@@ -9,6 +9,7 @@ import io.legado.app.data.entities.SearchBook
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.addType
 import io.legado.app.help.book.removeAllBookType
+import io.legado.app.help.book.updateTo
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.StrResponse
 import io.legado.app.help.source.getBookType
@@ -244,6 +245,14 @@ object WebBook {
         book: Book,
         canReName: Boolean = true,
     ): Book {
+        if (book.origin.startsWith("ext_")) {
+            val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository = org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+            val loaded = extensionRepository.getBookDetail(book.origin, book.bookUrl)
+            if (loaded != null) {
+                book.updateTo(loaded)
+            }
+            return book
+        }
         if (!book.config.fixedType) {
             book.removeAllBookType()
             book.addType(bookSource.getBookType())
@@ -319,6 +328,12 @@ object WebBook {
         book: Book,
         runPerJs: Boolean = false
     ): Result<List<BookChapter>> {
+        if (book.origin.startsWith("ext_")) {
+            return kotlin.runCatching {
+                val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository = org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+                extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+            }
+        }
         if (!book.config.fixedType) {
             book.removeAllBookType()
             book.addType(bookSource.getBookType())
@@ -397,6 +412,14 @@ object WebBook {
         nextChapterUrl: String? = null,
         needSave: Boolean = true
     ): String {
+        if (book.origin.startsWith("ext_")) {
+            val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository = org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+            val content = extensionRepository.getChapterContent(book.origin, bookChapter.url) ?: ""
+            if (needSave && content.isNotBlank()) {
+                io.legado.app.help.book.BookHelp.saveText(book, bookChapter, content)
+            }
+            return content
+        }
         if (bookSource.getContentRule().content.isNullOrEmpty()) {
             Debug.log(bookSource.bookSourceUrl, "⇒正文规则为空,使用章节链接:${bookChapter.url}")
             return bookChapter.url

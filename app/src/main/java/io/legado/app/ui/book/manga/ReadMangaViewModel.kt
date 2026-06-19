@@ -120,7 +120,7 @@ class ReadMangaViewModel(
         }
 
         //自动换源
-        if (!book.isLocal && ReadManga.bookSource == null) {
+        if (!book.isLocal && !book.origin.startsWith("ext_") && ReadManga.bookSource == null) {
             autoChangeSource(book.name, book.author)
             return
         }

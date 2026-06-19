@@ -1,22 +1,22 @@
-# 书源调试
+# Gỡ lỗi nguồn sách (Debug)
 
-* 调试搜索>>输入关键字，如：
+* Gỡ lỗi Tìm kiếm >> Nhập từ khóa, ví dụ:
 ```
-系统
+Hệ thống
 ```
-* 调试发现>>输入发现URL，如：
+* Gỡ lỗi Khám phá >> Nhập URL khám phá, ví dụ:
 ```
-月票榜::https://www.qidian.com/rank/yuepiao?page={{page}}
+Bảng xếp hạng::https://www.qidian.com/rank/yuepiao?page={{page}}
 ```
-* 调试详情页>>输入详情页URL，如：
+* Gỡ lỗi Trang chi tiết >> Nhập URL trang chi tiết sách, ví dụ:
 ```
 https://m.qidian.com/book/1015609210
 ```
-* 调试目录页>>输入目录页URL，如：
+* Gỡ lỗi Trang mục lục >> Nhập URL trang mục lục, ví dụ:
 ```
 ++https://www.zhaishuyuan.com/read/30394
 ```
-* 调试正文页>>输入正文页URL，如：
+* Gỡ lỗi Trang nội dung >> Nhập URL trang nội dung chương, ví dụ:
 ```
 --https://www.zhaishuyuan.com/chapter/30394/20940996
 ```

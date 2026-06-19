@@ -20,12 +20,15 @@ interface ExploreRepository {
     fun getExploreSources(query: String, selectedGroup: String): Flow<List<BookSourcePart>>
     suspend fun getBookSource(sourceUrl: String): BookSource?
     suspend fun getSourceExploreKinds(sourceUrl: String): List<ExploreKind>
+    suspend fun getHomeKinds(sourceUrl: String): List<ExploreKind>
+    suspend fun getGenreKinds(sourceUrl: String): List<ExploreKind>
     suspend fun topSource(bookSource: BookSourcePart)
     suspend fun deleteSource(sourceUrl: String)
 }
 
 class ExploreRepositoryImpl(
-    private val appDb: AppDatabase
+    private val appDb: AppDatabase,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository,
 ) : ExploreRepository, ExploreBooksGateway {
 
     override fun getBookshelfItems(): Flow<List<SearchBook>> {
@@ -86,8 +89,25 @@ class ExploreRepositoryImpl(
     }
 
     override suspend fun getSourceExploreKinds(sourceUrl: String): List<ExploreKind> = withContext(IO) {
+        if (sourceUrl.startsWith("ext_")) {
+            return@withContext extensionRepository.getSourceExploreKinds(sourceUrl)
+        }
         val source = appDb.bookSourceDao.getBookSource(sourceUrl)
         return@withContext source?.exploreKinds() ?: emptyList()
+    }
+
+    override suspend fun getHomeKinds(sourceUrl: String): List<ExploreKind> = withContext(IO) {
+        if (sourceUrl.startsWith("ext_")) {
+            return@withContext extensionRepository.getHomeKinds(sourceUrl)
+        }
+        return@withContext emptyList()
+    }
+
+    override suspend fun getGenreKinds(sourceUrl: String): List<ExploreKind> = withContext(IO) {
+        if (sourceUrl.startsWith("ext_")) {
+            return@withContext extensionRepository.getGenreKinds(sourceUrl)
+        }
+        return@withContext emptyList()
     }
 
     override suspend fun topSource(bookSource: BookSourcePart) {

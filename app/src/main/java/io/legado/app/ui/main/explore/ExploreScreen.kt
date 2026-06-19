@@ -10,6 +10,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -55,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
+import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
 import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
@@ -78,6 +80,7 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.tabRow.AppTabRow
 import io.legado.app.utils.startActivity
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
@@ -172,28 +175,37 @@ fun ExploreScreen(
         },
         contentWindowInsets = WindowInsets(0)
     ) { paddingValues ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            if (uiState.items.isEmpty()) {
-                EmptyMessage(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(
-                            top = paddingValues.calculateTopPadding(),
-                            bottom = paddingValues.calculateBottomPadding()
-                        ),
-                    messageResId = R.string.explore_empty
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding())
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                AppTabRow(
+                    tabTitles = listOf("Nguồn sách", "Nguồn Extension"),
+                    selectedTabIndex = uiState.exploreTab,
+                    onTabSelected = { viewModel.setExploreTab(it) },
+                    isScrollable = false,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                return@Box
-            }
 
-            FastScrollLazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = adaptiveContentPadding(
-                    top = paddingValues.calculateTopPadding(),
-                    bottom = 120.dp
-                )
-            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    if (uiState.items.isEmpty()) {
+                        EmptyMessage(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = paddingValues.calculateBottomPadding()),
+                            messageResId = R.string.explore_empty
+                        )
+                    } else {
+                        FastScrollLazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = adaptiveContentPadding(
+                                top = 8.dp,
+                                bottom = 120.dp
+                            )
+                        ) {
                 items(
                     items = listItems,
                     key = { it.key }
@@ -207,7 +219,13 @@ fun ExploreScreen(
                             item = item,
                             isExpanded = isExpanded,
                             loadingKinds = if (isExpanded) uiState.loadingKinds else false,
-                            onClick = { viewModel.toggleExpand(item) },
+                            onClick = {
+                                if (item.bookSourceUrl.startsWith("ext_")) {
+                                    onOpenExploreShow(item.bookSourceName, item.bookSourceUrl, null)
+                                } else {
+                                    viewModel.toggleExpand(item)
+                                }
+                            },
                             onTop = { viewModel.topSource(item) },
                             onEdit = {
                                 context.startActivity<BookSourceEditActivity> {
@@ -271,27 +289,30 @@ fun ExploreScreen(
                 }
             }
 
-            TopFloatingStickyItem(
-                item = stickyHeaderSource,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(top = paddingValues.calculateTopPadding() + 4.dp, start = 8.dp)
-            ) { item ->
-                TextCard(
-                    text = item.bookSourceName,
-                    textStyle = LegadoTheme.typography.labelMediumEmphasized,
-                    cornerRadius = 12.dp,
-                    horizontalPadding = 12.dp,
-                    verticalPadding = 8.dp,
-                    onClick = {
-                        scope.launch {
-                            val index = listItems.indexOfFirst {
-                                it is ExploreListItem.Header && it.source.bookSourceUrl == item.bookSourceUrl
-                            }
-                            if (index >= 0) listState.animateScrollToItem(index)
+                        TopFloatingStickyItem(
+                            item = stickyHeaderSource,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .padding(top = 4.dp, start = 8.dp)
+                        ) { item ->
+                            TextCard(
+                                text = item.bookSourceName,
+                                textStyle = LegadoTheme.typography.labelMediumEmphasized,
+                                cornerRadius = 12.dp,
+                                horizontalPadding = 12.dp,
+                                verticalPadding = 8.dp,
+                                onClick = {
+                                    scope.launch {
+                                        val index = listItems.indexOfFirst {
+                                            it is ExploreListItem.Header && it.source.bookSourceUrl == item.bookSourceUrl
+                                        }
+                                        if (index >= 0) listState.animateScrollToItem(index)
+                                    }
+                                }
+                            )
                         }
                     }
-                )
+                }
             }
         }
     }
@@ -360,12 +381,20 @@ fun ExploreSourceHeader(
             modifier = Modifier
                 .combinedClickable(
                     onClick = onClick,
-                    onLongClick = { showMenu = true }
+                    onLongClick = { if (!item.bookSourceUrl.startsWith("ext_")) showMenu = true }
                 )
                 .fillMaxWidth(),
             colors = ListItemDefaults.colors(
                 containerColor = Color.Transparent
             ),
+            leadingContent = if (item.bookSourceUrl.startsWith("ext_")) {
+                {
+                    SourceIcon(
+                        path = item.bookSourceGroup,
+                        modifier = Modifier.size(40.dp)
+                    )
+                }
+            } else null,
             headlineContent = {
                 AppText(
                     text = item.bookSourceName,

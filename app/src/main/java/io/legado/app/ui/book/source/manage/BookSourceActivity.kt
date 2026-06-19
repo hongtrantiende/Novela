@@ -5,7 +5,12 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.SubMenu
+import android.view.View
 import android.view.WindowManager
+import com.google.android.material.tabs.TabLayout
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import io.legado.app.ui.theme.AppTheme
+import io.legado.app.vbookextension.ui.ExtensionScreens
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
@@ -85,6 +90,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
     SearchView.OnQueryTextListener {
     override val binding by viewBinding(ActivityBookSourceBinding::inflate)
     override val viewModel by viewModels<BookSourceViewModel>()
+    private var currentTab = 0
     private val importRecordKey = "bookSourceRecordKey"
     private val adapter by lazy { BookSourceAdapter(this, this, binding.recyclerView) }
     private val itemTouchCallback by lazy { ItemTouchCallback(adapter) }
@@ -150,6 +156,52 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         initLiveDataGroup()
         initSelectActionBar()
         resumeCheckSource()
+
+        // Setup TabLayout
+        val tabLayout = binding.tabLayout
+        val tabSources = tabLayout.newTab().setText("Nguồn sách")
+        val tabExtensions = tabLayout.newTab().setText("Nguồn Extension")
+        tabLayout.addTab(tabSources)
+        tabLayout.addTab(tabExtensions)
+
+        tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                when (tab?.position) {
+                    0 -> {
+                        currentTab = 0
+                        binding.recyclerView.visibility = View.VISIBLE
+                        binding.selectActionBar.visibility = View.VISIBLE
+                        binding.composeView.visibility = View.GONE
+                        binding.titleBar.visibility = View.VISIBLE
+                        binding.titleBar.title = getString(R.string.book_source)
+                        searchView.visibility = View.VISIBLE
+                        invalidateOptionsMenu()
+                    }
+                    1 -> {
+                        currentTab = 1
+                        binding.recyclerView.visibility = View.GONE
+                        binding.selectActionBar.visibility = View.GONE
+                        binding.composeView.visibility = View.VISIBLE
+                        binding.titleBar.title = "Nguồn Extension"
+                        searchView.visibility = View.GONE
+                        invalidateOptionsMenu()
+                    }
+                }
+            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
+
+        // Setup ComposeView
+        binding.composeView.apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                AppTheme {
+                    ExtensionScreens()
+                }
+            }
+        }
+
         if (!LocalConfig.bookSourcesHelpVersionIsLast) {
             showHelp("SourceMBookHelp")
         }
@@ -161,11 +213,18 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
     }
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        groupMenu = menu.findItem(R.id.menu_group).subMenu
-        val sortSubMenu = menu.findItem(R.id.action_sort).subMenu!!
-        sortSubMenu.findItem(R.id.menu_sort_desc).isChecked = !sortAscending
-        sortSubMenu.setGroupCheckable(R.id.menu_group_sort, true, true)
-        upGroupMenu()
+        for (i in 0 until menu.size()) {
+            menu.getItem(i).isVisible = currentTab == 0
+        }
+        if (currentTab == 0) {
+            groupMenu = menu.findItem(R.id.menu_group)?.subMenu
+            val sortSubMenu = menu.findItem(R.id.action_sort)?.subMenu
+            if (sortSubMenu != null) {
+                sortSubMenu.findItem(R.id.menu_sort_desc)?.isChecked = !sortAscending
+                sortSubMenu.setGroupCheckable(R.id.menu_group_sort, true, true)
+            }
+            upGroupMenu()
+        }
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -643,9 +702,9 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
                 bundleOf(Pair("checkSourceMessage", null))
             )
             groups.forEach { group ->
-                if (group.contains("失效") && searchView.query.isEmpty()) {
-                    searchView.setQuery("失效", true)
-                    toastOnUi("发现有失效书源，已为您自动筛选！")
+                if ((group.contains("lỗi") || group.contains("trống") || group == "Hết giờ") && searchView.query.isEmpty()) {
+                    searchView.setQuery("lỗi", true)
+                    toastOnUi("Phát hiện nguồn sách bị lỗi, đã tự động lọc cho bạn!")
                 }
             }
         }

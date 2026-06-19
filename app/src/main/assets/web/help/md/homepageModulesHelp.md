@@ -1,103 +1,101 @@
-# 首页模块 (Homepage Modules) 配置规范
+# Cấu hình Mô-đun Trang chủ (Homepage Modules)
 
-书源的 `homepageModules` 字段允许开发者声明该书源在首页展示的内容模块。这些模块通过 JSON
-数组进行定义，支持高度自定义的布局和数据来源。
+Trường `homepageModules` của nguồn sách cho phép nhà phát triển khai báo các mô-đun nội dung hiển thị của nguồn sách này trên trang chủ. Các mô-đun này được định nghĩa thông qua một mảng JSON, hỗ trợ bố cục tùy biến cao và nguồn dữ liệu linh hoạt.
 
 ---
 
-## 1. 数据结构 (Data Structure)
+## 1. Cấu trúc Dữ liệu (Data Structure)
 
-`homepageModules` 是一个包含多个模块定义对象的 JSON 数组。
+`homepageModules` là một mảng JSON chứa nhiều đối tượng định nghĩa mô-đun.
 
-### 模块通用字段
+### Các trường chung của mô-đun
 
-| 字段               | 类型       | 必须 | 说明                                                    |
+| Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |:-----------------|:---------|:---|:------------------------------------------------------|
-| **key**          | `String` | 是  | 模块唯一标识。建议使用 `[a-z0-9_]` 字符。用于保存用户的排序/显隐设置。            |
-| **type**         | `Enum`   | 是  | 模块类型。定义了渲染方式和交互逻辑。详见 [模块类型](#2-模块类型-module-types)。    |
-| **title**        | `String` | 是  | 模块默认标题。用户可在本地自定义覆盖。                                   |
-| **kindTitle**    | `String` | 否  | 用于匹配书源「发现」规则中的分类标题。匹配成功后自动继承其 URL 和规则。                |
-| **url**          | `String` | 否  | 显式指定数据接口 URL。优先级高于 `kindTitle`。支持变量替换。                |
-| **args**         | `String` | 否  | 附加参数。在 `buttonGroup` 类型中为 JSON 数组字符串。                 |
-| **layoutConfig** | `Object` | 否  | 布局配置对象，用于调整列数、行数、图标等。详见 [布局配置](#3-布局配置-layoutconfig)。 |
+| **key**          | `String` | Có  | Mã định danh duy nhất của mô-đun. Khuyên dùng các ký tự `[a-z0-9_]`. Dùng để lưu cài đặt sắp xếp/hiển thị của người dùng. |
+| **type**         | `Enum`   | Có  | Loại mô-đun. Xác định phương thức hiển thị và logic tương tác. Xem thêm [Loại mô-đun](#2-loai-mo-dun-module-types). |
+| **title**        | `String` | Có  | Tiêu đề mặc định của mô-đun. Người dùng có thể tùy chỉnh đè lên ở cục bộ. |
+| **kindTitle**    | `String` | Không | Dùng để khớp với tiêu đề phân loại trong quy tắc "Khám phá" của nguồn sách. Sau khi khớp thành công sẽ tự động kế thừa URL và quy tắc của phân loại đó. |
+| **url**          | `String` | Không | Chỉ định rõ ràng URL giao diện dữ liệu. Có độ ưu tiên cao hơn `kindTitle`. Hỗ trợ thay thế biến. |
+| **args**         | `String` | Không | Tham số bổ sung. Trong loại `buttonGroup`, đây là một chuỗi mảng JSON. |
+| **layoutConfig** | `Object` | Không | Đối tượng cấu hình bố cục, dùng để điều chỉnh số cột, số hàng, biểu tượng, v.v. Xem thêm [Cấu hình bố cục](#3-cau-hinh-bo-cuc-layoutconfig). |
 
 ---
 
-## 2. 模块类型 (Module Types)
+## 2. Loại mô-đun (Module Types)
 
-### 列表与轮播类
+### Nhóm Danh sách và Trình chiếu (Carousel)
 
-| 类型 (Type) | 描述    | 特点                     |
+| Loại (Type) | Mô tả | Đặc điểm |
 |:----------|:------|:-----------------------|
-| `banner`  | 横滑轮播图 | 适合展示高权重的精品推荐，使用大图封面。   |
-| `ranking` | 排行榜列表 | 垂直列表展示，带排名序号。          |
-| `card`    | 推荐卡片  | 横向滑动的卡片流，同时显示封面、标题及简介。 |
+| `banner`  | Trình chiếu trượt ngang | Thích hợp hiển thị các đề xuất chất lượng cao, sử dụng ảnh bìa lớn. |
+| `ranking` | Danh sách bảng xếp hạng | Hiển thị danh sách dọc kèm theo số thứ tự xếp hạng. |
+| `card`    | Thẻ đề xuất  | Dòng thẻ trượt ngang, hiển thị đồng thời ảnh bìa, tiêu đề và giới thiệu ngắn. |
 
-### 网格类
+### Nhóm Lưới (Grid)
 
-| 类型 (Type)      | 描述    | 特点                |
+| Loại (Type)      | Mô tả | Đặc điểm |
 |:---------------|:------|:------------------|
-| `grid`         | 标准网格  | 最常用的展示形式。支持自定义行列。 |
-| `gridRanking`  | 网格排行榜 | 多行多列的排行展示。横向翻页。   |
-| `infiniteGrid` | 无限网格  | 垂直滚动的网格流。无限加载。    |
-| `waterfall`    | 错位瀑布流 | 垂直错位排列的书架流。无限加载。  |
+| `grid`         | Lưới tiêu chuẩn | Định dạng hiển thị phổ biến nhất. Hỗ trợ tùy chỉnh số hàng/cột. |
+| `gridRanking`  | Lưới bảng xếp hạng | Hiển thị bảng xếp hạng nhiều hàng nhiều cột. Lật trang theo chiều ngang. |
+| `infiniteGrid` | Lưới vô hạn  | Dòng lưới cuộn dọc. Tải nội dung vô hạn. |
+| `waterfall`    | Dòng thác nước | Dòng sách xếp so le cuộn dọc. Tải nội dung vô hạn. |
 
-### 功能类
+### Nhóm Chức năng
 
-| 类型 (Type)     | 描述    | 特点                                          |
+| Loại (Type)     | Mô tả | Đặc điểm |
 |:--------------|:------|:--------------------------------------------|
-| `buttonGroup` | 快捷按钮组 | 渲染为一组圆形/图标按钮，支持自动填充宽度与自动分列。通常用于放置常用分类或功能入口。 |
+| `buttonGroup` | Nhóm nút nhanh | Hiển thị dưới dạng một nhóm nút tròn/icon, hỗ trợ tự động căn độ rộng và chia cột. Thường dùng để đặt các lối vào phân loại hoặc chức năng phổ biến. |
 
 ---
 
-## 3. 布局配置 (LayoutConfig)
+## 3. Cấu hình bố cục (LayoutConfig)
 
-通过 `layoutConfig` 对象，可以精细化控制模块的表现。
+Thông qua đối tượng `layoutConfig`, bạn có thể kiểm soát chi tiết cách hiển thị của mô-đun.
 
-| 属性 (Property) | 类型       | 适用类型                                | 默认值 | 说明                                       |
+| Thuộc tính (Property) | Kiểu dữ liệu | Loại áp dụng | Giá trị mặc định | Mô tả |
 |:--------------|:---------|:------------------------------------|:----|:-----------------------------------------|
-| `columns`     | `Int`    | `grid`, `waterfall`, `infiniteGrid` | 3   | 每行显示的列数。                                 |
-| `icon`        | `String` | `buttonGroup`                       | -   | 按钮组的默认统一图标 URL。                          |
-| `icons`       | `Object` | `buttonGroup`                       | -   | 图标映射表。例：`{"排行": "http://path/to/icon"}`。 |
+| `columns`     | `Int`    | `grid`, `waterfall`, `infiniteGrid` | 3   | Số cột hiển thị trên mỗi hàng. |
+| `icon`        | `String` | `buttonGroup`                       | -   | URL biểu tượng mặc định chung cho nhóm nút. |
+| `icons`       | `Object` | `buttonGroup`                       | -   | Bảng ánh xạ biểu tượng. Ví dụ: `{"Xếp hạng": "http://path/to/icon"}`. |
 
 ---
 
-## 4. 数据绑定逻辑 (Data Binding)
+## 4. Logic liên kết dữ liệu (Data Binding)
 
-1. **自动匹配**：如果提供了 `kindTitle`，系统会遍历书源 `exploreKinds()` 返回的列表。如果某个分类的
-   `title` 与之完全一致，该模块将自动使用该分类的 `url`。
-2. **静态指定**：如果提供了 `url`，系统将直接请求该 URL。
-3. **降级逻辑**：若 `kindTitle` 未匹配且无 `url`，模块将回退至书源的主 `exploreUrl`。
+1. **Tự động khớp**: Nếu cung cấp `kindTitle`, hệ thống sẽ duyệt qua danh sách trả về từ `exploreKinds()` của nguồn sách. Nếu `title` của phân loại nào trùng khớp hoàn toàn, mô-đun đó sẽ tự động sử dụng `url` của phân loại đó.
+2. **Chỉ định tĩnh**: Nếu cung cấp `url`, hệ thống sẽ trực tiếp gửi yêu cầu đến URL đó.
+3. **Phương án dự phòng (fallback)**: Nếu không khớp được `kindTitle` và không có `url`, mô-đun sẽ chuyển sang sử dụng `exploreUrl` chính của nguồn sách.
 
 ---
 
-## 5. 完整 JSON 示例
+## 5. Ví dụ JSON đầy đủ
 
 ```json
 [
   {
     "key": "top_banner",
     "type": "banner",
-    "title": "精品强推",
-    "kindTitle": "首页推荐"
+    "title": "Đề xuất chọn lọc",
+    "kindTitle": "Trang chủ đề xuất"
   },
   {
     "key": "quick_nav",
     "type": "buttonGroup",
-    "title": "分类导航",
-    "args": "[\"武侠\", \"仙侠\", \"都市\", \"历史\"]",
+    "title": "Điều hướng phân loại",
+    "args": "[\"Võ hiệp\", \"Tiên hiệp\", \"Đô thị\", \"Lịch sử\"]",
     "layoutConfig": {
       "icon": "https://example.com/icons/default.png",
       "icons": {
-        "武侠": "https://example.com/icons/wuxia.png"
+        "Võ hiệp": "https://example.com/icons/wuxia.png"
       }
     }
   },
   {
     "key": "hot_rank",
     "type": "ranking",
-    "title": "热门榜单",
-    "kindTitle": "排行榜",
+    "title": "Bảng xếp hạng hot",
+    "kindTitle": "Bảng xếp hạng",
     "layoutConfig": {
       "rows": 5
     }
@@ -105,8 +103,8 @@
   {
     "key": "explore_waterfall",
     "type": "waterfall",
-    "title": "发现更多",
-    "kindTitle": "全部",
+    "title": "Khám phá thêm",
+    "kindTitle": "Tất cả",
     "layoutConfig": {
       "columns": 2
     }

@@ -1368,7 +1368,7 @@
     <string name="read_aloud_read_phone_state_permission_rationale">Đọc cần đọc trạng thái điện thoại để thực hiện chức năng tạm dừng đọc trong khi gọi</string>
     <string name="read_aloud_by_media_button_title">Nút tai nghe bắt đầu đọc</string>
     <string name="read_aloud_by_media_button_summary">Bắt đầu đọc bằng nút tai nghe</string>
-    <string name="group_sources_by_domain">按域名分组显示</string>
+    <string name="group_sources_by_domain">Gom nhóm theo tên miền</string>
     <string name="theme_config">Cấu hình chủ đề</string>
     <string name="show_manga_ui">Duyệt manga</string>
     <string name="disable_manga_scale">Vô hiệu hóa thu phóng manga</string>

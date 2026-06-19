@@ -67,7 +67,7 @@ fun ReadingTimeBarChartCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                AppText("阅读时长分布", style = LegadoTheme.typography.titleMedium)
+                AppText("Phân bổ thời gian đọc", style = LegadoTheme.typography.titleMedium)
             }
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -126,9 +126,9 @@ fun ReadingTimeBarChartCard(
                         }
 
                         val labelText = when (period) {
-                            ReadPeriod.YEAR -> "${date.monthValue}月"
+                            ReadPeriod.YEAR -> "Th. ${date.monthValue}"
                             ReadPeriod.WEEK -> when (date.dayOfWeek.value) {
-                                1 -> "一"; 2 -> "二"; 3 -> "三"; 4 -> "四"; 5 -> "五"; 6 -> "六"; 7 -> "日"; else -> ""
+                                1 -> "T2"; 2 -> "T3"; 3 -> "T4"; 4 -> "T5"; 5 -> "T6"; 6 -> "T7"; 7 -> "CN"; else -> ""
                             }
                             else -> date.dayOfMonth.toString()
                         }

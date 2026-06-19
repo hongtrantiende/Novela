@@ -72,7 +72,7 @@ fun LatestReadItem(
                 color = LegadoTheme.colorScheme.onSurfaceVariant
             )
             AppText(
-                text = "最后阅读: ${formatFriendlyDate(record.lastRead.toString())}",
+                text = "Đọc lần cuối: ${formatFriendlyDate(record.lastRead.toString())}",
                 style = LegadoTheme.typography.labelSmall,
                 color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )

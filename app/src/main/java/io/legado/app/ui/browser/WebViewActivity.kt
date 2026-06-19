@@ -170,6 +170,20 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             }
         }
         AppCookieManager.applyToWebView(url)
+        if (viewModel.sourceOrigin.startsWith("ext_")) {
+            val extId = viewModel.sourceOrigin.substringAfter("ext_")
+            val prefs = getSharedPreferences("novel_reader_prefs", MODE_PRIVATE)
+            val cookie = prefs.getString("ext_cookies_$extId", "") ?: ""
+            if (cookie.isNotBlank()) {
+                val cookieManager = CookieManager.getInstance()
+                val uri = Uri.parse(url)
+                val domain = uri.host ?: ""
+                cookie.split(";").forEach { pair ->
+                    cookieManager.setCookie(domain, pair.trim())
+                }
+                cookieManager.flush()
+            }
+        }
         binding.webView.setOnLongClickListener {
             val hitTestResult = binding.webView.hitTestResult
             if (hitTestResult.type == WebView.HitTestResult.IMAGE_TYPE ||
@@ -263,7 +277,13 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             super.onPageFinished(view, url)
             val cookieManager = CookieManager.getInstance()
             url?.let {
-                CookieStore.setCookie(it, cookieManager.getCookie(it))
+                val cookie = cookieManager.getCookie(it)
+                CookieStore.setCookie(it, cookie)
+                if (viewModel.sourceOrigin.startsWith("ext_")) {
+                    val extId = viewModel.sourceOrigin.substringAfter("ext_")
+                    val prefs = getSharedPreferences("novel_reader_prefs", MODE_PRIVATE)
+                    prefs.edit().putString("ext_cookies_$extId", cookie ?: "").apply()
+                }
             }
             view?.title?.let { title ->
                 if (title != url && title != view.url && title.isNotBlank()) {

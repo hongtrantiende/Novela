@@ -1,0 +1,344 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+	<string-array name="server_type">
+		<item>WEBDAV</item>
+	</string-array>
+
+	<string-array name="book_type">
+		<item>Văn bản</item>
+		<item>Âm thanh</item>
+		<item>Hình ảnh</item>
+		<item>Tệp</item>
+	</string-array>
+
+	<string-array name="layout_type">
+		<item>Danh sách</item>
+		<item>Một cột</item>
+		<item>Hai cột</item>
+		<item>Thác nước</item>
+		<item>Ba cột</item>
+	</string-array>
+
+	<string-array name="rss_type">
+		<item>Trang web</item>
+		<item>Hình ảnh</item>
+		<item>Video</item>
+	</string-array>
+
+	<string-array name="group_style">
+		<item>Tab</item>
+		<item>Ẩn Tab</item>
+		<item>Thư mục</item>
+	</string-array>
+
+	<string-array name="book_sort">
+		<item>@string/text_default</item>
+		<item>@string/bookshelf_px_0</item>
+		<item>@string/bookshelf_px_1</item>
+		<item>@string/bookshelf_px_2</item>
+		<item>@string/bookshelf_px_3</item>
+		<item>@string/bookshelf_px_4</item>
+		<item>@string/bookshelf_px_5</item>
+	</string-array>
+
+	<string-array name="indent">
+		<item>@string/indent_0</item>
+		<item>@string/indent_1</item>
+		<item>@string/indent_2</item>
+		<item>@string/indent_3</item>
+		<item>@string/indent_4</item>
+	</string-array>
+
+	<string-array name="text_suffix">
+		<item>.txt</item>
+		<item>.json</item>
+		<item>.xml</item>
+	</string-array>
+
+	<string-array name="convert_s">
+		<item>@string/jf_convert_o</item>
+		<item>@string/jf_convert_j</item>
+		<item>@string/jf_convert_f</item>
+	</string-array>
+
+	<string-array name="theme_mode">
+		<item>Theo hệ thống</item>
+		<item>Chế độ sáng</item>
+		<item>Chế độ tối</item>
+	</string-array>
+
+	<string-array name="themes_item">
+		<item>Màu động (Dynamic Color)</item>
+		<item>Đồng cỏ</item>
+		<item>Quả chanh</item>
+		<item>Đen &amp; Trắng</item>
+		<item>E-ink</item>
+		<item>Trời xanh</item>
+		<item>Tháng tám</item>
+		<item>Làn sóng mới</item>
+		<item>Mùa xuân</item>
+		<item>Thiên niên kỷ</item>
+		<item>Dòng biển ẩn</item>
+		<item>Ban nhạc</item>
+		<item>Tùy chỉnh</item>
+		<item>Trong suốt</item>
+	</string-array>
+
+	<string-array name="NavBarColors">
+		<item>Tự động</item>
+		<item>Đen</item>
+		<item>Trắng</item>
+		<item>Theo nền</item>
+	</string-array>
+
+	<string-array name="screen_time_out">
+		<item>Mặc định</item>
+		<item>1 phút</item>
+		<item>5 phút</item>
+		<item>10 phút</item>
+		<item>Luôn sáng</item>
+	</string-array>
+
+	<string-array name="read_slider_mode">
+		<item>Luôn hiển thị</item>
+		<item>Không hiển thị</item>
+	</string-array>
+
+	<string-array name="title_bar_mode">
+		<item>Hiển thị trên thanh ứng dụng</item>
+		<item>Hiển thị trên một dòng riêng biệt</item>
+		<item>Chỉ hiển thị chương</item>
+		<item>Không hiển thị</item>
+	</string-array>
+
+	<string-array name="title_chapter_mode">
+		<item>Tắt hiển thị tiêu đề</item>
+		<item>Tắt hiển thị chương</item>
+		<item>Tắt hiển thị tiêu đề và chương</item>
+	</string-array>
+
+	<string-array name="screen_direction_title">
+		<item>@string/screen_unspecified</item>
+		<item>@string/screen_portrait</item>
+		<item>@string/screen_landscape</item>
+		<item>@string/screen_sensor</item>
+		<item>@string/screen_portrait_reversed</item>
+		<item>@string/screen_landscape_reversed</item>
+	</string-array>
+
+	<string-array name="click_image_way_title">
+		<item>Hành vi gói mới</item>
+		<item>Xem trước hình ảnh</item>
+		<item>Cổ điển</item>
+		<item>Tắt nhấp chọn</item>
+		<item>Nhấp đúp chọn</item>
+	</string-array>
+
+	<string-array name="double_page_title">
+		<item>Trang đơn</item>
+		<item>Trang đôi</item>
+		<item>Trang đôi khi màn hình ngang</item>
+		<item>Trang đôi trên máy tính bảng hoặc màn hình ngang</item>
+	</string-array>
+
+	<string-array name="progress_bar_behavior_title">
+		<item>@string/adjust_chapter_page</item>
+		<item>@string/adjust_chapter_index</item>
+	</string-array>
+
+	<string-array name="brightness_bar_mode_title">
+		<item>@string/brightness_bar_off</item>
+		<item>@string/brightness_bar_horizontal</item>
+		<item>@string/brightness_bar_vertical</item>
+	</string-array>
+
+	<string-array name="brightness_bar_position_title">
+		<item>@string/brightness_bar_left</item>
+		<item>@string/brightness_bar_right</item>
+	</string-array>
+
+	<string-array name="icon_names" tools:ignore="Typos">
+		<item>iconMain</item>
+		<item>iconWhite</item>
+		<item>icon0</item>
+		<item>icon1</item>
+		<item>icon2</item>
+		<item>icon3</item>
+		<item>icon4</item>
+		<item>icon5</item>
+		<item>icon6</item>
+	</string-array>
+
+	<string-array name="chinese_mode">
+		<item>Tắt</item>
+		<item>Phồn thể sang Giản thể</item>
+		<item>Giản thể sang Phồn thể</item>
+	</string-array>
+
+	<string-array name="system_typefaces">
+		<item>Phông chữ mặc định</item>
+		<item>Phông chữ có chân (Serif)</item>
+		<item>Phông chữ đơn cách (Monospace)</item>
+	</string-array>
+
+	<string-array name="read_tip">
+		<item>Không hiển thị</item>
+		<item>Tên sách</item>
+		<item>Tiêu đề</item>
+		<item>Tiêu đề có mũi tên (Phông hệ thống)</item>
+		<item>Tiêu đề có mũi tên</item>
+		<item>Thời gian</item>
+		<item>Pin</item>
+		<item>Pin cổ điển</item>
+		<item>Hiển thị pin bên trong</item>
+		<item>Chỉ hiển thị biểu tượng pin</item>
+		<item>Phần trăm pin (%)</item>
+		<item>Số trang</item>
+		<item>Tiến độ (%)</item>
+		<item>Tiến độ (xx/yyy)</item>
+		<item>Số trang và tiến độ</item>
+		<item>Thời gian và Pin</item>
+		<item>Thời gian và Pin cổ điển</item>
+		<item>Thời gian và Phần trăm pin (%)</item>
+	</string-array>
+
+	<string-array name="text_font_weight">
+		<item>Bình thường</item>
+		<item>In đậm</item>
+		<item>Mảnh</item>
+	</string-array>
+
+	<string-array name="language">
+		<item>Theo hệ thống</item>
+		<item>Tiếng Trung giản thể</item>
+		<item>Tiếng Trung phồn thể</item>
+		<item>Tiếng Anh</item>
+	</string-array>
+
+	<string-array name="tabletInterface">
+		<item>Tự động</item>
+		<item>Luôn luôn</item>
+		<item>Chế độ nằm ngang</item>
+		<item>Tắt</item>
+	</string-array>
+
+	<string-array name="paletteStyle">
+		<item>Dịu nhẹ (TonalSpot)</item>
+		<item>Trung tính</item>
+		<item>Rực rỡ</item>
+		<item>Biểu cảm</item>
+		<item>Cầu vồng</item>
+		<item>Trái cây thập cẩm</item>
+		<item>Đơn sắc</item>
+		<item>Trung thực</item>
+		<item>Theo nội dung</item>
+	</string-array>
+
+	<string-array name="materialVersion">
+		<item>Material 3 (2021)</item>
+		<item>Material 3 Expressive (2025)</item>
+	</string-array>
+
+	<string-array name="composeEngine">
+		<item>Material Design</item>
+		<item>Miuix</item>
+	</string-array>
+
+	<string-array name="customMode">
+		<item>Toàn cục</item>
+		<item>Chỉ màu nhấn</item>
+	</string-array>
+
+	<string-array name="rule_type">
+		<item>Nguồn sách</item>
+		<item>Nguồn RSS</item>
+		<item>Quy tắc thay thế</item>
+		<item>Tự động nhận diện</item>
+	</string-array>
+
+	<string-array name="default_home_page">
+		<item>@string/home</item>
+		<item>@string/bookshelf</item>
+		<item>@string/discovery</item>
+		<item>@string/rss</item>
+		<item>@string/my</item>
+	</string-array>
+
+	<string-array name="default_app_variant">
+		<item>@string/official_version</item>
+		<item>@string/beta_release_version</item>
+		<item>@string/all_version</item>
+		<item>@string/beta_releaseA_version</item>
+	</string-array>
+
+	<string-array name="default_home_page_value">
+		<item>home</item>
+		<item>bookshelf</item>
+		<item>explore</item>
+		<item>rss</item>
+		<item>my</item>
+	</string-array>
+
+	<string-array name="default_app_variant_value">
+		<item>official_version</item>
+		<item>beta_release_version</item>
+		<item>all_version</item>
+		<item>beta_releaseA_version</item>
+	</string-array>
+
+	<string-array name="tip_color">
+		<item>Cùng màu với nội dung chính</item>
+		<item>Tùy chỉnh</item>
+	</string-array>
+
+	<string-array name="tip_divider_color">
+		<item>Mặc định</item>
+		<item>Cùng màu với nội dung chính</item>
+		<item>Tùy chỉnh</item>
+	</string-array>
+
+	<string-array name="bookshelf_px_array">
+		<item>@string/bookshelf_px_0</item>
+		<item>@string/bookshelf_px_1</item>
+		<item>@string/bookshelf_px_2</item>
+		<item>@string/bookshelf_px_3</item>
+		<item>@string/bookshelf_px_4</item>
+		<item>@string/bookshelf_px_5</item>
+	</string-array>
+
+	<string-array name="bookshelf_layout">
+		<item>@string/list</item>
+		<item>@string/compact_list</item>
+		<item>@string/grid</item>
+		<item>@string/compact_grid</item>
+		<item>@string/cover_grid</item>
+	</string-array>
+
+	<string-array name="bookshelf_grid_layout">
+		<item>Tiêu chuẩn</item>
+		<item>Tối giản (Nhỏ gọn)</item>
+		<item>Chỉ hiển thị bìa</item>
+	</string-array>
+
+	<string-array name="label_vis_mode" >
+		<item>Tự động</item>
+		<item>Hiển thị khi được chọn</item>
+		<item>Luôn hiển thị</item>
+		<item>Không hiển thị</item>
+	</string-array>
+
+	<string-array name="customContrast">
+		<item>Mặc định</item>
+		<item>Mạnh</item>
+		<item>Mạnh nhất</item>
+	</string-array>
+
+	<string-array name="backup_sync_mode">
+		<item>@string/backup_to_local_and_network</item>
+		<item>@string/backup_to_local</item>
+		<item>@string/backup_to_network</item>
+	</string-array>
+
+	<string name="all_version">Tất cả phiên bản</string>
+</resources>

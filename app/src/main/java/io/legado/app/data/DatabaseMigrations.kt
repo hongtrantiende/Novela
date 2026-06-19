@@ -20,7 +20,7 @@ object DatabaseMigrations {
             migration_31_32, migration_32_33, migration_33_34, migration_34_35,
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
-            migration_82_83,
+            migration_82_83, migration_91_92,
         )
     }
 
@@ -450,6 +450,39 @@ object DatabaseMigrations {
             database.execSQL("DROP TABLE readRecordSession_old")
         }
     }
+
+    private val migration_91_92 = object : Migration(91, 92) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS `extensions` (
+                    `id` TEXT NOT NULL, 
+                    `name` TEXT NOT NULL, 
+                    `author` TEXT NOT NULL, 
+                    `version` INTEGER NOT NULL, 
+                    `source` TEXT NOT NULL, 
+                    `type` TEXT NOT NULL, 
+                    `locale` TEXT NOT NULL, 
+                    `description` TEXT NOT NULL, 
+                    `localPath` TEXT NOT NULL, 
+                    `iconPath` TEXT, 
+                    `isInstalled` INTEGER NOT NULL, 
+                    `isEnabled` INTEGER NOT NULL, 
+                    `repositoryUrl` TEXT, 
+                    PRIMARY KEY(`id`)
+                )
+            """)
+            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS `repositories` (
+                    `url` TEXT NOT NULL, 
+                    `name` TEXT NOT NULL, 
+                    `addedAt` INTEGER NOT NULL, 
+                    `isEnabled` INTEGER NOT NULL, 
+                    PRIMARY KEY(`url`)
+                )
+            """)
+        }
+    }
+
 
 
     @Suppress("ClassName")

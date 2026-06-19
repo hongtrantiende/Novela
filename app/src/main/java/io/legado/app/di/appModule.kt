@@ -134,6 +134,7 @@ import io.legado.app.ui.rss.favorites.RssFavoritesViewModel
 import io.legado.app.ui.rss.read.ReadRssViewModel
 import io.legado.app.ui.rss.source.manage.RssSourceViewModel
 import io.legado.app.ui.rss.subscription.RuleSubViewModel
+import io.legado.app.vbookextension.ui.ExtensionViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -197,8 +198,12 @@ val appModule = module {
     single<WebDavBackupGateway> { WebDavBackupRepository() }
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
     single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
+    single { io.legado.app.vbookextension.runtime.VBookJsExtensionRunner(get(), io.legado.app.help.http.okHttpClient) }
+    single { io.legado.app.vbookextension.loader.ExtensionLoader(get(), io.legado.app.help.http.okHttpClient, get(), get()) }
+    single { io.legado.app.vbookextension.data.repository.ExtensionRepository(get(), get(), get()) }
+
     single<BookDomainRepository> { BookDomainRepositoryImpl(get(), get()) }
-    single { ExploreRepositoryImpl(get()) }
+    single { ExploreRepositoryImpl(get(), get()) }
     single<ExploreRepository> { get<ExploreRepositoryImpl>() }
     single<ExploreBooksGateway> { get<ExploreRepositoryImpl>() }
     singleOf(::RssRepository)
@@ -230,6 +235,7 @@ val appModule = module {
             .build()
     }
 
+    viewModelOf(::ExtensionViewModel)
     viewModelOf(::DictRuleViewModel)
     viewModelOf(::DictViewModel)
     viewModelOf(::RssSourceViewModel)

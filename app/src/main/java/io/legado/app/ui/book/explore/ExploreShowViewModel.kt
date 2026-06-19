@@ -25,6 +25,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
+import io.legado.app.vbookextension.data.dao.ExtensionDao
+import io.legado.app.vbookextension.data.entity.ExtensionEntity
 
 private data class ExploreShowLoadState(
     val isLoading: Boolean = false,
@@ -36,6 +38,8 @@ private data class ExploreShowLoadState(
 private data class ExploreShowKindState(
     val kinds: List<ExploreKind> = emptyList(),
     val selectedKindTitle: String? = null,
+    val homeKinds: List<ExploreKind> = emptyList(),
+    val genreKinds: List<ExploreKind> = emptyList(),
 )
 
 private data class ExploreShowDisplayState(
@@ -52,6 +56,7 @@ class ExploreShowViewModel(
     private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
     private val localPreferencesRepository: LocalPreferencesRepository,
+    private val extensionDao: ExtensionDao,
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
@@ -64,6 +69,7 @@ class ExploreShowViewModel(
             gridCount = if (appCtx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 7 else 3,
         )
     )
+    private val _extension = MutableStateFlow<ExtensionEntity?>(null)
 
     private var sourceUrl: String? = null
     private var exploreUrl: String? = null
@@ -140,7 +146,15 @@ class ExploreShowViewModel(
                 _loadState,
                 _kindState,
                 _displayState,
-            ) { rawBooks, bookshelf, loadState, kindState, displayState ->
+                _extension,
+            ) { array ->
+                val rawBooks = array[0] as List<SearchBook>
+                val bookshelf = array[1] as Set<BookShelfKey>
+                val loadState = array[2] as ExploreShowLoadState
+                val kindState = array[3] as ExploreShowKindState
+                val displayState = array[4] as ExploreShowDisplayState
+                val extension = array[5] as ExtensionEntity?
+
                 val books = rawBooks.map { item ->
                     ExploreBookItemUi(
                         book = item,
@@ -158,6 +172,8 @@ class ExploreShowViewModel(
                     books = books.toImmutableList(),
                     kinds = kindState.kinds.toImmutableList(),
                     selectedKindTitle = kindState.selectedKindTitle,
+                    homeKinds = kindState.homeKinds.toImmutableList(),
+                    genreKinds = kindState.genreKinds.toImmutableList(),
                     layoutState = displayState.layoutState,
                     gridCount = displayState.gridCount,
                     isLoading = loadState.isLoading,
@@ -165,6 +181,7 @@ class ExploreShowViewModel(
                     isEnd = loadState.isEnd,
                     errorMsg = loadState.errorMsg,
                     sheet = displayState.sheet,
+                    extension = extension,
                 )
             }.collect { newState ->
                 _uiState.value = newState
@@ -191,17 +208,66 @@ class ExploreShowViewModel(
             )
         }
 
-        if (incomingExploreUrl == null) {
+        if (incomingSourceUrl.startsWith("ext_")) {
+            val extId = incomingSourceUrl.substringAfter("ext_")
             viewModelScope.launch {
-                loadKinds(incomingSourceUrl)
+                _extension.value = extensionDao.getExtensionById(extId)
             }
+        } else {
+            _extension.value = null
         }
 
-        loadMore(isRefresh = true)
+        viewModelScope.launch {
+            loadKinds(incomingSourceUrl, incomingExploreUrl)
+        }
     }
 
-    private suspend fun loadKinds(sourceUrl: String) {
-        _kindState.update { it.copy(kinds = repository.getSourceExploreKinds(sourceUrl)) }
+    private suspend fun loadKinds(sourceUrl: String, incomingExploreUrl: String?) {
+        if (sourceUrl.startsWith("ext_")) {
+            val homeKinds = repository.getHomeKinds(sourceUrl)
+            val genreKinds = repository.getGenreKinds(sourceUrl)
+            val kinds = homeKinds + genreKinds
+            _kindState.update {
+                it.copy(
+                    kinds = kinds,
+                    homeKinds = homeKinds,
+                    genreKinds = genreKinds
+                )
+            }
+            if (incomingExploreUrl != null) {
+                val matchedKind = kinds.find { 
+                    it.url == incomingExploreUrl || 
+                    (it.url?.contains("||") == true && it.url.substringAfter("||") == incomingExploreUrl) ||
+                    (incomingExploreUrl.contains("||") == true && it.url == incomingExploreUrl.substringAfter("||"))
+                }
+                if (matchedKind != null) {
+                    _kindState.update { it.copy(selectedKindTitle = matchedKind.title) }
+                }
+                exploreUrl = incomingExploreUrl
+                loadMore(isRefresh = true)
+            } else if (exploreUrl.isNullOrBlank() && homeKinds.isNotEmpty()) {
+                val firstKind = homeKinds.first()
+                _kindState.update { it.copy(selectedKindTitle = firstKind.title) }
+                exploreUrl = firstKind.url
+                loadMore(isRefresh = true)
+            }
+        } else {
+            val kinds = repository.getSourceExploreKinds(sourceUrl)
+            _kindState.update { it.copy(kinds = kinds) }
+            if (incomingExploreUrl != null) {
+                val matchedKind = kinds.find { it.url == incomingExploreUrl }
+                if (matchedKind != null) {
+                    _kindState.update { it.copy(selectedKindTitle = matchedKind.title) }
+                }
+                exploreUrl = incomingExploreUrl
+                loadMore(isRefresh = true)
+            } else if (exploreUrl.isNullOrBlank() && kinds.isNotEmpty()) {
+                val firstKind = kinds.first()
+                _kindState.update { it.copy(selectedKindTitle = firstKind.title) }
+                exploreUrl = firstKind.url
+                loadMore(isRefresh = true)
+            }
+        }
     }
 
     private fun switchKind(kind: ExploreKind) {

@@ -1,12 +1,12 @@
-# 在线朗读规则说明
+# Hướng dẫn Quy tắc Đọc Trực tuyến (HTTP TTS)
 
-* 在线朗读规则为url规则,同书源url
-* js参数
+* Quy tắc đọc trực tuyến sử dụng các quy tắc URL, tương tự như URL của nguồn sách.
+* Các tham số JS:
 ```
-speakText //朗读文本
-speakSpeed //朗读速度,5-50
+speakText //Văn bản cần đọc
+speakSpeed //Tốc độ đọc, từ 5 đến 50
 ```
-* 例:
+* Ví dụ:
 ```
 http://tts.baidu.com/text2audio,{
     "method": "POST",

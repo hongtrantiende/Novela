@@ -1,6 +1,8 @@
 package io.legado.app.ui.main.explore
 
 import android.app.Application
+import android.content.Context
+import io.legado.app.vbookextension.data.entity.ExtensionEntity
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookSourcePart
@@ -9,6 +11,7 @@ import io.legado.app.data.repository.ExploreRepository
 import io.legado.app.domain.usecase.ExploreKindUiUseCase
 import io.legado.app.help.source.clearExploreKindsCache
 import io.legado.app.help.source.exploreKinds
+import io.legado.app.vbookextension.data.dao.ExtensionDao
 import io.legado.app.help.source.getExploreInfoMap
 import io.legado.app.ui.widget.components.explore.calculateExploreKindRows
 import io.legado.app.ui.widget.components.list.ListUiState
@@ -36,7 +39,8 @@ import kotlinx.coroutines.launch
 class ExploreViewModel(
     application: Application,
     private val exploreRepository: ExploreRepository,
-    private val exploreKindUseCase: ExploreKindUiUseCase
+    private val exploreKindUseCase: ExploreKindUiUseCase,
+    private val extensionDao: ExtensionDao,
 ) : BaseViewModel(application) {
 
     private val _uiState = MutableStateFlow(ExploreUiState())
@@ -80,6 +84,11 @@ class ExploreViewModel(
         }
     }
 
+    fun setExploreTab(tabIndex: Int) {
+        _uiState.update { it.copy(exploreTab = tabIndex, expandedId = null) }
+        observeExplore()
+    }
+
     private fun observeExplore() {
         exploreJob?.cancel()
         exploreJob = viewModelScope.launch {
@@ -87,11 +96,40 @@ class ExploreViewModel(
             val query = state.searchKey
             val selectedGroup = state.selectedGroup
 
-            exploreRepository.getExploreSources(query, selectedGroup)
-                .flowOn(IO)
-                .collectLatest { items ->
-                    _uiState.update { it.copy(items = items.toImmutableList()) }
-                }
+            if (state.exploreTab == 1) {
+                extensionDao.getInstalledExtensions()
+                    .flowOn(IO)
+                    .collectLatest { exts ->
+                        val prefs = getApplication<Application>().getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+                        val sortedExts = exts.sortedWith(compareByDescending<ExtensionEntity> {
+                            prefs.getBoolean("ext_pinned_${it.id}", false)
+                        }.thenBy { it.name })
+                        val mappedItems = sortedExts.filter { it.isEnabled }.map { ext ->
+                            BookSourcePart(
+                                bookSourceUrl = "ext_${ext.id}",
+                                bookSourceName = ext.name,
+                                bookSourceGroup = ext.iconPath,
+                                customOrder = 0,
+                                enabled = ext.isEnabled,
+                                enabledExplore = ext.isEnabled,
+                                hasLoginUrl = false,
+                                lastUpdateTime = 0,
+                                respondTime = 0,
+                                weight = 0,
+                                hasExploreUrl = true
+                            )
+                        }.filter {
+                            query.isBlank() || it.bookSourceName.contains(query, ignoreCase = true)
+                        }
+                        _uiState.update { it.copy(items = mappedItems.toImmutableList()) }
+                    }
+            } else {
+                exploreRepository.getExploreSources(query, selectedGroup)
+                    .flowOn(IO)
+                    .collectLatest { items ->
+                        _uiState.update { it.copy(items = items.toImmutableList()) }
+                    }
+            }
         }
     }
 
@@ -117,7 +155,11 @@ class ExploreViewModel(
         kindsJob?.cancel()
         kindsJob = viewModelScope.launch(IO) {
             try {
-                val kinds = source.exploreKinds()
+                val kinds = if (source.bookSourceUrl.startsWith("ext_")) {
+                    exploreRepository.getSourceExploreKinds(source.bookSourceUrl)
+                } else {
+                    source.exploreKinds()
+                }
                 exploreKindUseCase.warmUp(source.bookSourceUrl)
                 val infoMap = getExploreInfoMap(source.bookSourceUrl)
                 val displayNames = kinds.associate { kind ->
@@ -152,7 +194,9 @@ class ExploreViewModel(
 
     fun refreshExploreKinds(source: BookSourcePart) {
         viewModelScope.launch(IO) {
-            source.clearExploreKindsCache()
+            if (!source.bookSourceUrl.startsWith("ext_")) {
+                source.clearExploreKindsCache()
+            }
             if (_uiState.value.expandedId == source.bookSourceUrl) {
                 loadExploreKinds(source)
             }
@@ -204,7 +248,8 @@ class ExploreViewModel(
         val exploreKinds: ImmutableList<ExploreKind> = persistentListOf(),
         val kindDisplayNames: ImmutableMap<String, String> = persistentMapOf(),
         val kindValues: ImmutableMap<String, String> = persistentMapOf(),
-        val loadingKinds: Boolean = false
+        val loadingKinds: Boolean = false,
+        val exploreTab: Int = 0,
     ) : ListUiState<BookSourcePart>
 
     fun buildExploreListItems(state: ExploreUiState): ImmutableList<ExploreListItem> {

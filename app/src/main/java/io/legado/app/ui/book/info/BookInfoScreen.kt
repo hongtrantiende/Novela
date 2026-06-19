@@ -62,6 +62,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import androidx.compose.material.icons.filled.Language
+import io.legado.app.ui.browser.WebViewActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.ImageLoader
 import io.legado.app.R
@@ -232,6 +237,10 @@ private fun BookInfoScreenContent(
                             ) {
                                 BookInfoActions(
                                     inBookshelf = state.inBookshelf,
+                                    showSource = book.origin.startsWith("ext_").not(),
+                                    bookUrl = book.bookUrl,
+                                    bookName = book.name,
+                                    bookOrigin = book.origin,
                                     onShelfClick = { onIntent(BookInfoIntent.ShelfClick) },
                                     onTocClick = { onIntent(BookInfoIntent.TocClick) },
                                     onGroupClick = { onIntent(BookInfoIntent.GroupClick) },
@@ -779,6 +788,10 @@ private fun BookInfoHeader(
 @Composable
 private fun BookInfoActions(
     inBookshelf: Boolean,
+    showSource: Boolean = true,
+    bookUrl: String = "",
+    bookName: String = "",
+    bookOrigin: String = "",
     onShelfClick: () -> Unit,
     onTocClick: () -> Unit,
     onGroupClick: () -> Unit,
@@ -841,12 +854,36 @@ private fun BookInfoActions(
             label = stringResource(R.string.view_toc),
             onClick = onTocClick
         )
-        BookInfoActionCard(
-            modifier = Modifier.weight(1f),
-            icon = Icons.Default.Code,
-            label = stringResource(R.string.book_source),
-            onClick = onSourceClick
-        )
+        if (showSource) {
+            BookInfoActionCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Code,
+                label = stringResource(R.string.book_source),
+                onClick = onSourceClick
+            )
+        } else {
+            val context = LocalContext.current
+            BookInfoActionCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Language,
+                label = "Mở trang web",
+                onClick = {
+                    if (bookUrl.isNotBlank()) {
+                        try {
+                            val intent = Intent(context, WebViewActivity::class.java).apply {
+                                putExtra("url", bookUrl)
+                                putExtra("title", bookName)
+                                putExtra("sourceName", bookName)
+                                putExtra("sourceOrigin", bookOrigin)
+                            }
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                    }
+                }
+            )
+        }
         BookInfoActionCard(
             modifier = Modifier.weight(1f),
             icon = Icons.Default.Timeline,
@@ -954,12 +991,54 @@ private fun BookInfoSummary(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        val translatedIntro by io.legado.app.utils.translateAsState(book.getDisplayIntro().orEmpty())
-        AnimatedTextLine(
-            text = translatedIntro.ifBlank { stringResource(R.string.intro_show_null) },
-            style = LegadoTheme.typography.bodyMedium,
+        Spacer(modifier = Modifier.height(8.dp))
+        AppText(
+            text = stringResource(R.string.book_intro),
+            style = LegadoTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = LegadoTheme.colorScheme.onSurface
         )
+
+        val translatedIntro by io.legado.app.utils.translateAsState(book.getDisplayIntro().orEmpty())
+        val introText = translatedIntro.ifBlank { stringResource(R.string.intro_show_null) }
+        var isIntroExpanded by remember { mutableStateOf(false) }
+
+        GlassCard(
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                AppText(
+                    text = introText,
+                    style = LegadoTheme.typography.bodyMedium,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    maxLines = if (isIntroExpanded) Int.MAX_VALUE else 4,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    lineHeight = 22.sp
+                )
+
+                if (introText.length > 150) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isIntroExpanded = !isIntroExpanded },
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        AppText(
+                            text = if (isIntroExpanded) "Thu gọn" else "Xem thêm",
+                            style = LegadoTheme.typography.labelMedium,
+                            color = LegadoTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 @Composable

@@ -44,7 +44,7 @@ fun SummarySection(
             val dailyTime = dailyDetails.sumOf { it.readTime }
 
             ReadingSummaryCard(
-                title = selectedDate.format(DateTimeFormatter.ofPattern("M月d日阅读概览")),
+                title = selectedDate.format(DateTimeFormatter.ofPattern("'Tổng quan đọc sách ngày' d 'tháng' M")),
                 bookCount = distinctBooks.size,
                 totalTimeMillis = dailyTime,
                 bookNamesForCover = distinctBooks.take(3),
@@ -58,7 +58,7 @@ fun SummarySection(
 
         if (allBooksCount > 0) {
             ReadingSummaryCard(
-                title = "累计阅读成就",
+                title = "Thành tích đọc tích lũy",
                 bookCount = allBooksCount,
                 totalTimeMillis = totalTime,
                 bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
@@ -92,7 +92,7 @@ fun ReadingSummaryCard(
                 AppText(title, style = LegadoTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(4.dp))
                 AppText(
-                    text = "共阅读 $bookCount 本书，时长 ${ReadRecordFormatter.formatDuration(totalTimeMillis)}",
+                    text = "Đã đọc $bookCount cuốn sách, thời gian ${ReadRecordFormatter.formatDuration(totalTimeMillis)}",
                     style = LegadoTheme.typography.bodyMedium,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
                 )

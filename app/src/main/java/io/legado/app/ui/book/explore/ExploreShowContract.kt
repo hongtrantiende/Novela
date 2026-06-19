@@ -7,12 +7,16 @@ import io.legado.app.domain.model.BookShelfState
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
+import io.legado.app.vbookextension.data.entity.ExtensionEntity
+
 @Stable
 data class ExploreShowUiState(
     val sourceUrl: String? = null,
     val books: ImmutableList<ExploreBookItemUi> = persistentListOf(),
     val kinds: ImmutableList<ExploreKind> = persistentListOf(),
     val selectedKindTitle: String? = null,
+    val homeKinds: ImmutableList<ExploreKind> = persistentListOf(),
+    val genreKinds: ImmutableList<ExploreKind> = persistentListOf(),
     val layoutState: Int = 0,
     val gridCount: Int = 3,
     val isLoading: Boolean = false,
@@ -20,6 +24,7 @@ data class ExploreShowUiState(
     val isEnd: Boolean = false,
     val errorMsg: String? = null,
     val sheet: ExploreShowSheet = ExploreShowSheet.None,
+    val extension: ExtensionEntity? = null,
 )
 
 @Stable

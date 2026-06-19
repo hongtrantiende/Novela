@@ -17,8 +17,15 @@ class GetChapterContentUseCase(
      * Get TOC for a book. If tocUrl is empty, fetches book info first.
      */
     suspend fun getToc(book: Book): Pair<List<BookChapter>, BookSource> {
-        val source = bookSourceDao.getBookSource(book.origin)
-            ?: throw NoStackTraceException("书源不存在")
+        val source = if (book.origin.startsWith("ext_")) {
+            BookSource().apply {
+                bookSourceUrl = book.origin
+                bookSourceName = book.originName ?: ""
+            }
+        } else {
+            bookSourceDao.getBookSource(book.origin)
+                ?: throw NoStackTraceException("书源不存在")
+        }
         if (book.tocUrl.isEmpty()) {
             WebBook.getBookInfoAwait(source, book)
         }
@@ -34,8 +41,15 @@ class GetChapterContentUseCase(
         chapter: BookChapter,
         nextChapterUrl: String?,
     ): String {
-        val bookSource = bookSourceDao.getBookSource(book.origin)
-            ?: throw NoStackTraceException("书源不存在")
+        val bookSource = if (book.origin.startsWith("ext_")) {
+            BookSource().apply {
+                bookSourceUrl = book.origin
+                bookSourceName = book.originName ?: ""
+            }
+        } else {
+            bookSourceDao.getBookSource(book.origin)
+                ?: throw NoStackTraceException("书源不存在")
+        }
         return WebBook.getContentAwait(bookSource, book, chapter, nextChapterUrl, false)
     }
 

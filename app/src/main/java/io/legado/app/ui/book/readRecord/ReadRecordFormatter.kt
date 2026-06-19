@@ -5,9 +5,9 @@ import io.legado.app.utils.formatReadDuration
 object ReadRecordFormatter {
     fun formatWords(words: Long): String {
         return if (words >= 10000) {
-            String.format("%.1f万字", words / 10000f)
+            String.format("%.1f vạn chữ", words / 10000f)
         } else {
-            "${words}字"
+            "${words} chữ"
         }
     }
 

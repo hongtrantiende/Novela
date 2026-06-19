@@ -86,6 +86,7 @@ class BookInfoViewModel(
     private val clearBookCacheUseCase: ClearBookCacheUseCase,
     private val bookGroupRepository: BookGroupRepository,
     private val imageLoader: ImageLoader,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository,
 ) : BaseViewModel(application) {
 
     val allGroups = bookGroupRepository.flowAll()
@@ -139,12 +140,22 @@ class BookInfoViewModel(
     ) {
         if (currentBook?.bookUrl == bookUrl) return
         _uiState.value = BookInfoUiState() // 立即重置 UI 状态
-        currentBook = if (!name.isNullOrBlank() && !author.isNullOrBlank()) {
+        currentBook = if (!name.isNullOrBlank() && (!author.isNullOrBlank() || origin?.startsWith("ext_") == true)) {
             Book(
                 bookUrl = bookUrl,
                 name = name,
-                author = author,
+                author = author ?: "",
                 origin = origin ?: BookType.localTag,
+                coverUrl = coverPath
+            ).apply {
+                addType(BookType.notShelf)
+            }
+        } else if (origin?.startsWith("ext_") == true) {
+            Book(
+                bookUrl = bookUrl,
+                name = name ?: "",
+                author = author ?: "",
+                origin = origin,
                 coverUrl = coverPath
             ).apply {
                 addType(BookType.notShelf)
@@ -701,6 +712,10 @@ class BookInfoViewModel(
         scope: CoroutineScope = viewModelScope,
     ) {
         syncUiState(isTocLoading = true)
+        if (book.origin.startsWith("ext_")) {
+            loadExtensionBookInfo(book, scope)
+            return
+        }
         if (book.isLocal) {
             LocalBook.upBookInfo(book)
             currentBook = book
@@ -739,6 +754,68 @@ class BookInfoViewModel(
                     context.toastOnUi(R.string.error_get_book_info)
                     syncUiState(isTocLoading = false)
                 }
+        }
+    }
+
+    private fun loadExtensionBookInfo(book: Book, scope: CoroutineScope) {
+        syncUiState(isTocLoading = true)
+        execute(scope) {
+            extensionRepository.getBookDetail(book.origin, book.bookUrl)
+        }.onSuccess { loadedBook ->
+            if (loadedBook != null) {
+                val dbBook = appDb.bookDao.getBook(loadedBook.name, loadedBook.author)
+                if (!inBookshelf && dbBook != null && !dbBook.isNotShelf && dbBook.origin == loadedBook.origin) {
+                    dbBook.updateTo(loadedBook)
+                    inBookshelf = true
+                }
+                currentBook = loadedBook
+                if (inBookshelf) {
+                    appDb.bookDao.update(loadedBook)
+                }
+                syncUiState(isTocLoading = true)
+                refreshMeta(loadedBook)
+                loadExtensionChapterList(loadedBook, scope)
+            } else {
+                syncUiState(isTocLoading = false)
+                context.toastOnUi("Không tải được chi tiết sách từ extension")
+            }
+        }.onError {
+            AppLog.put("获取扩展书籍信息失败\n${it.localizedMessage}", it)
+            context.toastOnUi("Lỗi tải chi tiết sách từ extension")
+            syncUiState(isTocLoading = false)
+        }
+    }
+
+    private fun loadExtensionChapterList(book: Book, scope: CoroutineScope) {
+        syncUiState(isTocLoading = true)
+        val oldBook = book.copy()
+        execute(scope) {
+            extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+        }.onSuccess { chapters ->
+            book.totalChapterNum = chapters.size
+            if (chapters.isNotEmpty()) {
+                book.latestChapterTitle = chapters.last().title
+                if (book.durChapterTitle.isNullOrBlank()) {
+                    book.durChapterTitle = chapters.first().title
+                }
+            }
+            if (inBookshelf) {
+                appDb.bookDao.replace(oldBook, book)
+                if (oldBook.bookUrl != book.bookUrl) {
+                    BookHelp.updateCacheFolder(oldBook, book)
+                }
+                appDb.bookChapterDao.delByBook(oldBook.bookUrl)
+                appDb.bookChapterDao.insert(*chapters.toTypedArray())
+                ReadBook.onChapterListUpdated(book)
+            }
+            currentBook = book
+            currentChapterList = chapters
+            syncUiState(isTocLoading = false)
+        }.onError {
+            currentChapterList = emptyList()
+            syncUiState(isTocLoading = false)
+            AppLog.put("获取扩展目录失败\n${it.localizedMessage}", it)
+            context.toastOnUi("Lỗi tải danh sách chương từ extension")
         }
     }
     fun changeTo(
@@ -847,6 +924,10 @@ class BookInfoViewModel(
         scope: CoroutineScope = viewModelScope,
     ) {
         syncUiState(isTocLoading = true)
+        if (book.origin.startsWith("ext_")) {
+            loadExtensionChapterList(book, scope)
+            return
+        }
         if (book.isLocal) {
             execute(scope) {
                 LocalBook.getChapterList(book).also {

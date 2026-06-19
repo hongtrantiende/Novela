@@ -162,7 +162,7 @@ fun SearchBookListItem(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            val intro = book.intro?.replace("\\s+".toRegex(), "") ?: ""
+            val intro = book.intro?.replace("\\s+".toRegex(), " ")?.trim() ?: ""
             if (intro.isNotEmpty()) {
                 val translatedIntro by translateAsState(intro, isMeta = false)
                 AppText(

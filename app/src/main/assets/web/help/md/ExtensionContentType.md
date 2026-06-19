@@ -1,141 +1,141 @@
 ```java
 public enum MimeTypeEnum {
 
-    AAC("acc", "AAC音频", "audio/aac"),
+    AAC("acc", "Âm thanh AAC", "audio/aac"),
 
-    ABW("abw", "AbiWord文件", "application/x-abiword"),
+    ABW("abw", "Tài liệu AbiWord", "application/x-abiword"),
 
-    ARC("arc", "存档文件", "application/x-freearc"),
+    ARC("arc", "Tệp lưu trữ", "application/x-freearc"),
 
-    AVI("avi", "音频视频交错格式", "video/x-msvideo"),
+    AVI("avi", "Định dạng xen kẽ âm thanh video", "video/x-msvideo"),
 
-    AZW("azw", "亚马逊Kindle电子书格式", "application/vnd.amazon.ebook"),
+    AZW("azw", "Định dạng sách điện tử Amazon Kindle", "application/vnd.amazon.ebook"),
 
-    BIN("bin", "任何类型的二进制数据", "application/octet-stream"),
+    BIN("bin", "Bất kỳ loại dữ liệu nhị phân nào", "application/octet-stream"),
 
-    BMP("bmp", "Windows OS / 2位图图形", "image/bmp"),
+    BMP("bmp", "Đồ họa bitmap Windows OS/2", "image/bmp"),
 
-    BZ("bz", "BZip存档", "application/x-bzip"),
+    BZ("bz", "Tệp lưu trữ BZip", "application/x-bzip"),
 
-    BZ2("bz2", "BZip2存档", "application/x-bzip2"),
+    BZ2("bz2", "Tệp lưu trữ BZip2", "application/x-bzip2"),
 
-    CSH("csh", "C-Shell脚本", "application/x-csh"),
+    CSH("csh", "Kịch bản C-Shell", "application/x-csh"),
 
-    CSS("css", "级联样式表（CSS）", "text/css"),
+    CSS("css", "Bảng kiểu xếp chồng (CSS)", "text/css"),
 
-    CSV("csv", "逗号分隔值（CSV）", "text/csv"),
+    CSV("csv", "Các giá trị phân tách bằng dấu phẩy (CSV)", "text/csv"),
 
-    DOC("doc", "微软Word文件", "application/msword"),
+    DOC("doc", "Tài liệu Microsoft Word", "application/msword"),
 
-    DOCX("docx", "Microsoft Word（OpenXML）", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+    DOCX("docx", "Microsoft Word (OpenXML)", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
 
-    EOT("eot", "MS Embedded OpenType字体", "application/vnd.ms-fontobject"),
+    EOT("eot", "Phông chữ MS Embedded OpenType", "application/vnd.ms-fontobject"),
 
-    EPUB("epub", "电子出版物（EPUB）", "application/epub+zip"),
+    EPUB("epub", "Ấn phẩm điện tử (EPUB)", "application/epub+zip"),
 
-    GZ("gz", "GZip压缩档案", "application/gzip"),
+    GZ("gz", "Tệp nén GZip", "application/gzip"),
 
-    GIF("gif", "图形交换格式（GIF）", "image/gif"),
+    GIF("gif", "Định dạng trao đổi hình ảnh (GIF)", "image/gif"),
 
-    HTM("htm", "超文本标记语言（HTML）", "text/html"),
+    HTM("htm", "Ngôn ngữ đánh dấu siêu văn bản (HTML)", "text/html"),
 
-    HTML("html", "超文本标记语言（HTML）", "text/html"),
+    HTML("html", "Ngôn ngữ đánh dấu siêu văn bản (HTML)", "text/html"),
 
-    ICO("ico", "图标格式", "image/vnd.microsoft.icon"),
+    ICO("ico", "Định dạng biểu tượng", "image/vnd.microsoft.icon"),
 
-    ICS("ics", "iCalendar格式", "text/calendar"),
+    ICS("ics", "Định dạng iCalendar", "text/calendar"),
 
-    JAR("jar", "Java存档", "application/java-archive"),
+    JAR("jar", "Tệp lưu trữ Java", "application/java-archive"),
 
-    JPEG("jpeg", "JPEG图像", "image/jpeg"),
+    JPEG("jpeg", "Hình ảnh JPEG", "image/jpeg"),
 
-    JPG("jpg", "JPEG图像", "image/jpeg"),
+    JPG("jpg", "Hình ảnh JPEG", "image/jpeg"),
 
     JS("js", "JavaScript", "text/javascript"),
 
-    JSON("json", "JSON格式", "application/json"),
+    JSON("json", "Định dạng JSON", "application/json"),
 
-    JSONLD("jsonld", "JSON-LD格式", "application/ld+json"),
+    JSONLD("jsonld", "Định dạng JSON-LD", "application/ld+json"),
 
-    MID("mid", "乐器数字接口（MIDI）", "audio/midi"),
+    MID("mid", "Giao diện kỹ thuật số nhạc cụ (MIDI)", "audio/midi"),
 
-    MIDI("midi", "乐器数字接口（MIDI）", "audio/midi"),
+    MIDI("midi", "Giao diện kỹ thuật số nhạc cụ (MIDI)", "audio/midi"),
 
-    MJS("mjs", "JavaScript模块", "text/javascript"),
+    MJS("mjs", "Mô-đun JavaScript", "text/javascript"),
 
-    MP3("mp3", "MP3音频", "audio/mpeg"),
+    MP3("mp3", "Âm thanh MP3", "audio/mpeg"),
 
-    MPEG("mpeg", "MPEG视频", "video/mpeg"),
+    MPEG("mpeg", "Video MPEG", "video/mpeg"),
 
-    MPKG("mpkg", "苹果安装程序包", "application/vnd.apple.installer+xml"),
+    MPKG("mpkg", "Gói cài đặt Apple", "application/vnd.apple.installer+xml"),
 
-    ODP("odp", "OpenDocument演示文稿文档", "application/vnd.oasis.opendocument.presentation"),
+    ODP("odp", "Tài liệu trình bày OpenDocument", "application/vnd.oasis.opendocument.presentation"),
 
-    ODS("ods", "OpenDocument电子表格文档", "application/vnd.oasis.opendocument.spreadsheet"),
+    ODS("ods", "Tài liệu bảng tính OpenDocument", "application/vnd.oasis.opendocument.spreadsheet"),
 
-    ODT("odt", "OpenDocument文字文件", "application/vnd.oasis.opendocument.text"),
+    ODT("odt", "Tài liệu văn bản OpenDocument", "application/vnd.oasis.opendocument.text"),
 
-    OGA("oga", "OGG音讯", "audio/ogg"),
+    OGA("oga", "Âm thanh OGG", "audio/ogg"),
 
-    OGV("ogv", "OGG视频", "video/ogg"),
+    OGV("ogv", "Video OGG", "video/ogg"),
 
     OGX("ogx", "OGG", "application/ogg"),
 
-    OPUS("opus", "OPUS音频", "audio/opus"),
+    OPUS("opus", "Âm thanh OPUS", "audio/opus"),
 
-    OTF("otf", "otf字体", "font/otf"),
+    OTF("otf", "Phông chữ OTF", "font/otf"),
 
-    PNG("png", "便携式网络图形", "image/png"),
+    PNG("png", "Đồ họa mạng di động", "image/png"),
 
-    PDF("pdf", "Adobe 可移植文档格式（PDF）", "application/pdf"),
+    PDF("pdf", "Định dạng tài liệu di động Adobe (PDF)", "application/pdf"),
 
     PHP("php", "php", "application/x-httpd-php"),
 
     PPT("ppt", "Microsoft PowerPoint", "application/vnd.ms-powerpoint"),
 
-    PPTX("pptx", "Microsoft PowerPoint（OpenXML）", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+    PPTX("pptx", "Microsoft PowerPoint (OpenXML)", "application/vnd.openxmlformats-officedocument.presentationml.presentation"),
 
-    RAR("rar", "RAR档案", "application/vnd.rar"),
+    RAR("rar", "Tệp lưu trữ RAR", "application/vnd.rar"),
 
-    RTF("rtf", "富文本格式", "application/rtf"),
+    RTF("rtf", "Định dạng văn bản dạng RTF", "application/rtf"),
 
-    SH("sh", "Bourne Shell脚本", "application/x-sh"),
+    SH("sh", "Kịch bản Bourne Shell", "application/x-sh"),
 
-    SVG("svg", "可缩放矢量图形（SVG）", "image/svg+xml"),
+    SVG("svg", "Đồ họa vectơ có thể thu phóng (SVG)", "image/svg+xml"),
 
-    SWF("swf", "小型Web格式（SWF）或Adobe Flash文档", "application/x-shockwave-flash"),
+    SWF("swf", "Định dạng Web nhỏ (SWF) hoặc tài liệu Adobe Flash", "application/x-shockwave-flash"),
 
-    TAR("tar", "磁带存档（TAR）", "application/x-tar"),
+    TAR("tar", "Tệp lưu trữ băng từ (TAR)", "application/x-tar"),
 
-    TIF("tif", "标记图像文件格式（TIFF）", "image/tiff"),
+    TIF("tif", "Định dạng tệp hình ảnh được gắn thẻ (TIFF)", "image/tiff"),
 
-    TIFF("tiff", "标记图像文件格式（TIFF）", "image/tiff"),
+    TIFF("tiff", "Định dạng tệp hình ảnh được gắn thẻ (TIFF)", "image/tiff"),
 
-    TS("ts", "MPEG传输流", "video/mp2t"),
+    TS("ts", "MPEG truyền tải dòng", "video/mp2t"),
 
-    TTF("ttf", "ttf字体", "font/ttf"),
+    TTF("ttf", "Phông chữ TTF", "font/ttf"),
 
-    TXT("txt", "文本（通常为ASCII或ISO 8859- n", "text/plain"),
+    TXT("txt", "Văn bản (thường là ASCII hoặc ISO 8859-n)", "text/plain"),
 
-    VSD("vsd", "微软Visio", "application/vnd.visio"),
+    VSD("vsd", "Microsoft Visio", "application/vnd.visio"),
 
-    WAV("wav", "波形音频格式", "audio/wav"),
+    WAV("wav", "Định dạng âm thanh sóng (WAV)", "audio/wav"),
 
-    WEBA("weba", "WEBM音频", "audio/webm"),
+    WEBA("weba", "Âm thanh WEBM", "audio/webm"),
 
-    WEBM("webm", "WEBM视频", "video/webm"),
+    WEBM("webm", "Video WEBM", "video/webm"),
 
-    WEBP("webp", "WEBP图像", "image/webp"),
+    WEBP("webp", "Hình ảnh WEBP", "image/webp"),
 
-    WOFF("woff", "Web开放字体格式（WOFF）", "font/woff"),
+    WOFF("woff", "Định dạng phông chữ mở Web (WOFF)", "font/woff"),
 
-    WOFF2("woff2", "Web开放字体格式（WOFF）", "font/woff2"),
+    WOFF2("woff2", "Định dạng phông chữ mở Web (WOFF)", "font/woff2"),
 
     XHTML("xhtml", "XHTML", "application/xhtml+xml"),
 
-    XLS("xls", "微软Excel", "application/vnd.ms-excel"),
+    XLS("xls", "Microsoft Excel", "application/vnd.ms-excel"),
 
-    XLSX("xlsx", "微软Excel（OpenXML）", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    XLSX("xlsx", "Microsoft Excel (OpenXML)", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
 
     XML("xml", "XML", "application/xml"),
 
@@ -151,6 +151,6 @@ public enum MimeTypeEnum {
 
     MIME_3G2_WITHOUT_VIDEO("3g2", "3GPP2 audio/video container  doesn't contain video", "audio/3gpp2"),
 
-    MIME_7Z("7z", "7-zip存档", "application/x-7z-compressed")
+    MIME_7Z("7z", "Tệp lưu trữ 7-zip", "application/x-7z-compressed")
 }
 ```

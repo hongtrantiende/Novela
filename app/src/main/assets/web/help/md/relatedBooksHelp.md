@@ -1,73 +1,73 @@
-# 关联书籍 (Related Books) 配置规范
+# Quy chuẩn cấu hình Sách liên quan (Related Books)
 
-书源的 `ruleBookInfo.relatedBooks` 字段允许开发者声明一组关联书籍模块，用于在书籍详情页底部展示「关联书籍」横滑轮播。支持配置多个模块，每个模块有独立的标题和数据来源，例如「同作者作品」、「读这本书的人还在读」等。
-
----
-
-## 1. 字段位置
-
-在书源编辑器的 **详情页** 选项卡中，新增了 `relatedBooks` 字段。
-
-```
-详情页 → relatedBooks
-```
-
-对应 JSON 路径：`ruleBookInfo.relatedBooks`
+Trường `ruleBookInfo.relatedBooks` của nguồn sách cho phép nhà phát triển khai báo một nhóm các mô-đun sách liên quan, dùng để hiển thị thanh trượt ngang "Sách liên quan" ở dưới cùng của trang chi tiết sách. Hỗ trợ cấu hình nhiều mô-đun, mỗi mô-đun có tiêu đề và nguồn dữ liệu độc lập, ví dụ như "Tác phẩm cùng tác giả", "Người đọc sách này cũng đọc", v.v.
 
 ---
 
-## 2. 数据结构
+## 1. Vị trí trường dữ liệu
 
-`relatedBooks` 是一个包含多个模块定义对象的 JSON 数组。
+Trong tab **Trang chi tiết** của trình chỉnh sửa nguồn sách, trường `relatedBooks` đã được thêm mới.
 
-### 模块字段
+```
+Trang chi tiết → relatedBooks
+```
 
-| 字段      | 类型       | 必须 | 说明                                     |
+Đường dẫn JSON tương ứng: `ruleBookInfo.relatedBooks`
+
+---
+
+## 2. Cấu trúc dữ liệu
+
+`relatedBooks` là một mảng JSON chứa nhiều đối tượng định nghĩa mô-đun.
+
+### Các trường dữ liệu của mô-đun
+
+| Trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
 |:--------|:---------|:---|:---------------------------------------|
-| **key** | `String` | 否  | 模块唯一标识。建议使用 `[a-z0-9_]` 字符。若未提供则使用 title。 |
-| **title** | `String` | 是  | 模块标题，显示在轮播上方。如「同作者作品」。                  |
-| **url** | `String` | 是  | 数据接口 URL。支持模板变量替换。                      |
+| **key** | `String` | Không  | Mã định danh duy nhất của mô-đun. Khuyên dùng các ký tự `[a-z0-9_]`. Nếu không cung cấp sẽ sử dụng `title`. |
+| **title** | `String` | Có  | Tiêu đề mô-đun, hiển thị phía trên thanh trượt. Ví dụ: "Tác phẩm cùng tác giả". |
+| **url** | `String` | Có  | URL giao diện dữ liệu. Hỗ trợ thay thế biến mẫu. |
 
 ---
 
-## 3. 工作原理
+## 3. Nguyên lý hoạt động
 
-1. 当用户打开某本书的详情页时，如果该书源配置了 `relatedBooks`，系统会解析 JSON 数组。
-2. 对每个模块，系统将 URL 中的模板变量替换为当前书籍的实际值，然后发起请求。
-3. 返回的数据使用书源的 **发现规则**（`ruleExplore`）进行解析，获取书籍列表。
-4. 解析后的书籍以横滑轮播的形式展示在详情页的操作按钮和书籍简介之间。
-5. 当前查看的书籍会自动从结果中过滤掉，避免重复显示。
-6. 如果某个模块请求失败或返回空列表，该模块会被静默跳过，不影响其他模块和详情页功能。
+1. Khi người dùng mở trang chi tiết của một cuốn sách bất kỳ, nếu nguồn sách đó cấu hình `relatedBooks`, hệ thống sẽ phân tích cú pháp mảng JSON.
+2. Đối với mỗi mô-đun, hệ thống sẽ thay thế các biến mẫu trong URL bằng giá trị thực tế của cuốn sách hiện tại, sau đó gửi yêu cầu.
+3. Dữ liệu trả về sẽ được phân tích bằng **Quy tắc khám phá** (`ruleExplore`) của nguồn sách để lấy danh sách sách.
+4. Sách sau khi phân tích sẽ được hiển thị dưới dạng thanh trượt ngang giữa các nút chức năng và phần giới thiệu sách trên trang chi tiết.
+5. Cuốn sách hiện đang xem sẽ tự động được lọc khỏi kết quả để tránh hiển thị trùng lặp.
+6. Nếu một mô-đun bất kỳ yêu cầu thất bại hoặc trả về danh sách trống, mô-đun đó sẽ bị bỏ qua một cách lặng lẽ, không ảnh hưởng đến các mô-đun khác và các chức năng của trang chi tiết.
 
-> **注意**：关联书籍的解析复用的是「发现」规则（`ruleExplore`），而非「详情页」规则（`ruleBookInfo`）。请确保书源的发现规则已正确配置。
+> **Lưu ý**: Việc phân tích sách liên quan tái sử dụng quy tắc "Khám phá" (`ruleExplore`), chứ không phải quy tắc "Trang chi tiết" (`ruleBookInfo`). Vui lòng đảm bảo quy tắc khám phá của nguồn sách đã được cấu hình chính xác.
 
 ---
 
-## 4. URL 语法
+## 4. Cú pháp URL
 
-URL 支持与 `exploreUrl` 相同的 JS 语法，包括 `@js:` 前缀、`<js></js>` 标签和 `{{...}}` 内嵌表达式。
+URL hỗ trợ cùng cú pháp JS như `exploreUrl`, bao gồm tiền tố `@js:`, thẻ `<js></js>` và biểu thức nhúng `{{...}}`.
 
-### JS 上下文中的可用对象
+### Các đối tượng khả dụng trong ngữ cảnh JS
 
-| 对象       | 说明                   | 示例属性                                                                |
+| Đối tượng | Mô tả | Thuộc tính ví dụ |
 |:---------|:---------------------|:--------------------------------------------------------------------|
-| `book`   | 当前书籍对象               | `book.name`, `book.author`, `book.kind`, `book.bookUrl`, `book.tocUrl`, `book.origin` |
-| `source` | 当前书源对象               | `source.bookSourceUrl`, `source.getVariable()` 等                      |
-| `cookie` | Cookie 存储             | `cookie.getKey(domain, key)`                                        |
-| `page`   | 页码（固定为 1）            | `page`                                                              |
-| `java`   | JS 扩展工具（`AnalyzeUrl`） | `java.ajax()`, `java.log()` 等                                       |
+| `book`   | Đối tượng sách hiện tại | `book.name`, `book.author`, `book.kind`, `book.bookUrl`, `book.tocUrl`, `book.origin` |
+| `source` | Đối tượng nguồn sách hiện tại | `source.bookSourceUrl`, `source.getVariable()` v.v.                      |
+| `cookie` | Lưu trữ Cookie | `cookie.getKey(domain, key)`                                        |
+| `page`   | Số trang (cố định là 1) | `page`                                                              |
+| `java`   | Công cụ mở rộng JS (`AnalyzeUrl`) | `java.ajax()`, `java.log()` v.v.                                       |
 
-### 简单模板语法
+### Cú pháp mẫu đơn giản
 
-对于简单的 URL，可以直接使用 `{{book.属性名}}` 语法，值会自动进行 URL 编码：
+Đối với URL đơn giản, bạn có thể sử dụng trực tiếp cú pháp `{{book.tên_thuộc_tính}}`, giá trị sẽ tự động được mã hóa URL:
 
 ```
 https://example.com/search?keyword={{book.author}}&name={{book.name}}
 ```
 
-### `@js:` 表达式
+### Biểu thức `@js:`
 
-对于需要逻辑处理的 URL，使用 `@js:` 前缀：
+Đối với URL yêu cầu xử lý logic, hãy sử dụng tiền tố `@js:`:
 
 ```
 @js:"https://example.com/api/related?author=" + java.net.URLEncoder.encode(book.author, "UTF-8")
@@ -75,109 +75,109 @@ https://example.com/search?keyword={{book.author}}&name={{book.name}}
 
 ---
 
-## 5. 完整 JSON 示例
+## 5. Ví dụ JSON đầy đủ
 
 ```json
 [
   {
     "key": "same_author",
-    "title": "同作者作品",
+    "title": "Tác phẩm cùng tác giả",
     "url": "https://example.com/search?keyword={{book.author}}&type=author&page=1"
   },
   {
     "key": "readers_also_read",
-    "title": "读这本书的人还在读",
+    "title": "Người đọc sách này cũng đọc",
     "url": "https://example.com/api/related?book={{book.bookUrl}}&limit=20"
   },
   {
     "key": "same_genre",
-    "title": "同类推荐",
+    "title": "Đề xuất cùng thể loại",
     "url": "https://example.com/category/{{book.kind}}?page=1"
   }
 ]
 ```
 
-以上配置会在详情页底部显示三行轮播：
+Cấu hình trên sẽ hiển thị ba hàng thanh trượt ở cuối trang chi tiết:
 
 ```
 ┌─────────────────────────────────────────────┐
-│ [操作按钮区域]                                  │
+│ [Khu vực nút chức năng]                     │
 ├─────────────────────────────────────────────┤
-│ 同作者作品                                      │
-│ [封面1] [封面2] [封面3] [封面4] →               │
+│ Tác phẩm cùng tác giả                       │
+│ [Ảnh bìa 1] [Ảnh bìa 2] [Ảnh bìa 3] [Ảnh bìa 4] → │
 │                                             │
-│ 读这本书的人还在读                                │
-│ [封面1] [封面2] [封面3] [封面4] →               │
+│ Người đọc sách này cũng đọc                 │
+│ [Ảnh bìa 1] [Ảnh bìa 2] [Ảnh bìa 3] [Ảnh bìa 4] → │
 │                                             │
-│ 同类推荐                                       │
-│ [封面1] [封面2] [封面3] [封面4] →               │
+│ Đề xuất cùng thể loại                       │
+│ [Ảnh bìa 1] [Ảnh bìa 2] [Ảnh bìa 3] [Ảnh bìa 4] → │
 ├─────────────────────────────────────────────┤
-│ [书籍简介区域]                                  │
+│ [Khu vực giới thiệu sách]                   │
 └─────────────────────────────────────────────┘
 ```
 
 ---
 
-## 6. 简化示例
+## 6. Ví dụ đơn giản
 
-如果只需要一行关联书籍，JSON 数组只包含一个元素即可：
+Nếu chỉ cần một hàng sách liên quan, mảng JSON chỉ cần chứa một phần tử:
 
 ```json
 [
   {
-    "title": "同作者作品",
+    "title": "Tác phẩm cùng tác giả",
     "url": "https://example.com/search?keyword={{book.author}}"
   }
 ]
 ```
 
-`key` 字段为可选，未提供时自动使用 `title` 作为标识。
+Trường `key` là tùy chọn, khi không được cung cấp sẽ tự động lấy `title` làm mã định danh.
 
 ---
 
-## 7. URL 示例
+## 7. Ví dụ URL
 
-### 按作者查找相关书籍
+### Tìm sách liên quan theo tác giả
 
 ```
 https://example.com/search?keyword={{book.author}}&type=author
 ```
 
-### 按书籍名称查找同系列
+### Tìm cùng hệ liệt/sê-ri theo tên sách
 
 ```
 https://example.com/search?keyword={{book.name}}&type=related
 ```
 
-### 按分类查找同类书籍
+### Tìm sách cùng loại theo phân loại
 
 ```
 https://example.com/category/{{book.kind}}?page=1
 ```
 
-### 使用 JS 表达式
+### Sử dụng biểu thức JS
 
-与 `exploreUrl` 一样，URL 完整支持 `@js:` 和 `<js>` 表达式。在 JS 上下文中，`book` 对象即当前书籍，可访问 `book.name`、`book.author`、`book.kind`、`book.bookUrl`、`book.tocUrl` 等属性。
+Giống như `exploreUrl`, URL hỗ trợ đầy đủ các biểu thức `@js:` và `<js>`. Trong ngữ cảnh JS, đối tượng `book` đại diện cho cuốn sách hiện tại, bạn có thể truy cập các thuộc tính như `book.name`, `book.author`, `book.kind`, `book.bookUrl`, `book.tocUrl`, v.v.
 
-**简单拼接：**
+**Ghép chuỗi đơn giản:**
 
 ```
 @js:"https://example.com/api/related?author=" + java.net.URLEncoder.encode(book.author, "UTF-8") + "&book_id=" + book.bookUrl.split("/").pop()
 ```
 
-**带条件逻辑：**
+**Kèm logic điều kiện:**
 
 ```
 @js:
 var base = "https://example.com/api/related";
-if (book.kind && book.kind.contains("玄幻")) {
+if (book.kind && book.kind.contains("Huyền Huyễn")) {
   base + "?genre=fantasy&author=" + java.net.URLEncoder.encode(book.author, "UTF-8")
 } else {
   base + "?author=" + java.net.URLEncoder.encode(book.author, "UTF-8")
 }
 ```
 
-**带 Cookie/鉴权的请求：**
+**Yêu cầu kèm Cookie/Xác thực:**
 
 ```
 @js:
@@ -187,38 +187,38 @@ var ck = "sessionid=" + (String(cookie.getKey("example.com", "sessionid")) || ""
 
 ---
 
-## 8. 显示逻辑
+## 8. Logic hiển thị
 
-| 条件                                  | 行为                        |
+| Điều kiện | Hành vi |
 |:------------------------------------|:-------------------------|
-| `relatedBooks` 为空或未配置       | 不显示关联书籍模块               |
-| JSON 格式错误                          | 静默跳过，不影响详情页其他内容        |
-| 某个模块的 URL 请求失败                    | 跳过该模块，其他模块正常显示         |
-| 某个模块返回空列表                         | 跳过该模块，其他模块正常显示         |
-| 所有模块均无结果                          | 不显示关联书籍区域               |
-| 结果中包含当前书籍                         | 自动过滤掉当前书籍               |
-| 本地书籍（无书源）                         | 不显示关联书籍模块               |
-| 切换书源时                              | 清空关联书籍，重新加载新源的数据       |
+| `relatedBooks` trống hoặc không được cấu hình | Không hiển thị mô-đun sách liên quan |
+| Định dạng JSON bị lỗi | Bỏ qua lặng lẽ, không ảnh hưởng đến các nội dung khác của trang chi tiết |
+| Yêu cầu URL của một mô-đun nào đó thất bại | Bỏ qua mô-đun đó, các mô-đun khác hiển thị bình thường |
+| Một mô-đun nào đó trả về danh sách trống | Bỏ qua mô-đun đó, các mô-đun khác hiển thị bình thường |
+| Tất cả các mô-đun đều không có kết quả | Không hiển thị khu vực sách liên quan |
+| Kết quả chứa cuốn sách hiện tại | Tự động lọc bỏ cuốn sách hiện tại |
+| Sách cục bộ (không có nguồn sách) | Không hiển thị mô-đun sách liên quan |
+| Khi chuyển nguồn sách | Xóa sách liên quan cũ, tải lại dữ liệu của nguồn mới |
 
 ---
 
-## 9. 书源编辑器配置
+## 9. Cấu hình trình chỉnh sửa nguồn sách
 
-在书源编辑器的 **详情页** 选项卡中：
+Trong tab **Trang chi tiết** của trình chỉnh sửa nguồn sách:
 
-| 字段                  | 值                                                                 |
+| Trường | Giá trị |
 |:--------------------|:------------------------------------------------------------------|
-| relatedBooks | `[{"title":"同作者作品","url":"https://example.com/search?keyword={{book.author}}"}]` |
+| relatedBooks | `[{"title":"Tác phẩm cùng tác giả","url":"https://example.com/search?keyword={{book.author}}"}]` |
 
 ---
 
-## 10. 最佳实践
+## 10. Thực tiễn tốt nhất
 
-1. **合理设置模块数量**：建议 1-3 个模块，过多的轮播行会影响页面体验。
-2. **使用有意义的标题**：标题应清晰描述推荐来源，如「同作者作品」比「推荐」更具引导性。
-3. **优先使用作者或分类**：按作者查找是最常见的关联方式，能有效推荐同作者的其他作品。
-4. **避免过于宽泛的查询**：如果 URL 返回的结果与当前书籍关联性不强，用户体验会下降。
-5. **确保发现规则兼容**：URL 返回的数据必须能被 `ruleExplore` 正确解析。
-6. **简单场景用模板，复杂场景用 JS**：简单的 `{{book.author}}` 替换直接用模板语法；需要条件判断、字符串拼接、Cookie 处理等复杂逻辑时用 `@js:` 表达式。
-7. **测试边界情况**：测试作者名包含特殊字符（如 `&`、`#`、中文）时 URL 是否正常工作。模板变量会自动进行 URL 编码，但 `@js:` 表达式中需要手动调用 `java.net.URLEncoder.encode()`。
-8. **控制返回数量**：建议服务端限制返回数量（如 10-20 本），过多的轮播内容会影响体验。
+1. **Thiết lập số lượng mô-đun hợp lý**: Khuyến nghị dùng 1-3 mô-đun, quá nhiều hàng thanh trượt sẽ ảnh hưởng đến trải nghiệm trang.
+2. **Sử dụng tiêu đề có ý nghĩa**: Tiêu đề nên mô tả rõ ràng nguồn gốc đề xuất, ví dụ "Tác phẩm cùng tác giả" sẽ có tính định hướng tốt hơn là từ "Đề xuất" chung chung.
+3. **Ưu tiên sử dụng tác giả hoặc phân loại**: Tìm kiếm theo tác giả là cách liên kết phổ biến nhất, giúp đề xuất hiệu quả các tác phẩm khác của cùng tác giả.
+4. **Tránh truy vấn quá rộng**: Nếu kết quả trả về từ URL không có tính liên quan cao với cuốn sách hiện tại, trải nghiệm người dùng sẽ bị giảm sút.
+5. **Đảm bảo tính tương thích của quy tắc khám phá**: Dữ liệu trả về từ URL phải được phân tích cú pháp chính xác bởi `ruleExplore`.
+6. **Cảnh đơn giản dùng bản mẫu, cảnh phức tạp dùng JS**: Thay thế đơn giản như `{{book.author}}` thì dùng trực tiếp cú pháp mẫu; khi cần phán đoán điều kiện, ghép chuỗi, xử lý Cookie hoặc các logic phức tạp khác thì dùng biểu thức `@js:`.
+7. **Kiểm tra các trường hợp biên**: Kiểm tra xem URL có hoạt động bình thường khi tên tác giả chứa các ký tự đặc biệt (như `&`, `#`, chữ tiếng Trung). Các biến mẫu sẽ tự động được mã hóa URL, nhưng trong biểu thức `@js:` bạn cần gọi thủ công `java.net.URLEncoder.encode()`.
+8. **Kiểm soát số lượng trả về**: Khuyến nghị phía máy chủ giới hạn số lượng trả về (ví dụ 10-20 cuốn), nội dung thanh trượt quá nhiều sẽ ảnh hưởng đến trải nghiệm.

@@ -1,60 +1,50 @@
-# WebDav 书籍简明使用教程
+# Hướng dẫn nhanh sử dụng Sách WebDav
 
-> 本帮助页会在第一次进入时弹出，后续则不再出现，如想查看，请点击右上角 “**⁝**” > 帮助 查看此页。
+> Trang hướng dẫn này tự động hiển thị khi bạn truy cập lần đầu và sẽ không xuất hiện lại nữa. Nếu muốn xem lại, vui lòng nhấn nút ba chấm dọc “**⁝**” ở góc trên bên phải > chọn Trợ giúp để xem trang này.
 
-虽然阅读主要是用来看网络小说的工具，但为了方便书友，也提供了一些本地书籍阅读的简单支持（epub、txt）
+Mặc dù "Đọc sách" (Legado) chủ yếu được thiết kế để đọc tiểu thuyết trực tuyến, nhưng để thuận tiện cho bạn đọc, ứng dụng cũng hỗ trợ đơn giản việc đọc sách tải lên từ thiết bị cục bộ (định dạng epub, txt).
 
-但阅读本地书籍的一个难题就是如何在多设备上同步阅读进度以及书籍，假如换了设备之后，原来设备上的本地书籍也要再次手动导入，不太方便。
+Tuy nhiên, một vấn đề lớn khi đọc sách cục bộ là làm thế nào để đồng bộ hóa tiến trình đọc và kho sách trên nhiều thiết bị. Nếu bạn đổi thiết bị, việc nhập thủ công lại sách cục bộ từ đầu rất bất tiện.
 
-阅读本身没有自己的服务器，没有类似多看、微信读书那种服务器存储的可能性，但是，阅读支持 WebDav 备份，那么我们也可以利用 WebDav 来同步书籍。
+"Đọc sách" không có máy chủ riêng nên không lưu trữ sách như các ứng dụng như WeChat Reading. Tuy nhiên, ứng dụng hỗ trợ sao lưu WebDav, cho phép bạn sử dụng dịch vụ WebDav cá nhân để đồng bộ hóa sách.
 
-### 前提条件
-1. 配置好书籍存储位置（WebDav书籍下载存储到的位置）：依次点击我的/其他设置/书籍存储位置，选择书籍保存位置即可。
+### Điều kiện tiên quyết
+1. **Thiết lập Vị trí lưu trữ sách** (nơi lưu sách tải xuống từ WebDav): Vào Của tôi / Cài đặt khác / Vị trí lưu trữ sách, và chọn thư mục lưu sách mong muốn.
 
-2. 配置好 WebDav 备份（WebDav书籍的保存位置）：我的/备份与恢复/WebDav设置。这里需要配置 WebDav 备份的服务器地址、账号、密码。详细的配置方案这里不赘述，请看这篇文章：[坚果云注册与配置 · 语雀 (yuque.com)](https://www.yuque.com/legado/wiki/fkx510) 或点击该页面右上角的帮助按钮，查看配置方法。
+2. **Thiết lập Sao lưu WebDav** (nơi lưu trữ sách trên dịch vụ WebDav): Vào Của tôi / Sao lưu & Phục hồi / Cài đặt WebDav. Tại đây bạn cần điền địa chỉ máy chủ WebDav, tài khoản và mật khẩu.
 
-### 上传书籍到 WebDav
+### Tải sách lên WebDav
 
-配置好 WebDav 后，从主界面进入 WebDav 书籍页没有任何书籍显示，这是很正常的，因为我们WebDav的服务器上还没有任何书籍。
+Sau khi định cấu hình WebDav, việc truy cập trang Sách WebDav từ màn hình chính và không thấy cuốn sách nào là hoàn toàn bình thường, vì chúng ta chưa tải bất kỳ cuốn sách nào lên máy chủ WebDav.
 
-目前将书籍上传到 WebDav 的方式有三种：
+Hiện tại có ba cách để tải sách lên WebDav:
 
-1. App 上传已导入的本地书籍。
+1. **Ứng dụng tải lên sách cục bộ đã nhập**:
+   Nhấn giữ sách cục bộ đã nhập trên tủ sách để vào Chi tiết sách > Nhấn nút ba chấm “**⁝**” ở góc trên bên phải > Chọn **Tải lên WebDav**, đợi vài giây để hoàn tất tải lên.
 
-   长按已导入的本地书籍进入书籍详情 > 右上角 “**⁝**” 找到 **上传 WebDav** ，点击，等待几秒后即可上传成功。
+2. **Ứng dụng tải lên sách mạng đã lưu vào bộ nhớ đệm (cache)**:
+   Tại giao diện chính, nhấn vào Thêm cài đặt ở góc trên bên phải > Chọn Bộ nhớ đệm/Xuất > Nhấn nút ba chấm “**⁝**” ở góc trên bên phải của trang này và tích chọn **Xuất sang WebDav**. Từ đó, mỗi khi xuất sách, ứng dụng sẽ tự động tải một bản sao lên máy chủ WebDav.
 
-2. App 上传已缓存的网络书籍。
+3. **Sử dụng ứng dụng WebDav (như Jianguoyun) hoặc máy chủ WebDav tự dựng để tải lên**:
+   Đối với hầu hết người dùng, việc tải lên trực tiếp từ ứng dụng là đủ. Nhưng nếu bạn có số lượng sách lớn, chúng tôi khuyên bạn nên tải lên hàng loạt bằng ứng dụng khách WebDav trên máy tính hoặc điện thoại thay vì tải lên từng cuốn một qua ứng dụng.
+   Ví dụ, nếu sử dụng dịch vụ WebDav của Jianguoyun, hãy truy cập thư mục `legado/books` trên máy chủ WebDav của bạn (đây là thư mục mặc định lưu trữ sách) và tải hàng loạt sách của bạn vào thư mục đó.
 
-   主界面右上角点击更多设置 > 点击缓存/导出，在此页面右上角 “**⁝**” 找到 **导出到 WebDav** 并勾选。那么在书籍导出的时候便会自动上传一份到 WebDav 服务器中。
+**Dù sử dụng bất kỳ phương pháp nào ở trên, để đảm bảo tải lên thành công, tốt nhất bạn nên vào trang Sách WebDav kiểm tra xem đã thấy các sách đã tải lên xuất hiện hay chưa.**
 
-3. 使用坚果云客户端/自建WebDav服务客户端上传。
+### Tải sách từ WebDav về máy
 
-   对于大部分用户来说，App上传足够了，但有些用户书籍数量可能比较大，那么我们不建议您一本一本通过 App 上传，更好的方式是使用您所使用的 WebDav 服务的客户端批量上传。
+Trái ngược với việc tải lên có nhiều cách khác nhau, việc tải sách về máy khá đơn giản:
+Duyệt qua danh sách sách đã tải lên trên **Trang sách WebDav**, tìm cuốn sách bạn muốn tải xuống, nhấn vào nút **Thêm vào kệ sách**, ứng dụng sẽ tự động tải sách về thiết bị cục bộ và thêm vào tủ sách của bạn.
 
-   假设我们使用的坚果云的 WebDav 服务，进入 [坚果云官网](https://www.jianguoyun.com/d/home#/) ,下载对应平台的客户端安装运行，找到文件夹目录 legado/books ，这里就是存放书籍的位置，您可以批量将书籍上传到该文件夹下。
+### Lưu ý
+- Nếu bạn sử dụng dịch vụ WebDav miễn phí của Jianguoyun, giới hạn băng thông miễn phí hàng tháng là đủ để đồng bộ hóa cài đặt ứng dụng và **một lượng nhỏ sách**. Tuy nhiên, nếu bạn thường xuyên tải lên/tải xuống sách lớn, lưu lượng có thể không đủ. Vui lòng chú ý mức sử dụng để tránh ảnh hưởng đến việc đồng bộ hóa cấu hình của ứng dụng.
 
-**不管是使用上述的任何一种方式上传的书籍，为了确保上传无误，请您最好在上传书籍后进入 WebDav 书籍页 检查是否能看到已经上传的书籍。**
+### Câu hỏi thường gặp
+- Vào **Trang sách WebDav** báo lỗi "Lỗi lấy sách WebDav, WebDav chưa được cấu hình".
+  > Nguyên nhân là do bạn chưa thiết lập dịch vụ đồng bộ WebDav. Vui lòng làm theo hướng dẫn trong phần Điều kiện tiên quyết để cấu hình.
 
-### 下载 WebDav 书籍到本地
+- Sách cục bộ do thiết bị A tải lên có hiển thị trên thiết bị B không, và có tự động thêm vào tủ sách không?
+  > Nếu thiết bị A và B sử dụng chung một tài khoản WebDav, thiết bị B sẽ thấy sách do thiết bị A tải lên tại **Trang sách WebDav**. Tuy nhiên, sách sẽ không tự động thêm vào tủ sách trên thiết bị B; bạn phải vào **Trang sách WebDav** của thiết bị B, tìm sách đó và nhấn **Thêm vào kệ sách** thủ công.
 
-与上传方式的多种多样不同，下载书籍到本地的方式比较朴素。
-
-在 **WebDav 书籍页** 浏览已经上传的书籍，找到自己要下载的书籍，点击 **加入书架** 按钮，软件则会自动下载该书籍到本地并加入到书架中。
-
-### 注意事项
-
-- 如果使用的是坚果云的 WebDav 服务，免费流量限额对于同步App设置等以及 **少量的书籍** 足够了。但是如果是频繁需要上传/下载书籍的用户流量可能就不太够用了，请注意个人的用量，避免出现超出限额影响 App 设置等的同步。
-
-### 常见问题
-
-- 进入 **WebDav书籍页** 提示 "获取WebDav书籍出错 webDav 没有配置"。
-
-  > 这是因为没有配置 WebDav 同步服务，按照上文 前提条件 中提到的配置 Webdav 同步的方法配置好就行了。
-
-- A 设备上传的本地书籍能否在 B 设备上看到，是否能够自动加到书架？
-
-  > 如果 A 设备和 B 设备配置了相同的 WebDav 服务，那么 B 在 **WebDav 书籍页** 就能看到 A 上传的书籍。但是无法直接在书架上看到该书籍，这个可能后续会想方案来做，目前必须自己在 **WebDav 书籍页** 找到该书籍手动点击 **加入书架** 导入才行。
-
-- 本地书籍的阅读进度/书签等是否同步？
-
-  > 可以同步。
+- Tiến trình đọc/đánh dấu sách của sách cục bộ có được đồng bộ không?
+  > Có, chúng được đồng bộ hóa.

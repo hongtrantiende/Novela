@@ -1,6 +1,6 @@
-# 替换管理界面帮助
+# Trợ giúp Giao diện Quản lý Thay thế
 
-* 替换规则是用来替换正文内容的一种规则
-  * 菜单可以新建和导入规则
-  * 可以拖动排序
-  * 可以选择操作
+* Quy tắc thay thế được sử dụng để thay thế nội dung trong văn bản:
+  * Sử dụng menu để tạo mới hoặc nhập các quy tắc.
+  * Có thể kéo thả để sắp xếp thứ tự ưu tiên.
+  * Có thể chọn các thao tác khác nhau cho quy tắc.

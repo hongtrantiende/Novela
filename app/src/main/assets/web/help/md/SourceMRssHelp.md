@@ -1,20 +1,20 @@
-# 订阅源管理界面帮助
+# Trợ giúp Giao diện Quản lý Nguồn RSS (Đăng ký)
 
-* 订阅源可以通过规则订阅一些网络内容
-* 书源右上角标志
-  * 绿点表示书源有发现,且启用了发现
-  * 红点表示书源有发现,但是未启用
-  * 没有标志表示此书源没有发现
-* 右上角有分组菜单,可以按分组筛选书源
-* 右上角更多菜单里包含
-  * 新建订阅源
-  * 本地导入
-  * 网络导入
-  * 二维码导入
-  * 分享选中源
-* 选择源的更多操作在右下角的菜单里面,操作都是针对选择的书源
-  * 启用所选
-  * 禁用所选
-  * 置顶所选
-  * 置底所选
-  * 导出所选
+* Nguồn đăng ký (RSS) giúp bạn cập nhật các nội dung trên mạng theo quy tắc thiết lập.
+* Ký hiệu ở góc trên bên phải nguồn RSS:
+  * Chấm màu xanh lá: nguồn RSS có tính năng "Khám phá" và đang được bật.
+  * Chấm màu đỏ: nguồn RSS có tính năng "Khám phá" nhưng chưa được bật.
+  * Không có ký hiệu: nguồn RSS này không hỗ trợ tính năng "Khám phá".
+* Có menu nhóm ở góc trên bên phải để lọc nguồn RSS theo nhóm.
+* Menu tùy chọn khác ở góc trên bên phải bao gồm:
+  * Tạo mới nguồn RSS
+  * Nhập từ máy (Cục bộ)
+  * Nhập trực tuyến (Mạng)
+  * Nhập từ mã QR
+  * Chia sẻ nguồn đã chọn
+* Các thao tác khác cho nguồn RSS nằm trong menu ở góc dưới bên phải (chỉ áp dụng cho các nguồn RSS đã chọn):
+  * Bật mục đã chọn
+  * Tắt mục đã chọn
+  * Ghim lên đầu
+  * Chuyển xuống cuối
+  * Xuất nguồn đã chọn

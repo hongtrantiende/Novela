@@ -82,7 +82,7 @@ fun ReadRecordOverviewScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = "阅读总览",
+                title = "Thống kê đọc sách",
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
@@ -120,14 +120,14 @@ fun ReadRecordOverviewScreen(
 
                 item {
                     val stats = listOf(
-                        StatItem("阅读时间", ReadRecordFormatter.formatDuration(state.totalTime)),
-                        StatItem("阅读天数", "${state.readingDays}天"),
-                        StatItem("累计读过", "${state.totalBooks}本"),
-                        StatItem("读完书籍", "${state.finishedBooks}本"),
-                        StatItem("在读书籍", "${state.readingBooks}本"),
-                        StatItem("阅读字数", ReadRecordFormatter.formatWords(state.totalWords))
+                        StatItem("Thời gian đọc", ReadRecordFormatter.formatDuration(state.totalTime)),
+                        StatItem("Số ngày đọc", "${state.readingDays} ngày"),
+                        StatItem("Tổng sách đã đọc", "${state.totalBooks} cuốn"),
+                        StatItem("Sách đã đọc xong", "${state.finishedBooks} cuốn"),
+                        StatItem("Sách đang đọc", "${state.readingBooks} cuốn"),
+                        StatItem("Số chữ đã đọc", ReadRecordFormatter.formatWords(state.totalWords))
                     )
-                    StatsGridCard(title = "阅读数据", items = stats)
+                    StatsGridCard(title = "Dữ liệu đọc sách", items = stats)
                 }
 
                 item {
@@ -155,11 +155,11 @@ fun PeriodSelector(
 ) {
     val periods = remember {
         listOf(
-            ReadPeriod.DAY to "日",
-            ReadPeriod.WEEK to "周",
-            ReadPeriod.MONTH to "月",
-            ReadPeriod.YEAR to "年",
-            ReadPeriod.ALL to "总"
+            ReadPeriod.DAY to "Ngày",
+            ReadPeriod.WEEK to "Tuần",
+            ReadPeriod.MONTH to "Tháng",
+            ReadPeriod.YEAR to "Năm",
+            ReadPeriod.ALL to "Tổng"
         )
     }
 
@@ -203,7 +203,7 @@ fun DateNavigator(
             label = "DateNavigator"
         ) { targetDate ->
             val text = when (period) {
-                ReadPeriod.DAY -> targetDate.format(DateTimeFormatter.ofPattern("yyyy年M月d日"))
+                ReadPeriod.DAY -> targetDate.format(DateTimeFormatter.ofPattern("'Ngày' d 'tháng' M, yyyy"))
                 ReadPeriod.WEEK -> {
                     val start = targetDate.with(java.time.DayOfWeek.MONDAY)
                     val end = targetDate.with(java.time.DayOfWeek.SUNDAY)
@@ -214,8 +214,8 @@ fun DateNavigator(
                     }"
                 }
 
-                ReadPeriod.MONTH -> targetDate.format(DateTimeFormatter.ofPattern("yyyy年M月"))
-                ReadPeriod.YEAR -> targetDate.format(DateTimeFormatter.ofPattern("yyyy年"))
+                ReadPeriod.MONTH -> targetDate.format(DateTimeFormatter.ofPattern("'Tháng' M, yyyy"))
+                ReadPeriod.YEAR -> targetDate.format(DateTimeFormatter.ofPattern("yyyy"))
                 ReadPeriod.ALL -> ""
             }
             AppText(
@@ -247,7 +247,7 @@ fun HeatmapCard(state: ReadRecordOverviewUiState) {
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                AppText("阅读热力图", style = LegadoTheme.typography.titleMedium)
+                AppText("Bản đồ nhiệt đọc sách", style = LegadoTheme.typography.titleMedium)
             }
             Spacer(modifier = Modifier.height(8.dp))
             HeatmapCalendarSection(
@@ -285,7 +285,7 @@ fun TopReadingListCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 AppText(
-                    text = "阅读时长榜",
+                    text = "Bảng xếp hạng thời gian đọc",
                     style = LegadoTheme.typography.titleMedium
                 )
             }
@@ -368,12 +368,12 @@ fun ReadingCalendarCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                AppText("读书日历", style = LegadoTheme.typography.titleMedium)
+                AppText("Lịch đọc sách", style = LegadoTheme.typography.titleMedium)
             }
             Spacer(modifier = Modifier.height(16.dp))
             
             Row(modifier = Modifier.fillMaxWidth()) {
-                val days = listOf("日", "一", "二", "三", "四", "五", "六")
+                val days = listOf("CN", "T2", "T3", "T4", "T5", "T6", "T7")
                 days.forEach { day ->
                     AppText(
                         text = day,

@@ -108,11 +108,16 @@ class SearchRepositoryImpl(
     override suspend fun saveSearchBooks(books: List<SearchBook>): Unit =
         withContext(Dispatchers.IO) {
         if (books.isNotEmpty()) {
-            appDb.searchBookDao.insert(books)
+            val dbBooks = books.filterNot { it.origin.startsWith("ext_") }
+            if (dbBooks.isNotEmpty()) {
+                appDb.searchBookDao.insert(dbBooks)
+            }
         }
     }
 
     override suspend fun saveSearchBook(book: SearchBook): Unit = withContext(Dispatchers.IO) {
-        appDb.searchBookDao.insert(book)
+        if (!book.origin.startsWith("ext_")) {
+            appDb.searchBookDao.insert(book)
+        }
     }
 }

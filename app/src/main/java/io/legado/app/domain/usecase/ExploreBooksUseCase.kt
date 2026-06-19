@@ -8,6 +8,7 @@ import kotlinx.coroutines.withContext
 
 class ExploreBooksUseCase(
     private val gateway: ExploreBooksGateway,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository,
 ) {
     companion object {
         /** 排名类模块自动加载的最大书本数 */
@@ -24,6 +25,10 @@ class ExploreBooksUseCase(
         page: Int = 1,
         key: String? = null,
     ): ExploreResult = withContext(Dispatchers.IO) {
+        if (sourceUrl.startsWith("ext_")) {
+            val books = extensionRepository.exploreBooks(sourceUrl, moduleUrl ?: "", page)
+            return@withContext ExploreResult(moduleUrl ?: "", books)
+        }
         val request = resolveRequest(sourceUrl, moduleUrl, args, key)
         val books = gateway.exploreBooks(request.source, request.url, page, key = key)
         ExploreResult(request.url, books)
@@ -34,6 +39,9 @@ class ExploreBooksUseCase(
         moduleUrl: String?,
         args: String?
     ): List<SearchBook> = withContext(Dispatchers.IO) {
+        if (sourceUrl.startsWith("ext_")) {
+            return@withContext extensionRepository.exploreBooks(sourceUrl, moduleUrl ?: "", 1).take(MAX_RANKING_BOOKS)
+        }
         val request = resolveRequest(sourceUrl, moduleUrl, args)
         var books = gateway.exploreBooks(request.source, request.url, page = 1)
         var page = 1

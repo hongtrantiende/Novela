@@ -84,6 +84,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     var bookSource: BookSource? = null
     var msg: String? = null
     private val readRecordRepository: ReadRecordRepository by inject()
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository by inject()
     private var lastReadLength: Long = 0
     private val loadingChapters = arrayListOf<Int>()
     private val readRecord = ReadRecord()
@@ -815,6 +816,32 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         success: (() -> Unit)? = null
     ) {
         val book = book ?: return removeLoading(chapter.index)
+        if (book.origin.startsWith("ext_")) {
+            scope.launch {
+                try {
+                    val content = extensionRepository.getChapterContent(book.origin, chapter.url) ?: "Không có nội dung"
+                    BookHelp.saveText(book, chapter, content)
+                    contentLoadFinish(
+                        book,
+                        chapter,
+                        content,
+                        resetPageOffset = resetPageOffset,
+                        success = success
+                    )
+                } catch (e: Exception) {
+                    contentLoadFinish(
+                        book,
+                        chapter,
+                        "Lỗi tải chương: ${e.localizedMessage}",
+                        resetPageOffset = resetPageOffset,
+                        success = success
+                    )
+                } finally {
+                    removeLoading(chapter.index)
+                }
+            }
+            return
+        }
         val bookSource = bookSource
         if (bookSource != null) {
             val started =
@@ -836,6 +863,15 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     private suspend fun downloadAwait(chapter: BookChapter): String {
         val book = book!!
+        if (book.origin.startsWith("ext_")) {
+            return try {
+                val content = extensionRepository.getChapterContent(book.origin, chapter.url) ?: "Không có nội dung"
+                BookHelp.saveText(book, chapter, content)
+                content
+            } catch (e: Exception) {
+                "Lỗi tải chương: ${e.localizedMessage}"
+            }
+        }
         val bookSource = bookSource
         if (bookSource != null) {
             return CacheBook.getOrCreate(bookSource, book).downloadAwait(chapter)

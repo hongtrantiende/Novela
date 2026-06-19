@@ -730,7 +730,7 @@ fun TimelineSessionItem(
 ) {
     val session = item.session
     var coverPath by remember { mutableStateOf<String?>(null) }
-    var chapterTitle by remember { mutableStateOf<String?>("加载中...") }
+    var chapterTitle by remember { mutableStateOf<String?>("Đang tải...") }
 
     LaunchedEffect(session.bookName, session.bookAuthor) {
         coverPath = viewModel.getBookCover(session.bookName, session.bookAuthor)
@@ -805,7 +805,7 @@ fun TimelineSessionItem(
                         overflow = TextOverflow.Ellipsis
                     )
                     AppText(
-                        text = session.bookAuthor.ifBlank { "未知作者" },
+                        text = session.bookAuthor.ifBlank { "Tác giả chưa rõ" },
                         style = LegadoTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
@@ -861,13 +861,13 @@ fun ReadRecordItem(
                 maxLines = 1
             )
             AppText(
-                text = detail.bookAuthor.ifBlank { "未知作者" },
+                text = detail.bookAuthor.ifBlank { "Tác giả chưa rõ" },
                 style = LegadoTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline,
             )
             Spacer(modifier = Modifier.height(8.dp))
             AppText(
-                text = "阅读时长: ${formatDuring(detail.readTime)}",
+                text = "Thời gian đọc: ${formatDuring(detail.readTime)}",
                 color = MaterialTheme.colorScheme.outline,
                 style = LegadoTheme.typography.labelSmall
             )
@@ -895,7 +895,7 @@ fun DateHeader(
             )
             dailyTotalTime?.let { total ->
                 AppText(
-                    text = "已读 ${formatDuring(total)}",
+                    text = "Đã đọc ${formatDuring(total)}",
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurface
                 )
@@ -949,7 +949,7 @@ fun ReadingSummaryCard(
 
                 Row(verticalAlignment = Alignment.Bottom) {
                     AppText(
-                        text = "已读 ",
+                        text = "Đã đọc ",
                         style = LegadoTheme.typography.titleMedium
                     )
                     AppText(
@@ -959,7 +959,7 @@ fun ReadingSummaryCard(
                         fontWeight = FontWeight.Bold,
                     )
                     AppText(
-                        text = " 本书",
+                        text = " cuốn sách",
                         style = LegadoTheme.typography.titleMedium
                     )
                 }
@@ -968,10 +968,10 @@ fun ReadingSummaryCard(
 
                 val hours = totalDurationMinutes / 60
                 val minutes = totalDurationMinutes % 60
-                val timeString = if (hours > 0) "${hours}小时${minutes}分钟" else "${minutes}分钟"
+                val timeString = if (hours > 0) "${hours} giờ ${minutes} phút" else "${minutes} phút"
 
                 AppText(
-                    text = "共阅读 $timeString",
+                    text = "Tổng thời gian đọc: $timeString",
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
                 )

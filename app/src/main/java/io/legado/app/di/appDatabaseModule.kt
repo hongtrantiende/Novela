@@ -4,6 +4,8 @@ import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
 import io.legado.app.data.dao.*
 import org.koin.dsl.module
+import io.legado.app.vbookextension.data.dao.ExtensionDao
+import io.legado.app.vbookextension.data.dao.RepositoryDao
 
 /**
  * 应用程序的数据库和 DAO 模块
@@ -39,4 +41,6 @@ val appDatabaseModule = module {
     factory<HomepageModuleDao> { get<AppDatabase>().homepageModuleDao }
     factory<HomepageCustomSetDao> { get<AppDatabase>().homepageCustomSetDao }
     factory<HighlightRuleDao> { get<AppDatabase>().highlightRuleDao }
+    factory<ExtensionDao> { get<AppDatabase>().extensionDao }
+    factory<RepositoryDao> { get<AppDatabase>().repositoryDao }
 }

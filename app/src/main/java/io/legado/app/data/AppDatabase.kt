@@ -61,6 +61,10 @@ import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordDetail
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.help.DefaultData
+import io.legado.app.vbookextension.data.entity.ExtensionEntity
+import io.legado.app.vbookextension.data.entity.RepositoryEntity
+import io.legado.app.vbookextension.data.dao.ExtensionDao
+import io.legado.app.vbookextension.data.dao.RepositoryDao
 import org.intellij.lang.annotations.Language
 import splitties.init.appCtx
 import java.util.Locale
@@ -75,7 +79,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 91,
+    version = 92,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -84,7 +88,7 @@ val appDb by lazy {
         RssStar::class, TxtTocRule::class, ReadRecord::class, HttpTTS::class, Cache::class,
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
         SearchContentHistory::class, HomepageModule::class, HomepageCustomSet::class,
-        HighlightRule::class],
+        HighlightRule::class, ExtensionEntity::class, RepositoryEntity::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -164,6 +168,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val homepageModuleDao: HomepageModuleDao
     abstract val homepageCustomSetDao: HomepageCustomSetDao
     abstract val highlightRuleDao: HighlightRuleDao
+    abstract val extensionDao: ExtensionDao
+    abstract val repositoryDao: RepositoryDao
 
     companion object {
 

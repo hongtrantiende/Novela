@@ -2071,7 +2071,7 @@ class ReadBookViewModel(
                 syncBookProgress(book)
             }
         }
-        if (!book.isLocal && ReadBook.bookSource == null) {
+        if (!book.isLocal && !book.origin.startsWith("ext_") && ReadBook.bookSource == null) {
             autoChangeSource(book.name, book.author)
             return
         }

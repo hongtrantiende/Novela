@@ -10,15 +10,22 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -26,10 +33,15 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
+import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.outlined.FilterAlt
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
@@ -44,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
@@ -70,6 +83,11 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import org.koin.androidx.compose.koinViewModel
+import io.legado.app.vbookextension.ui.ExtensionDetailDialog
+import io.legado.app.vbookextension.ui.ExtensionViewModel
+import io.legado.app.vbookextension.data.entity.ExtensionEntity
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import androidx.compose.material.icons.filled.Settings
 
 private enum class BookFilterState(val id: Int) {
     SHOW_ALL(0),
@@ -119,6 +137,8 @@ fun ExploreShowScreen(
 
     var previewBook by remember { mutableStateOf<SearchBook?>(null) }
     var previewSharedCoverKey by remember { mutableStateOf<String?>(null) }
+    var activeDetailExtension by remember { mutableStateOf<ExtensionEntity?>(null) }
+    var showDeleteDialogFor by remember { mutableStateOf<ExtensionEntity?>(null) }
 
     val filterStateId = CoverConfig.exploreFilterState
     val books = remember(state.books, filterStateId) {
@@ -281,126 +301,165 @@ fun ExploreShowScreen(
                         imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
                         contentDescription = "切换布局"
                     )
+
+                    if (state.sourceUrl?.startsWith("ext_") == true && state.extension != null) {
+                        TopBarActionButton(
+                            onClick = { activeDetailExtension = state.extension },
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Cài đặt nguồn"
+                        )
+                    }
                 },
                 scrollBehavior = scrollBehavior
             )
         }
     ) { paddingValues ->
-        AppPullToRefresh(
-            modifier = Modifier.fillMaxSize(),
-            isRefreshing = state.isRefreshing,
-            onRefresh = { viewModel.onIntent(ExploreShowIntent.Refresh) },
-            topPadding = paddingValues.calculateTopPadding()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding())
         ) {
-            Crossfade(
-                targetState = isGridMode,
-                animationSpec = tween(250),
-                label = "LayoutCrossfade"
-            ) { isGrid ->
-                if (isGrid) {
-                    LazyVerticalGrid(
-                        state = gridState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .responsiveHazeSource(hazeState),
-                        columns = GridCells.Fixed(state.gridCount),
-                        contentPadding = PaddingValues(
-                            top = paddingValues.calculateTopPadding() + 12.dp,
-                            bottom = paddingValues.calculateBottomPadding() + 12.dp,
-                            start = 12.dp,
-                            end = 12.dp
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        itemsIndexed(
-                            items = books,
-                            key = { index, item -> "${item.book.bookUrl}:$index" }
-                        ) { index, item ->
-                            val sharedCoverKey = bookCoverSharedElementKey(
-                                item.book.bookUrl,
-                                "explore:grid:$index"
-                            )
-                            ExploreBookGridItem(
-                                book = item.book,
-                                shelfState = item.shelfState,
-                                onClick = {
-                                    viewModel.onIntent(
-                                        ExploreShowIntent.OpenBook(
-                                            item.book,
-                                            sharedCoverKey
-                                        )
-                                    )
-                                },
-                                onLongClick = { book, coverKey ->
-                                    previewBook = book
-                                    previewSharedCoverKey = coverKey
-                                },
-                                modifier = Modifier.animateItem(),
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                sharedCoverKey = sharedCoverKey,
-                            )
-                        }
+            if (state.sourceUrl?.startsWith("ext_") == true && state.homeKinds.isNotEmpty()) {
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(LegadoTheme.colorScheme.background)
+                        .padding(vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(state.homeKinds.size) { index ->
+                        val kind = state.homeKinds[index]
+                        val selected = state.selectedKindTitle == kind.title
+                        ExploreCategoryChip(
+                            name = kind.title,
+                            selected = selected,
+                            onClick = {
+                                viewModel.onIntent(ExploreShowIntent.SwitchKind(kind))
+                            }
+                        )
+                    }
+                }
+            }
 
-                        if (showLoadMoreFooter) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                ExploreShowLoadMoreFooter(
-                                    state = state,
-                                    onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
-                                    onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+            AppPullToRefresh(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .weight(1f),
+                isRefreshing = state.isRefreshing,
+                onRefresh = { viewModel.onIntent(ExploreShowIntent.Refresh) },
+                topPadding = 0.dp
+            ) {
+                Crossfade(
+                    targetState = isGridMode,
+                    animationSpec = tween(250),
+                    label = "LayoutCrossfade"
+                ) { isGrid ->
+                    if (isGrid) {
+                        LazyVerticalGrid(
+                            state = gridState,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .responsiveHazeSource(hazeState),
+                            columns = GridCells.Fixed(state.gridCount),
+                            contentPadding = PaddingValues(
+                                top = 12.dp,
+                                bottom = paddingValues.calculateBottomPadding() + 12.dp,
+                                start = 12.dp,
+                                end = 12.dp
+                            ),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            itemsIndexed(
+                                items = books,
+                                key = { index, item -> "${item.book.bookUrl}:$index" }
+                            ) { index, item ->
+                                val sharedCoverKey = bookCoverSharedElementKey(
+                                    item.book.bookUrl,
+                                    "explore:grid:$index"
+                                )
+                                ExploreBookGridItem(
+                                    book = item.book,
+                                    shelfState = item.shelfState,
+                                    onClick = {
+                                        viewModel.onIntent(
+                                            ExploreShowIntent.OpenBook(
+                                                item.book,
+                                                sharedCoverKey
+                                            )
+                                        )
+                                    },
+                                    onLongClick = { book, coverKey ->
+                                        previewBook = book
+                                        previewSharedCoverKey = coverKey
+                                    },
+                                    modifier = Modifier.animateItem(),
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    sharedCoverKey = sharedCoverKey,
                                 )
                             }
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .responsiveHazeSource(hazeState),
-                        state = listState,
-                        contentPadding = PaddingValues(
-                            top = paddingValues.calculateTopPadding(),
-                            bottom = paddingValues.calculateBottomPadding() + 16.dp
-                        )
-                    ) {
-                        itemsIndexed(
-                            items = books,
-                            key = { index, item -> "${item.book.bookUrl}:$index" }
-                        ) { index, item ->
-                            val sharedCoverKey = bookCoverSharedElementKey(
-                                item.book.bookUrl,
-                                "explore:list:$index"
-                            )
-                            ExploreBookItem(
-                                book = item.book,
-                                shelfState = item.shelfState,
-                                onClick = {
-                                    viewModel.onIntent(
-                                        ExploreShowIntent.OpenBook(
-                                            item.book,
-                                            sharedCoverKey
-                                        )
-                                    )
-                                },
-                                onLongClick = { book, coverKey ->
-                                    previewBook = book
-                                    previewSharedCoverKey = coverKey
-                                },
-                                modifier = Modifier.animateItem(),
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                sharedCoverKey = sharedCoverKey,
-                            )
-                        }
 
-                        if (showLoadMoreFooter) {
-                            item {
-                                ExploreShowLoadMoreFooter(
-                                    state = state,
-                                    onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
-                                    onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                            if (showLoadMoreFooter) {
+                                item(span = { GridItemSpan(maxLineSpan) }) {
+                                    ExploreShowLoadMoreFooter(
+                                        state = state,
+                                        onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                        onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .responsiveHazeSource(hazeState),
+                            state = listState,
+                            contentPadding = PaddingValues(
+                                top = 8.dp,
+                                bottom = paddingValues.calculateBottomPadding() + 16.dp
+                            )
+                        ) {
+                            itemsIndexed(
+                                items = books,
+                                key = { index, item -> "${item.book.bookUrl}:$index" }
+                            ) { index, item ->
+                                val sharedCoverKey = bookCoverSharedElementKey(
+                                    item.book.bookUrl,
+                                    "explore:list:$index"
                                 )
+                                ExploreBookItem(
+                                    book = item.book,
+                                    shelfState = item.shelfState,
+                                    onClick = {
+                                        viewModel.onIntent(
+                                            ExploreShowIntent.OpenBook(
+                                                item.book,
+                                                sharedCoverKey
+                                            )
+                                        )
+                                    },
+                                    onLongClick = { book, coverKey ->
+                                        previewBook = book
+                                        previewSharedCoverKey = coverKey
+                                    },
+                                    modifier = Modifier.animateItem(),
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    sharedCoverKey = sharedCoverKey,
+                                )
+                            }
+
+                            if (showLoadMoreFooter) {
+                                item {
+                                    ExploreShowLoadMoreFooter(
+                                        state = state,
+                                        onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                        onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                                    )
+                                }
                             }
                         }
                     }
@@ -426,6 +485,37 @@ fun ExploreShowScreen(
             viewModel.onIntent(ExploreShowIntent.AddToShelf(book))
         },
     )
+
+    val extViewModel: ExtensionViewModel = koinViewModel()
+
+    activeDetailExtension?.let { ext ->
+        ExtensionDetailDialog(
+            extension = ext,
+            viewModel = extViewModel,
+            onDismissRequest = { activeDetailExtension = null },
+            onUninstallClick = {
+                showDeleteDialogFor = ext
+                activeDetailExtension = null
+            }
+        )
+    }
+
+    showDeleteDialogFor?.let { ext ->
+        AppAlertDialog(
+            data = ext,
+            onDismissRequest = { showDeleteDialogFor = null },
+            title = "Gỡ cài đặt tiện ích?",
+            text = "Bạn có chắc chắn muốn gỡ cài đặt tiện ích \"${ext.name}\" không?",
+            confirmText = "Xác nhận",
+            onConfirm = {
+                extViewModel.uninstallExtension(ext.id)
+                showDeleteDialogFor = null
+                onBack()
+            },
+            dismissText = "Hủy",
+            onDismiss = { showDeleteDialogFor = null }
+        )
+    }
 }
 
 @Composable
@@ -490,4 +580,42 @@ fun ExploreBookGridItem(
         animatedVisibilityScope = animatedVisibilityScope,
         sharedCoverKey = sharedCoverKey
     )
+}
+
+@Composable
+fun ExploreCategoryChip(
+    name: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val translatedName by io.legado.app.utils.translateAsState(name)
+    val containerColor = if (selected) LegadoTheme.colorScheme.primaryContainer
+                         else LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    val contentColor = if (selected) LegadoTheme.colorScheme.onPrimaryContainer
+                       else LegadoTheme.colorScheme.onSurface
+    val borderStrokeColor = if (selected) LegadoTheme.colorScheme.primary
+                            else LegadoTheme.colorScheme.outline.copy(alpha = 0.3f)
+    
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(containerColor)
+            .border(
+                width = 1.dp,
+                color = borderStrokeColor,
+                shape = CircleShape
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        contentAlignment = androidx.compose.ui.Alignment.Center
+    ) {
+        AppText(
+            text = translatedName,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = contentColor,
+            maxLines = 1
+        )
+    }
 }

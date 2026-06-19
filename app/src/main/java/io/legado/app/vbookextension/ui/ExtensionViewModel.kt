@@ -1,0 +1,227 @@
+package io.legado.app.vbookextension.ui
+
+import android.content.Context
+import android.util.Log
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import io.legado.app.vbookextension.data.dao.ExtensionDao
+import io.legado.app.vbookextension.data.dao.RepositoryDao
+import io.legado.app.vbookextension.data.entity.ExtensionEntity
+import io.legado.app.vbookextension.data.entity.RepositoryEntity
+import io.legado.app.vbookextension.loader.ExtensionLoader
+import io.legado.app.vbookextension.model.ExtensionInfo
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+
+class ExtensionViewModel(
+    private val appContext: Context,
+    val extensionLoader: ExtensionLoader,
+    private val extensionDao: ExtensionDao,
+    private val repositoryDao: RepositoryDao,
+) : ViewModel() {
+
+    companion object {
+        private const val TAG = "ExtVM"
+    }
+
+    // Selected extension details state
+    private val _selectedCookie = MutableStateFlow("")
+    val selectedCookie = _selectedCookie.asStateFlow()
+
+    private val _selectedLocalStorage = MutableStateFlow<Map<String, String>>(emptyMap())
+    val selectedLocalStorage = _selectedLocalStorage.asStateFlow()
+
+    private val _selectedParallelConnections = MutableStateFlow(3)
+    val selectedParallelConnections = _selectedParallelConnections.asStateFlow()
+
+    private val _selectedConnectionInterval = MutableStateFlow(0)
+    val selectedConnectionInterval = _selectedConnectionInterval.asStateFlow()
+
+    private val _selectedIsPinned = MutableStateFlow(false)
+    val selectedIsPinned = _selectedIsPinned.asStateFlow()
+
+    fun loadExtensionDetails(extensionId: String) {
+        val prefs = appContext.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+        _selectedCookie.value = prefs.getString("ext_cookies_$extensionId", "") ?: ""
+        _selectedParallelConnections.value = prefs.getInt("ext_parallel_connections_$extensionId", 3)
+        _selectedConnectionInterval.value = prefs.getInt("ext_connection_interval_$extensionId", 0)
+        _selectedIsPinned.value = prefs.getBoolean("ext_pinned_$extensionId", false)
+
+        val storagePrefs = appContext.getSharedPreferences("ext_storage_$extensionId", Context.MODE_PRIVATE)
+        val result = mutableMapOf<String, String>()
+        storagePrefs.all.forEach { (k, v) ->
+            result[k] = v?.toString() ?: ""
+        }
+        _selectedLocalStorage.value = result
+    }
+
+    fun updateCookie(extensionId: String, cookie: String) {
+        val prefs = appContext.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("ext_cookies_$extensionId", cookie).apply()
+        _selectedCookie.value = cookie
+    }
+
+    fun addLocalStorageItem(extensionId: String, key: String, value: String) {
+        val prefs = appContext.getSharedPreferences("ext_storage_$extensionId", Context.MODE_PRIVATE)
+        prefs.edit().putString(key, value).apply()
+        loadExtensionDetails(extensionId)
+    }
+
+    fun removeLocalStorageItem(extensionId: String, key: String) {
+        val prefs = appContext.getSharedPreferences("ext_storage_$extensionId", Context.MODE_PRIVATE)
+        prefs.edit().remove(key).apply()
+        loadExtensionDetails(extensionId)
+    }
+
+    fun updateParallelConnections(extensionId: String, count: Int) {
+        val prefs = appContext.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putInt("ext_parallel_connections_$extensionId", count).apply()
+        _selectedParallelConnections.value = count
+    }
+
+    fun updateConnectionInterval(extensionId: String, intervalMs: Int) {
+        val prefs = appContext.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putInt("ext_connection_interval_$extensionId", intervalMs).apply()
+        _selectedConnectionInterval.value = intervalMs
+    }
+
+    fun togglePinnedState(extensionId: String) {
+        val prefs = appContext.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+        val current = prefs.getBoolean("ext_pinned_$extensionId", false)
+        prefs.edit().putBoolean("ext_pinned_$extensionId", !current).apply()
+        _selectedIsPinned.value = !current
+    }
+
+    val installedExtensions: Flow<List<ExtensionEntity>> = extensionDao.getInstalledExtensions()
+    val repositories: Flow<List<RepositoryEntity>> = repositoryDao.getRepositories()
+
+    private val _availableExtensions = MutableStateFlow<List<ExtensionInfo>>(emptyList())
+    val availableExtensions: StateFlow<List<ExtensionInfo>> = _availableExtensions.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _installingIds = MutableStateFlow<Set<String>>(emptySet())
+    val installingIds: StateFlow<Set<String>> = _installingIds.asStateFlow()
+
+    private val _error = MutableStateFlow<String?>(null)
+    val error: StateFlow<String?> = _error.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            extensionLoader.ensureDefaultRepository()
+            extensionLoader.autoFixExtensionTypes()
+            fetchAllExtensions()
+        }
+    }
+
+    fun fetchAllExtensions() {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val allExts = mutableListOf<ExtensionInfo>()
+                
+                // 1. Fetch built-in
+                val builtIn = extensionLoader.fetchBuiltInExtensions()
+                allExts.addAll(builtIn)
+                
+                // 2. Fetch enabled repos
+                val repos = repositoryDao.getEnabledRepositories()
+                for (repo in repos) {
+                    if (repo.url != "file:///android_asset/plugin.json") {
+                        try {
+                            val repoExts = extensionLoader.fetchRepository(repo.url)
+                            allExts.addAll(repoExts)
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to fetch repo: ${repo.url}", e)
+                        }
+                    }
+                }
+                
+                // 3. De-duplicate by slug and version
+                val distinctExts = allExts.groupBy { it.name.toSlug() }.map { (_, list) ->
+                    list.maxByOrNull { it.version } ?: list.first()
+                }
+                
+                _availableExtensions.value = distinctExts
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun installExtension(info: ExtensionInfo) {
+        viewModelScope.launch {
+            val slug = info.name.toSlug()
+            _installingIds.update { it + slug }
+            try {
+                extensionLoader.installExtension(info)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to install extension: ${info.name}", e)
+            } finally {
+                _installingIds.update { it - slug }
+            }
+        }
+    }
+
+    fun uninstallExtension(extensionId: String) {
+        viewModelScope.launch {
+            extensionLoader.uninstallExtension(extensionId)
+        }
+    }
+
+    fun toggleExtensionEnabled(extensionId: String, enabled: Boolean) {
+        viewModelScope.launch {
+            extensionDao.setEnabled(extensionId, enabled)
+        }
+    }
+
+    fun addRepository(url: String, name: String = "") {
+        viewModelScope.launch {
+            val finalUrl = if (url.trim().removeSuffix("/") == "https://www.vbookext.me") {
+                ExtensionLoader.DEFAULT_REPO_URL
+            } else {
+                url.trim()
+            }
+
+            val repoName = name.ifBlank {
+                if (finalUrl == ExtensionLoader.DEFAULT_REPO_URL) {
+                    "Thư viện Tiện ích (GitHub)"
+                } else {
+                    finalUrl.substringAfterLast("/").substringBefore(".")
+                        .ifBlank { "Repository" }
+                }
+            }
+            repositoryDao.insert(
+                RepositoryEntity(
+                    url = finalUrl,
+                    name = repoName,
+                    addedAt = System.currentTimeMillis(),
+                    isEnabled = true
+                )
+            )
+            fetchAllExtensions()
+        }
+    }
+
+    fun removeRepository(repo: RepositoryEntity) {
+        viewModelScope.launch {
+            repositoryDao.delete(repo)
+            fetchAllExtensions()
+        }
+    }
+
+    private fun String.toSlug(): String {
+        val normalized = java.text.Normalizer.normalize(this, java.text.Normalizer.Form.NFD)
+            .replace(Regex("[\\p{InCombiningDiacriticalMarks}]"), "")
+        return normalized
+            .lowercase()
+            .replace("đ", "d").replace("Đ", "d")
+            .replace(Regex("[^a-z0-9]"), "-")
+            .replace(Regex("-+"), "-")
+            .trim('-')
+    }
+}

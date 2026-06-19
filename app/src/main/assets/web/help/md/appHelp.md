@@ -1,222 +1,160 @@
-# 帮助文档
+# Tài liệu Trợ giúp
 
-【温馨提醒】 *本帮助可以在“**我的**”——右上角帮助按钮再次打开，更新前一定要做好备份，以免数据丢失！*
+【Lưu ý】 *Bạn có thể mở lại tài liệu trợ giúp này trong mục "**Của tôi**" —— nút trợ giúp ở góc trên bên phải. Nhớ sao lưu dữ liệu trước khi cập nhật ứng dụng để tránh mất dữ liệu!*
 
-## 新人必读 
+## Người mới cần đọc
 
-### 1. 为什么第一次安装好之后什么东西都没有？
-阅读只是一个转码工具，不提供内容。
+### 1. Tại sao sau khi cài đặt lần đầu lại không thấy nội dung gì?
+Legado chỉ là một công cụ chuyển đổi mã nguồn và đọc sách, ứng dụng không cung cấp bất kỳ nội dung sách nào. Bạn cần tự nhập nguồn sách.
 
-### 2. 正文出现缺字漏字、内容缺失或排版错乱等情况，如何处理？
-有可能是净化规则出现问题，先关闭替换净化并刷新，再观察是否正常。如果正常说明净化规则存在误杀，如果关闭后仍然出现相关问题，请点击源链接查看原文与正文是否相同，如果不同，再进行反馈。
+### 2. Nội dung sách bị thiếu chữ, mất chương hoặc lỗi định dạng thì xử lý thế nào?
+Có thể do quy tắc lọc gặp lỗi. Hãy thử tắt tính năng lọc và tải lại trang để kiểm tra xem có bình thường không. Nếu bình thường thì do quy tắc lọc bị lỗi; nếu tắt đi vẫn bị lỗi, hãy nhấn vào liên kết gốc của nguồn sách để kiểm tra xem trang web gốc có bị lỗi tương tự không.
 
-### 3. 漫画源看书显示乱码，如何解决？
-【异次元】和【阅读】是两个不同的软件，**两个软件的源并不通用**，请导入【阅读】的支持的漫画源！
+### 3. Nguồn truyện tranh bị hiển thị lỗi ký tự (lộn xộn)?
+【Yidianyuan】 (YCY) và 【Legado】 là hai phần mềm hoàn toàn khác nhau, **nguồn của hai phần mềm này không dùng chung được**. Vui lòng nhập nguồn truyện tranh được thiết kế dành riêng cho 【Legado】!
 
-## 书源相关
+## Vấn đề về Nguồn sách
 
-### 1. 如何导入本地书源文件？
-以导入 QQ 接收到的书源文件为例：
-* 下载群文件里的书源文件；
-* 打开【阅读】软件；
-* 点击“**我的**”——“**书源管理**”；
-* 点击右上角选择“**本地导入**”；
-* 左下角选择书源文件所在的路径；
-* 点击书源文件导入；
-* 导入后返回书源管理界面；
+### 1. Làm thế nào để nhập nguồn sách cục bộ từ máy?
+Ví dụ cách nhập nguồn sách nhận được từ ứng dụng QQ:
+* Tải xuống tệp nguồn sách từ tin nhắn/nhóm;
+* Mở ứng dụng 【Legado】;
+* Vào mục "**Của tôi**" —— "**Quản lý nguồn**";
+* Nhấn vào dấu 3 chấm ở góc trên bên phải, chọn "**Nhập từ máy**";
+* Chọn thư mục chứa tệp nguồn sách vừa tải;
+* Nhấn vào tệp nguồn sách để nhập;
+* Sau khi nhập xong, quay lại giao diện quản lý nguồn sách để kiểm tra.
 
-**【注】** 
-1. *新版 QQ 文件下载路径：`Android/data/com.tencent.mobileqq/Tencent/QQfile_recv/`。*
-2. *书源格式后缀有 .txt 和 .json，其中 .json 文件在某些情况下可能无法导入，需要修改后缀为 .txt 才可导入。*
+**【Lưu ý】**
+1. *Đường dẫn tải tệp của QQ phiên bản mới: `Android/data/com.tencent.mobileqq/Tencent/QQfile_recv/`.*
+2. *Đuôi tệp nguồn sách thường là .txt hoặc .json. Một số tệp .json có thể không nhập được trực tiếp, bạn cần đổi đuôi tệp thành .txt để nhập.*
 
-![QQ 导入书源](https://cdn.jsdelivr.net/gh/gedoor/gedoor.github.io@master/images/importSource.jpg)
+![Nhập nguồn sách QQ](https://cdn.jsdelivr.net/gh/gedoor/gedoor.github.io@master/images/importSource.jpg)
 
-### 2. 如何新建大佬发的单独书源？
-* 复制书源代码；
-* 打开阅读软件；
-* 点击“**我的**”——“**书源管理**”；
-* 右上角“**⁝**”——“**+ 新建书源**”；
-* 进入后点击右上角“**⁝**”——“**粘贴源**”；
-* 粘贴完成后点击上方保存“**🖫**”按钮；
-* 本次新建单独书源操作完成。
+### 2. Làm cách nào để tạo thủ công nguồn sách được chia sẻ?
+* Sao chép đoạn mã nguồn sách (dạng text/JSON);
+* Mở ứng dụng Legado;
+* Vào mục "**Của tôi**" —— "**Quản lý nguồn**";
+* Nhấn dấu 3 chấm ở góc trên bên phải —— chọn "**+ Tạo mới nguồn sách**";
+* Trong màn hình tạo mới, nhấn dấu 3 chấm ở góc trên bên phải —— chọn "**Dán nguồn**";
+* Sau khi dán xong, nhấn nút Lưu (biểu tượng thẻ nhớ 🖫) ở thanh công cụ phía trên;
+* Hoàn tất tạo nguồn sách mới.
 
-**【注】** *如果书源有错误或者复制不全会显示格式错误，请重新复制。*
+**【Lưu ý】** *Nếu mã nguồn sách bị thiếu hoặc lỗi định dạng, ứng dụng sẽ báo lỗi định dạng. Hãy sao chép lại chuẩn xác.*
 
-### 3. 为什么导入 2.0 书源后无法阅读？
-部分 2.0 书源并不适用于 3.0 版本的阅读，建议导入后进行筛选。
+### 3. Tại sao sau khi nhập nguồn sách phiên bản 2.0 lại không đọc được?
+Một số nguồn sách phiên bản 2.0 không tương thích với phiên bản 3.0. Bạn nên kiểm tra và chọn lọc lại sau khi nhập.
 
-### 4. 【阅读】2.0 数据如何导入【阅读】3.0？
-先对【阅读】2.0 的数据进行备份，然后进入【阅读】3.0，点击“**我的**”，选择“**备份与恢复**”，再点击“**导入旧版本数据**”。
+### 4. Cách chuyển dữ liệu từ Legado 2.0 sang Legado 3.0?
+Hãy tiến hành sao lưu dữ liệu trên bản 2.0 trước. Sau đó mở bản 3.0, vào mục "**Của tôi**" -> chọn "**Sao lưu và khôi phục**" -> nhấn "**Nhập dữ liệu phiên bản cũ**".
 
-### 5. 如何给朋友分享我的书源？
-* 打开【阅读】软件；
-* 点击备份；
-* 打开手机系统自带的文件管理；
-* 在手机内置存储根目录找到 `YueDu3.0` 文件夹；
-* 找到 `myBookSource.json`，长按选择分享；
-* 选择微信分享或者 QQ 分享；
-* 选择你要分享的好友点击发送；
-* 好友接收后在手机内置存储根目录找到 `myBookSource.json` 文件；
-* 复制该文件到手机内置存储根目录找到 `YueDu3.0` 文件夹（如已有该文件请先删除该文件或者备份到其他地方再复制到文件夹）；
-* 打开【阅读】软件点击恢复。
+### 5. Làm thế nào để chia sẻ nguồn sách của tôi cho bạn bè?
+* Mở ứng dụng 【Legado】;
+* Thực hiện Sao lưu dữ liệu;
+* Mở ứng dụng Quản lý tệp của điện thoại;
+* Tìm thư mục `YueDu3.0` ở bộ nhớ trong;
+* Tìm tệp `myBookSource.json`, nhấn giữ và chọn chia sẻ;
+* Gửi qua Zalo, Messenger hoặc các ứng dụng khác;
+* Người nhận tải tệp về, sao chép vào thư mục `YueDu3.0` ở bộ nhớ trong của họ (nếu có tệp cũ trùng tên thì hãy xóa hoặc sao lưu tệp đó đi trước);
+* Mở ứng dụng 【Legado】 và nhấn Khôi phục dữ liệu.
 
-**【注】**
-1. *备份路径如已修改过请在修改后的路径下查找书源文件。*
-2. *Android 10 及以下版本系统，新版 QQ 文件接收路径在 `Android/data/com.tencent.mobileqq/Tencent/QQfile_recv/`，旧版 QQ 文件接收路径则在 `Tencent/QQfile_recv/`；新版微信文件接收路径在 `Android/data/com.tencent.mobileqq/Tencent/MicroMsg/Download`，旧版微信文件接收路径则在 `Tencent/MicroMsg/Download`。*
-3. *Android 11 及以上系统版本用户，由于系统限制，无法访问 `Android/data` 目录。*
+**【Lưu ý】**
+1. *Nếu bạn đã thay đổi đường dẫn sao lưu mặc định, hãy tìm tệp trong thư mục tùy chỉnh đó.*
+2. *Đối với Android 10 trở xuống, đường dẫn nhận tệp mặc định của các app chat thường nằm trong thư mục cài đặt của app đó. Từ Android 11 trở lên, do giới hạn bảo mật của hệ thống, người dùng sẽ không thể truy cập trực tiếp thư mục `Android/data` bằng các trình quản lý tệp thông thường.*
 
-### 6. 效验书源显示失效就说明书源不能用了吗？
-效验书源只是测试书源，可以做为参考，但失效了不代表书源不能用了。
+### 6. Kiểm tra (xác minh) nguồn sách báo lỗi (vô hiệu) thì có nghĩa là nguồn đó không dùng được nữa không?
+Tính năng kiểm tra chỉ mang tính chất tham khảo tại thời điểm kiểm tra. Đôi khi do lỗi kết nối mạng tạm thời mà báo lỗi, nhưng nguồn sách thực tế vẫn có thể sử dụng bình thường.
 
-### 7. “发现”和正版书源能不能使用？
-发现和正版书源只能用来找书或看排行榜，不能用来看书，如需看书请切换书源。
+### 7. Mục "Khám phá" của các nguồn sách có đọc trực tiếp được không?
+Mục Khám phá chỉ dùng để tìm sách hoặc xem các bảng xếp hạng truyện. Để đọc sách, bạn cần chọn sách đó và chọn nguồn đọc tương ứng.
 
-### 8. 为什么书源这么多，“发现”里却只有一点点？
-书源想要在发现界面里显示需要在书源里添加发现规则，并不是所有书源都有发现规则。
+### 8. Tại sao tôi nhập rất nhiều nguồn sách mà mục "Khám phá" lại có rất ít nội dung?
+Chỉ những nguồn sách có cấu hình Quy tắc khám phá thì mới hiển thị trong mục Khám phá. Không phải nguồn sách nào cũng hỗ trợ quy tắc này.
 
-## 本地/WebDav远程书籍相关
+## Vấn đề về Sách Cục bộ / WebDAV
 
-### 1. 目前阅读支持哪些格式的本地书籍？
-目前支持 TXT 和 EPUB 格式。
+### 1. Ứng dụng hỗ trợ những định dạng sách cục bộ nào?
+Hiện tại ứng dụng hỗ trợ các định dạng TXT và EPUB.
 
-### 2. 如何导入本地/WebDav远程书籍？
-本地：在书架页面点击右上角“**⁝**”，选择“**添加本地**”，授予相关权限后即可导入本地书籍。也可在文件管理器中使用【阅读】打开相关书籍。
+### 2. Làm thế nào để nhập sách cục bộ hoặc sách từ WebDAV?
+Cục bộ: Tại màn hình Tủ sách, nhấn dấu 3 chấm ở góc trên bên phải -> chọn "**Nhập sách cục bộ**", cấp quyền truy cập bộ nhớ để chọn và nhập sách. Bạn cũng có thể mở sách trực tiếp từ trình quản lý tệp bằng ứng dụng Legado.
 
-远程：在主页面点击右上角 “**⁝**”，选择 **WebDav书籍**，正确配置好后即可看到上传的远程书籍，点击 **加入书架** 按钮导入即可。
+WebDAV: Tại màn hình chính, nhấn dấu 3 chấm ở góc trên bên phải -> chọn "**Sách WebDav**". Sau khi cấu hình thành công, bạn sẽ thấy danh sách sách trên đám mây, nhấn vào sách và chọn "**Thêm vào tủ sách**" để tải về.
 
-### 3. 如何上传本地书籍到 WebDav 远程？
-长按本地书籍，进入书籍详情页，点击右上角 “**⁝**”，选择 **上传WebDav**，等待几秒后即可上传到远程。
+### 3. Làm cách nào để tải sách cục bộ lên WebDAV?
+Nhấn giữ cuốn sách trong tủ sách để vào trang Chi tiết sách, nhấn dấu 3 chấm ở góc trên bên phải -> chọn "**Tải lên WebDav**". Hoặc trong trang bộ đệm sách, bạn chọn "**Xuất lên WebDav**".
 
-或进入书籍缓存页面，点击右上角 “**⁝**”，选择 **导出到 WebDav**，在书籍导出时便可同时上传到远程。
+### 4. Nhập file TXT báo lỗi "LoadTocError" hoặc "List is empty" là sao?
+* Vui lòng kiểm tra xem bạn đã cấp quyền truy cập bộ nhớ cho ứng dụng trong Cài đặt hệ thống chưa.
+* Quá trình tự động nhận diện mục lục bị thất bại. Bạn có thể nhấn vào biểu tượng đổi nguồn mục lục ở góc trên bên phải để chọn quy tắc nhận diện khác theo cách thủ công.
 
-### 4. 导入 TXT 文件提示“LoadTocError”或“List is empty”是怎么回事？
-* 请先去应用详情中确认是否授予了【阅读】“读写手机存储”的权限。
-* 自动识别目录失败，可能是相关目录规则未开启，请点击右上角的换源按钮手动更换目录规则。
+### 5. Làm thế nào để tải toàn bộ sách về đọc ngoại tuyến?
+Thêm sách trực tuyến vào Tủ sách, sau đó tại trang Tủ sách, nhấn giữ cuốn sách hoặc vào menu chọn "**Bộ đệm ngoại tuyến**" (Offline cache).
 
-如果尝试所有规则均无法识别，请在 GitHub 上提交 Issue 并附上相关 TXT 文件，也可以发送邮件至 i@qnmlgb.trade（标题：legado 本地文件章节无法识别；内容对其具体情况进行简要说明，附件上传相关 TXT 文件）。
+### 6. Cách tùy chỉnh tên tệp khi xuất sách dạng TXT hoặc EPUB?
+* Vào "**Bộ đệm ngoại tuyến**" —— chọn "**Tên tệp xuất**".
+* Quy tắc đặt tên hỗ trợ cú pháp JS, sử dụng các biến: `name` (tên sách) và `author` (tác giả).
+* Ví dụ:
+  > name + " - Tác giả " + author
+  > Kết quả: Dac Nhan Tam - Tác giả Dale Carnegie
 
-### 5. 如何下载书籍到本地？
-把在线书籍加入到书架后，在书架页面点击右上角，选择“**离线缓存**”即可。
+### 7. Tại sao tôi mở tệp TXT cục bộ lại bị lỗi font chữ (ký tự lạ)?
+Có thể do ứng dụng không nhận diện đúng bảng mã của file. Khuyên dùng các trình soạn thảo văn bản trên máy tính hoặc điện thoại để chuyển mã tệp về định dạng UTF-8 phổ biến.
 
-### 6. 如何自定义导出的 TXT 或 EPUB 文件名称？
-* 点击“**离线缓存**“——”**导出文件名**“
-* 使用方法:
-  - 导出文件名支持 js 语法
-  - 可用变量: name（书名）和 author（作者）
-  - 示例:
-  > name + "作者:" + author
-  - 导出文件名:
-  >  Legado 是最好的在线阅读软件 作者: kunfei
+## Vấn đề về Giao diện đọc sách
 
-**【注】** *name、author 等变量与字符串的拼接都需要在 JSON 上下文环境中进行，即必须使用 `{}` 将变量与字符串包裹起来。*
+### 1. Làm thế nào để làm mới Tủ sách?
+Tại màn hình Tủ sách, vuốt màn hình từ trên xuống để làm mới và kiểm tra chương mới.
 
-### 7. 为什么我打开本地的 TXT 文件，显示内容却是乱码？
-部分编码在阅读上会识别错误，建议先用文本编辑器转换为常用的 UTF-8 格式。
+### 2. Số nhỏ màu đỏ hoặc xám ở góc trên bên phải sách trong Tủ sách có ý nghĩa gì?
+Màu đỏ có nghĩa là sách có chương mới cập nhật; màu xám nghĩa là không có cập nhật mới. Con số hiển thị số lượng chương chưa đọc.
 
-### 8. 阅读对部分把正文（如所有含引号的句子）识别成标题，如何解决？
-点击右上角更换目录规则即可。
+### 3. Làm thế nào để xem thông tin chi tiết của một cuốn sách?
+Nhấn giữ vào cuốn sách đó trong Tủ sách.
 
-## 书籍界面相关
+### 4. Làm cách nào để xóa hoặc chuyển nhóm cho sách trên Tủ sách?
+Thực hiện các thao tác này trong trang Chi tiết sách (nhấn giữ sách).
 
-### 1. 如何刷新书架？
-在书架界面下拉即可刷新。
+### 5. Cách tắt/bật tính năng tự động cập nhật chương mới cho một cuốn sách?
+Vào trang Chi tiết sách, nhấn dấu 3 chấm ở góc trên bên phải —— chọn "**Cho phép cập nhật**".
 
-### 2. 书架界面书籍右上角的红色或者灰色背景小数字代表什么？
-红色代表书籍有更新，灰色代表无更新，数字代表未读章节。
+### 6. Cách thay đổi ảnh bìa, tên sách, tên tác giả hoặc phần giới thiệu của cuốn sách?
+Vào trang Chi tiết sách, nhấn vào biểu tượng Chỉnh sửa (hình cây bút) ở góc trên bên phải.
 
-### 3. 如何查看书籍详情？
-长按书籍即可查看。
+### 7. Cách sử dụng phông chữ tùy chỉnh của riêng tôi?
+Tại giao diện đọc sách —— chọn "**Phông chữ**" —— nhấn dấu 3 chấm góc trên bên phải để tìm tới tệp phông chữ trong máy của bạn.
 
-### 4. 如何对书架上的书进行删除、切换书架的操作？
-书籍详情页操作即可。
+### 8. Hỗ trợ các định dạng phông chữ nào?
+Ứng dụng hỗ trợ phông chữ định dạng TTF và OTF.
 
-### 5. 如何禁止或允许某本书更新？
-书籍详情页，点击右上角——“**允许更新**”。
+### 9. Đọc sách trực tuyến thường xuyên bị báo "Đang tải..." thì làm thế nào?
+Đối với sách trực tuyến, nguyên nhân thường do chất lượng nguồn sách kém hoặc cấu hình nguồn sách bị lỗi thời. Bạn nên đổi nguồn sách khác để đọc. Đối với sách cục bộ, lỗi này thường do quy tắc nhận diện mục lục không chính xác, hãy chọn quy tắc mục lục khác.
 
-### 6. 如何更换小说封面、名字、作者或简介？
-书籍详情页，点击右上角修改按钮。
+### 10. Tại sao mỗi khi đọc đến trang cuối của chương, chữ và các dòng kẻ lề lại bị lệch không thẳng hàng?
+Vui lòng vào mục "Cài đặt" —— tắt tùy chọn "Căn đều cạnh dưới văn bản", sau đó điều chỉnh lại kích thước khoảng cách dòng.
 
-### 7. 怎么使用自定义字体？
-阅读界面——“**字体**”——点击右上角选择字体文件路径。
+### 11. Các trang truyện tranh hoặc nguồn ảnh chỉ hiển thị trang đầu tiên, khắc phục thế nào?
+Trước tiên, hãy kiểm tra xem trang web gốc có hiển thị bình thường không. Nếu bình thường, tại giao diện đọc sách, nhấn vào góc trên bên phải biểu tượng 3 chấm, chọn "**Hiệu ứng lật trang (sách này)**", và đổi hiệu ứng lật trang thành "**Cuộn**" (Scroll).
 
-### 8. 目前支持哪些格式的字体文件？
-目前支持 TTF 和 OTF 格式。
+## Quy tắc lọc và Thay thế (Lọc)
 
-### 9. 书籍经常“正在加载中”怎么办？
-在线书籍出现这个问题通常是由于源质量不好或不兼容引起的，可以换其它源多试试；本地书籍出现这个问题大概率是目录规则问题，手动切换规则可以解决。
+### 1. Tính năng lọc và thay thế là gì?
+Tính năng này giúp loại bỏ các quảng cáo chèn trong nội dung truyện, sửa lỗi chính tả hoặc lọc bỏ các từ nhạy cảm, từ bị ẩn.
 
-### 10. 书籍内容只有标题，正文内容是路径怎么办？
-通常是缓存路径引起的，更换缓存路径即可。
+### 2. Cách tự viết quy tắc lọc và thay thế?
+* Dòng 1: Tên quy tắc.
+* Dòng 2: Nhóm quy tắc.
+* Dòng 3: Quy tắc tìm kiếm (Nội dung muốn thay thế).
+* Dòng 4: Thay thế bằng (Nội dung mới thay thế vào; nếu để trống mặc định là xóa nội dung ở Dòng 3).
+* Dòng 5: Phạm vi áp dụng. Bạn điền tên sách hoặc tên nguồn sách muốn áp dụng quy tắc này (nếu để trống sẽ áp dụng cho tất cả).
 
-### 11. 看书时如遇到“目录为空”、“加载失败”或长串英文等情况怎么办？
-在线书籍一般是书源问题，切换或更新书源即可。本地书籍请尝试手动更换目录规则。
+**【Lưu ý】** *If các từ quảng cáo phức tạp không lọc sạch bằng văn bản thông thường, bạn cần tích chọn "Sử dụng biểu thức chính quy (Regex)" và viết quy tắc tìm kiếm ở Dòng 3 theo cú pháp biểu thức chính quy.*
 
-### 12. 为什么每一章的最后一页，阅读的文字和横线背景总是对不齐？
-请在“**设置**”——“**文字底部对齐**”选项中关闭底部对齐，再调整排版。
+## Vấn đề khác
 
-### 13. 漫画源或图片章节只能看到第一页，如何解决？
-请先查看原网页是否正常，若正常，请在书籍阅读界面点击右上角的“**⁝**”按钮，在弹出的菜单中，选择“**翻页动画(本书)**”，将翻页动画更改为“**滚动**”。
+### 1. Làm thế nào để sử dụng tính năng Nghe sách (TTS)?
+Bạn có thể sử dụng công cụ chuyển văn bản thành giọng nói (TTS) mặc định của điện thoại hoặc cài đặt các công cụ của bên thứ ba như Google TTS.
+*Cách cài đặt:* Cài đặt hệ thống -> Cài đặt bổ sung -> Hỗ trợ tiếp cận -> Đầu ra chuyển văn bản thành giọng nói (TTS) -> Chọn công cụ đọc mong muốn.
 
-### 14. 阅读图片章节、漫画或 EPUB 插图时，图片被缩放到一页中，以至无法看清，如何处理？
-* 临时处理方案：长按图片可以进行双指缩放。图片章节请先参考 Q13 中的方案将翻页动画更改为“**滚动**”。
-* 3.0 旧版可以点击书籍界面的章节标题进入“**编辑书源**”界面，在“**正文**”——“**图片样式**”中填入 *`full`*，保存更改，刷新当前章节即可。
-* 3.0 新版可以直接在书籍阅读界面点击右上角的“**⁝**”按钮，选择“**图片样式**”——***`full`***。
-
-
-## 替换净化相关
-
-### 1. 替换净化是什么？
-替换净化可以去除书籍内容里的广告、错别字、屏蔽词等。
-
-### 2. 如何自己填写净化替换规则？
-* 第一行：替换规则名称。请根据自己需求对替换净化规则进行命名；
-* 第二行：分组。净化规则的分组组别；
-* 第三行：替换规则。填写需要被替换的内容；
-* 第四行：替换为。填写想替换成的内容（如不填则默认表示删除第三行里填写的内容）；
-* 第五行：替换范围，选填书名或者源名。填写此替换净化规则需要对哪本书籍或者哪个书源生效（如不填则对所有书籍和书源生效）。
-
-**【注】** *如常规去除方法去除不掉，则需要勾选“使用正则表达式”，同时第三行里的替换规则也需要按照正则表达式来填写（正则表达式填写方法可自行网上搜索学习）。*
-
-
-## 备份相关
-
-### 1. 云备份在哪？
-“**我的**”——“**备份与恢复**”——“**WebDav 设置**”。
-
-### 2. 如何操作进行云备份？
-* 侧栏设置，WebDav 设置；
-* 正确填写 WebDAV 服务器地址、账号和密码；
-* 无需操作，APP 默认每天自动云备份一次。
-
-作者在此诚挚推荐使用【坚果云】进行 WebDav 备份。
-
-如果直接在手机上注册，须下载【坚果云】APP，步骤较为繁琐。推荐在电脑上进行操作：
-1. 打开注册链接：https://www.jianguoyun.com/d/signup ；
-2. 注册后，进入坚果云；
-3. 点击右上角账户名处选择“**账户信息**”，然后选择“**安全选项**”；
-4. 在“**安全选项**”中找到“**第三方应用管理**”，并选择“**添加应用**”，输入名称（如“阅读”）后，会生成密码，选择完成；
-5. 其中 `https://dav.jianguoyun.com/dav/` 就是填入“**WebDAV 服务器地址**”的内容，“**使用情况**”后面的邮箱地址就是你的“**WebDAV 账号**”，点击“**显示密码**“后得到的密码就是你的“**WebDAV 密码**”。
-
-### 3. 关于云备份的相关说明
-
-在正确设置好云备份的情况下，APP 默认每天自动云备份一次，当日多次手动云备份会对当日的旧云备份文件进行覆盖，并不会覆盖之前及之后不同日期的备份文件，每天所自动云备份的文件会按照日期进行命名。
-
-### 4. 本地备份和云备份都能备份哪些东西？
-书架、看书进度、搜索记录、书源、替换和 APP 设置等都会备份，基本涵盖所有内容。
-
-### 5. 出现某些未知 Bug 怎么办？
-清除软件数据试试看，不行再进行反馈。
-
-
-## 其他
-
-### 1. 如何听书？
-可以使用手机自带的朗读引擎，也可使用第三方如 Google（谷歌）或小米等朗读引擎。
-
-【具体操作】*安装——系统设置——其他高级设置——辅助功能——TTS 输出——选择安装的朗读引擎（不同品牌手机的操作方法及步骤也不同，视情况而定）。*
-
-### 2. 如何设置屏幕方向、屏幕显示时长、显示/隐藏状态栏、显示/隐藏导航栏、音量键翻页、长按选择文本、点击总是翻下一页或自定义翻页按键？
-阅读界面——“**设置**”（可上划，下面还有其他设置）。
-
-### 3. 搜索的时候感觉手机卡顿，如何解决？
-“**我的**”——“**其他设置**”——调低“**更新和搜索线程数**”。
+### 2. Cách cài đặt hướng màn hình, thời gian sáng màn hình, ẩn/hiện thanh trạng thái, ẩn/hiện thanh điều hướng, lật trang bằng phím âm lượng hoặc nhấn giữ chọn văn bản?
+Tại giao diện đọc sách —— chọn "**Cài đặt**" (vuốt lên để xem thêm nhiều cấu hình khác bên dưới).
