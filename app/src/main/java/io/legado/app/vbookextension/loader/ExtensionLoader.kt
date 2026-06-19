@@ -25,7 +25,7 @@ class ExtensionLoader(
 ) {
     companion object {
         private const val TAG = "ExtLoader"
-        val DEFAULT_REPO_URL = "https://raw.githubusercontent.com/hongtrantiende/APK-TTC/main/plugin.json"
+        val DEFAULT_REPO_URL = "https://raw.githubusercontent.com/hongtrantiende/Extransion-TTC/main/plugin.json"
     }
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
