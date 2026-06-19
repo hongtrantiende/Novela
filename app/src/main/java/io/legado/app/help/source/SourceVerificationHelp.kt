@@ -40,33 +40,56 @@ object SourceVerificationHelp {
     ): Pair<String, String> {
         source
             ?: throw NoStackTraceException("getVerificationResult parameter source cannot be null")
+        return getVerificationResult(
+            source.getKey(),
+            source.getTag(),
+            source.getSourceType(),
+            url,
+            title,
+            useBrowser,
+            refetchAfterSuccess,
+            html
+        )
+    }
+
+    @Synchronized
+    fun getVerificationResult(
+        sourceKey: String,
+        sourceTag: String,
+        sourceType: Int,
+        url: String,
+        title: String,
+        useBrowser: Boolean,
+        refetchAfterSuccess: Boolean = true,
+        html: String? = null
+    ): Pair<String, String> {
         require(url.length < 64 * 1024) { "getVerificationResult parameter url too long" }
         check(!isMainThread) { "getVerificationResult must be called on a background thread" }
 
-        clearResult(source.getKey())
+        clearResult(sourceKey)
 
         if (!useBrowser) {
             appCtx.startActivity<VerificationCodeActivity> {
                 putExtra("imageUrl", url)
-                putExtra("sourceOrigin", source.getKey())
-                putExtra("sourceName", source.getTag())
-                putExtra("sourceType", source.getSourceType())
-                IntentData.put(getVerificationResultKey(source), Thread.currentThread())
+                putExtra("sourceOrigin", sourceKey)
+                putExtra("sourceName", sourceTag)
+                putExtra("sourceType", sourceType)
+                IntentData.put(getVerificationResultKey(sourceKey), Thread.currentThread())
             }
         } else {
-            startBrowser(source, url, title, true, refetchAfterSuccess, html)
+            startBrowser(sourceKey, sourceTag, sourceType, url, title, true, refetchAfterSuccess, html)
         }
 
         var waitUserInput = false
-        while (getResult(source.getKey()) == null) {
+        while (getResult(sourceKey) == null) {
             if (!waitUserInput && html == null) {
                 AppLog.putDebug("等待返回验证结果...")
                 waitUserInput = true
             }
             LockSupport.parkNanos(this, waitTime)
         }
-        val result = getResult(source.getKey()) ?: throw NoStackTraceException("验证结果为空")
-        clearResult(source.getKey())
+        val result = getResult(sourceKey) ?: throw NoStackTraceException("验证结果为空")
+        clearResult(sourceKey)
         if (result.second.isEmpty()) throw NoStackTraceException("验证结果为空")
         return result
     }
@@ -84,17 +107,39 @@ object SourceVerificationHelp {
         html: String? = null
     ) {
         source ?: throw NoStackTraceException("startBrowser parameter source cannot be null")
+        startBrowser(
+            source.getKey(),
+            source.getTag(),
+            source.getSourceType(),
+            url,
+            title,
+            saveResult,
+            refetchAfterSuccess,
+            html
+        )
+    }
+
+    fun startBrowser(
+        sourceKey: String,
+        sourceTag: String,
+        sourceType: Int,
+        url: String,
+        title: String,
+        saveResult: Boolean? = false,
+        refetchAfterSuccess: Boolean? = true,
+        html: String? = null
+    ) {
         require(url.length < 64 * 1024) { "startBrowser parameter url too long" }
         appCtx.startActivity<WebViewActivity> {
             putExtra("title", title)
             putExtra("url", url)
-            putExtra("sourceOrigin", source.getKey())
-            putExtra("sourceName", source.getTag())
-            putExtra("sourceType", source.getSourceType())
+            putExtra("sourceOrigin", sourceKey)
+            putExtra("sourceName", sourceTag)
+            putExtra("sourceType", sourceType)
             putExtra("sourceVerificationEnable", saveResult)
             putExtra("refetchAfterSuccess", refetchAfterSuccess)
             putExtra("html", html)
-            IntentData.put(getVerificationResultKey(source), Thread.currentThread())
+            IntentData.put(getVerificationResultKey(sourceKey), Thread.currentThread())
         }
     }
 

@@ -268,6 +268,9 @@ class ExtensionLoader(
             if (repo.url == "file:///android_asset/plugin.json") {
                 repositoryDao.delete(repo)
             }
+            if (repo.url == "https://raw.githubusercontent.com/hongtrantiende/APK-TTC/main/plugin.json") {
+                repositoryDao.delete(repo)
+            }
         }
 
         repos.forEach { repo ->

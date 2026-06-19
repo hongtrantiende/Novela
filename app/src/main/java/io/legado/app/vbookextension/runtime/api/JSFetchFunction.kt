@@ -11,6 +11,7 @@ import org.mozilla.javascript.*
 import org.mozilla.javascript.Context as RhinoContext
 import android.content.Context
 import android.webkit.CookieManager
+import io.legado.app.help.source.SourceVerificationHelp
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Semaphore
@@ -40,6 +41,7 @@ object JSFetchFunction {
         scope: ScriptableObject,
         httpClient: OkHttpClient,
         extensionId: String,
+        extensionName: String,
         context: Context
     ) {
         val fetchFn = object : BaseFunction() {
@@ -54,7 +56,7 @@ object JSFetchFunction {
                 val url = RhinoContext.toString(args[0])
                 val options = if (args.size > 1 && args[1] is Scriptable) args[1] as Scriptable else null
 
-                return executeFetch(cx, parentScope, httpClient, url, options, extensionId, context)
+                return executeFetch(cx, parentScope, httpClient, url, options, extensionId, extensionName, context)
             }
         }
 
@@ -68,6 +70,7 @@ object JSFetchFunction {
         url: String,
         options: Scriptable?,
         extensionId: String,
+        extensionName: String,
         context: Context
     ): Scriptable {
         try {
@@ -180,10 +183,50 @@ object JSFetchFunction {
             }
 
             ExtensionRequestRateLimiter.acquire(extensionId, context)
-            val response = try {
+            var response = try {
                 activeClient.newCall(request).execute()
             } finally {
                 ExtensionRequestRateLimiter.release(extensionId)
+            }
+
+            var bodyBytes = response.body?.use { it.bytes() }
+
+            if (isCloudflareChallenge(response, bodyBytes)) {
+                Log.d(TAG, "Cloudflare challenge detected for $url, launching WebView verification...")
+                try {
+                    val pair = SourceVerificationHelp.getVerificationResult(
+                        sourceKey = "ext_$extensionId",
+                        sourceTag = extensionName,
+                        sourceType = 0, // SourceType.book
+                        url = url,
+                        title = extensionName,
+                        useBrowser = true,
+                        refetchAfterSuccess = false,
+                        html = if (bodyBytes != null) String(bodyBytes) else null
+                    )
+                    
+                    // Update final cookie from cookieManager after verification
+                    val webViewCookie = cookieManager.getCookie(url)
+                    val newCookie = mergeCookies(webViewCookie, customCookie, existingCookie)
+                    
+                    val newRequestBuilder = request.newBuilder()
+                    if (newCookie.isNotBlank()) {
+                        newRequestBuilder.header("Cookie", newCookie)
+                    }
+                    
+                    Log.d(TAG, "Retrying request after verification for: $url")
+                    ExtensionRequestRateLimiter.acquire(extensionId, context)
+                    val retryResponse = try {
+                        activeClient.newCall(newRequestBuilder.build()).execute()
+                    } finally {
+                        ExtensionRequestRateLimiter.release(extensionId)
+                    }
+                    
+                    response = retryResponse
+                    bodyBytes = retryResponse.body?.use { it.bytes() }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed during automatic verification: ${e.message}", e)
+                }
             }
 
             // Sync Set-Cookie back to WebView CookieManager
@@ -222,9 +265,6 @@ object JSFetchFunction {
             val jsReqHeaders = NativeJSON.parse(ctx, scope, jsonReqHeaders.toString(), org.mozilla.javascript.Callable { _, _, _, args ->
                 args?.getOrNull(1)
             })
-
-
-            val bodyBytes = response.body?.use { it.bytes() }
             if (bodyBytes != null) {
                 Log.d(TAG, "Fetch snippet for $url: ${String(bodyBytes).replace("\n", " ").take(300)}")
                 try {
@@ -279,6 +319,22 @@ object JSFetchFunction {
         }
     }
 
+
+    private fun isCloudflareChallenge(response: Response, bodyBytes: ByteArray?): Boolean {
+        if (response.code == 403 || response.code == 503) {
+            val server = response.header("Server") ?: ""
+            if (server.contains("cloudflare", ignoreCase = true)) {
+                return true
+            }
+            bodyBytes?.let {
+                val html = String(it)
+                if (html.contains("cf-challenge") || html.contains("window._cf_chl_opt") || html.contains("Just a moment...")) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
 
     private fun getProperty(obj: Scriptable, name: String): String? {
         val value = obj.get(name, obj)

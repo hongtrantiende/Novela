@@ -365,8 +365,9 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                         fontWeight = FontWeight.Medium,
                                         fontSize = 13.sp
                                     )
+                                    val isDefaultRepo = repo.url.contains("Extransion-TTC", ignoreCase = true)
                                     AppText(
-                                        text = repo.url,
+                                        text = if (isDefaultRepo) "********************************" else repo.url,
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
@@ -560,7 +561,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
             data = repo,
             onDismissRequest = { repoToDelete = null },
             title = "Xóa kho nguồn?",
-            text = "Bạn có chắc chắn muốn xóa kho nguồn \"${repo.name}\" (${repo.url}) không?",
+            text = "Bạn có chắc chắn muốn xóa kho nguồn \"${repo.name}\" (${if (repo.url.contains("Extransion-TTC", ignoreCase = true)) "****************" else repo.url}) không?",
             confirmText = "Xóa",
             onConfirm = {
                 viewModel.removeRepository(repo)
@@ -722,6 +723,8 @@ fun ExtensionDetailDialog(
                                                 putExtra("title", extension.name)
                                                 putExtra("sourceName", extension.name)
                                                 putExtra("sourceOrigin", "ext_${extension.id}")
+                                                putExtra("sourceVerificationEnable", true)
+                                                putExtra("refetchAfterSuccess", false)
                                             }
                                             context.startActivity(intent)
                                         } catch (e: Exception) {

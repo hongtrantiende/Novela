@@ -172,7 +172,7 @@ class VBookJsExtensionRunner(
             }
             ScriptableObject.putProperty(scope, "load", loadFn)
 
-            JSFetchFunction.inject(rhinoCtx, scope, httpClient, extension.id, appContext)
+            JSFetchFunction.inject(rhinoCtx, scope, httpClient, extension.id, extension.pluginJson.metadata.name, appContext)
 
             val extCacheKey = "${extension.id}_$scriptFileName"
             val extScript = compiledScripts.getOrPut(extCacheKey) {
