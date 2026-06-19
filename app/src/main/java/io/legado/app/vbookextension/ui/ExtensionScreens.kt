@@ -366,13 +366,15 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                         fontSize = 13.sp
                                     )
                                     val isDefaultRepo = repo.url.contains("Extransion-TTC", ignoreCase = true)
-                                    AppText(
-                                        text = if (isDefaultRepo) "********************************" else repo.url,
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                                    if (!isDefaultRepo) {
+                                        AppText(
+                                            text = repo.url,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
                                 if (repo.url != "file:///android_asset/plugin.json") {
                                     IconButton(
@@ -561,7 +563,11 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
             data = repo,
             onDismissRequest = { repoToDelete = null },
             title = "Xóa kho nguồn?",
-            text = "Bạn có chắc chắn muốn xóa kho nguồn \"${repo.name}\" (${if (repo.url.contains("Extransion-TTC", ignoreCase = true)) "****************" else repo.url}) không?",
+            text = if (repo.url.contains("Extransion-TTC", ignoreCase = true)) {
+                "Bạn có chắc chắn muốn xóa kho nguồn \"${repo.name}\" không?"
+            } else {
+                "Bạn có chắc chắn muốn xóa kho nguồn \"${repo.name}\" (${repo.url}) không?"
+            },
             confirmText = "Xóa",
             onConfirm = {
                 viewModel.removeRepository(repo)
