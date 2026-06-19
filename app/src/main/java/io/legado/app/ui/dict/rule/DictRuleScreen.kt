@@ -194,7 +194,7 @@ fun DictRuleScreen(
     )
 
     BatchImportDialog(
-        title = "导入词典规则",
+        title = "Nhập quy tắc từ điển",
         importState = importState,
         onDismissRequest = { onIntent(DictRuleIntent.CancelImport) },
         onToggleItem = { onIntent(DictRuleIntent.ToggleImportSelection(it)) },
@@ -264,7 +264,7 @@ fun DictRuleScreen(
     )
 
     RuleListScaffold(
-        title = "字典规则",
+        title = "Quy tắc từ điển",
         state = state,
         onBackClick = { onBackClick() },
         onSearchToggle = { active ->
@@ -319,10 +319,15 @@ fun DictRuleScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(rules, key = { it.id }) { item ->
+                    val translatedTitle = when (item.id) {
+                        "百度汉语" -> "Baidu Hán ngữ"
+                        "海词英文" -> "Hải từ tiếng Anh"
+                        else -> item.id
+                    }
                     ReorderableSelectionItem(
                         state = reorderableState,
                         key = item.id,
-                        title = item.id,
+                        title = translatedTitle,
                         isEnabled = item.isEnabled,
                         isSelected = selectedIds.contains(item.id),
                         inSelectionMode = inSelectionMode,

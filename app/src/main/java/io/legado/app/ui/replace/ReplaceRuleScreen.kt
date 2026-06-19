@@ -104,7 +104,7 @@ fun ReplaceRuleScreen(
     val importState by viewModel.importState.collectAsStateWithLifecycle()
 
     var selectedTabIndex by remember { mutableIntStateOf(0) }
-    val tabItems = remember(groups) { listOf("全部") + groups }
+    val tabItems = remember(groups) { listOf("Tất cả") + groups }
 
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
         viewModel.moveItemInList(from.index, to.index)
@@ -211,7 +211,7 @@ fun ReplaceRuleScreen(
         val maxIndex = groups.size
         if (selectedTabIndex > maxIndex) {
             selectedTabIndex = 0
-            viewModel.setGroup("全部")
+            viewModel.setGroup("Tất cả")
         }
     }
 
@@ -263,7 +263,7 @@ fun ReplaceRuleScreen(
     )
 
     RuleListScaffold(
-        title = "替换规则",
+        title = "Quy tắc thay thế",
         state = uiState,
         onBackClick = { onBackClick() },
         onSearchToggle = { viewModel.setSearchMode(!uiState.isSearch) },
@@ -345,39 +345,39 @@ fun ReplaceRuleScreen(
                 onClick = { showImportSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "分组管理",
+                text = "Quản lý nhóm",
                 onClick = { showGroupManageSheet = true; dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "帮助",
+                text = "Trợ giúp",
                 onClick = { /*TODO*/ dismiss() }
             )
             PillDivider()
             RoundDropdownMenuItem(
-                text = "旧的在前",
+                text = "Cũ nhất trước",
                 onClick = { viewModel.setSortMode("asc"); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "新的在前",
+                text = "Mới nhất trước",
                 onClick = { viewModel.setSortMode("desc"); dismiss() }
             )
             RoundDropdownMenuItem(
-                text = "名称升序",
+                text = "Tên tăng dần",
                 onClick = {
                     viewModel.setSortMode("name_asc")
                     dismiss()
                     scope.launch {
-                        snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
+                        snackbarHostState.showSnackbar("Kéo thả bị vô hiệu hóa trong chế độ sắp xếp này")
                     }
                 }
             )
             RoundDropdownMenuItem(
-                text = "名称降序",
+                text = "Tên giảm dần",
                 onClick = {
                     viewModel.setSortMode("name_desc")
                     dismiss()
                     scope.launch {
-                        snackbarHostState.showSnackbar("当前排序模式下禁用拖动")
+                        snackbarHostState.showSnackbar("Kéo thả bị vô hiệu hóa trong chế độ sắp xếp này")
                     }
                 }
             )
@@ -423,15 +423,15 @@ fun ReplaceRuleScreen(
                         modifier = Modifier,
                         dropdownContent = { dismiss ->
                             RoundDropdownMenuItem(
-                                text = "移至顶部",
+                                text = "Lên đầu",
                                 onClick = { viewModel.toTop(ui.rule); dismiss() }
                             )
                             RoundDropdownMenuItem(
-                                text = "移至底部",
+                                text = "Xuống cuối",
                                 onClick = { viewModel.toBottom(ui.rule); dismiss() }
                             )
                             RoundDropdownMenuItem(
-                                text = "删除",
+                                text = "Xóa",
                                 onClick = { showDeleteRuleDialog = ui.rule; dismiss() }
                             )
                         }

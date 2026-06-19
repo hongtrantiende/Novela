@@ -90,7 +90,7 @@ fun ReplaceEditScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = if (state.id > 0) "编辑替换规则" else "新增替换规则",
+                title = if (state.id > 0) "Sửa quy tắc thay thế" else "Thêm quy tắc thay thế",
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBack)
                 },
@@ -105,27 +105,27 @@ fun ReplaceEditScreen(
                                 viewModel.save(onSaveSuccess)
                             },
                             imageVector = Icons.Default.Save,
-                            contentDescription = "保存"
+                            contentDescription = "Lưu"
                         )
                     }
                     TopBarActionButton(
                         onClick = { showMenu = true },
                         imageVector = Icons.Default.MoreVert,
-                        contentDescription = "更多操作"
+                        contentDescription = "Thêm thao tác"
                     )
                     RoundDropdownMenu(
                         expanded = showMenu,
                         onDismissRequest = { showMenu = false }
                     ) {
                         RoundDropdownMenuItem(
-                            text = "复制规则",
+                            text = "Sao chép quy tắc",
                             onClick = {
                                 showMenu = false
                                 viewModel.copyRule()
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "粘贴规则",
+                            text = "Dán quy tắc",
                             onClick = {
                                 showMenu = false
                                 viewModel.pasteRule(onSuccess = {})
@@ -182,7 +182,7 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.name,
                     onValueChange = viewModel::onNameChange,
-                    label = "规则名称",
+                    label = "Tên quy tắc",
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -202,8 +202,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.pattern,
                     onValueChange = viewModel::onPatternChange,
-                    label = "匹配规则",
-                    placeholder = { AppText("输入正则表达式或关键字") },
+                    label = "Quy tắc khớp",
+                    placeholder = { AppText("Nhập biểu thức chính quy hoặc từ khóa") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -215,8 +215,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.replacement,
                     onValueChange = viewModel::onReplacementChange,
-                    label = "替换为",
-                    placeholder = { AppText("输入替换内容或捕获组") },
+                    label = "Thay thế thành",
+                    placeholder = { AppText("Nhập nội dung thay thế hoặc nhóm bắt") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -231,27 +231,27 @@ fun ReplaceEditScreen(
                     horizontalArrangement = Arrangement.Start
                 ) {
                     ToggleChip(
-                        label = "标题",
+                        label = "Tiêu đề",
                         selected = state.scopeTitle,
-                        checkedContentDescription = "已选择",
+                        checkedContentDescription = "Đã chọn",
                         onToggle = { viewModel.onScopeTitleChange(!state.scopeTitle) }
                     )
 
                     Spacer(Modifier.width(8.dp))
 
                     ToggleChip(
-                        label = "内容",
+                        label = "Nội dung",
                         selected = state.scopeContent,
-                        checkedContentDescription = "已选择",
+                        checkedContentDescription = "Đã chọn",
                         onToggle = { viewModel.onScopeContentChange(!state.scopeContent) }
                     )
 
                     Spacer(Modifier.weight(1f))
 
                     ToggleChip(
-                        label = "使用正则",
+                        label = "Dùng regex",
                         selected = state.isRegex,
-                        checkedContentDescription = "正则已启用",
+                        checkedContentDescription = "Regex đã bật",
                         onToggle = { viewModel.onRegexChange(!state.isRegex) }
                     )
 
@@ -260,8 +260,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.scope,
                     onValueChange = viewModel::onScopeChange,
-                    label = "特定范围",
-                    placeholder = { AppText("指定规则适用的范围") },
+                    label = "Phạm vi chỉ định",
+                    placeholder = { AppText("Chỉ định phạm vi áp dụng quy tắc") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -273,8 +273,8 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.excludeScope,
                     onValueChange = viewModel::onExcludeScopeChange,
-                    label = "排除范围",
-                    placeholder = { AppText("指定规则不适用的范围") },
+                    label = "Phạm vi loại trừ",
+                    placeholder = { AppText("Chỉ định phạm vi không áp dụng quy tắc") },
                     modifier = Modifier
                         .fillMaxWidth()
                         .onFocusChanged {
@@ -286,7 +286,7 @@ fun ReplaceEditScreen(
                 AppTextField(
                     value = state.timeout,
                     onValueChange = viewModel::onTimeoutChange,
-                    label = "超时 (ms)",
+                    label = "Thời gian chờ (ms)",
                     placeholder = { AppText("3000") },
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -297,7 +297,7 @@ fun ReplaceEditScreen(
 
             ManageGroupDialog(
                 show = state.showGroupDialog,
-                groups = state.allGroups.filter { it != "默认" },
+                groups = state.allGroups.filter { it != "Mặc định" && it != "默认" },
                 onDismiss = { viewModel.toggleGroupDialog(false) },
                 onDelete = { viewModel.deleteGroups(it) }
             )
@@ -325,8 +325,8 @@ fun GroupSelector(
             AppTextField(
                 value = currentGroup,
                 onValueChange = onGroupChange,
-                label = "分组",
-                placeholder = { AppText("默认") },
+                label = "Nhóm",
+                placeholder = { AppText("Mặc định") },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -369,10 +369,10 @@ fun ManageGroupDialog(
     AppAlertDialog(
         show = show,
         onDismissRequest = onDismiss,
-        title = "分组管理",
+        title = "Quản lý nhóm",
         content = {
             if (groups.isEmpty()) {
-                AppText("暂无其他分组")
+                AppText("Không có nhóm nào khác")
             } else {
                 Column(
                     modifier = Modifier.verticalScroll(rememberScrollState()),
@@ -395,11 +395,11 @@ fun ManageGroupDialog(
                 }
             }
         },
-        confirmText = "删除选中",
+        confirmText = "Xóa đã chọn",
         onConfirm = {
             onDelete(selectedGroups.toList())
         },
-        dismissText = "关闭",
+        dismissText = "Đóng",
         onDismiss = onDismiss
     )
 }

@@ -17,7 +17,16 @@ data class BookGroupUi(
 
 fun BookGroup.toBookGroupUi() = BookGroupUi(
     groupId = groupId,
-    groupName = groupName,
+    groupName = when (groupName) {
+        "未读" -> "Chưa đọc"
+        "在读" -> "Đang đọc"
+        "小说" -> "Tiểu thuyết"
+        "全部" -> "Tất cả"
+        "网络未分组" -> "Chưa phân loại mạng"
+        "本地未分组" -> "Chưa phân loại cục bộ"
+        "音频" -> "Âm thanh"
+        else -> groupName
+    },
     cover = cover,
     order = order,
     enableRefresh = enableRefresh,

@@ -117,6 +117,12 @@ object OtherConfig {
             DownloadCacheConfig.cacheBookThreadCount = value
         }
 
+    var downloadDelay: Long
+        get() = DownloadCacheConfig.downloadDelay
+        set(value) {
+            DownloadCacheConfig.downloadDelay = value
+        }
+
     var preDownloadNum: Int
         get() = DownloadCacheConfig.preDownloadNum
         set(value) {

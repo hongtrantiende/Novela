@@ -121,11 +121,17 @@ class ExploreViewModel(
                 exploreKindUseCase.warmUp(source.bookSourceUrl)
                 val infoMap = getExploreInfoMap(source.bookSourceUrl)
                 val displayNames = kinds.associate { kind ->
-                    kind.title to exploreKindUseCase.resolveDisplayName(
+                    val originalName = exploreKindUseCase.resolveDisplayName(
                         kind = kind,
                         sourceUrl = source.bookSourceUrl,
                         infoMap = infoMap
                     )
+                    val translatedName = if (io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled) {
+                        io.legado.app.utils.TranslateUtils.translateMeta(originalName)
+                    } else {
+                        originalName
+                    }
+                    kind.title to translatedName
                 }
                 val values = buildKindValues(kinds, source.bookSourceUrl)
                 _uiState.update {

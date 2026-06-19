@@ -6,6 +6,11 @@ import io.legado.app.ui.config.prefDelegate
 
 object TranslationConfig {
 
+    var isGlobalTranslateEnabled by prefDelegate(
+        PreferKey.globalTranslateEnabled,
+        false
+    )
+
     var llmTranslateEnabled by prefDelegate(
         PreferKey.llmTranslateEnabled,
         false

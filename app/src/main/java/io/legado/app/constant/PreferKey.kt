@@ -68,6 +68,7 @@ object PreferKey {
     const val restoreIgnore = "restoreIgnore"
     const val threadCount = "threadCount"
     const val cacheBookThreadCount = "cacheBookThreadCount"
+    const val downloadDelay = "downloadDelay"
     const val webPort = "webPort"
     const val keepLight = "keep_light"
     const val readSliderMode = "read_slider_mode"
@@ -352,6 +353,8 @@ object PreferKey {
     const val navIconMy = "navIconMy"
 
     // Translation
+    const val translateEnable = "translateEnable"
+    const val globalTranslateEnabled = "globalTranslateEnabled"
     const val llmTranslateEnabled = "llmTranslateEnabled"
     const val llmProvider = "llmProvider"
     const val llmBaseUrl = "llmBaseUrl"

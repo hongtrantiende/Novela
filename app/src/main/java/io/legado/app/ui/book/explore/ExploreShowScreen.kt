@@ -242,9 +242,11 @@ fun ExploreShowScreen(
         modifier = Modifier
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
+            val rawTitle = state.selectedKindTitle ?: title
+            val translatedTitle by io.legado.app.utils.translateAsState(rawTitle)
             GlassMediumFlexibleTopAppBar(
                 modifier = Modifier.responsiveHazeEffect(state = hazeState),
-                title = state.selectedKindTitle ?: title,
+                title = translatedTitle,
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBack)
                 },

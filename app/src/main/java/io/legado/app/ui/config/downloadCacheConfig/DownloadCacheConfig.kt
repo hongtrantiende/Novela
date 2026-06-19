@@ -23,12 +23,17 @@ object DownloadCacheConfig {
 
     var threadCount by prefDelegate(
         PreferKey.threadCount,
-        16
+        1
     )
 
     var cacheBookThreadCount by prefDelegate(
         PreferKey.cacheBookThreadCount,
-        16
+        1
+    )
+
+    var downloadDelay by prefDelegate(
+        PreferKey.downloadDelay,
+        2000L
     )
 
     private var _userAgent by prefDelegate(

@@ -88,6 +88,8 @@ object CacheBook {
             }.onStart {
                 updateSummary()
             }.onEachParallel(OtherConfig.cacheBookThreadCount.coerceIn(1, maxDownloadConcurrency)) {
+                val delayMs = OtherConfig.downloadDelay
+                if (delayMs > 0) delay(delayMs)
                 coroutineScope {
                     it.download(this, context)
                 }

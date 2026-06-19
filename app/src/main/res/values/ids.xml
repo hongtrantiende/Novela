@@ -18,5 +18,6 @@
     <item name="cursor_left" type="id" />
     <item name="cursor_right" type="id" />
     <item name="navigation_bar" type="id" />
+    <item name="tag_translate_key" type="id" />
 
 </resources>

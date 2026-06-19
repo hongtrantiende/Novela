@@ -110,6 +110,11 @@ data class BookChapter(
                 2 -> displayTitle = ChineseUtils.s2t(displayTitle)
             }
         }
+        if (io.legado.app.utils.TranslateUtils.isTranslateEnabled()) {
+            displayTitle = kotlinx.coroutines.runBlocking {
+                io.legado.app.utils.TranslateUtils.translateChapterTitle(displayTitle)
+            }
+        }
         if (useReplace && replaceRules != null) kotlin.run {
             replaceRules.forEach { item ->
                 if (item.pattern.isNotEmpty()) {

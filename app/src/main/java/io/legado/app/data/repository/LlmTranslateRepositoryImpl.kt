@@ -61,6 +61,14 @@ class LlmTranslateRepositoryImpl : LlmGateway {
                     onUpdate,
                     retryReason
                 )
+                TranslationConstants.PROVIDER_VIETPHRASE -> {
+                    val translatedText = io.legado.app.utils.TranslateUtils.translateContent(text)
+                    if (translatedText.isNotEmpty()) {
+                        Result.success(translatedText)
+                    } else {
+                        Result.failure(Exception("Empty VietPhrase translation result"))
+                    }
+                }
 
                 else -> Result.failure(IllegalArgumentException("Unknown provider: $provider"))
             }

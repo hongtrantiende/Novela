@@ -183,77 +183,77 @@ abstract class AppDatabase : RoomDatabase() {
                 @Language("sql")
                 val insertBookGroupAllSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdAll}, '全部', -10, 1
+                    select ${BookGroup.IdAll}, 'Tất cả', -10, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdAll})
                 """.trimIndent()
                 db.execSQL(insertBookGroupAllSql)
                 @Language("sql")
                 val insertBookGroupLocalSql = """
                     insert into book_groups(groupId, groupName, 'order', enableRefresh, show) 
-                    select ${BookGroup.IdLocal}, '本地', -9, 0, 1
+                    select ${BookGroup.IdLocal}, 'Cục bộ', -9, 0, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdLocal})
                 """.trimIndent()
                 db.execSQL(insertBookGroupLocalSql)
                 @Language("sql")
                 val insertBookGroupTextSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdText}, '小说', -26, 1
+                    select ${BookGroup.IdText}, 'Tiểu thuyết', -26, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdText})
                 """.trimIndent()
                 db.execSQL(insertBookGroupTextSql)
                 @Language("sql")
                 val insertBookGroupMangaSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdManga}, '漫画', -25, 1
+                    select ${BookGroup.IdManga}, 'Truyện tranh', -25, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdManga})
                 """.trimIndent()
                 db.execSQL(insertBookGroupMangaSql)
                 @Language("sql")
                 val insertBookGroupMusicSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdAudio}, '音频', -8, 1
+                    select ${BookGroup.IdAudio}, 'Audio', -8, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdAudio})
                 """.trimIndent()
                 db.execSQL(insertBookGroupMusicSql)
                 Language("sql")
                 val insertGroupReading = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdReading}, '在读', -30, 1
+                    select ${BookGroup.IdReading}, 'Đang đọc', -30, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdReading})
                 """.trimIndent()
                 db.execSQL(insertGroupReading)
                 @Language("sql")
                 val insertGroupUnread = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdUnread}, '未读', -29, 1
+                    select ${BookGroup.IdUnread}, 'Chưa đọc', -29, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdUnread})
                 """.trimIndent()
                 db.execSQL(insertGroupUnread)
                 @Language("sql")
                 val insertGroupReadFinished = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdReadFinished}, '已读', -28, 1
+                    select ${BookGroup.IdReadFinished}, 'Đã đọc', -28, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdReadFinished})
                 """.trimIndent()
                 db.execSQL(insertGroupReadFinished)
                 @Language("sql")
                 val insertBookGroupNetNoneGroupSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdNetNone}, '网络未分组', -7, 1
+                    select ${BookGroup.IdNetNone}, 'Chưa phân loại mạng', -7, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdNetNone})
                 """.trimIndent()
                 db.execSQL(insertBookGroupNetNoneGroupSql)
                 @Language("sql")
                 val insertBookGroupLocalNoneGroupSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdLocalNone}, '本地未分组', -6, 0
+                    select ${BookGroup.IdLocalNone}, 'Chưa phân loại cục bộ', -6, 0
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdLocalNone})
                 """.trimIndent()
                 db.execSQL(insertBookGroupLocalNoneGroupSql)
                 @Language("sql")
                 val insertBookGroupErrorSql = """
                     insert into book_groups(groupId, groupName, 'order', show) 
-                    select ${BookGroup.IdError}, '更新失败', -1, 1
+                    select ${BookGroup.IdError}, 'Lỗi cập nhật', -1, 1
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdError})
                 """.trimIndent()
                 db.execSQL(insertBookGroupErrorSql)

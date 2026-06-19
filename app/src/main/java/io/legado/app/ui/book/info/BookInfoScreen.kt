@@ -688,9 +688,10 @@ private fun BookInfoHeader(
                 ) {
                     var showTitleMenu by remember { mutableStateOf(false) }
                     var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
+                    val translatedBookName by io.legado.app.utils.translateAsState(book.name)
                     Box {
                         AnimatedTextLine(
-                            text = book.name,
+                            text = translatedBookName,
                             style = LegadoTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             maxLines = if (isTitleExpanded) Int.MAX_VALUE else 2,
@@ -719,8 +720,9 @@ private fun BookInfoHeader(
                             )
                         }
                     }
+                    val translatedAuthor by io.legado.app.utils.translateAsState(book.getRealAuthor())
                     AnimatedTextLine(
-                        text = stringResource(R.string.author_show, book.getRealAuthor()),
+                        text = stringResource(R.string.author_show, translatedAuthor),
                         style = LegadoTheme.typography.bodyLarge,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.combinedClickable(
@@ -747,8 +749,9 @@ private fun BookInfoHeader(
                 ) {
                     groupNames?.takeIf { it.isNotBlank() }?.let {
                         item(key = "group-$it") {
+                            val translatedGroupName by io.legado.app.utils.translateAsState(it)
                             TextCard(
-                                text = stringResource(R.string.group_s, it),
+                                text = stringResource(R.string.group_s, translatedGroupName),
                                 textStyle = LegadoTheme.typography.labelLargeEmphasized,
                                 backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
                                 contentColor = LegadoTheme.colorScheme.onSurface,
@@ -759,8 +762,9 @@ private fun BookInfoHeader(
                         items = kindLabels,
                         key = { index, label -> "kind-$index-$label" }
                     ) { _, label ->
+                        val translatedLabel by io.legado.app.utils.translateAsState(label)
                         TextCard(
-                            text = label,
+                            text = translatedLabel,
                             textStyle = LegadoTheme.typography.labelLargeEmphasized,
                             backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
                             contentColor = LegadoTheme.colorScheme.onSurface,
@@ -951,8 +955,9 @@ private fun BookInfoSummary(
             }
         }
         Spacer(modifier = Modifier.height(4.dp))
+        val translatedIntro by io.legado.app.utils.translateAsState(book.getDisplayIntro().orEmpty())
         AnimatedTextLine(
-            text = book.getDisplayIntro().orEmpty().ifBlank { stringResource(R.string.intro_show_null) },
+            text = translatedIntro.ifBlank { stringResource(R.string.intro_show_null) },
             style = LegadoTheme.typography.bodyMedium,
         )
     }

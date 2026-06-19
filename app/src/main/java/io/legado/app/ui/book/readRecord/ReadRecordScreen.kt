@@ -182,12 +182,12 @@ fun ReadRecordScreen(
         topBar = {
             Column {
                 GlassMediumFlexibleTopAppBar(
-                    title = "阅读记录",
+                    title = "Lịch sử đọc",
                     subtitle = run {
                         val subTitle = when (displayMode) {
-                            DisplayMode.AGGREGATE -> "汇总视图"
-                            DisplayMode.TIMELINE -> "时间线视图"
-                            DisplayMode.LATEST -> "最后阅读"
+                            DisplayMode.AGGREGATE -> "Tổng hợp"
+                            DisplayMode.TIMELINE -> "Dòng thời gian"
+                            DisplayMode.LATEST -> "Gần đây"
                         }
                         subTitle
                     },
@@ -256,7 +256,7 @@ fun ReadRecordScreen(
                                 top = padding.calculateTopPadding(),
                                 bottom = padding.calculateBottomPadding()
                             ),
-                        message = "加载中",
+                        message = "Đang tải",
                         isLoading = true
                     )
                 }
@@ -269,7 +269,7 @@ fun ReadRecordScreen(
                                 top = padding.calculateTopPadding(),
                                 bottom = padding.calculateBottomPadding()
                             ),
-                        message = "没有记录"
+                        message = "Không có lịch sử"
                     )
                 }
 
@@ -296,7 +296,7 @@ fun ReadRecordScreen(
                                     scope.launch {
                                         val candidates = viewModel.getMergeCandidates(record)
                                         if (candidates.isEmpty()) {
-                                            snackbarHostState.showSnackbar("没有可合并的同名记录")
+                                            snackbarHostState.showSnackbar("Không có lịch sử cùng tên truyện để gộp")
                                         } else {
                                             mergeDialogData = record to candidates
                                         }
@@ -341,25 +341,25 @@ fun ReadRecordScreen(
     AppAlertDialog(
         data = pendingDeleteAction,
         onDismissRequest = { pendingDeleteAction = null },
-        title = "确认删除",
+        title = "Xác nhận xóa",
         content = { _ ->
             Column {
-                AppText("确定要删除这条记录吗？")
+                AppText("Bạn có chắc chắn muốn xóa lịch sử này không?")
                 Spacer(modifier = Modifier.height(8.dp))
                 CheckboxItem(
-                    title = "不再提示",
+                    title = "Không hỏi lại",
                     checked = skipDeleteConfirmTemp,
                     onCheckedChange = { skipDeleteConfirmTemp = it }
                 )
             }
         },
-        confirmText = "删除",
+        confirmText = "Xóa",
         onConfirm = { action ->
             action.invoke()
             pendingDeleteAction = null
             skipDeleteConfirm = skipDeleteConfirmTemp
         },
-        dismissText = "取消",
+        dismissText = "Hủy",
         onDismiss = {
             pendingDeleteAction = null
         }
@@ -407,14 +407,14 @@ fun ReadRecordScreen(
     AppAlertDialog(
         data = mergeDialogData,
         onDismissRequest = { mergeDialogData = null },
-        title = "合并阅读记录",
+        title = "Gộp lịch sử đọc",
         content = { (targetRecord, candidates) ->
             Column {
-                AppText("将以下作者的“${targetRecord.bookName}”合并到 ${targetRecord.bookAuthor.ifBlank { "未知作者" }}")
+                AppText("Gộp lịch sử đọc của truyện “${targetRecord.bookName}” vào tác giả ${targetRecord.bookAuthor.ifBlank { "Chưa rõ" }}")
                 Spacer(modifier = Modifier.height(8.dp))
 
                 candidates.forEach { candidate ->
-                    val author = candidate.bookAuthor.ifBlank { "未知作者" }
+                    val author = candidate.bookAuthor.ifBlank { "Chưa rõ" }
                     val isChecked = selectedAuthors.contains(candidate.bookAuthor)
 
                     CheckboxItem(
@@ -431,7 +431,7 @@ fun ReadRecordScreen(
                 }
             }
         },
-        confirmText = "合并",
+        confirmText = "Gộp",
         onConfirm = { (targetRecord, candidates) ->
             viewModel.mergeReadRecords(
                 targetRecord,
@@ -439,7 +439,7 @@ fun ReadRecordScreen(
             )
             mergeDialogData = null
         },
-        dismissText = "取消",
+        dismissText = "Hủy",
         onDismiss = { mergeDialogData = null }
     )
 }
@@ -461,7 +461,7 @@ fun SummarySection(
             val dailyTime = dailyDetails.sumOf { it.readTime }
 
             ReadingSummaryCard(
-                title = selectedDate.format(DateTimeFormatter.ofPattern("M月d日阅读概览")),
+                title = selectedDate.format(DateTimeFormatter.ofPattern("Tổng quan đọc ngày d tháng M")),
                 bookCount = distinctBooks.size,
                 totalTimeMillis = dailyTime,
                 bookNamesForCover = distinctBooks.take(3),
@@ -475,7 +475,7 @@ fun SummarySection(
 
         if (allBooksCount > 0) {
             ReadingSummaryCard(
-                title = "累计阅读成就",
+                title = "Thành tựu đọc tích lũy",
                 bookCount = allBooksCount,
                 totalTimeMillis = totalTime,
                 bookNamesForCover = state.latestRecords.take(5).map { it.bookName to it.bookAuthor },
@@ -691,7 +691,7 @@ fun LatestReadItem(
                 overflow = TextOverflow.Ellipsis
             )
             AppText(
-                text = record.bookAuthor.ifBlank { "未知作者" },
+                text = record.bookAuthor.ifBlank { "Chưa rõ" },
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.outline,
                 maxLines = 1,
@@ -735,7 +735,7 @@ fun TimelineSessionItem(
     LaunchedEffect(session.bookName, session.bookAuthor) {
         coverPath = viewModel.getBookCover(session.bookName, session.bookAuthor)
         val title = viewModel.getChapterTitle(session.bookName, session.bookAuthor, session.words)
-        chapterTitle = title ?: "第 ${session.words} 章"
+        chapterTitle = title ?: "Chương ${session.words}"
     }
 
     val endTimeText = DateUtil.format(Date(session.endTime), "HH:mm")

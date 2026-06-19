@@ -42,6 +42,8 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.utils.translateAsState
+import androidx.compose.runtime.getValue
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -109,9 +111,10 @@ fun SearchBookListItem(
                 .weight(1f)
                 .align(Alignment.CenterVertically)
         ) {
+            val translatedName by translateAsState(book.name)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AppText(
-                    text = book.name,
+                    text = translatedName,
                     modifier = Modifier.weight(1f),
                     style = LegadoTheme.typography.titleSmall,
                     maxLines = 1,
@@ -130,8 +133,9 @@ fun SearchBookListItem(
             }
 
             Row {
+                val translatedAuthor by translateAsState(book.author)
                 AppText(
-                    text = book.author,
+                    text = translatedAuthor,
                     style = LegadoTheme.typography.bodySmall,
                     maxLines = 1,
                 )
@@ -145,8 +149,9 @@ fun SearchBookListItem(
                         maxLines = 1,
                     )
 
+                    val translatedLatest by translateAsState(latestChapter)
                     AppText(
-                        text = "最新: $latestChapter",
+                        text = "Mới nhất: $translatedLatest",
                         style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -159,8 +164,9 @@ fun SearchBookListItem(
 
             val intro = book.intro?.replace("\\s+".toRegex(), "") ?: ""
             if (intro.isNotEmpty()) {
+                val translatedIntro by translateAsState(intro, isMeta = false)
                 AppText(
-                    text = intro,
+                    text = translatedIntro,
                     style = LegadoTheme.typography.labelSmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                     maxLines = 2,
@@ -180,7 +186,8 @@ fun SearchBookListItem(
                         .fadingEdge(lazyListState, gradientWidth = 8.dp)
                 ) {
                     items(kinds) { kind ->
-                        SearchBookTagChip(text = kind)
+                        val translatedKind by translateAsState(kind)
+                        SearchBookTagChip(text = translatedKind)
                         Spacer(modifier = Modifier.width(6.dp))
                     }
                 }
@@ -251,8 +258,9 @@ fun SearchBookGridItem(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp, vertical = 4.dp)
         ) {
+            val translatedName by translateAsState(book.name)
             AppText(
-                text = book.name,
+                text = translatedName,
                 style = LegadoTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
@@ -51,6 +52,8 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
+import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
 
@@ -88,6 +91,7 @@ private fun BookCacheManageScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var pendingDeleteBook by remember { mutableStateOf<BookCacheBookItem?>(null) }
     var pendingDeleteChapter by remember { mutableStateOf<Pair<BookCacheBookItem, BookCacheChapterItem>?>(null) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
     val allBooks = state.shelfBooks + state.notShelfBooks
     val hasRunningDownload = allBooks.any { it.hasActiveDownload }
     val hasDownloadTarget = allBooks.any { it.cachedCount < it.totalCount }
@@ -96,16 +100,21 @@ private fun BookCacheManageScreen(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             GlassMediumFlexibleTopAppBar(
-                title = "缓存管理",
+                title = "Quản lý tải xuống",
                 subtitle = state.downloadSummary.takeIf { it.isNotBlank() },
                 navigationIcon = {
                     TopBarNavigationButton(onClick = onBackClick)
                 },
                 actions = {
                     TopBarActionButton(
+                        onClick = { showSettingsDialog = true },
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Cài đặt"
+                    )
+                    TopBarActionButton(
                         onClick = { onIntent(BookCacheManageIntent.Refresh) },
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = "刷新"
+                        contentDescription = "Làm mới"
                     )
                 },
                 scrollBehavior = scrollBehavior
@@ -122,7 +131,7 @@ private fun BookCacheManageScreen(
                         }
                     },
                     icon = if (hasRunningDownload) Icons.Default.Stop else Icons.Default.Download,
-                    tooltipText = if (hasRunningDownload) "停止下载" else "开始下载"
+                    tooltipText = if (hasRunningDownload) "Dừng tải" else "Bắt đầu tải"
                 )
             }
         }
@@ -147,8 +156,8 @@ private fun BookCacheManageScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 cacheSection(
-                    title = "书架书籍",
-                    emptyText = "没有书架内书籍缓存或下载任务",
+                    title = "Sách trong tủ",
+                    emptyText = "Không có nhiệm vụ tải xuống nào cho sách trong tủ",
                     books = state.shelfBooks,
                     expandedBookUrls = state.expandedBookUrls,
                     chaptersByBookUrl = state.chaptersByBookUrl,
@@ -160,8 +169,8 @@ private fun BookCacheManageScreen(
                     onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
                 )
                 cacheSection(
-                    title = "未在书架",
-                    emptyText = "没有未在书架的书籍下载状态",
+                    title = "Sách ngoài tủ",
+                    emptyText = "Không có nhiệm vụ tải xuống nào cho sách ngoài tủ",
                     books = state.notShelfBooks,
                     expandedBookUrls = state.expandedBookUrls,
                     chaptersByBookUrl = state.chaptersByBookUrl,
@@ -198,6 +207,48 @@ private fun BookCacheManageScreen(
             pendingDeleteChapter = null
         },
         onDismiss = { pendingDeleteChapter = null }
+    )
+
+    if (showSettingsDialog) {
+        DownloadSettingsDialog(
+            onDismiss = { showSettingsDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun DownloadSettingsDialog(
+    onDismiss: () -> Unit
+) {
+    var threadCount by remember { mutableStateOf(OtherConfig.cacheBookThreadCount.toString()) }
+    var downloadDelay by remember { mutableStateOf((OtherConfig.downloadDelay / 1000).toString()) }
+
+    AppAlertDialog(
+        show = true,
+        onDismissRequest = onDismiss,
+        title = "Cài đặt tải truyện",
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AppTextField(
+                    value = threadCount,
+                    onValueChange = { threadCount = it },
+                    label = "Số luồng tải"
+                )
+                AppTextField(
+                    value = downloadDelay,
+                    onValueChange = { downloadDelay = it },
+                    label = "Độ trễ tải (giây)"
+                )
+            }
+        },
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = {
+            OtherConfig.cacheBookThreadCount = threadCount.toIntOrNull() ?: 1
+            OtherConfig.downloadDelay = (downloadDelay.toLongOrNull() ?: 2L) * 1000L
+            onDismiss()
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = onDismiss
     )
 }
 
@@ -341,7 +392,7 @@ private fun BookCacheBookCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AppText(
-                    text = "下载中 ${item.downloadingCount} · 等待 ${item.waitingCount} · 暂停 ${item.pausedCount} · 失败 ${item.errorCount}",
+                    text = "Đang tải ${item.downloadingCount} · Đợi ${item.waitingCount} · Tạm dừng ${item.pausedCount} · Lỗi ${item.errorCount}",
                     modifier = Modifier.weight(1f),
                     style = LegadoTheme.typography.labelMediumEmphasized,
                     color = LegadoTheme.colorScheme.onSurfaceVariant
@@ -357,9 +408,9 @@ private fun BookCacheBookCard(
                         },
                         icon = if (item.hasActiveDownload) Icons.Default.Stop else Icons.Default.PlayArrow,
                         contentDescription = when {
-                            item.hasActiveDownload -> "暂停本书下载"
-                            item.isPaused -> "继续本书下载"
-                            else -> "开始本书下载"
+                            item.hasActiveDownload -> "Tạm dừng tải sách này"
+                            item.isPaused -> "Tiếp tục tải sách này"
+                            else -> "Bắt đầu tải sách này"
                         }
                     )
                 }
@@ -415,13 +466,13 @@ private fun BookCacheChapterRow(
             SmallTonalButton(
                 onClick = onStop,
                 icon = Icons.Default.Stop,
-                contentDescription = "暂停章节下载"
+                contentDescription = "Tạm dừng tải chương"
             )
         } else if (item.isPaused || !item.isCached) {
             SmallTonalButton(
                 onClick = onDownload,
                 icon = Icons.Default.Download,
-                contentDescription = if (item.isPaused) "继续章节下载" else "下载章节"
+                contentDescription = if (item.isPaused) "Tiếp tục tải chương" else "Tải chương"
             )
         }
         SmallTonalButton(
@@ -434,12 +485,12 @@ private fun BookCacheChapterRow(
 
 private fun chapterStatusText(item: BookCacheChapterItem): String {
     return when {
-        item.isDownloading -> "下载中"
-        item.isWaiting -> "等待下载"
-        item.isPaused -> "已暂停"
-        item.isError -> "下载失败"
-        item.isCached -> "已缓存"
-        else -> "未缓存"
+        item.isDownloading -> "Đang tải"
+        item.isWaiting -> "Đợi tải"
+        item.isPaused -> "Đã tạm dừng"
+        item.isError -> "Tải lỗi"
+        item.isCached -> "Đã tải"
+        else -> "Chưa tải"
     }
 }
 
@@ -453,7 +504,7 @@ private fun DeleteBookCacheDialog(
         show = item != null,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.delete),
-        text = "删除《${item?.name.orEmpty()}》的全部缓存，并从下载队列移除？",
+        text = "Xóa toàn bộ bộ nhớ đệm của 《${item?.name.orEmpty()}》 và gỡ khỏi danh sách tải xuống?",
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { item?.let(onConfirm) },
         dismissText = stringResource(android.R.string.cancel),
@@ -471,7 +522,7 @@ private fun DeleteChapterCacheDialog(
         show = item != null,
         onDismissRequest = onDismiss,
         title = stringResource(R.string.delete),
-        text = "删除章节缓存：${item?.second?.title.orEmpty()}？",
+        text = "Xóa bộ nhớ đệm chương: ${item?.second?.title.orEmpty()}?",
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { item?.let { onConfirm(it.first, it.second) } },
         dismissText = stringResource(android.R.string.cancel),

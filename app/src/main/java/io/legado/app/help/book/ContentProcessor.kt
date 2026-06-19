@@ -96,9 +96,10 @@ class ContentProcessor private constructor(
         includeTitle: Boolean = true,
         useReplace: Boolean = true,
         chineseConvert: Boolean = true,
-        reSegment: Boolean = true
+        reSegment: Boolean = true,
+        translate: Boolean = io.legado.app.utils.TranslateUtils.isTranslateEnabled()
     ): BookContent {
-        var mContent = content
+        var mContent = if (translate) kotlinx.coroutines.runBlocking { io.legado.app.utils.TranslateUtils.translateContent(content) } else content
         var sameTitleRemoved = false
         var effectiveReplaceRules: ArrayList<ReplaceRule>? = null
         if (content != "null") {

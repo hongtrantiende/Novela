@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Login
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
@@ -142,6 +143,19 @@ fun ExploreScreen(
         onSearchQueryChange = { viewModel.search(it) },
         onSearchToggle = { viewModel.toggleSearchVisible(it) },
         searchPlaceholder = stringResource(R.string.search),
+        topBarActions = {
+            var isGlobalTranslateEnabled by remember { mutableStateOf(io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled) }
+            io.legado.app.ui.widget.components.topbar.TopBarActionButton(
+                onClick = { 
+                    io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled = !isGlobalTranslateEnabled
+                    isGlobalTranslateEnabled = !isGlobalTranslateEnabled
+                    val msg = if (isGlobalTranslateEnabled) "Đã bật dịch toàn cục" else "Đã tắt dịch toàn cục"
+                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                },
+                imageVector = androidx.compose.material.icons.Icons.Default.Translate,
+                contentDescription = "Dịch"
+            )
+        },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 leadingIcon = { MenuItemIcon(Icons.Default.Group) },

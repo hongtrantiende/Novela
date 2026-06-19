@@ -149,6 +149,7 @@ android {
 
     lint {
         checkDependencies = true
+        disable += "ExtraTranslation"
     }
 }
 
