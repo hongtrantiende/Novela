@@ -40,6 +40,14 @@ class ExtensionLoader(
         }
     }
 
+    private fun newRequest(url: String): Request {
+        val builder = Request.Builder().url(url)
+        if (url.contains("raw.githubusercontent.com/hongtrantiende/") || url.contains("githubusercontent.com/hongtrantiende/")) {
+            builder.header("Authorization", "token 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")
+        }
+        return builder.build()
+    }
+
     init {
         extensionsDir.mkdirs()
     }
@@ -94,7 +102,7 @@ class ExtensionLoader(
                 } else {
                     repoUrl
                 }
-                val request = Request.Builder().url(fetchUrl).build()
+                val request = newRequest(fetchUrl)
                 val response = httpClient.newCall(request).execute()
                 response.body?.string() ?: return@withContext emptyList()
             }
@@ -105,21 +113,45 @@ class ExtensionLoader(
                     if (ext.path.contains("/zips/")) {
                         val base = ext.path.substringBefore("/zips/")
                         val zipName = ext.path.substringAfter("/zips/").substringBefore(".zip")
-                        val fileExt = when (zipName) {
+                        val iconName = when (val cleaned = zipName
+                            .replace(".net", "")
+                            .replace(".com", "")
+                            .replace(".vn", "")
+                            .replace(".org", "")
+                            .replace(".cc", "")
+                            .replace("-ver-dich", "")) {
+                            "biqugezz" -> "biquge"
+                            "ixdzs8" -> "ixdzs"
+                            "uukanshu" -> "uushuk"
+                            else -> cleaned
+                        }
+                        val fileExt = when (iconName) {
                             "me-truyen-chu-vn", "lwxs", "pi12345", "xiaoshubao" -> "ico"
                             "h528" -> "jpg"
                             else -> "png"
                         }
-                        ext.copy(icon = "$base/icons/$zipName.$fileExt")
+                        ext.copy(icon = "$base/icons/$iconName.$fileExt")
                     } else if (ext.path.contains("/plugins/")) {
                         val base = ext.path.substringBefore("/plugins/")
                         val zipName = ext.path.substringAfter("/plugins/").substringBefore(".zip")
-                        val fileExt = when (zipName) {
+                        val iconName = when (val cleaned = zipName
+                            .replace(".net", "")
+                            .replace(".com", "")
+                            .replace(".vn", "")
+                            .replace(".org", "")
+                            .replace(".cc", "")
+                            .replace("-ver-dich", "")) {
+                            "biqugezz" -> "biquge"
+                            "ixdzs8" -> "ixdzs"
+                            "uukanshu" -> "uushuk"
+                            else -> cleaned
+                        }
+                        val fileExt = when (iconName) {
                             "me-truyen-chu-vn", "lwxs", "pi12345", "xiaoshubao" -> "ico"
                             "h528" -> "jpg"
                             else -> "png"
                         }
-                        ext.copy(icon = "$base/icons/$zipName.$fileExt")
+                        ext.copy(icon = "$base/icons/$iconName.$fileExt")
                     } else {
                         ext
                     }
@@ -164,7 +196,7 @@ class ExtensionLoader(
                     val assetPath = info.path.substringAfter("file:///android_asset/")
                     appContext.assets.open(assetPath).use { it.readBytes() }
                 } else {
-                    val zipRequest = Request.Builder().url(info.path).build()
+                    val zipRequest = newRequest(info.path)
                     val zipResponse = httpClient.newCall(zipRequest).execute()
                     zipResponse.body?.bytes() ?: throw ExtensionException("Empty download")
                 }
@@ -202,7 +234,7 @@ class ExtensionLoader(
                         } else if (info.icon.startsWith("/") && File(info.icon).exists()) {
                             File(info.icon).readBytes()
                         } else {
-                            val iconRequest = Request.Builder().url(info.icon).build()
+                            val iconRequest = newRequest(info.icon)
                             httpClient.newCall(iconRequest).execute().body?.bytes()
                         }
                         iconBytes?.let {

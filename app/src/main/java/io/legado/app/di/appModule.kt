@@ -221,6 +221,7 @@ val appModule = module {
 
     single<ImageLoader> {
         ImageLoader.Builder(get())
+            .okHttpClient(okHttpClient)
             .components {
                 if (Build.VERSION.SDK_INT >= 28) {
                     add(ImageDecoderDecoder.Factory())

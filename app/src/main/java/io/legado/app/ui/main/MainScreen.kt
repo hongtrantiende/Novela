@@ -477,7 +477,7 @@ fun MainScreen(
                                         }
                                     },
                                     modifier = Modifier
-                                        .defaultMinSize(minWidth = 76.dp)
+                                        .defaultMinSize(minWidth = 86.dp)
                                         .semantics(mergeDescendants = true) {
                                             contentDescription = "nav_${destination.route}"
                                         }

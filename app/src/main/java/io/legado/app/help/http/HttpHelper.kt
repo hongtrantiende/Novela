@@ -94,6 +94,10 @@ val okHttpClient: OkHttpClient by lazy {
         .addInterceptor { chain ->
             val request = chain.request()
             val builder = request.newBuilder()
+            val url = request.url.toString()
+            if (url.contains("raw.githubusercontent.com/hongtrantiende/") || url.contains("githubusercontent.com/hongtrantiende/")) {
+                builder.header("Authorization", "token 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")
+            }
             if (request.header(AppConst.UA_NAME) == null) {
                 builder.addHeader(AppConst.UA_NAME, AppConfig.userAgent)
             } else if (request.header(AppConst.UA_NAME) == "null") {

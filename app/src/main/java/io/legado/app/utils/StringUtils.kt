@@ -268,9 +268,9 @@ object StringUtils {
         if (words > 0) {
             if (words > 10000) {
                 val df = wordCountFormatter
-                wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "Mười ngàn lời nói"
+                wordsS = df.format(words * 1.0f / 10000f.toDouble()) + " vạn chữ"
             } else {
-                wordsS = words.toString() + "Tính cách"
+                wordsS = words.toString() + " chữ"
             }
         }
         return wordsS
@@ -284,9 +284,9 @@ object StringUtils {
             if (words > 0) {
                 if (words > 10000) {
                     val df = wordCountFormatter
-                    wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "Mười ngàn lời nói"
+                    wordsS = df.format(words * 1.0f / 10000f.toDouble()) + " vạn chữ"
                 } else {
-                    wordsS = words.toString() + "Tính cách"
+                    wordsS = words.toString() + " chữ"
                 }
             }
         } else {
