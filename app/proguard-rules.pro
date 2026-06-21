@@ -59,6 +59,7 @@
 
 # 保持js引擎调用的java类
 -keep class * extends io.legado.app.help.JsExtensions{*;}
+-keep class io.legado.app.vbookextension.** { *; }
 # 数据类
 -keep class **.data.entities.**{*;}
 # Gson反序列化用的数据传输类

@@ -70,5 +70,20 @@
   - **Kiểm tra nội dung HTML thực tế**: Thay vì chỉ kiểm tra mã phản hồi 403/503 cùng với header `Server: cloudflare` (vốn dễ gây nhận diện nhầm khi tiện ích lỗi kịch bản hoặc trang API gặp lỗi thông thường không có captcha), ứng dụng hiện chỉ kích hoạt WebView xác minh khi HTML body chứa các dấu hiệu của thử thách Cloudflare thực tế như `cf-challenge`, `window._cf_chl_opt`, `Just a moment...`, `challenge-running`, `cf_challenge`, hoặc `cdn-cgi/challenge-platform`.
   - **Tăng thời gian chờ (Cooldown) lên 5 phút**: Sau khi người dùng giải captcha thành công hoặc bấm nút dấu tích (V) để lưu/bỏ qua, thời gian chờ kích hoạt WebView mới của tiện ích đó được kéo dài lên **5 phút** (300,000 ms) thay vì 15 giây. Điều này đảm bảo giao diện WebView không bị bật lên liên tục làm phiền người dùng khi tiện ích xảy ra lỗi tải truyện liên tục.
 
+### 6. Cấu hình mặc định điều khiển cảm ứng màn hình chỉ kích hoạt Menu ở giữa
+- **Tập tin chỉnh sửa**:
+  - [ReadMangaConfig.kt](file:///c:/Users/ACER/Desktop/Nam/apk%20legado/apk-thienthucac/app/src/main/java/io/legado/app/ui/config/readMangaConfig/ReadMangaConfig.kt)
+  - [ReadMenuConfig.kt](file:///c:/Users/ACER/Desktop/Nam/apk%20legado/apk-thienthucac/app/src/main/java/io/legado/app/ui/config/readConfig/ReadMenuConfig.kt)
+  - [ReadSettingsRepository.kt](file:///c:/Users/ACER/Desktop/Nam/apk%20legado/apk-thienthucac/app/src/main/java/io/legado/app/data/repository/ReadSettingsRepository.kt)
+  - [AppConfig.kt](file:///c:/Users/ACER/Desktop/Nam/apk%20legado/apk-thienthucac/app/src/main/java/io/legado/app/help/config/AppConfig.kt)
+- **Chi tiết**:
+  - Đặt cấu hình mặc định (default/fallback values) cho toàn bộ các vùng cảm ứng bên ngoài (TL, TC, TR, ML, MR, BL, BC, BR) về giá trị `-1` (Không có/Non-action) cho cả trình đọc truyện chữ (Novel Reader) và truyện tranh (Manga Reader).
+  - Chỉ giữ lại vùng chính giữa (MC) có hành vi mở Menu (`0`), giúp giao diện đọc sạch sẽ và không bị phản hồi nhầm khi chạm vào các cạnh màn hình.
 
-
+### 7. Tối ưu hóa cấu hình R8 và Ký số tự động cho bản build Release chính thức
+- **Tập tin chỉnh sửa**:
+  - [proguard-rules.pro](file:///c:/Users/ACER/Desktop/Nam/apk%20legado/apk-thienthucac/app/proguard-rules.pro)
+  - [build.gradle.kts](file:///c:/Users/ACER/Desktop/Nam/apk%20legado/apk-thienthucac/app/build.gradle.kts)
+- **Chi tiết**:
+  - Thêm cấu hình `-keep class io.legado.app.vbookextension.** { *; }` vào Proguard Rules của ứng dụng. Việc này ngăn chặn R8 tối ưu hóa hoặc làm biến đổi tên các class/method nằm trong package cầu nối Extension JS (chạy Rhino/WebView), giữ cho các tiện ích truyện hoạt động ổn định và chính xác trên bản build Release chính thức.
+  - Cấu hình cho phép tự động ký số bằng key `debug` cho bản build Release nếu không chỉ định keystore chính thức, giúp APK sinh ra được ký số hợp lệ và sẵn sàng để cài đặt trực tiếp.
