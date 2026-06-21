@@ -114,7 +114,7 @@ object Backup {
                     }
                 }
             }.onError {
-                AppLog.put("自动备份失败\n${it.localizedMessage}")
+                AppLog.put("Sao lưu tự động không thành công\n${it.localizedMessage}")
             }
         }
     }
@@ -128,7 +128,7 @@ object Backup {
     }
 
     private suspend fun backup(context: Context, path: String?, mode: String = "both") {
-        LogUtils.d(TAG, "开始备份 path:$path")
+        LogUtils.d(TAG, "Bắt đầu đường dẫn sao lưu:$path")
         LocalConfig.lastBackup = System.currentTimeMillis()
         val aes = BackupAES()
         FileUtils.delete(backupPath)
@@ -236,7 +236,7 @@ object Backup {
                 try {
                     AppWebDav.backUpWebDav(zipFileName)
                 } catch (e: Exception) {
-                    AppLog.put("上传备份至webdav失败\n$e", e)
+                    AppLog.put("Không thể tải bản sao lưu lên webdav\n$e", e)
                 }
             }
         }
@@ -258,14 +258,14 @@ object Backup {
         currentCoroutineContext().ensureActive()
         withContext(IO) {
             if (list.isNotEmpty()) {
-                LogUtils.d(TAG, "阅读备份 $fileName 列表大小 ${list.size}")
+                LogUtils.d(TAG, "Đọc kích thước danh sách $fileName sao lưu ${list.size}")
                 val file = FileUtils.createFileIfNotExist(path + File.separator + fileName)
                 file.outputStream().buffered().use {
                     GSON.writeToOutputStream(it, list)
                 }
-                LogUtils.d(TAG, "阅读备份 $fileName 写入大小 ${file.length()}")
+                LogUtils.d(TAG, "Đọc bản sao lưu $fileName Kích thước ghi ${file.length()}")
             } else {
-                LogUtils.d(TAG, "阅读备份 $fileName 列表为空")
+                LogUtils.d(TAG, "Đọc danh sách $fileName sao lưu trống")
             }
         }
     }
@@ -276,9 +276,9 @@ object Backup {
         val treeDoc = DocumentFile.fromTreeUri(context, uri)!!
         treeDoc.findFile(fileName)?.delete()
         val fileDoc = treeDoc.createFile("", fileName)
-            ?: throw NoStackTraceException("创建文件失败")
+            ?: throw NoStackTraceException("Không tạo được tập tin")
         val outputS = fileDoc.openOutputStream()
-            ?: throw NoStackTraceException("打开OutputStream失败")
+            ?: throw NoStackTraceException("Không mở được OutputStream")
         outputS.use {
             FileInputStream(zipFilePath).use { inputS ->
                 inputS.copyTo(outputS)

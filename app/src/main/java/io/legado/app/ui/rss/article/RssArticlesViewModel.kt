@@ -74,7 +74,7 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
                 errorMessage = null
             )
         }.onError {
-            AppLog.put("rss获取内容失败", it)
+            AppLog.put("Không thể lấy nội dung từ rss", it)
             _loadState.value = _loadState.value.copy(
                 isRefreshing = false,
                 isLoadingMore = false,
@@ -103,7 +103,7 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
             nextPageUrl = it.second
             loadMoreSuccess(it.first)
         }.onError {
-            AppLog.put("rss获取内容失败", it)
+            AppLog.put("Không thể lấy nội dung từ rss", it)
             if (page > 1) page--
             _loadState.value = _loadState.value.copy(
                 isLoadingMore = false,

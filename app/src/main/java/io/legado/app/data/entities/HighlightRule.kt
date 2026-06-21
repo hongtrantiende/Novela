@@ -32,46 +32,46 @@ data class HighlightRule(
         val parts = ArrayList<String>(4)
         parts.add(targetScopeLabel())
         textColor?.let {
-            parts.add("字色 ${it.toHexColor()}")
+            parts.add("Màu từ ${it.toHexColor()}")
         }
         bgColor?.let {
-            parts.add("背景色 ${it.toHexColor()}")
+            parts.add("Màu nền ${it.toHexColor()}")
         }
         if (underlineMode != 0) {
             parts.add(
                 when (underlineMode) {
-                    1 -> "实线下划线"
-                    2 -> "虚线下划线"
-                    3 -> "波浪下划线"
-                    4 -> "双下划线"
-                    5 -> "自定义SVG"
-                    else -> "下划线"
+                    1 -> "gạch chân liền nét"
+                    2 -> "gạch chân nét đứt"
+                    3 -> "gạch chân lượn sóng"
+                    4 -> "gạch chân kép"
+                    5 -> "SVG tùy chỉnh"
+                    else -> "gạch chân"
                 } + underlineColor?.let { " ${it.toHexColor()}" }.orEmpty()
             )
         }
         if (!bgImage.isNullOrBlank()) {
             parts.add(
                 when (bgImageFit) {
-                    1 -> "背景图(拉伸)"
-                    2 -> "背景图(裁剪)"
-                    else -> "背景图(平铺)"
+                    1 -> "Hình nền (kéo dài)"
+                    2 -> "Hình nền (đã cắt)"
+                    else -> "Hình nền (lát gạch)"
                 }
             )
         }
         if (!fontPath.isNullOrBlank()) {
-            parts.add("自定义字体")
+            parts.add("Phông chữ tùy chỉnh")
         }
         if (parts.isEmpty()) {
-            parts.add("无样式")
+            parts.add("Không có phong cách")
         }
         return parts.joinToString(" / ")
     }
 
     fun targetScopeLabel(): String {
         return when (targetScope) {
-            TARGET_TITLE -> "作用于标题"
-            TARGET_BODY -> "作用于正文"
-            else -> "作用于全部"
+            TARGET_TITLE -> "Hành động theo tiêu đề"
+            TARGET_BODY -> "Hành động trên văn bản"
+            else -> "Áp dụng cho tất cả"
         }
     }
 
@@ -81,7 +81,7 @@ data class HighlightRule(
 
     fun normalizedSampleText(): String {
         return sampleText.ifBlank {
-            "她轻声说：“今晚就出发。”\n最近在重读《百年孤独》（纪念版），节奏依然很稳。"
+            "Cô nhẹ nhàng nói: “Tối nay chúng ta xuất phát nhé.”\nGần đây tôi đọc lại Trăm Năm Cô Đơn (bản kỷ niệm), nhịp độ vẫn rất đều đặn."
         }
     }
 

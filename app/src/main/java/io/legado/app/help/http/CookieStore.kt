@@ -29,7 +29,7 @@ object CookieStore : CookieManagerInterface {
             val cookieBean = Cookie(domain, cookie ?: "")
             appDb.cookieDao.insert(cookieBean)
         } catch (e: Exception) {
-            AppLog.put("保存Cookie失败\n$e", e)
+            AppLog.put("Không lưu được cookie\n$e", e)
         }
     }
 

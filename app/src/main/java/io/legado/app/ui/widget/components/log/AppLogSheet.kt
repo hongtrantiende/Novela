@@ -54,7 +54,7 @@ fun AppLogSheet(
         }
     ) {
         if (logs.isEmpty()) {
-            EmptyMessage(message = "暂无日志")
+            EmptyMessage(message = "Chưa có nhật ký nào")
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
@@ -182,7 +182,7 @@ private fun LogItem(
     ) {
         AppText(
             text = buildString {
-                if (item.isCrash) append("[崩溃] ")
+                if (item.isCrash) append("[sụp đổ]")
                 if (item.time > 0) append(LogUtils.logTimeFormat.format(Date(item.time)))
             },
             style = LegadoTheme.typography.labelMedium,

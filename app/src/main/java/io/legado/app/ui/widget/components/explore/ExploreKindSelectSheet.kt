@@ -92,7 +92,7 @@ fun ExploreKindSelectSheet(
                 query = query,
                 backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                 onQueryChange = { query = it },
-                placeholder = "选择或搜索分类",
+                placeholder = "Chọn hoặc tìm kiếm một danh mục",
                 autoFocus = false
             )
 

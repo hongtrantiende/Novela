@@ -59,13 +59,13 @@ object TranslateUtils {
     )
 
     private val chapterUnitMap = mapOf(
-        "卷" to "Quyển",
-        "回" to "Hồi",
-        "章" to "Chương",
-        "幕" to "Màn",
-        "折" to "Chiết",
-        "节" to "Tiết",
-        "集" to "Tập"
+        "cuộn" to "Quyển",
+        "trở lại" to "Hồi",
+        "chương" to "Chương",
+        "màn hình" to "Màn",
+        "nếp gấp" to "Chiết",
+        "Lễ hội" to "Tiết",
+        "bộ" to "Tập"
     )
 
     /**
@@ -373,7 +373,7 @@ object TranslateUtils {
         val translatedWords = ArrayList<String>()
         for (token in tokens) {
             // Filter: skip 'de', 'le', 'zhu'
-            if (token == "的" || token == "了" || token == "著") {
+            if (token == "của" || token == "Hiểu rồi" || token == "viết") {
                 continue
             }
             
@@ -426,7 +426,7 @@ object TranslateUtils {
                 continue
             }
             
-            if (token == "的" || token == "了" || token == "著") {
+            if (token == "của" || token == "Hiểu rồi" || token == "viết") {
                 continue
             }
             

@@ -26,7 +26,7 @@ class HandleFileViewModel(application: Application) : BaseViewModel(application)
         }.onSuccess {
             success.invoke(it)
         }.onError {
-            AppLog.put("上传文件失败\n${it.localizedMessage}", it)
+            AppLog.put("Tải tệp lên không thành công\n${it.localizedMessage}", it)
             it.printOnDebug()
             errorLiveData.postValue(it.localizedMessage)
         }

@@ -308,7 +308,7 @@ object CacheBook {
             ContextCompat.startForegroundService(context, intent)
             true
         } catch (e: Exception) {
-            LogUtils.e("CacheBook", "启动下载服务失败: ${e.localizedMessage}")
+            LogUtils.e("CacheBook", "Không thể bắt đầu dịch vụ tải xuống: ${e.localizedMessage}")
             false
         }
     }
@@ -574,7 +574,7 @@ object CacheBook {
         } else {
             0
         }
-        return "下载中:$downloadingCount | 等待:$waitingCount | 暂停:$pausedCount | 失败:${stateStore.state.totalFailure} | 已缓存:${successDownloadCount.get()}"
+        return "Đang tải xuống: $downloadingCount | Đang chờ: $waitingCount | Đang tạm dừng: $pausedCount | Lỗi: ${stateStore.state.totalFailure} | Đã lưu vào bộ nhớ đệm: ${successDownloadCount.get()}"
     }
 
     private fun CacheDownloadRequest.hasValidSelection(): Boolean {

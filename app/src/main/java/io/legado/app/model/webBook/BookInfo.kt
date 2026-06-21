@@ -36,7 +36,7 @@ object BookInfo {
         body ?: throw NoStackTraceException(
             appCtx.getString(R.string.error_get_web_content, baseUrl)
         )
-        Debug.log(bookSource.bookSourceUrl, "≡获取成功:${baseUrl}")
+        Debug.log(bookSource.bookSourceUrl, "≡Nhận thành công:${baseUrl}")
         Debug.log(bookSource.bookSourceUrl, body, state = 20)
         val analyzeRule = AnalyzeRule(book, bookSource)
         analyzeRule.setContent(body).setBaseUrl(baseUrl)
@@ -58,13 +58,13 @@ object BookInfo {
         infoRule.init?.let {
             if (it.isNotBlank()) {
                 coroutineContext.ensureActive()
-                Debug.log(bookSource.bookSourceUrl, "≡执行详情页初始化规则")
+                Debug.log(bookSource.bookSourceUrl, "≡Thực hiện quy tắc khởi tạo trang chi tiết")
                 analyzeRule.setContent(analyzeRule.getElement(it))
             }
         }
         val mCanReName = canReName && !infoRule.canReName.isNullOrBlank()
         coroutineContext.ensureActive()
-        Debug.log(bookSource.bookSourceUrl, "┌获取书名")
+        Debug.log(bookSource.bookSourceUrl, "┌Nhận tên sách")
         BookHelp.formatBookName(analyzeRule.getString(infoRule.name)).let {
             if (it.isNotEmpty() && (mCanReName || book.name.isEmpty())) {
                 book.name = it
@@ -72,7 +72,7 @@ object BookInfo {
             Debug.log(bookSource.bookSourceUrl, "└${it}")
         }
         coroutineContext.ensureActive()
-        Debug.log(bookSource.bookSourceUrl, "┌获取作者")
+        Debug.log(bookSource.bookSourceUrl, "┌Nhận tác giả")
         BookHelp.formatBookAuthor(analyzeRule.getString(infoRule.author)).let {
             if (it.isNotEmpty() && (mCanReName || book.author.isEmpty())) {
                 book.author = it
@@ -80,7 +80,7 @@ object BookInfo {
             Debug.log(bookSource.bookSourceUrl, "└${it}")
         }
         coroutineContext.ensureActive()
-        Debug.log(bookSource.bookSourceUrl, "┌获取分类")
+        Debug.log(bookSource.bookSourceUrl, "┌Nhận danh mục")
         try {
             analyzeRule.getStringList(infoRule.kind)
                 ?.joinToString(",")
@@ -92,10 +92,10 @@ object BookInfo {
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
-            DebugLog.e("获取分类出错", e)
+            DebugLog.e("Lỗi khi nhận danh mục", e)
         }
         coroutineContext.ensureActive()
-        Debug.log(bookSource.bookSourceUrl, "┌获取字数")
+        Debug.log(bookSource.bookSourceUrl, "┌Nhận số từ")
         try {
             wordCountFormat(analyzeRule.getString(infoRule.wordCount)).let {
                 if (it.isNotEmpty()) book.wordCount = it
@@ -104,10 +104,10 @@ object BookInfo {
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
-            DebugLog.e("获取字数出错", e)
+            DebugLog.e("Lỗi đếm số từ", e)
         }
         coroutineContext.ensureActive()
-        Debug.log(bookSource.bookSourceUrl, "┌获取最新章节")
+        Debug.log(bookSource.bookSourceUrl, "┌Nhận chương mới nhất")
         try {
             analyzeRule.getString(infoRule.lastChapter).let {
                 if (it.isNotEmpty()) book.latestChapterTitle = it
@@ -116,10 +116,10 @@ object BookInfo {
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
-            DebugLog.e("获取最新章节出错", e)
+            DebugLog.e("Lỗi tải chương mới nhất", e)
         }
         coroutineContext.ensureActive()
-        Debug.log(bookSource.bookSourceUrl, "┌获取简介")
+        Debug.log(bookSource.bookSourceUrl, "┌Nhận lời giới thiệu")
         try {
             HtmlFormatter.format(analyzeRule.getString(infoRule.intro)).take(5000).let {
                 if (it.isNotEmpty()) book.intro = it
@@ -128,10 +128,10 @@ object BookInfo {
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
-            DebugLog.e("获取简介出错", e)
+            DebugLog.e("Lỗi lấy hồ sơ", e)
         }
         coroutineContext.ensureActive()
-        Debug.log(bookSource.bookSourceUrl, "┌获取封面链接")
+        Debug.log(bookSource.bookSourceUrl, "┌Nhận link bìa")
         try {
             analyzeRule.getString(infoRule.coverUrl).let {
                 if (it.isNotEmpty()) {
@@ -143,11 +143,11 @@ object BookInfo {
         } catch (e: Exception) {
             coroutineContext.ensureActive()
             Debug.log(bookSource.bookSourceUrl, "└${e.localizedMessage}")
-            DebugLog.e("获取封面出错", e)
+            DebugLog.e("Lỗi nhận bìa", e)
         }
         coroutineContext.ensureActive()
         if (!book.isWebFile) {
-            Debug.log(bookSource.bookSourceUrl, "┌获取目录链接")
+            Debug.log(bookSource.bookSourceUrl, "┌Nhận link thư mục")
             book.tocUrl = analyzeRule.getString(infoRule.tocUrl, isUrl = true)
             if (book.tocUrl.isEmpty()) book.tocUrl = baseUrl
             if (book.tocUrl == baseUrl) {
@@ -155,11 +155,11 @@ object BookInfo {
             }
             Debug.log(bookSource.bookSourceUrl, "└${book.tocUrl}")
         } else {
-            Debug.log(bookSource.bookSourceUrl, "┌获取文件下载链接")
+            Debug.log(bookSource.bookSourceUrl, "┌Nhận link tải file")
             book.downloadUrls = analyzeRule.getStringList(infoRule.downloadUrls, isUrl = true)
             if (book.downloadUrls.isNullOrEmpty()) {
                 Debug.log(bookSource.bookSourceUrl, "└")
-                throw NoStackTraceException("下载链接为空")
+                throw NoStackTraceException("Liên kết tải xuống trống")
             } else {
                 Debug.log(
                     bookSource.bookSourceUrl,

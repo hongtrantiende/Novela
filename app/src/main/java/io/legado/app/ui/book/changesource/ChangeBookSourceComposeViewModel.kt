@@ -259,7 +259,7 @@ class ChangeBookSourceComposeViewModel(
                 }
                 if (book.isWebFile) {
                     val source = io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
-                        ?: throw io.legado.app.exception.NoStackTraceException("书源不存在")
+                        ?: throw io.legado.app.exception.NoStackTraceException("Nguồn sách không tồn tại")
                     onSuccess(emptyList(), source)
                     return@launch
                 }

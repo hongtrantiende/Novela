@@ -54,8 +54,8 @@ fun JsonConfigEditor(
             val config = keyConfigs[key]
 
             val displayTitle = when (key) {
-                "columns" -> "列数 (Columns)"
-                "rows" -> "行数 (Rows)"
+                "columns" -> "Cột"
+                "rows" -> "Hàng"
                 else -> key
             }
 

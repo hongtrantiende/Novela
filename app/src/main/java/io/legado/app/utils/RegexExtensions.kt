@@ -69,7 +69,7 @@ fun CharSequence.replace(
             handler.postDelayed(timeout) {
                 if (coroutine.isActive) {
                     val timeoutMsg =
-                        "替换超时,3秒后还未结束将重启应用\n替换规则$regex\n替换内容:$charSequence"
+                        "Hết thời gian chờ thay thế, ứng dụng sẽ được khởi động lại nếu chưa hoàn thành sau 3 giây.\nQuy tắc thay thế $regex\nNội dung thay thế:$charSequence"
                     val exception = RegexTimeoutException(timeoutMsg)
                     block.cancel(exception)
                     appCtx.longToastOnUi(timeoutMsg)

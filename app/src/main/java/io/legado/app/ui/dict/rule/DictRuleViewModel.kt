@@ -126,7 +126,7 @@ class DictRuleViewModel(
         return when {
             text.isJsonArray() -> GSON.fromJsonArray<DictRule>(text).getOrThrow()
             text.isJsonObject() -> listOf(GSON.fromJsonObject<DictRule>(text).getOrThrow())
-            else -> throw Exception("格式不正确")
+            else -> throw Exception("Định dạng không chính xác")
         }
     }
 
@@ -197,13 +197,13 @@ class DictRuleViewModel(
     fun pasteRule(): DictRule? {
         val text = context.getClipText()
         if (text.isNullOrBlank()) {
-            context.toastOnUi("剪贴板没有内容")
+            context.toastOnUi("Clipboard không có nội dung")
             return null
         }
         return try {
             GSON.fromJsonObject<DictRule>(text).getOrThrow()
         } catch (e: Exception) {
-            context.toastOnUi("格式不对")
+            context.toastOnUi("Định dạng sai")
             null
         }
     }

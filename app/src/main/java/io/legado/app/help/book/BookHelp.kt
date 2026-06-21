@@ -176,7 +176,7 @@ object BookHelp {
             postEvent(EventBus.SAVE_CONTENT, Pair(book, bookChapter))
         } catch (e: Exception) {
             e.printStackTrace()
-            AppLog.put("保存正文失败 ${book.name} ${bookChapter.title}", e)
+            AppLog.put("Không lưu được văn bản ${book.name} ${bookChapter.title}", e)
         }
     }
 
@@ -192,7 +192,7 @@ object BookHelp {
                 saveToLocalTxt(book, bookChapter, content)
                 TextFile.clear()
             } catch (e: Exception) {
-                AppLog.put("修改本地TXT失败: ${e.localizedMessage}", e)
+                AppLog.put("Không thể sửa đổi TXT cục bộ: ${e.localizedMessage}", e)
             }
         }
         // 保存阅读缓存文本(.nb)
@@ -337,7 +337,7 @@ object BookHelp {
                                 // 如果部分图片失效，每次进入正文都会花很长时间再次获取图片数据
                                 // 所以无论如何都要将数据写入到文件里
                                 // throw NoStackTraceException("数据异常")
-                                AppLog.put("${book.name} ${chapter?.title} 图片 $src 下载错误 数据异常")
+                                AppLog.put("${book.name} ${chapter?.title} ảnh $src lỗi tải xuống dữ liệu bất thường")
                             }
                             writeImage(book, src, it)
                         }
@@ -350,7 +350,7 @@ object BookHelp {
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
-            val msg = "${book.name} ${chapter?.title} 图片 $src 下载失败\n${e.localizedMessage}"
+            val msg = "${book.name} ${chapter?.title} Tải xuống ảnh $src không thành công\n${e.localizedMessage}"
             AppLog.put(msg, e)
         } finally {
             downloadImages.remove(src)
@@ -382,7 +382,7 @@ object BookHelp {
                 inputStream.copyTo(output, 16 * 1024)
             }
             if (!checkImage(temp)) {
-                AppLog.put("${book.name} 图片 $src 下载错误 数据异常")
+                AppLog.put("${book.name} ảnh $src lỗi tải xuống dữ liệu bất thường")
             }
             if (image.exists()) {
                 image.delete()
@@ -418,7 +418,7 @@ object BookHelp {
             val path = FileUtils.getPath(downloadDir, cacheEpubFolderName, book.originName)
             val file = File(path)
             val doc = DocumentFile.fromSingleUri(appCtx, uri)
-                ?: throw IOException("文件不存在")
+                ?: throw IOException("Tập tin không tồn tại")
             if (!file.exists() || doc.lastModified() > book.latestChapterTime) {
                 LocalBook.getBookInputStream(book).use { inputStream ->
                     FileOutputStream(file).use { outputStream ->
@@ -751,14 +751,14 @@ object BookHelp {
 
     private val chapterNamePattern1 by lazy {
         Pattern.compile(
-            ".*?第([\\d零〇一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]+)[章节篇回集话]"
+            "..."
         )
     }
 
     @Suppress("RegExpSimplifiable")
     private val chapterNamePattern2 by lazy {
         Pattern.compile(
-            "^(?:[\\d零〇一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]+[,:、])*([\\d零〇一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]+)(?:[,:、]|\\.[^\\d])"
+            "^(?:[\\dzero một hai ba bốn năm sáu bảy tám chín trăm triệu một hai ba bốn năm Lu bảy tám chín trăm nghìn]+[,:,])*([\\d Zero, một, hai, ba, bốn, năm, sáu, bảy, tám, chín, mười, một, hai, ba, bốn, năm, sáu, tám, chín, một trăm nghìn]+)(?:[,:,]|\\.[^\\d])"
         )
     }
 

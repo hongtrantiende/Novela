@@ -148,9 +148,9 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
             onSuccess.invoke()
         }.onError {
             if (it is SQLiteConstraintException) {
-                AppLog.put("书籍信息保存失败，存在相同书名作者书籍\n$it", it, true)
+                AppLog.put("Lưu thông tin sách thất bại, đã tồn tại sách cùng tên và tác giả\n$it", it, true)
             } else {
-                AppLog.put("书籍信息保存失败\n$it", it, true)
+                AppLog.put("Lưu thông tin sách thất bại\n$it", it, true)
             }
         }
     }
@@ -176,7 +176,7 @@ class BookInfoEditViewModel(application: Application) : BaseViewModel(applicatio
                 }
                 _uiState.value = _uiState.value.copy(coverUrl = coverFile.absolutePath)
             }.onFailure {
-                AppLog.put("书籍封面保存失败\n$it", it, true)
+                AppLog.put("Lưu bìa sách thất bại\n$it", it, true)
             }
         }
     }

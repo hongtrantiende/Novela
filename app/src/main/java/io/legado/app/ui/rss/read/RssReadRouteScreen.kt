@@ -309,7 +309,7 @@ fun RssReadRouteScreen(
                                             )
                                             redirectPolicy = policy
                                         }
-                                        context.toastOnUi("重定向策略已更新")
+                                        context.toastOnUi("Đã cập nhật chính sách chuyển hướng")
                                     },
                                     trailingIcon = {
                                         if (policy == redirectPolicy) {

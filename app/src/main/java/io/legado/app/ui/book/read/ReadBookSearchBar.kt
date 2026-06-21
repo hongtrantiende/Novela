@@ -46,13 +46,13 @@ fun ReadBookSearchBar(
                 onClick = {
                     onIntent(ReadBookIntent.NavigateSearchResultByOffset(-1))
                 },
-                tooltipText = "上一个结果",
+                tooltipText = "Kết quả trước đó",
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                 contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "上一个结果",
+                    contentDescription = "Kết quả trước đó",
                     modifier = Modifier.size(20.dp),
                 )
             }
@@ -71,13 +71,13 @@ fun ReadBookSearchBar(
                 onClick = {
                     onIntent(ReadBookIntent.NavigateSearchResultByOffset(1))
                 },
-                tooltipText = "下一个结果",
+                tooltipText = "kết quả tiếp theo",
                 containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
                 contentColor = LegadoTheme.colorScheme.onSurfaceVariant,
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "下一个结果",
+                    contentDescription = "kết quả tiếp theo",
                     modifier = Modifier.size(20.dp),
                 )
             }

@@ -37,7 +37,7 @@ data class GithubRelease(
     val createdAt: String?
 ) {
     fun gitReleaseToAppReleaseInfo(): List<AppReleaseInfo> {
-        assets ?: throw NoStackTraceException("获取新版本出错")
+        assets ?: throw NoStackTraceException("Lỗi tải phiên bản mới")
 
         val version = tagName
         val abi = Build.SUPPORTED_ABIS.firstOrNull() ?: ""

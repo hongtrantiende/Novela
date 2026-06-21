@@ -82,7 +82,7 @@ class MobiFile(var book: Book) {
                 MobiReader().readMobi(it)
             }
         }.onFailure {
-            AppLog.put("读取Mobi文件失败\n${it.localizedMessage}", it)
+            AppLog.put("Không đọc được tập tin Mobi\n${it.localizedMessage}", it)
             it.printOnDebug()
         }.getOrThrow()
     }
@@ -105,7 +105,7 @@ class MobiFile(var book: Book) {
                 val chapter = BookChapter()
                 val content = kF6Book.getSectionText(section)
                 val soup = Jsoup.parse(content)
-                val title = soup.getElementsByTag("title").first()?.text() ?: "卷首"
+                val title = soup.getElementsByTag("title").first()?.text() ?: "tập đầu tiên"
                 chapter.bookUrl = book.bookUrl
                 chapter.title = title
                 chapter.url = "0:" + section.href
@@ -146,7 +146,7 @@ class MobiFile(var book: Book) {
                 val chapter = BookChapter()
                 val content = kf8Book.getSectionText(section)
                 val soup = Jsoup.parse(content)
-                val title = soup.getElementsByTag("title").first()?.text() ?: "卷首"
+                val title = soup.getElementsByTag("title").first()?.text() ?: "tập đầu tiên"
                 chapter.bookUrl = book.bookUrl
                 chapter.title = title
                 chapter.url = "0:" + section.href
@@ -290,7 +290,7 @@ class MobiFile(var book: Book) {
                 }
             }
         } catch (e: Exception) {
-            AppLog.put("加载书籍封面失败\n${e.localizedMessage}", e)
+            AppLog.put("Không tải được bìa sách\n${e.localizedMessage}", e)
             e.printOnDebug()
         }
     }
@@ -298,7 +298,7 @@ class MobiFile(var book: Book) {
     private fun upBookInfo() {
         if (mobiBook == null) {
             mFile = null
-            book.intro = "书籍导入异常"
+            book.intro = "Ngoại lệ nhập sách"
         } else {
             upBookCover()
             val metadata = mobiBook!!.metadata

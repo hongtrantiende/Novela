@@ -17,11 +17,11 @@ enum class RedirectPolicy {
 
 fun RedirectPolicy.title(): String {
     return when (this) {
-        RedirectPolicy.ALLOW_ALL -> "允许所有跳转"
-        RedirectPolicy.ASK_ALWAYS -> "总是询问"
-        RedirectPolicy.ASK_CROSS_ORIGIN -> "跨域询问"
-        RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS -> "同域询问，跨域拦截"
-        RedirectPolicy.BLOCK_CROSS_ORIGIN -> "拦截跨域"
-        RedirectPolicy.BLOCK_ALL -> "拦截所有"
+        RedirectPolicy.ALLOW_ALL -> "Cho phép tất cả các bước nhảy"
+        RedirectPolicy.ASK_ALWAYS -> "luôn hỏi"
+        RedirectPolicy.ASK_CROSS_ORIGIN -> "Truy vấn tên miền chéo"
+        RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS -> "Truy vấn cùng tên miền, chặn tên miền chéo"
+        RedirectPolicy.BLOCK_CROSS_ORIGIN -> "Chặn tên miền chéo"
+        RedirectPolicy.BLOCK_ALL -> "chặn tất cả"
     }
 }

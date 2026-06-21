@@ -297,7 +297,7 @@ fun ReplaceEditScreen(
 
             ManageGroupDialog(
                 show = state.showGroupDialog,
-                groups = state.allGroups.filter { it != "Mặc định" && it != "默认" },
+                groups = state.allGroups.filter { it != "Mặc định" && it != "mặc định" },
                 onDismiss = { viewModel.toggleGroupDialog(false) },
                 onDelete = { viewModel.deleteGroups(it) }
             )

@@ -64,13 +64,13 @@ fun LoadMoreFooter(
     AppAlertDialog(
         data = showFullError,
         onDismissRequest = { showFullError = null },
-        title = "错误详情",
-        confirmText = "复制",
+        title = "Chi tiết lỗi",
+        confirmText = "sao chép",
         onConfirm = { error ->
             context.sendToClip(error)
             showFullError = null
         },
-        dismissText = "关闭",
+        dismissText = "đóng cửa",
         onDismiss = { showFullError = null },
         content = { error ->
             SelectionContainer {
@@ -160,7 +160,7 @@ fun LoadMoreFooter(
                                     )
 
                                     AppText(
-                                        text = "重新加载",
+                                        text = "tải lại",
                                         color = LegadoTheme.colorScheme.error,
                                         style = LegadoTheme.typography.labelMedium
                                     )
@@ -179,7 +179,7 @@ fun LoadMoreFooter(
                         AppContainedLoadingIndicator()
 
                         AppText(
-                            text = "正在加载…",
+                            text = "Đang tải…",
                             color = LegadoTheme.colorScheme.outline,
                             style = LegadoTheme.typography.bodySmall
                         )
@@ -206,7 +206,7 @@ fun LoadMoreFooter(
                                         tint = LegadoTheme.colorScheme.onSurface
                                     )
                                     AppText(
-                                        text = "已经到底了~",
+                                        text = "Kết thúc rồi~",
                                         color = LegadoTheme.colorScheme.onSurface,
                                         style = LegadoTheme.typography.bodySmall,
                                         modifier = Modifier.weight(1f),
@@ -236,7 +236,7 @@ fun LoadMoreFooter(
                                             tint = LegadoTheme.colorScheme.primary
                                         )
                                         AppText(
-                                            text = "尝试加载下一页",
+                                            text = "Hãy thử tải trang tiếp theo",
                                             color = LegadoTheme.colorScheme.primary,
                                             style = LegadoTheme.typography.labelMedium
                                         )
@@ -263,7 +263,7 @@ fun LoadMoreFooter(
                                         tint = LegadoTheme.colorScheme.onSurface
                                     )
                                     AppText(
-                                        text = "已经到底了~",
+                                        text = "Kết thúc rồi~",
                                         color = LegadoTheme.colorScheme.onSurface,
                                         style = LegadoTheme.typography.bodySmall,
                                         modifier = Modifier.weight(1f),
@@ -304,7 +304,7 @@ fun LoadMoreFooter(
                                     )
 
                                     AppText(
-                                        text = "加载更多",
+                                        text = "tải thêm",
                                         color = LegadoTheme.colorScheme.onSurface,
                                         style = LegadoTheme.typography.bodySmall,
                                         modifier = Modifier.weight(1f),

@@ -74,7 +74,7 @@ class GroupManageDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler
     private fun initData() {
         lifecycleScope.launch {
             appDb.bookGroupDao.flowAll().catch {
-                AppLog.put("书籍分组管理界面获取分组数据失败\n${it.localizedMessage}", it)
+                AppLog.put("Không lấy được dữ liệu nhóm trong giao diện quản lý nhóm sách\n${it.localizedMessage}", it)
             }.flowOn(IO).conflate().collect {
                 adapter.setItems(it)
             }
@@ -93,7 +93,7 @@ class GroupManageDialog : BaseBottomSheetDialogFragment(R.layout.dialog_recycler
                 if (appDb.bookGroupDao.canAddGroup) {
                     showDialogFragment(GroupEditDialog())
                 } else {
-                    toastOnUi("分组已达上限(64个)")
+                    toastOnUi("Đã đạt đến giới hạn nhóm (64)")
                 }
             }
         }

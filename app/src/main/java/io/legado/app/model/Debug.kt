@@ -86,7 +86,7 @@ object Debug {
     fun startChecking(source: BookSource) {
         isChecking = true
         debugTimeMap[source.bookSourceUrl] = System.currentTimeMillis()
-        debugMessageMap[source.bookSourceUrl] = "${debugTimeFormat.format(Date(0))} 开始校验"
+        debugMessageMap[source.bookSourceUrl] = "${debugTimeFormat.format(Date(0))} Bắt đầu xác minh"
     }
 
     fun finishChecking() {
@@ -101,7 +101,7 @@ object Debug {
         if (debugTimeMap[sourceUrl] != null && debugMessageMap[sourceUrl] != null) {
             val spendingTime = System.currentTimeMillis() - debugTimeMap[sourceUrl]!!
             debugTimeMap[sourceUrl] =
-                if (state == "校验成功") spendingTime else CheckSource.timeout + spendingTime
+                if (state == "Xác minh thành công") spendingTime else CheckSource.timeout + spendingTime
             val printTime = debugTimeFormat.format(Date(spendingTime))
             debugMessageMap[sourceUrl] = "$printTime $state"
         }
@@ -110,26 +110,26 @@ object Debug {
     suspend fun startDebug(scope: CoroutineScope, rssSource: RssSource) {
         cancelDebug()
         debugSource = rssSource.sourceUrl
-        log(debugSource, "︾开始解析")
+        log(debugSource, "︾Bắt đầu phân tích cú pháp")
         val sort = rssSource.sortUrls().first()
         Rss.getArticles(scope, sort.first, sort.second, rssSource, 1)
             .onSuccess {
                 if (it.first.isEmpty()) {
-                    log(debugSource, "⇒列表页解析成功，为空")
-                    log(debugSource, "︽解析完成", state = 1000)
+                    log(debugSource, "⇒Trang danh sách được phân tích thành công và trống")
+                    log(debugSource, "︽Đã hoàn thành phân tích", state = 1000)
                 } else {
                     val ruleContent = rssSource.ruleContent
                     if (!rssSource.ruleArticles.isNullOrBlank() && rssSource.ruleDescription.isNullOrBlank()) {
-                        log(debugSource, "︽列表页解析完成")
+                        log(debugSource, "︽Đã hoàn thành việc phân tích trang danh sách")
                         log(debugSource, showTime = false)
                         if (ruleContent.isNullOrEmpty()) {
-                            log(debugSource, "⇒内容规则为空，默认获取整个网页", state = 1000)
+                            log(debugSource, "⇒Quy tắc nội dung trống và toàn bộ trang web được lấy theo mặc định.", state = 1000)
                         } else {
                             rssContentDebug(scope, it.first[0], ruleContent, rssSource)
                         }
                     } else {
-                        log(debugSource, "⇒存在描述规则，不解析内容页")
-                        log(debugSource, "︽解析完成", state = 1000)
+                        log(debugSource, "⇒Có quy tắc mô tả và trang nội dung không được phân tích cú pháp")
+                        log(debugSource, "︽Đã hoàn thành phân tích", state = 1000)
                     }
                 }
             }
@@ -146,12 +146,12 @@ object Debug {
             key.contains("@js:") -> {
                 val ruleContent = rssSource.ruleContent
                 if (ruleContent.isNullOrEmpty()) {
-                    log(debugSource, "⇒内容规则为空，默认获取整个网页", state = 1000)
+                    log(debugSource, "⇒Quy tắc nội dung trống và toàn bộ trang web được lấy theo mặc định.", state = 1000)
                 } else {
                     val rssArticle = RssArticle()
                     rssArticle.origin = rssSource.sourceUrl
                     rssArticle.link = key
-                    log(debugSource, "⇒开始解析@js:链接:$key")
+                    log(debugSource, "⇒Bắt đầu phân tích cú pháp @js: link: $key")
                     rssContentDebug(scope, rssArticle, ruleContent, rssSource)
                 }
             }
@@ -159,8 +159,8 @@ object Debug {
             key.contains("::") -> {
                 val name = key.substringBefore("::")
                 val url = key.substringAfter("::")
-                log(debugSource, "⇒开始访问分类页:$url")
-                log(debugSource, "︾开始解析分类页")
+                log(debugSource, "⇒Bắt đầu truy cập trang danh mục: $url")
+                log(debugSource, "︾Bắt đầu phân tích trang danh mục")
                 rssSortDebug(scope, rssSource, name, url)
             }
 
@@ -168,29 +168,29 @@ object Debug {
                 val ruleContent = rssSource.ruleContent
                 if (!rssSource.ruleArticles.isNullOrBlank() && rssSource.ruleDescription.isNullOrBlank()) {
                     if (ruleContent.isNullOrEmpty()) {
-                        log(debugSource, "⇒内容规则为空，默认获取整个网页", state = 1000)
+                        log(debugSource, "⇒Quy tắc nội dung trống và toàn bộ trang web được lấy theo mặc định.", state = 1000)
                     } else {
                         val rssArticle = RssArticle()
                         rssArticle.origin = rssSource.sourceUrl
                         rssArticle.link = key
-                        log(debugSource, "⇒开始访问内容页:$key")
+                        log(debugSource, "⇒Bắt đầu truy cập trang nội dung:$key")
                         rssContentDebug(scope, rssArticle, ruleContent, rssSource)
                     }
                 } else {
-                    log(debugSource, "⇒存在描述规则，不解析内容页")
-                    log(debugSource, "︽解析完成", state = 1000)
+                    log(debugSource, "⇒Có quy tắc mô tả và trang nội dung không được phân tích cú pháp")
+                    log(debugSource, "︽Đã hoàn thành phân tích", state = 1000)
                 }
             }
 
             else -> {
                 val searchUrl = rssSource.searchUrl
                 if (searchUrl.isNullOrEmpty()) {
-                    log(debugSource, "⇒搜索URL为空", state = -1)
+                    log(debugSource, "⇒URL tìm kiếm trống", state = -1)
                     return
                 }
-                log(debugSource, "⇒开始搜索关键字:$key")
-                log(debugSource, "︾开始解析搜索页")
-                rssSortDebug(scope, rssSource, "搜索", searchUrl, key)
+                log(debugSource, "⇒Bắt đầu tìm kiếm từ khóa:$key")
+                log(debugSource, "︾Bắt đầu phân tích trang tìm kiếm")
+                rssSortDebug(scope, rssSource, "tìm kiếm", searchUrl, key)
             }
         }
     }
@@ -199,21 +199,21 @@ object Debug {
         Rss.getArticles(scope, name, url, rssSource, 1, key)
             .onSuccess {
                 if (it.first.isEmpty()) {
-                    log(debugSource, "⇒列表页解析成功，为空")
-                    log(debugSource, "︽解析完成", state = 1000)
+                    log(debugSource, "⇒Trang danh sách được phân tích thành công và trống")
+                    log(debugSource, "︽Đã hoàn thành phân tích", state = 1000)
                 } else {
                     val ruleContent = rssSource.ruleContent
                     if (!rssSource.ruleArticles.isNullOrBlank() && rssSource.ruleDescription.isNullOrBlank()) {
-                        log(debugSource, "︽列表页解析完成")
+                        log(debugSource, "︽Đã hoàn thành việc phân tích trang danh sách")
                         log(debugSource, showTime = false)
                         if (ruleContent.isNullOrEmpty()) {
-                            log(debugSource, "⇒内容规则为空，默认获取整个网页", state = 1000)
+                            log(debugSource, "⇒Quy tắc nội dung trống và toàn bộ trang web được lấy theo mặc định.", state = 1000)
                         } else {
                             rssContentDebug(scope, it.first[0], ruleContent, rssSource)
                         }
                     } else {
-                        log(debugSource, "⇒存在描述规则，不解析内容页")
-                        log(debugSource, "︽解析完成", state = 1000)
+                        log(debugSource, "⇒Có quy tắc mô tả và trang nội dung không được phân tích cú pháp")
+                        log(debugSource, "︽Đã hoàn thành phân tích", state = 1000)
                     }
                 }
             }
@@ -228,11 +228,11 @@ object Debug {
         ruleContent: String,
         rssSource: RssSource
     ) {
-        log(debugSource, "︾开始解析内容页")
+        log(debugSource, "︾Bắt đầu phân tích trang nội dung")
         Rss.getContent(scope, rssArticle, ruleContent, rssSource)
             .onSuccess {
                 log(debugSource, it)
-                log(debugSource, "︽内容页解析完成", state = 1000)
+                log(debugSource, "︽Đã hoàn tất phân tích trang nội dung", state = 1000)
             }
             .onError {
                 log(debugSource, it.stackTraceStr, state = -1)
@@ -248,13 +248,13 @@ object Debug {
                 val book = Book()
                 book.origin = bookSource.bookSourceUrl
                 book.bookUrl = key
-                log(bookSource.bookSourceUrl, "⇒开始访问详情页:$key")
+                log(bookSource.bookSourceUrl, "⇒Bắt đầu truy cập trang chi tiết: $key")
                 infoDebug(scope, bookSource, book)
             }
 
             key.contains("::") -> {
                 val url = key.substringAfter("::")
-                log(bookSource.bookSourceUrl, "⇒开始访问发现页:$url")
+                log(bookSource.bookSourceUrl, "⇒Bắt đầu truy cập trang khám phá: $url")
                 exploreDebug(scope, bookSource, url)
             }
 
@@ -263,7 +263,7 @@ object Debug {
                 val book = Book()
                 book.origin = bookSource.bookSourceUrl
                 book.tocUrl = url
-                log(bookSource.bookSourceUrl, "⇒开始访目录页:$url")
+                log(bookSource.bookSourceUrl, "⇒Bắt đầu truy cập trang thư mục: $url")
                 tocDebug(scope, bookSource, book)
             }
 
@@ -271,30 +271,30 @@ object Debug {
                 val url = key.substring(2)
                 val book = Book()
                 book.origin = bookSource.bookSourceUrl
-                log(bookSource.bookSourceUrl, "⇒开始访正文页:$url")
+                log(bookSource.bookSourceUrl, "⇒Bắt đầu truy cập trang văn bản chính: $url")
                 val chapter = BookChapter()
-                chapter.title = "调试"
+                chapter.title = "gỡ lỗi"
                 chapter.url = url
                 contentDebug(scope, bookSource, book, chapter, null)
             }
 
             else -> {
-                log(bookSource.bookSourceUrl, "⇒开始搜索关键字:$key")
+                log(bookSource.bookSourceUrl, "⇒Bắt đầu tìm kiếm từ khóa:$key")
                 searchDebug(scope, bookSource, key)
             }
         }
     }
 
     private fun exploreDebug(scope: CoroutineScope, bookSource: BookSource, url: String) {
-        log(debugSource, "︾开始解析发现页")
+        log(debugSource, "︾Bắt đầu phân tích trang khám phá")
         val explore = WebBook.exploreBook(scope, bookSource, url, 1)
             .onSuccess { exploreBooks ->
                 if (exploreBooks.isNotEmpty()) {
-                    log(debugSource, "︽发现页解析完成")
+                    log(debugSource, "︽Đã hoàn tất phân tích trang khám phá")
                     log(debugSource, showTime = false)
                     infoDebug(scope, bookSource, exploreBooks[0].toBook())
                 } else {
-                    log(debugSource, "︽未获取到书籍", state = -1)
+                    log(debugSource, "︽Không nhận được sách", state = -1)
                 }
             }
             .onError {
@@ -304,15 +304,15 @@ object Debug {
     }
 
     private fun searchDebug(scope: CoroutineScope, bookSource: BookSource, key: String) {
-        log(debugSource, "︾开始解析搜索页")
+        log(debugSource, "︾Bắt đầu phân tích trang tìm kiếm")
         val search = WebBook.searchBook(scope, bookSource, key, 1)
             .onSuccess { searchBooks ->
                 if (searchBooks.isNotEmpty()) {
-                    log(debugSource, "︽搜索页解析完成")
+                    log(debugSource, "︽Đã hoàn tất phân tích trang tìm kiếm")
                     log(debugSource, showTime = false)
                     infoDebug(scope, bookSource, searchBooks[0].toBook())
                 } else {
-                    log(debugSource, "︽未获取到书籍", state = -1)
+                    log(debugSource, "︽Không nhận được sách", state = -1)
                 }
             }
             .onError {
@@ -323,20 +323,20 @@ object Debug {
 
     private fun infoDebug(scope: CoroutineScope, bookSource: BookSource, book: Book) {
         if (book.tocUrl.isNotBlank()) {
-            log(debugSource, "≡已获取目录链接,跳过详情页")
+            log(debugSource, "≡ Đã lấy được link thư mục, bỏ qua trang chi tiết")
             log(debugSource, showTime = false)
             tocDebug(scope, bookSource, book)
             return
         }
-        log(debugSource, "︾开始解析详情页")
+        log(debugSource, "︾Bắt đầu phân tích trang chi tiết")
         val info = WebBook.getBookInfo(scope, bookSource, book)
             .onSuccess {
-                log(debugSource, "︽详情页解析完成")
+                log(debugSource, "︽Đã hoàn tất phân tích trang chi tiết")
                 log(debugSource, showTime = false)
                 if (!book.isWebFile) {
                     tocDebug(scope, bookSource, book)
                 } else {
-                    log(debugSource, "≡文件类书源跳过解析目录", state = 1000)
+                    log(debugSource, "≡Tệp nguồn sách bỏ qua thư mục phân tích cú pháp", state = 1000)
                 }
             }
             .onError {
@@ -346,14 +346,14 @@ object Debug {
     }
 
     private fun tocDebug(scope: CoroutineScope, bookSource: BookSource, book: Book) {
-        log(debugSource, "︾开始解析目录页")
+        log(debugSource, "︾Bắt đầu phân tích trang thư mục")
         val chapterList = WebBook.getChapterList(scope, bookSource, book)
             .onSuccess { chapters ->
-                log(debugSource, "︽目录页解析完成")
+                log(debugSource, "︽Đã hoàn tất phân tích trang thư mục")
                 log(debugSource, showTime = false)
                 val toc = chapters.filter { !(it.isVolume && it.url.startsWith(it.title)) }
                 if (toc.isEmpty()) {
-                    log(debugSource, "≡没有正文章节")
+                    log(debugSource, "≡Không có phần văn bản")
                     return@onSuccess
                 }
                 val nextChapterUrl = toc.getOrNull(1)?.url ?: toc.first().url
@@ -372,7 +372,7 @@ object Debug {
         bookChapter: BookChapter,
         nextChapterUrl: String?
     ) {
-        log(debugSource, "︾开始解析正文页")
+        log(debugSource, "︾Bắt đầu phân tích trang văn bản")
         val content = WebBook.getContent(
             scope = scope,
             bookSource = bookSource,
@@ -381,7 +381,7 @@ object Debug {
             nextChapterUrl = nextChapterUrl,
             needSave = false
         ).onSuccess {
-            log(debugSource, "︽正文页解析完成", state = 1000)
+            log(debugSource, "︽Đã hoàn thành việc phân tích trang văn bản", state = 1000)
         }.onError {
             log(debugSource, it.stackTraceStr, state = -1)
         }

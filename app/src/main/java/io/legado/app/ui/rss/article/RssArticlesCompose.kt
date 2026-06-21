@@ -111,7 +111,7 @@ fun RssArticlesPage(
         } else {
             appDb.rssArticleDao.flowByOriginSort(origin, sortName)
         }.catch {
-            AppLog.put("订阅文章界面获取数据失败\n${it.localizedMessage}", it)
+            AppLog.put("Không lấy được dữ liệu trên giao diện bài viết đăng ký\n${it.localizedMessage}", it)
         }.flowOn(IO)
     }
     val articles by articleFlow.collectAsStateWithLifecycle(initialValue = emptyList())

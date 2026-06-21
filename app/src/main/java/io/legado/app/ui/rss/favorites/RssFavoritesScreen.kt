@@ -185,7 +185,7 @@ fun RssFavoritesScreen(
                 contentAlignment = Alignment.Center
             ) {
                 EmptyMessage(
-                    message = "还没有收藏订阅！",
+                    message = "Chưa có mục yêu thích hoặc đăng ký nào!",
                     isLoading = state.isLoading
                 )
             }

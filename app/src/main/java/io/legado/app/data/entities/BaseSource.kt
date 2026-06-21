@@ -115,11 +115,11 @@ interface BaseSource : JsExtensions {
                 GSONStrict.fromJsonObject<Map<String, String>>(json).getOrNull()?.let { map ->
                     putAll(map)
                 } ?: GSON.fromJsonObject<Map<String, String>>(json).getOrNull()?.let { map ->
-                    log("请求头规则 JSON 格式不规范，请改为规范格式")
+                    log("Định dạng JSON của quy tắc tiêu đề yêu cầu chưa được chuẩn hóa, vui lòng thay đổi nó thành định dạng được chuẩn hóa.")
                     putAll(map)
                 }
             } catch (e: Exception) {
-                AppLog.put("执行请求头规则出错\n$e", e)
+                AppLog.put("Đã xảy ra lỗi khi thực hiện quy tắc tiêu đề yêu cầu\n$e", e)
             }
         }
         if (!has(AppConst.UA_NAME, true)) {
@@ -173,7 +173,7 @@ interface BaseSource : JsExtensions {
             val cache = CacheManager.get("userInfo_${getKey()}") ?: return null
             return AES(key).decryptStr(cache)
         } catch (e: Exception) {
-            AppLog.put("获取登陆信息出错", e)
+            AppLog.put("Lỗi lấy thông tin đăng nhập", e)
             return null
         }
     }
@@ -225,7 +225,7 @@ interface BaseSource : JsExtensions {
             CacheManager.put("userInfo_${getKey()}", encodeStr)
             true
         } catch (e: Exception) {
-            AppLog.put("保存登陆信息出错", e)
+            AppLog.put("Lỗi lưu thông tin đăng nhập", e)
             false
         }
     }

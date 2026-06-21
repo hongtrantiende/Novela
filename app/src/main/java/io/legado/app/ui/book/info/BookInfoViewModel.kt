@@ -190,7 +190,7 @@ class BookInfoViewModel(
                     inBookshelf = false
                     searchBook
                 } else {
-                    currentBook ?: throw NoStackTraceException("未找到书籍")
+                    currentBook ?: throw NoStackTraceException("Không tìm thấy sách nào")
                 }
             }
         }.onSuccess { book ->
@@ -205,7 +205,7 @@ class BookInfoViewModel(
             }
             upBook(book, source)
         }.onError {
-            context.toastOnUi(it.localizedMessage ?: "未找到书籍")
+            context.toastOnUi(it.localizedMessage ?: "Không tìm thấy sách nào")
             emitEffect(BookInfoEffect.Finish(afterTransition = true))
         }
     }
@@ -264,7 +264,7 @@ class BookInfoViewModel(
 
             is BookInfoIntent.AddSourceAsNewBook -> {
                 addToBookshelf(intent.book, intent.toc) {
-                    context.toastOnUi("已添加到书架")
+                    context.toastOnUi("Đã thêm vào giá sách")
                 }
             }
 
@@ -415,8 +415,8 @@ class BookInfoViewModel(
 
     fun requestSourceVariableDialog() {
         execute {
-            val source = bookSource ?: throw NoStackTraceException("书源不存在")
-            val comment = source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
+            val source = bookSource ?: throw NoStackTraceException("Nguồn sách không tồn tại")
+            val comment = source.getDisplayVariableComment("Các biến nguồn có thể được lấy trong js thông qua source.getVariable()")
             val variable = source.getVariable()
             BookInfoEffect.ShowVariableDialog(
                 title = context.getString(R.string.set_source_variable),
@@ -427,17 +427,17 @@ class BookInfoViewModel(
         }.onSuccess {
             emitEffect(it)
         }.onError {
-            context.toastOnUi(it.localizedMessage ?: "书源不存在")
+            context.toastOnUi(it.localizedMessage ?: "Nguồn sách không tồn tại")
         }
     }
 
     fun requestBookVariableDialog() {
         execute {
-            val source = bookSource ?: throw NoStackTraceException("书源不存在")
+            val source = bookSource ?: throw NoStackTraceException("Nguồn sách không tồn tại")
             val book = currentBook ?: throw NoStackTraceException("book is null")
             val variable = book.getCustomVariable()
             val comment = source.getDisplayVariableComment(
-                "书籍变量可在js中通过book.getVariable(\"custom\")获取"
+                "Các biến sách có thể được lấy trong js thông qua book.getVariable(\"custom\")"
             )
             BookInfoEffect.ShowVariableDialog(
                 title = context.getString(R.string.set_book_variable),
@@ -448,7 +448,7 @@ class BookInfoViewModel(
         }.onSuccess {
             emitEffect(it)
         }.onError {
-            context.toastOnUi(it.localizedMessage ?: "书源不存在")
+            context.toastOnUi(it.localizedMessage ?: "Nguồn sách không tồn tại")
         }
     }
 
@@ -493,7 +493,7 @@ class BookInfoViewModel(
             inBookshelf = true
             syncUiState(isTocLoading = true)
             loadChapter(newBook)
-            context.toastOnUi("同步完成")
+            context.toastOnUi("Đồng bộ hóa đã hoàn tất")
         }.onFinally {
             setBusy(false)
         }.onError {
@@ -529,7 +529,7 @@ class BookInfoViewModel(
             }.onSuccess {
                 context.toastOnUi(R.string.clear_cache_success)
             }.onError {
-                context.toastOnUi("清理缓存出错\n${it.localizedMessage}")
+                context.toastOnUi("Lỗi xóa bộ nhớ đệm\n${it.localizedMessage}")
             }
         }
     }
@@ -558,14 +558,14 @@ class BookInfoViewModel(
             }
         }.onSuccess { success ->
             if (success) {
-                context.toastOnUi("保存成功")
+                context.toastOnUi("Đã lưu thành công")
             } else {
-                context.toastOnUi("保存失败")
+                context.toastOnUi("Lưu không thành công")
             }
         }.onFinally {
             setBusy(false)
         }.onError {
-            context.toastOnUi("保存出错: ${it.localizedMessage}")
+            context.toastOnUi("Lỗi lưu: ${it.localizedMessage}")
         }
     }
 
@@ -665,8 +665,8 @@ class BookInfoViewModel(
             }
             success?.invoke()
         }.onError {
-            AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            AppLog.put("Không thể thêm sách vào giá sách", it)
+            context.toastOnUi("Không thể thêm sách")
         }
     }
 
@@ -703,7 +703,7 @@ class BookInfoViewModel(
                 }
 
                 else -> {
-                    AppLog.put("下载远程书籍<${book.name}>失败", it)
+                    AppLog.put("Không tải được sách từ xa <${book.name}>", it)
                 }
             }
         }.onFinally {
@@ -756,7 +756,7 @@ class BookInfoViewModel(
                     }
                     scheduleRelatedBooksLoad(loadedBook, source)
                 }.onError {
-                    AppLog.put("获取书籍信息失败\n${it.localizedMessage}", it)
+                    AppLog.put("Không thể lấy được thông tin sách\n${it.localizedMessage}", it)
                     context.toastOnUi(R.string.error_get_book_info)
                     syncUiState(isTocLoading = false)
                 }
@@ -786,7 +786,7 @@ class BookInfoViewModel(
                 context.toastOnUi("Không tải được chi tiết sách từ extension")
             }
         }.onError {
-            AppLog.put("获取扩展书籍信息失败\n${it.localizedMessage}", it)
+            AppLog.put("Không thể lấy được thông tin sách mở rộng\n${it.localizedMessage}", it)
             context.toastOnUi("Lỗi tải chi tiết sách từ extension")
             syncUiState(isTocLoading = false)
         }
@@ -820,7 +820,7 @@ class BookInfoViewModel(
         }.onError {
             currentChapterList = emptyList()
             syncUiState(isTocLoading = false)
-            AppLog.put("获取扩展目录失败\n${it.localizedMessage}", it)
+            AppLog.put("Không thể tải thư mục tiện ích mở rộng\n${it.localizedMessage}", it)
             context.toastOnUi("Lỗi tải danh sách chương từ extension")
         }
     }
@@ -976,7 +976,7 @@ class BookInfoViewModel(
                 }.onError {
                     currentChapterList = emptyList()
                     syncUiState(isTocLoading = false)
-                    AppLog.put("获取目录失败\n${it.localizedMessage}", it)
+                    AppLog.put("Không lấy được thư mục\n${it.localizedMessage}", it)
                     context.toastOnUi(R.string.error_get_chapter_list)
                 }
         }
@@ -984,7 +984,7 @@ class BookInfoViewModel(
 
     private fun loadWebFile(book: Book) {
         execute {
-            val fileNameNoExtension = if (book.author.isBlank()) book.name else "${book.name} 作者：${book.author}"
+            val fileNameNoExtension = if (book.author.isBlank()) book.name else "${book.name} Tác giả: ${book.author}"
             book.downloadUrls.orEmpty().map { url ->
                 val analyzeUrl = AnalyzeUrl(
                     url,
@@ -1157,7 +1157,7 @@ class BookInfoViewModel(
             }
 
             BookInfoMenuAction.Upload -> uploadBook {
-                context.toastOnUi("上传成功")
+                context.toastOnUi("Tải lên thành công")
             }
             BookInfoMenuAction.SyncRemote -> syncFromRemote()
             BookInfoMenuAction.Refresh -> refreshCurrentBook()

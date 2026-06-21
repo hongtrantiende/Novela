@@ -689,7 +689,7 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             * clickActionBL * clickActionBC * clickActionBR != 0
         ) {
             appCtx.putPrefInt(PreferKey.clickActionMC, 0)
-            appCtx.toastOnUi("当前没有配置菜单区域,自动恢复中间区域为菜单.")
+            appCtx.toastOnUi("Hiện tại không có khu vực menu nào được định cấu hình và khu vực ở giữa sẽ tự động được khôi phục vào menu.")
         }
     }
 

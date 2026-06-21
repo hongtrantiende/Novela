@@ -68,7 +68,7 @@ class ChangeSourceSearchUseCase(
         val contentProcessor = ContentProcessor.get(oldBook)
         val bookSourceParts = scope.getBookSourceParts()
         if (bookSourceParts.isEmpty()) {
-            throw io.legado.app.exception.NoStackTraceException("启用书源为空")
+            throw io.legado.app.exception.NoStackTraceException("Bật nguồn sách trống")
         }
 
         tocMap.clear()
@@ -255,7 +255,7 @@ class ChangeSourceSearchUseCase(
             val len = content.length
             val endTime = System.currentTimeMillis()
             book.toSearchBook().apply {
-                chapterWordCountText = "[${chapterIndex + 1}] ${title}\n字数：${len}"
+                chapterWordCountText = "[${chapterIndex + 1}] ${title}\nSố từ: ${len}"
                 chapterWordCount = len
                 respondTime = (endTime - startTime).toInt()
             }
@@ -264,7 +264,7 @@ class ChangeSourceSearchUseCase(
             val endTime = System.currentTimeMillis()
             book.toSearchBook().apply {
                 chapterWordCountText =
-                    "[${chapterIndex + 1}] ${title}\n获取字数失败：${t.localizedMessage}"
+                    "[${chapterIndex + 1}] ${title}\nKhông đếm được số từ: ${t.localizedMessage}"
                 chapterWordCount = -1
                 respondTime = (endTime - startTime).toInt()
             }

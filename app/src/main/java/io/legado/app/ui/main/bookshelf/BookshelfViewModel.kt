@@ -656,7 +656,7 @@ class BookshelfViewModel(
         execute {
             updateBooksGroupUseCase.replaceGroup(bookUrls, groupId)
         }.onError {
-            context.toastOnUi("更新分组失败\n${it.localizedMessage}")
+            context.toastOnUi("Không cập nhật được nhóm\n${it.localizedMessage}")
         }
     }
 
@@ -674,7 +674,7 @@ class BookshelfViewModel(
                 appDb.bookDao.update(*updates.toTypedArray())
             }
         }.onError {
-            context.toastOnUi("排序保存失败\n${it.localizedMessage}")
+            context.toastOnUi("Sắp xếp lưu không thành công\n${it.localizedMessage}")
         }
     }
 
@@ -688,12 +688,12 @@ class BookshelfViewModel(
             )
         }.onSuccess { count ->
             if (count > 0) {
-                context.toastOnUi("已加入缓存队列: $count 本")
+                context.toastOnUi("Đã thêm vào hàng đợi bộ đệm: $count cái này")
             } else {
                 context.toastOnUi(R.string.no_download)
             }
         }.onError {
-            context.toastOnUi("批量缓存失败\n${it.localizedMessage}")
+            context.toastOnUi("Bộ nhớ đệm hàng loạt không thành công\n${it.localizedMessage}")
         }
     }
 
@@ -808,7 +808,7 @@ class BookshelfViewModel(
                 }
             }.catch {
                 completedWithoutFlowError = false
-                AppLog.put("更新目录出错\n${it.localizedMessage}", it)
+                AppLog.put("Lỗi cập nhật thư mục\n${it.localizedMessage}", it)
             }.collect()
 
             finishUpTocJob(completedWithoutFlowError)
@@ -920,18 +920,18 @@ class BookshelfViewModel(
     }
 
     fun addBookByUrl(bookUrls: String) {
-        loadingTextFlow.value = "添加中..."
+        loadingTextFlow.value = "Đang thêm..."
         addBookJob = execute {
             val successCount = addBookUseCase.execute(bookUrls) {
-                loadingTextFlow.value = "添加中... ($it)"
+                loadingTextFlow.value = "Đang thêm... ($it)"
             }
             if (successCount > 0) {
                 context.toastOnUi(R.string.success)
             } else {
-                context.toastOnUi("添加网址失败")
+                context.toastOnUi("Không thêm được URL")
             }
         }.onError {
-            AppLog.put("添加网址出错\n${it.localizedMessage}", it, true)
+            AppLog.put("Lỗi khi thêm URL\n${it.localizedMessage}", it, true)
         }.onFinally {
             loadingTextFlow.value = null
         }
@@ -941,9 +941,9 @@ class BookshelfViewModel(
         execute {
             exportBookshelfUseCase.exportToUri(uri, items).getOrThrow()
         }.onSuccess {
-            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("导出成功"))
+            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("Xuất thành công"))
         }.onError {
-            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("导出失败\n${it.localizedMessage}"))
+            _eventChannel.trySend(BaseRuleEvent.ShowSnackbar("Xuất không thành công\n${it.localizedMessage}"))
         }
     }
 
@@ -958,15 +958,15 @@ class BookshelfViewModel(
         }.onSuccess { url ->
             _eventChannel.trySend(
                 BaseRuleEvent.ShowSnackbar(
-                    message = "上传成功: $url",
-                    actionLabel = "复制链接",
+                    message = "Tải lên thành công: $url",
+                    actionLabel = "Sao chép liên kết",
                     url = url
                 )
             )
         }.onError {
             _eventChannel.trySend(
                 BaseRuleEvent.ShowSnackbar(
-                    message = "上传失败: ${it.localizedMessage}"
+                    message = "Tải lên không thành công: ${it.localizedMessage}"
                 )
             )
         }
@@ -974,12 +974,12 @@ class BookshelfViewModel(
 
     fun exportBookshelf(items: List<BookUiItem>?, success: (file: File) -> Unit) {
         execute {
-            items ?: throw NoStackTraceException("书籍不能为空")
+            items ?: throw NoStackTraceException("Sách không thể trống")
             exportBookshelfUseCase.exportToFile(items).getOrThrow()
         }.onSuccess {
             success(it)
         }.onError {
-            context.toastOnUi("导出书籍出错\n${it.localizedMessage}")
+            context.toastOnUi("Lỗi xuất sách\n${it.localizedMessage}")
         }
     }
 

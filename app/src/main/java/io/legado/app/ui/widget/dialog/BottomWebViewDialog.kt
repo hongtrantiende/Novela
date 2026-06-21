@@ -149,7 +149,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
             manager.beginTransaction().remove(this).commit()
             super.show(manager, tag)
         }.onFailure {
-            AppLog.put("显示对话框失败 tag:$tag", it)
+            AppLog.put("Không thể hiển thị thẻ hộp thoại:$tag", it)
         }
     }
 
@@ -434,13 +434,13 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
                 activity?.runOnUiThread {
                     currentWebView.loadDataWithBaseURL(
                         url,
-                        "<html><body style='color:red;'>加载失败：${it.localizedMessage}</body></html>",
+                        "<html><body style='color:red;'>Tải thất bại: ${it.localizedMessage}</body></html>",
                         "text/html",
                         "utf-8",
                         url
                     )
                 }
-                AppLog.put("WebView加载失败", it)
+                AppLog.put("WebView không tải được", it)
             }
         }
         dialog?.setOnKeyListener { _, keyCode, event ->
@@ -559,13 +559,13 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
         webPic ?: return
         Coroutine.async(lifecycleScope) {
             val fileName = "${AppConst.fileNameFormat.format(Date(System.currentTimeMillis()))}.jpg"
-            val byteArray = webData2bitmap(webPic) ?: throw NoStackTraceException("图片数据为空")
+            val byteArray = webData2bitmap(webPic) ?: throw NoStackTraceException("Dữ liệu hình ảnh trống")
             uri.writeBytes(requireContext(), fileName, byteArray)
         }.onError {
             ACache.get().remove(imagePathKey)
-            context?.toastOnUi("保存图片失败:${it.localizedMessage}")
+            context?.toastOnUi("Không lưu được hình ảnh:${it.localizedMessage}")
         }.onSuccess {
-            context?.toastOnUi("保存成功")
+            context?.toastOnUi("Đã lưu thành công")
         }
     }
 
@@ -811,7 +811,7 @@ class BottomWebViewDialog() : BottomSheetDialogFragment(R.layout.dialog_web_view
                     ByteArrayInputStream(bodyText.toByteArray(charset))
                 )
             } catch (e: Exception) {
-                AppLog.put("拦截请求处理失败", e)
+                AppLog.put("Xử lý yêu cầu chặn không thành công", e)
                 null
             }
         }

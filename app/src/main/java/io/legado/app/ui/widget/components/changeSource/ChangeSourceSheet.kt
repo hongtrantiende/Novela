@@ -158,7 +158,7 @@ fun ChangeSourceSheet(
             },
             onError = {
                 loadingAction = false
-                context.toastOnUi(if (replace) "换源失败" else "添加书籍失败")
+                context.toastOnUi(if (replace) "Không thể thay đổi nguồn" else "Không thể thêm sách")
             }
         )
     }
@@ -179,7 +179,7 @@ fun ChangeSourceSheet(
                         onDismissRequest = { showOptionsMenu = false }
                     ) { dismiss ->
                         RoundDropdownMenuItem(
-                            text = "校验作者",
+                            text = "Xác minh tác giả",
                             isSelected = checkAuthor,
                             onClick = {
                                 viewModel.onCheckAuthorChange(!checkAuthor)
@@ -187,7 +187,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "加载详情",
+                            text = "Tải chi tiết",
                             isSelected = loadInfo,
                             onClick = {
                                 viewModel.onLoadInfoChange(!loadInfo)
@@ -195,7 +195,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "加载目录",
+                            text = "Tải thư mục",
                             isSelected = loadToc,
                             onClick = {
                                 viewModel.onLoadTocChange(!loadToc)
@@ -203,7 +203,7 @@ fun ChangeSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "显示更多信息",
+                            text = "Hiển thị thêm thông tin",
                             isSelected = loadWordCount,
                             onClick = {
                                 viewModel.onLoadWordCountChange(!loadWordCount)
@@ -333,7 +333,7 @@ fun ChangeSourceSheet(
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = "置底",
+                                text = "đáy",
                                 onClick = {
                                     viewModel.bottomSource(item)
                                     onDismiss()
@@ -347,7 +347,7 @@ fun ChangeSourceSheet(
                                 }
                             )
                             RoundDropdownMenuItem(
-                                text = "禁用",
+                                text = "Vô hiệu hóa",
                                 onClick = {
                                     viewModel.disableSource(item)
                                     onDismiss()
@@ -418,7 +418,7 @@ fun ChangeSourceSheet(
     )
     ChangeSourceMigrationOptionsSheet(
         show = showMigrationOptions,
-        title = "换源选项",
+        title = "Tùy chọn thay đổi nguồn",
         onDismissRequest = { showMigrationOptions = false },
         onConfirm = { options ->
             ChangeSourceConfig.setMigrationOptions(options)

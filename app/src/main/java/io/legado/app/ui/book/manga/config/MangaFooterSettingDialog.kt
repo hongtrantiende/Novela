@@ -61,7 +61,7 @@ class MangaFooterSettingDialog :
                 }
                 setOnLongClickListener {
                     ReadMangaConfig.mangaScrollMode = mode
-                    toastOnUi("已设置为全局默认模式")
+                    toastOnUi("Đặt làm chế độ mặc định chung")
                     true
                 }
             })
@@ -272,14 +272,14 @@ class MangaFooterSettingDialog :
             else -> Gravity.START
         }
 
-        val label = if (!config.hideChapterLabel) "章节" else ""
+        val label = if (!config.hideChapterLabel) "chương" else ""
         val chapter = if (!config.hideChapter) "1/45 " else ""
-        val name = if (!config.hideChapterName) "第三话 " else ""
+        val name = if (!config.hideChapterName) "Chương 3" else ""
 
-        val progressLabel = if (!config.hideProgressRatioLabel) "总进度" else ""
+        val progressLabel = if (!config.hideProgressRatioLabel) "tổng tiến độ" else ""
         val progress = if (!config.hideProgressRatio) "2.1%" else ""
 
-        val pageLabel = if (!config.hidePageNumberLabel) "页数" else ""
+        val pageLabel = if (!config.hidePageNumberLabel) "Số trang" else ""
         val page = if (!config.hidePageNumber) "4/30 " else ""
 
         val parts = listOf(

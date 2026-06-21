@@ -234,7 +234,7 @@ class AnalyzeUrl(
             if (urlOption == null) {
                 urlOption = GSON.fromJsonObject<UrlOption>(urlOptionStr).getOrNull()
                 if (urlOption != null) {
-                    log("链接参数 JSON 格式不规范，请改为规范格式")
+                    log("Định dạng JSON của tham số liên kết chưa được chuẩn hóa, vui lòng thay đổi nó thành định dạng được chuẩn hóa.")
                 }
             }
             urlOption?.let { option ->
@@ -670,7 +670,7 @@ class AnalyzeUrl(
      */
     suspend fun upload(fileName: String, file: Any, contentType: String): StrResponse {
         val bodyMap = GSON.fromJsonObject<HashMap<String, Any>>(body).getOrNull()
-            ?: return getErrStrResponse(NoStackTraceException("请求体不是合法的JSON格式"))
+            ?: return getErrStrResponse(NoStackTraceException("Nội dung yêu cầu không ở định dạng JSON hợp pháp"))
         return getProxyClient(proxy).newCallStrResponse(retry) {
             url(urlNoQuery)
             bodyMap.forEach { entry ->

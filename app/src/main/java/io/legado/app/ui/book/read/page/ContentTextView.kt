@@ -107,7 +107,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
         if (longScreenshot) {
             canvas.translate(0f, scrollY.toFloat())
         }
-        check(!visibleRect.isEmpty) { "visibleRect 为空" }
+        check(!visibleRect.isEmpty) { "hiển thịRect trống" }
         canvas.clipRect(visibleRect)
         drawPage(canvas)
     }

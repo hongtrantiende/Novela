@@ -31,7 +31,7 @@ object ImageUtils {
                 put("src", src)
             } as ByteArray
         }.onFailure {
-            AppLog.putDebug("${src}解密错误", it)
+            AppLog.putDebug("lỗi giải mã ${src}", it)
         }.getOrNull()
     }
 
@@ -50,7 +50,7 @@ object ImageUtils {
             } as ByteArray
             ByteArrayInputStream(bytes)
         }.onFailure {
-            AppLog.putDebug("${src}解密错误", it)
+            AppLog.putDebug("lỗi giải mã ${src}", it)
         }.getOrNull()
     }
 

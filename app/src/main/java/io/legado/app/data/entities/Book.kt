@@ -278,7 +278,7 @@ data class Book(
         return try {
             LocalDate.parse(config.startDate)
         } catch (e: Exception) {
-            println("解析日期失败: ${config.startDate}, 错误: ${e.message}")
+            println("Không phân tích được ngày: ${config.startDate}, lỗi: ${e.message}")
             LocalDate.now()
         }
     }

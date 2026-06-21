@@ -38,7 +38,7 @@ import java.io.File
 @Suppress("DEPRECATION", "ConstPropertyName")
 object ChapterProvider {
     //用于图片字的替换
-    const val srcReplaceChar = "袮" //▩▣ 丨⼁ //换成袮，这是不应该存在的汉字,替换为祢
+    const val srcReplaceChar = "Bạn" //▩▣ 丨⼁ //换成Bạn，这是不应该存在的汉字,替换为祢
     const val srcReplaceCharC = '袮' //可能有略微的提升
     const val srcReplaceCharD = '祢'
 
@@ -375,7 +375,7 @@ object ChapterProvider {
                 if (textPage.height < durY) {
                     textPage.height = durY
                 }
-                textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
+                textPage.text = stringBuilder.toString().ifEmpty { "Trang này không có nội dung văn bản" }
                 stringBuilder.clear()
                 textPages.add(TextPage())
                 durY = 0f
@@ -406,7 +406,7 @@ object ChapterProvider {
                             if (textPage.leftLineSize == 0) {
                                 textPage.leftLineSize = textPage.lineSize
                             }
-                            textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
+                            textPage.text = stringBuilder.toString().ifEmpty { "Trang này không có nội dung văn bản" }
                             stringBuilder.clear()
                             textPages.add(TextPage())
                         }
@@ -444,7 +444,7 @@ object ChapterProvider {
                             if (textPage.leftLineSize == 0) {
                                 textPage.leftLineSize = textPage.lineSize
                             }
-                            textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
+                            textPage.text = stringBuilder.toString().ifEmpty { "Trang này không có nội dung văn bản" }
                             stringBuilder.clear()
                             textPages.add(TextPage())
                         }

@@ -52,7 +52,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试搜索 - 输入关键字，如："
+                android:text="Tìm kiếm gỡ lỗi - Nhập từ khóa như:"
                 tools:ignore="HardcodedText" />
 
             <LinearLayout
@@ -73,7 +73,7 @@
                     android:paddingTop="4dp"
                     android:paddingRight="12dp"
                     android:paddingBottom="4dp"
-                    android:text="我的"
+                    android:text="của tôi"
                     android:textSize="14sp"
                     tools:ignore="HardcodedText,UnusedAttribute" />
 
@@ -90,7 +90,7 @@
                     android:paddingTop="4dp"
                     android:paddingRight="12dp"
                     android:paddingBottom="4dp"
-                    android:text="系统"
+                    android:text="hệ thống"
                     android:textSize="14sp"
                     tools:ignore="HardcodedText,UnusedAttribute" />
             </LinearLayout>
@@ -99,7 +99,7 @@
                 android:id="@+id/text_fx_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试发现 - 输入发现URL，如："
+                android:text="Khám phá gỡ lỗi - Nhập URL khám phá như:"
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -115,14 +115,14 @@
                 android:paddingTop="4dp"
                 android:paddingRight="12dp"
                 android:paddingBottom="4dp"
-                android:text="系统::http://xxx"
+                android:text="Hệ thống::http://xxx"
                 android:textSize="14sp"
                 tools:ignore="HardcodedText,UnusedAttribute" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试详情页 - 输入详情页URL，如："
+                android:text="Trang chi tiết gỡ lỗi - nhập URL trang chi tiết, chẳng hạn như:"
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -145,7 +145,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试目录页 - 输入目录页URL，如："
+                android:text="Trang thư mục gỡ lỗi - Nhập URL trang thư mục, chẳng hạn như:"
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -168,7 +168,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试正文页 - 输入正文页URL，如："
+                android:text="Trang nội dung gỡ lỗi - nhập URL của trang nội dung, chẳng hạn như:"
                 tools:ignore="HardcodedText" />
 
             <TextView

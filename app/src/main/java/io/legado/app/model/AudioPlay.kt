@@ -153,7 +153,7 @@ object AudioPlay : CoroutineScope by MainScope() {
                 WebBook.getContent(this, bookSource, book, chapter)
                     .onSuccess { content ->
                         if (content.isEmpty()) {
-                            appCtx.toastOnUi("未获取到资源链接")
+                            appCtx.toastOnUi("Không nhận được liên kết tài nguyên")
                             // 加载失败时清空歌词
                             durLyric = null
                             callback?.upLyric(null)
@@ -161,7 +161,7 @@ object AudioPlay : CoroutineScope by MainScope() {
                             contentLoadFinish(chapter, content)
                         }
                     }.onError { error ->
-                        AppLog.put("获取资源链接出错\n$error", error, true)
+                        AppLog.put("Lấy liên kết tài nguyên lỗi\n$error", error, true)
                         upLoading(false)
                         // 加载失败时清空歌词
                         durLyric = null

@@ -97,7 +97,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
         }
         if (waitTime > 0) {
             throw ConcurrentException(
-                "根据并发率还需等待${waitTime}毫秒才可以访问",
+                "Tùy thuộc vào tốc độ xử lý đồng thời, bạn vẫn cần đợi ${waitTime} mili giây trước khi có thể truy cập.",
                 waitTime = waitTime
             )
         }

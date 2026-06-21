@@ -1941,13 +1941,13 @@ private fun SearchBottomMenuContent(
             SearchMenuActionButton(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Search,
-                text = "搜索内容",
+                text = "Tìm kiếm nội dung",
                 onClick = { onIntent(ReadBookIntent.OpenSearch(null)) },
             )
             SearchMenuActionButton(
                 modifier = Modifier.weight(1f),
                 icon = Icons.Default.Menu,
-                text = "主菜单",
+                text = "Thực đơn chính",
                 onClick = {
                     onIntent(ReadBookIntent.HideSearchMenu)
                     onIntent(ReadBookIntent.ShowMenu)
@@ -1956,7 +1956,7 @@ private fun SearchBottomMenuContent(
             SearchMenuActionButton(
                 modifier = Modifier.weight(0.55f),
                 icon = Icons.Default.Close,
-                text = "退出",
+                text = "từ bỏ",
                 onClick = { onIntent(ReadBookIntent.ExitSearch) },
             )
         }

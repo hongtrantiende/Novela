@@ -111,7 +111,7 @@ fun BookshelfConfigSheet(
                     PillDivider()
 
                     CompactDropdownSettingItem(
-                        title = "文件夹布局模式",
+                        title = "Chế độ bố trí thư mục",
                         description = stringResource(if (isLandscape) R.string.screen_landscape else R.string.screen_portrait),
                         selectedValue = folderLayoutMode.toString(),
                         displayEntries = arrayOf(stringResource(R.string.layout_mode_list), stringResource(R.string.layout_mode_grid)),
@@ -157,7 +157,7 @@ fun BookshelfConfigSheet(
                             )
 
                             CompactSliderSettingItem(
-                                title = "列表封面宽度",
+                                title = "chiều rộng bìa danh sách",
                                 value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
                                 valueRange = 40f..120f,
                                 steps = 80,
@@ -175,9 +175,9 @@ fun BookshelfConfigSheet(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             CompactDropdownSettingItem(
-                                title = "文件夹列表样式",
+                                title = "Kiểu danh sách thư mục",
                                 selectedValue = BookshelfConfig.bookshelfGroupListStyle.toString(),
-                                displayEntries = arrayOf("默认", "紧凑", "横排封面"),
+                                displayEntries = arrayOf("mặc định", "nhỏ gọn", "bìa ngang"),
                                 entryValues = arrayOf("0", "1", "2"),
                                 onValueChange = {
                                     BookshelfConfig.bookshelfGroupListStyle = it.toInt()
@@ -185,7 +185,7 @@ fun BookshelfConfigSheet(
                             )
                             AnimatedVisibility(visible = BookshelfConfig.bookshelfGroupListStyle == 2) {
                                 CompactSliderSettingItem(
-                                    title = "横排封面数量",
+                                    title = "Số lượng bìa ngang",
                                     value = BookshelfConfig.bookshelfGroupCoverCount.toFloat(),
                                     valueRange = 1f..10f,
                                     steps = 9,
@@ -259,7 +259,7 @@ fun BookshelfConfigSheet(
                     )
 
                     CompactSliderSettingItem(
-                        title = "网格封面宽度",
+                        title = "chiều rộng che lưới",
                         value = BookshelfConfig.bookshelfGridCoverWidth.toFloat(),
                         valueRange = 40f..150f,
                         steps = 110,
@@ -282,7 +282,7 @@ fun BookshelfConfigSheet(
                     )
 
                     CompactClickableSettingItem(
-                        title = "日间卡片背景颜色",
+                        title = "Màu nền thiệp ngày",
                         color = LegadoTheme.colorScheme.surface,
                         onClick = { showColorPicker = true },
                         trailingContent = {
@@ -303,7 +303,7 @@ fun BookshelfConfigSheet(
                     )
 
                     CompactClickableSettingItem(
-                        title = "夜间卡片背景颜色",
+                        title = "Màu nền thiệp đêm",
                         color = LegadoTheme.colorScheme.surface,
                         onClick = { showColorPickerDark = true },
                         trailingContent = {
@@ -324,7 +324,7 @@ fun BookshelfConfigSheet(
                     )
 
                     CompactSwitchSettingItem(
-                        title = "精简详情",
+                        title = "Hợp lý hóa chi tiết",
                         checked = BookshelfConfig.bookshelfLayoutCompact,
                         color = LegadoTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.bookshelfLayoutCompact = it }
@@ -333,7 +333,7 @@ fun BookshelfConfigSheet(
                     val listColCount =
                         if (isLandscape) BookshelfConfig.bookshelfLayoutListLandscape else BookshelfConfig.bookshelfLayoutListPortrait
                     CompactSliderSettingItem(
-                        title = "列表封面宽度",
+                        title = "chiều rộng bìa danh sách",
                         value = BookshelfConfig.bookshelfListCoverWidth.toFloat(),
                         valueRange = 40f..120f,
                         steps = 80,
@@ -353,7 +353,7 @@ fun BookshelfConfigSheet(
                     )
 
                     CompactSwitchSettingItem(
-                        title = "显示更多信息",
+                        title = "Hiển thị thêm thông tin",
                         checked = BookshelfConfig.showBookIntro,
                         color = LegadoTheme.colorScheme.surface,
                         onCheckedChange = { BookshelfConfig.showBookIntro = it }
@@ -364,7 +364,7 @@ fun BookshelfConfigSheet(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             CompactSwitchSettingItem(
-                                title = "显示最新章节",
+                                title = "Hiển thị chương mới nhất",
                                 checked = BookshelfConfig.bookshelfShowLatestChapter,
                                 color = LegadoTheme.colorScheme.surface,
                                 onCheckedChange = {
@@ -373,7 +373,7 @@ fun BookshelfConfigSheet(
                             )
 
                             CompactSwitchSettingItem(
-                                title = "显示简介",
+                                title = "Hiển thị phần giới thiệu",
                                 checked = BookshelfConfig.bookshelfShowIntro,
                                 color = LegadoTheme.colorScheme.surface,
                                 onCheckedChange = { BookshelfConfig.bookshelfShowIntro = it }
@@ -382,8 +382,8 @@ fun BookshelfConfigSheet(
                                 visible = BookshelfConfig.bookshelfShowIntro
                             ) {
                                 CompactSliderSettingItem(
-                                    title = "简介行数",
-                                    description = if (BookshelfConfig.bookshelfIntroMaxLines == 0) "显示全部简介" else "显示 ${BookshelfConfig.bookshelfIntroMaxLines} 行简介",
+                                    title = "Dòng giới thiệu",
+                                    description = if (BookshelfConfig.bookshelfIntroMaxLines == 0) "Hiển thị tất cả hồ sơ" else "Hiển thị phần giới thiệu dòng ${BookshelfConfig.bookshelfIntroMaxLines}",
                                     value = BookshelfConfig.bookshelfIntroMaxLines.toFloat(),
                                     valueRange = 0f..10f,
                                     steps = 10,
@@ -393,7 +393,7 @@ fun BookshelfConfigSheet(
                                 )
                             }
                             CompactSwitchSettingItem(
-                                title = "显示标签",
+                                title = "hiển thị nhãn",
                                 checked = BookshelfConfig.bookshelfShowTag,
                                 color = LegadoTheme.colorScheme.surface,
                                 onCheckedChange = { BookshelfConfig.bookshelfShowTag = it }
@@ -405,14 +405,14 @@ fun BookshelfConfigSheet(
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     CompactSwitchSettingItem(
-                                        title = "自定义标签颜色",
+                                        title = "Màu nhãn tùy chỉnh",
                                         checked = ThemeConfig.enableCustomTagColors,
                                         color = LegadoTheme.colorScheme.surface,
                                         onCheckedChange = { ThemeConfig.enableCustomTagColors = it }
                                     )
                                     AnimatedVisibility(visible = ThemeConfig.enableCustomTagColors) {
                                         CompactClickableSettingItem(
-                                            title = "管理标签颜色",
+                                            title = "Quản lý màu nhãn",
                                             color = LegadoTheme.colorScheme.surface,
                                             onClick = { showLabelColorManage = true }
                                         )
@@ -442,7 +442,7 @@ fun BookshelfConfigSheet(
             )
 
             CompactSwitchSettingItem(
-                title = "搜索按钮优先打开筛选栏",
+                title = "Nút tìm kiếm mở thanh bộ lọc đầu tiên",
                 checked = BookshelfConfig.bookshelfSearchActionDirectToSearch,
                 color = LegadoTheme.colorScheme.surface,
                 onCheckedChange = { BookshelfConfig.bookshelfSearchActionDirectToSearch = it }

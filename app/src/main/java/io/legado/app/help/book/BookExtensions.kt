@@ -102,11 +102,11 @@ fun Book.getBookTypeName(): String {
         isUmd        -> "UMD"
         isPdf        -> "PDF"
         isMobi       -> "MOBI"
-        isAudio      -> "有声书"
-        isImage      -> "漫画"
-        isOnLineTxt  -> "小说"
-        isWebFile    -> "网页文件"
-        else         -> "未知类型"
+        isAudio      -> "sách nói"
+        isImage      -> "truyện tranh"
+        isOnLineTxt  -> "cuốn tiểu thuyết"
+        isWebFile    -> "tài liệu mạng"
+        else         -> "loại không xác định"
     }
 }
 
@@ -137,7 +137,7 @@ fun Book.canSafelyRebindTo(newBookUrl: String): Boolean {
     val canMerge = sameOriginName && (sameNameAuthor || sameOrigin)
     if (!canMerge) {
         AppLog.put(
-            "书籍重定位冲突，已跳过迁移\n" +
+            "Xung đột về việc di dời sách, việc di chuyển bị bỏ qua" +
                     "old=$bookUrl\nnew=$newBookUrl\n" +
                     "oldName=$name oldAuthor=$author oldOriginName=$originName\n" +
                     "targetName=${targetBook.name} targetAuthor=${targetBook.author} targetOriginName=${targetBook.originName}"
@@ -152,7 +152,7 @@ private val localUriCache by lazy {
 
 fun Book.getLocalUri(): Uri {
     if (!isLocal) {
-        throw NoStackTraceException("不是本地书籍")
+        throw NoStackTraceException("Không phải sách địa phương")
     }
     var uri = localUriCache[bookUrl]
     if (uri != null) {
@@ -179,7 +179,7 @@ fun Book.getLocalUri(): Uri {
         val treeFileDoc = FileDoc.fromUri(treeUri, true)
 
         if (!treeFileDoc.exists()) {
-            appCtx.toastOnUi("书籍保存目录失效，请重新设置！")
+            appCtx.toastOnUi("Thư mục lưu trữ sách không hợp lệ, vui lòng đặt lại!")
         } else {
             val fileDoc = treeFileDoc.find(originName, 5, 100)
             if (fileDoc != null) {
@@ -321,7 +321,7 @@ fun Book.upKind() {
     if (isLocal) {
         // 添加格式
         val typeName = getBookTypeName()
-        if (typeName != "未知类型" && !kinds.contains(typeName)) {
+        if (typeName != "loại không xác định" && !kinds.contains(typeName)) {
             kinds.add(0, typeName)
         }
         // 添加大小
@@ -429,7 +429,7 @@ fun Book.isSameNameAuthor(other: Any?): Boolean {
 fun Book.getExportFileName(suffix: String): String {
     val template = AppConfig.bookExportFileName
     if (template.isNullOrBlank()) {
-        return "$name 作者：${getRealAuthor()}.$suffix"
+        return "$name Tác giả: ${getRealAuthor()}.$suffix"
     }
 
     return try {
@@ -467,8 +467,8 @@ fun Book.getExportFileName(suffix: String): String {
         "${result}.$suffix"
 
     } catch (e: Exception) {
-        AppLog.put("导出书名规则错误,使用默认规则\n${e.localizedMessage}", e)
-        "$name 作者：${getRealAuthor()}.$suffix"
+        AppLog.put("Lỗi quy tắc xuất tên sách, sử dụng quy tắc mặc định\n${e.localizedMessage}", e)
+        "$name Tác giả: ${getRealAuthor()}.$suffix"
     }
 }
 
@@ -482,7 +482,7 @@ fun Book.getExportFileName(
     jsStr: String? = AppConfig.episodeExportFileName
 ): String {
     // 默认规则
-    val default = "$name 作者：${getRealAuthor()} [${epubIndex}].$suffix"
+    val default = "$name Tác giả: ${getRealAuthor()} [${epubIndex}].$suffix"
     if (jsStr.isNullOrBlank()) {
         return default
     }
@@ -494,7 +494,7 @@ fun Book.getExportFileName(
     return kotlin.runCatching {
         RhinoScriptEngine.eval(jsStr, bindings).toString() + "." + suffix
     }.onFailure {
-        AppLog.put("导出书名规则错误,使用默认规则\n${it.localizedMessage}", it)
+        AppLog.put("Lỗi quy tắc xuất tên sách, sử dụng quy tắc mặc định\n${it.localizedMessage}", it)
     }.getOrDefault(default).normalizeFileName()
 }
 
@@ -507,7 +507,7 @@ fun Book.simulatedTotalChapterNum(): Int {
                 val startDate = LocalDate.parse(config.startDate)
                 ChronoUnit.DAYS.between(startDate, currentDate).toInt() + 1
             } catch (e: Exception) {
-                println("解析起始日期失败: ${config.startDate}, 错误: ${e.message}")
+                println("Không phân tích được ngày bắt đầu: ${config.startDate}, lỗi: ${e.message}")
                 1 // 解析失败时返回默认值1
             }
         } else {

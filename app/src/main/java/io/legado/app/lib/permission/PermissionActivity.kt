@@ -44,7 +44,7 @@ class PermissionActivity : AppCompatActivity() {
                     else -> requestPermissionsResult.launch(permissions)
                 }
             } catch (e: Exception) {
-                AppLog.put("请求权限出错\n$e", e, true)
+                AppLog.put("Lỗi khi yêu cầu quyền\n$e", e, true)
                 RequestPlugins.sRequestCallback?.onError(e)
                 finish()
             }

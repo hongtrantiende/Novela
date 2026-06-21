@@ -95,7 +95,7 @@ abstract class BaseDialogFragment(
             manager.beginTransaction().remove(this).commit()
             super.show(manager, tag)
         }.onFailure {
-            AppLog.put("显示对话框失败 tag:$tag", it)
+            AppLog.put("Không thể hiển thị thẻ hộp thoại:$tag", it)
         }
     }
 

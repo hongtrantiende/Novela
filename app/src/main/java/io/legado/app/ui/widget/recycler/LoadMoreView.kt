@@ -76,7 +76,7 @@ class LoadMoreView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
         hasMore = false
         errorMsg = msg ?: ""
         binding.tvText.text =
-            text.ifEmpty { context.getString(R.string.error_load_msg, "点击查看详情") }
+            text.ifEmpty { context.getString(R.string.error_load_msg, "Nhấn vào đây để xem chi tiết") }
         binding.tvText.visible()
     }
 

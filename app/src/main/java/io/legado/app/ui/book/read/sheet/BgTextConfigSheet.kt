@@ -288,7 +288,7 @@ fun BgTextConfigSheet(
                         )
                         Spacer(Modifier.width(12.dp))
                         AppText(
-                            text = preset.name.ifBlank { "预设${index}" },
+                            text = preset.name.ifBlank { "${index} mặc định" },
                             style = LegadoTheme.typography.labelMediumEmphasized
                         )
                     }

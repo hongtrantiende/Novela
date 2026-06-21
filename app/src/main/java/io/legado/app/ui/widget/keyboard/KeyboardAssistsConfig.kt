@@ -77,7 +77,7 @@ class KeyboardAssistsConfig : BaseDialogFragment(R.layout.dialog_recycler_view),
     private fun initData() {
         lifecycleScope.launch {
             appDb.keyboardAssistsDao.flowAll.catch {
-                AppLog.put("辅助按键配置获取数据失败\n${it.localizedMessage}", it)
+                AppLog.put("Cấu hình nút phụ không lấy được dữ liệu\n${it.localizedMessage}", it)
             }.flowOn(IO).collect {
                 adapter.setItems(it)
             }
@@ -93,7 +93,7 @@ class KeyboardAssistsConfig : BaseDialogFragment(R.layout.dialog_recycler_view),
 
     private fun editKey(keyboardAssist: KeyboardAssist?) {
         alert {
-            setTitle("辅助按键")
+            setTitle("Phím phụ")
             val alertBinding = DialogMultipleEditTextBinding.inflate(layoutInflater).apply {
                 layout1.hint = "key"
                 edit1.setText(keyboardAssist?.key)

@@ -377,7 +377,7 @@ class TocViewModel(
     }
 
     override fun ruleItemToEntity(item: TocItemUi): TocDomainItem {
-        throw NotImplementedError("TOC 不需要向后反转实体")
+        throw NotImplementedError("TOC không yêu cầu đảo ngược các thực thể")
     }
 
     override suspend fun generateJson(entities: List<TocDomainItem>) = ""

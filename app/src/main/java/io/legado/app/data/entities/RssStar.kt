@@ -23,7 +23,7 @@ data class RssStar(
     var content: String? = null,
     var image: String? = null,
     @ColumnInfo(defaultValue = "默认分组")
-    var group: String = "默认分组",
+    var group: String = "Nhóm mặc định",
     override var variable: String? = null,
     /**类型 0网页，1图片，2视频**/
     @ColumnInfo(defaultValue = "0")

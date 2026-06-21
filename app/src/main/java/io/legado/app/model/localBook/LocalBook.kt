@@ -104,7 +104,7 @@ object LocalBook {
             }
         if (inputStream != null) return inputStream
         book.removeLocalUriCache()
-        throw FileNotFoundException("${uri.path} 文件不存在")
+        throw FileNotFoundException("Tệp ${uri.path} không tồn tại")
     }
 
     fun getLastModified(book: Book): Result<Long> {
@@ -117,7 +117,7 @@ object LocalBook {
             if (file.exists()) {
                 return@runCatching file.lastModified()
             }
-            throw FileNotFoundException("${uri.path} 文件不存在")
+            throw FileNotFoundException("Tệp ${uri.path} không tồn tại")
         }
     }
 
@@ -151,7 +151,7 @@ object LocalBook {
         list.forEachIndexed { index, bookChapter ->
             bookChapter.index = index
             if (bookChapter.title.isEmpty()) {
-                bookChapter.title = "无标题章节"
+                bookChapter.title = "Chương không có tiêu đề"
             }
         }
         val replaceRules = ContentProcessor.get(book).getTitleReplaceRules()
@@ -190,8 +190,8 @@ object LocalBook {
             }
         } catch (e: Exception) {
             e.printOnDebug()
-            AppLog.put("获取本地书籍内容失败\n${e.localizedMessage}", e)
-            "获取本地书籍内容失败\n${e.localizedMessage}"
+            AppLog.put("Không thể tải nội dung sách địa phương\n${e.localizedMessage}", e)
+            "Không thể tải nội dung sách địa phương\n${e.localizedMessage}"
         }
         if (book.isEpub) {
             content ?: return null
@@ -362,7 +362,7 @@ object LocalBook {
                 name = bookMess["name"] ?: ""
                 author = bookMess["author"]?.takeIf { it.length != tempFileName.length } ?: ""
             } catch (e: Exception) {
-                AppLog.put("执行导入文件名规则出错\n${e.localizedMessage}", e)
+                AppLog.put("Lỗi thực thi quy tắc tên tệp nhập\n${e.localizedMessage}", e)
             }
         }
         if (name.isBlank()) {
@@ -422,7 +422,7 @@ object LocalBook {
                 )
             )
 
-            else -> throw NoStackTraceException("在线导入书籍支持http/https/DataURL")
+            else -> throw NoStackTraceException("Nhập sách trực tuyến hỗ trợ http/https/DataURL")
         }
         return saveBookFile(inputStream, fileName)
     }
@@ -441,7 +441,7 @@ object LocalBook {
                 var doc = treeDoc!!.findFile(fileName)
                 if (doc == null) {
                     doc = treeDoc.createFile(FileUtils.getMimeType(fileName), fileName)
-                        ?: throw SecurityException("请重新设置书籍保存位置\nPermission Denial")
+                        ?: throw SecurityException("Vui lòng đặt lại vị trí lưu sách\nTừ chối quyền")
                 }
                 appCtx.contentResolver.openOutputStream(doc.uri)!!.use { oStream ->
                     it.copyTo(oStream)
@@ -456,7 +456,7 @@ object LocalBook {
                     }
                     Uri.fromFile(file)
                 } catch (e: FileNotFoundException) {
-                    throw SecurityException("请重新设置书籍保存位置\nPermission Denial\n$e").apply {
+                    throw SecurityException("Vui lòng đặt lại vị trí lưu sách\nTừ chối quyền\n$e").apply {
                         addSuppressed(e)
                     }
                 }
@@ -540,7 +540,7 @@ object LocalBook {
             return true
         } catch (e: Exception) {
             e.printOnDebug()
-            AppLog.put("自动下载webDav书籍失败", e)
+            AppLog.put("Tự động tải xuống sách webDav không thành công", e)
             return false
         }
     }

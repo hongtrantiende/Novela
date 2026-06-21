@@ -164,7 +164,7 @@ fun EditThemeSheet(
             // Interface layout
             SectionTitle(stringResource(R.string.theme_manage_section_layout))
             CompactSwitchSettingItem(
-                title = "首页",
+                title = "trang đầu",
                 checked = data.showHome,
                 onCheckedChange = { data = data.copy(showHome = it) }
             )

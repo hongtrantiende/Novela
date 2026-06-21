@@ -33,12 +33,12 @@ object StringUtils {
     private val chnMap: HashMap<Char, Int>
         get() {
             val map = HashMap<Char, Int>()
-            var cnStr = "零一二三四五六七八九十"
+            var cnStr = "không một hai ba bốn năm sáu bảy tám chín mười"
             var c = cnStr.toCharArray()
             for (i in 0..10) {
                 map[c[i]] = i
             }
-            cnStr = "〇壹贰叁肆伍陆柒捌玖拾"
+            cnStr = "〹一二三四五六七八九十"
             c = cnStr.toCharArray()
             for (i in 0..10) {
                 map[c[i]] = i
@@ -73,8 +73,8 @@ object StringUtils {
             if (oldHour == 0) {
                 //比日期:昨天今天和明天
                 return when {
-                    difDate == 0L -> "今天"
-                    difDate < DAY_OF_YESTERDAY -> "昨天"
+                    difDate == 0L -> "Hôm nay"
+                    difDate < DAY_OF_YESTERDAY -> "Hôm qua"
                     else -> {
                         @SuppressLint("SimpleDateFormat")
                         val convertFormat = SimpleDateFormat("yyyy-MM-dd")
@@ -84,10 +84,10 @@ object StringUtils {
             }
 
             return when {
-                difSec < TIME_UNIT -> difSec.toString() + "秒前"
-                difMin < TIME_UNIT -> difMin.toString() + "分钟前"
-                difHour < HOUR_OF_DAY -> difHour.toString() + "小时前"
-                difDate < DAY_OF_YESTERDAY -> "昨天"
+                difSec < TIME_UNIT -> difSec.toString() + "vài giây trước"
+                difMin < TIME_UNIT -> difMin.toString() + "phút trước"
+                difHour < HOUR_OF_DAY -> difHour.toString() + "giờ trước"
+                difDate < DAY_OF_YESTERDAY -> "Hôm qua"
                 else -> {
                     @SuppressLint("SimpleDateFormat")
                     val convertFormat = SimpleDateFormat("yyyy-MM-dd")
@@ -113,9 +113,9 @@ object StringUtils {
             val today = LocalDate.now(ZoneId.systemDefault())
             val daysBetween = ChronoUnit.DAYS.between(inputDate, today)
             when (daysBetween) {
-                0L -> "今天"
-                1L -> "昨天"
-                in 2L..5L -> "${daysBetween}天前"
+                0L -> "Hôm nay"
+                1L -> "Hôm qua"
+                in 2L..5L -> "${daysBetween} ngày trước"
                 else -> dateString
             }
         }.getOrElse {
@@ -268,9 +268,9 @@ object StringUtils {
         if (words > 0) {
             if (words > 10000) {
                 val df = wordCountFormatter
-                wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "万字"
+                wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "Mười ngàn lời nói"
             } else {
-                wordsS = words.toString() + "字"
+                wordsS = words.toString() + "Tính cách"
             }
         }
         return wordsS
@@ -284,9 +284,9 @@ object StringUtils {
             if (words > 0) {
                 if (words > 10000) {
                     val df = wordCountFormatter
-                    wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "万字"
+                    wordsS = df.format(words * 1.0f / 10000f.toDouble()) + "Mười ngàn lời nói"
                 } else {
-                    wordsS = words.toString() + "字"
+                    wordsS = words.toString() + "Tính cách"
                 }
             }
         } else {

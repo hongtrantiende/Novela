@@ -236,7 +236,7 @@ class AudioPlayService : BaseService(),
             exoPlayer.seekTo(position.toLong())
             exoPlayer.prepare()
         }.onError {
-            AppLog.put("播放出错\n${it.localizedMessage}", it)
+            AppLog.put("Lỗi phát lại\n${it.localizedMessage}", it)
             toastOnUi("$url ${it.localizedMessage}")
             stopSelf()
         }
@@ -377,7 +377,7 @@ class AudioPlayService : BaseService(),
         AudioPlay.status = Status.STOP
         postEvent(EventBus.AUDIO_STATE, Status.STOP)
         AudioPlay.upLoading(false)
-        val errorMsg = "音频播放出错\n${error.errorCodeName} ${error.errorCode}"
+        val errorMsg = "Lỗi phát lại âm thanh\n${error.errorCodeName} ${error.errorCode}"
         AppLog.put(errorMsg, error)
         toastOnUi(errorMsg)
     }
@@ -536,26 +536,26 @@ class AudioPlayService : BaseService(),
      */
     override fun onAudioFocusChange(focusChange: Int) {
         if (ReadConfig.ignoreAudioFocus) {
-            AppLog.put("忽略音频焦点处理(有声)")
+            AppLog.put("Bỏ qua việc xử lý tiêu điểm âm thanh (có âm thanh)")
             return
         }
         when (focusChange) {
             AudioManager.AUDIOFOCUS_GAIN -> {
                 if (needResumeOnAudioFocusGain) {
-                    AppLog.put("音频焦点获得,继续播放")
+                    AppLog.put("Đã lấy được tiêu điểm âm thanh, tiếp tục phát")
                     resume()
                 } else {
-                    AppLog.put("音频焦点获得")
+                    AppLog.put("Đã đạt được tiêu điểm âm thanh")
                 }
             }
 
             AudioManager.AUDIOFOCUS_LOSS -> {
-                AppLog.put("音频焦点丢失,暂停播放")
+                AppLog.put("Mất tiêu điểm âm thanh, tạm dừng phát lại")
                 pause()
             }
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
-                AppLog.put("音频焦点暂时丢失并会很快再次获得,暂停播放")
+                AppLog.put("Tiêu điểm âm thanh tạm thời bị mất và sẽ sớm lấy lại được, tạm dừng phát lại")
                 if (!pause) {
                     needResumeOnAudioFocusGain = true
                     pause(false)
@@ -564,7 +564,7 @@ class AudioPlayService : BaseService(),
 
             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
                 // 短暂丢失焦点，这种情况是被其他应用申请了短暂的焦点希望其他声音能压低音量（或者关闭声音）凸显这个声音（比如短信提示音），
-                AppLog.put("音频焦点短暂丢失,不做处理")
+                AppLog.put("Tiêu điểm âm thanh tạm thời bị mất và không có quá trình xử lý nào được thực hiện.")
             }
         }
     }
@@ -644,7 +644,7 @@ class AudioPlayService : BaseService(),
                 val notification = createNotification()
                 notificationManager.notify(NotificationId.AudioPlayService, notification.build())
             } catch (e: Exception) {
-                AppLog.put("创建音频播放通知出错,${e.localizedMessage}", e, true)
+                AppLog.put("Lỗi tạo thông báo phát lại âm thanh, ${e.localizedMessage}", e, true)
             }
         }
     }
@@ -658,7 +658,7 @@ class AudioPlayService : BaseService(),
                 val notification = createNotification()
                 startForeground(NotificationId.AudioPlayService, notification.build())
             } catch (e: Exception) {
-                AppLog.put("创建音频播放通知出错,${e.localizedMessage}", e, true)
+                AppLog.put("Lỗi tạo thông báo phát lại âm thanh, ${e.localizedMessage}", e, true)
                 //创建通知出错不结束服务就会崩溃,服务必须绑定通知
                 stopSelf()
             }

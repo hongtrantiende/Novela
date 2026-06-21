@@ -24,8 +24,8 @@ class BookSourceDebugWebSocket(private val session: DefaultWebSocketServerSessio
                 if (frame is Frame.Text) {
                     val text = frame.readText()
                     if (!text.isJson()) {
-                        session.send("数据必须为Json格式")
-                        session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                        session.send("Dữ liệu phải ở định dạng Json")
+                        session.close(CloseReason(CloseReason.Codes.NORMAL, "Gỡ lỗi kết thúc"))
                         break
                     }
                     val debugBean = GSON.fromJsonObject<Map<String, String>>(text).getOrNull()
@@ -34,7 +34,7 @@ class BookSourceDebugWebSocket(private val session: DefaultWebSocketServerSessio
                         val key = debugBean["key"]
                         if (tag.isNullOrBlank() || key.isNullOrBlank()) {
                             session.send(appCtx.getString(R.string.cannot_empty))
-                            session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                            session.close(CloseReason(CloseReason.Codes.NORMAL, "Gỡ lỗi kết thúc"))
                             break
                         }
                         appDb.bookSourceDao.getBookSource(tag)?.let {
@@ -42,8 +42,8 @@ class BookSourceDebugWebSocket(private val session: DefaultWebSocketServerSessio
                             Debug.startDebug(this, it, key)
                         }
                     } else {
-                        session.send("数据必须为Json格式")
-                        session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                        session.send("Dữ liệu phải ở định dạng Json")
+                        session.close(CloseReason(CloseReason.Codes.NORMAL, "Gỡ lỗi kết thúc"))
                         break
                     }
                 }
@@ -64,7 +64,7 @@ class BookSourceDebugWebSocket(private val session: DefaultWebSocketServerSessio
                 session.send(msg)
                 if (state == -1 || state == 1000) {
                     Debug.cancelDebug(true)
-                    session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                    session.close(CloseReason(CloseReason.Codes.NORMAL, "Gỡ lỗi kết thúc"))
                 }
             }.onFailure {
                 it.printOnDebug()

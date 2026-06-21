@@ -492,7 +492,7 @@ class ReadBookViewModel(
                             textChapter.chapter.getFileName("nr")
                         )
                     ) {
-                        context.toastOnUi("未找到可移除的重复标题")
+                        context.toastOnUi("Không tìm thấy tiêu đề trùng lặp để xóa")
                     }
                 }
                 reverseRemoveSameTitle()
@@ -1267,7 +1267,7 @@ class ReadBookViewModel(
                 it.copy(httpTtsImportState = importState)
             }
         }.onError {
-            AppLog.put("导入朗读引擎失败\n${it.localizedMessage}", it, true)
+            AppLog.put("Không thể nhập công cụ đọc\n${it.localizedMessage}", it, true)
             _uiState.update { state ->
                 state.copy(
                     httpTtsImportState = BaseImportUiState.Error(
@@ -1378,7 +1378,7 @@ class ReadBookViewModel(
             }
             _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.success)))
         }.onError {
-            AppLog.put("保存朗读引擎失败\n${it.localizedMessage}", it, true)
+            AppLog.put("Không lưu được công cụ đọc\n${it.localizedMessage}", it, true)
             _uiState.update { state ->
                 state.copy(
                     httpTtsImportState = BaseImportUiState.Error(
@@ -1766,7 +1766,7 @@ class ReadBookViewModel(
         val dur = config.durConfig
         return ReadBookStyleConfig(
             styleSelect = config.styleSelect,
-            styleName = dur.name.ifBlank { "文字" },
+            styleName = dur.name.ifBlank { "Từ" },
             bgAlpha = config.bgAlpha.toFloat(),
             bgType = dur.bgType,
             bgStr = dur.bgStr,
@@ -1992,7 +1992,7 @@ class ReadBookViewModel(
                 book != null -> initBook(book)
                 else -> {
                     ReadBook.upMsg(context.getString(R.string.no_book))
-                    AppLog.put("未找到书籍\nbookUrl:$bookUrl")
+                    AppLog.put("Không tìm thấy sách nào\nurl sách:$bookUrl")
                 }
             }
             val index = intent.getIntExtra("index", -1)
@@ -2004,7 +2004,7 @@ class ReadBookViewModel(
         }.onSuccess {
             success?.invoke()
         }.onError {
-            val msg = "初始化数据失败\n${it.localizedMessage}"
+            val msg = "Không thể khởi tạo dữ liệu\n${it.localizedMessage}"
             ReadBook.upMsg(msg)
             AppLog.put(msg, it)
         }.onFinally {
@@ -2087,7 +2087,7 @@ class ReadBookViewModel(
             LocalBook.getBookInputStream(book)
             return true
         } catch (e: Throwable) {
-            ReadBook.upMsg("打开本地书籍出错: ${e.localizedMessage}")
+            ReadBook.upMsg("Lỗi mở sách địa phương: ${e.localizedMessage}")
             if (e is SecurityException || e is FileNotFoundException) {
                 requestBooksDirPicker(reloadChapterList = false)
             }
@@ -2102,7 +2102,7 @@ class ReadBookViewModel(
             return true
         } catch (e: Throwable) {
             coroutineContext.ensureActive()
-            ReadBook.upMsg("详情页出错: ${e.localizedMessage}")
+            ReadBook.upMsg("Lỗi trên trang chi tiết: ${e.localizedMessage}")
             return false
         }
     }
@@ -2170,7 +2170,7 @@ class ReadBookViewModel(
         execute {
             getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {
-            AppLog.put("拉取阅读进度失败《${book.name}》\n${it.localizedMessage}", it)
+            AppLog.put("Không lấy được tiến trình đọc \"${book.name}\"\n${it.localizedMessage}", it)
         }.onSuccess { progress ->
             progress ?: return@onSuccess
             if (progress.durChapterIndex < book.durChapterIndex ||
@@ -2180,7 +2180,7 @@ class ReadBookViewModel(
                 alertSync?.invoke(progress)
             } else if (progress.durChapterIndex < book.simulatedTotalChapterNum()) {
                 ReadBook.setProgress(progress)
-                AppLog.put("自动同步阅读进度成功《${book.name}》 ${progress.durChapterTitle}")
+                AppLog.put("Tự động đồng bộ hóa tiến trình đọc thành công \"${book.name}\" ${progress.durChapterTitle}")
             }
         }
     }
@@ -2220,7 +2220,7 @@ class ReadBookViewModel(
             ReadBook.upMsg(context.getString(R.string.loading))
             applyChangeSource(book, toc)
         }.onError {
-            AppLog.put("换源失败\n$it", it, true)
+            AppLog.put("Đổi nguồn thất bại\n$it", it, true)
             ReadBook.upMsg(null)
         }.onFinally {
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
@@ -2232,14 +2232,14 @@ class ReadBookViewModel(
         changeSourceCoroutine = execute {
             ReadBook.upMsg(context.getString(R.string.loading))
             val source = appDb.bookSourceDao.getBookSource(book.origin)
-                ?: throw NoStackTraceException("书源不存在")
+                ?: throw NoStackTraceException("Nguồn sách không tồn tại")
             if (book.tocUrl.isEmpty()) {
                 WebBook.getBookInfoAwait(source, book)
             }
             val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
             applyChangeSource(book, toc)
         }.onError {
-            AppLog.put("换源失败\n$it", it, true)
+            AppLog.put("Đổi nguồn thất bại\n$it", it, true)
             ReadBook.upMsg(null)
         }.onFinally {
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
@@ -2248,7 +2248,7 @@ class ReadBookViewModel(
 
     private suspend fun applyChangeSource(book: Book, toc: List<BookChapter>) {
         if (toc.isEmpty()) {
-            throw NoStackTraceException("换源目录为空")
+            throw NoStackTraceException("Thay đổi thư mục nguồn thành trống")
         }
         ReadBook.book?.migrateTo(book, toc)
         book.removeType(BookType.updateError)
@@ -2294,12 +2294,12 @@ class ReadBookViewModel(
             }.take(1).onEach { (book, toc) ->
                 changeTo(book, toc)
             }.onEmpty {
-                throw NoStackTraceException("没有合适书源")
+                throw NoStackTraceException("Không có nguồn sách phù hợp")
             }.onCompletion {
                 ReadBook.upMsg(null)
             }.catch {
-                AppLog.put("自动换源失败\n${it.localizedMessage}", it)
-                context.toastOnUi("自动换源失败\n${it.localizedMessage}")
+                AppLog.put("Thay đổi nguồn tự động không thành công\n${it.localizedMessage}", it)
+                context.toastOnUi("Thay đổi nguồn tự động không thành công\n${it.localizedMessage}")
             }.collect()
         }
     }
@@ -2360,8 +2360,8 @@ class ReadBookViewModel(
             stopReadAloudForClose()
             _effects.tryEmit(ReadBookEffect.Finish)
         }.onError {
-            AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            AppLog.put("Không thể thêm sách vào giá sách", it)
+            context.toastOnUi("Không thể thêm sách")
         }
     }
 
@@ -2787,11 +2787,11 @@ class ReadBookViewModel(
                 byteArray,
                 folderName = "Legado"
             )
-            if (!success) throw NoStackTraceException("保存到相册失败")
+            if (!success) throw NoStackTraceException("Không lưu được vào album")
         }.onError {
-            context.toastOnUi("保存图片失败: ${it.localizedMessage}")
+            context.toastOnUi("Không lưu được hình ảnh: ${it.localizedMessage}")
         }.onSuccess {
-            context.toastOnUi("已保存到相册")
+            context.toastOnUi("Đã lưu vào album")
         }
     }
 
@@ -3636,7 +3636,7 @@ class ReadBookViewModel(
             }.onSuccess { message ->
                 _effects.tryEmit(ReadBookEffect.ShowToast(message))
             }.onFailure { throwable ->
-                AppLog.put("选择阅读背景图失败", throwable)
+                AppLog.put("Không chọn được hình nền đọc", throwable)
                 _effects.tryEmit(ReadBookEffect.LongToast(throwable.localizedMessage ?: context.getString(R.string.error)))
             }
         }
@@ -3658,7 +3658,7 @@ class ReadBookViewModel(
             }.onSuccess { message ->
                 _effects.tryEmit(ReadBookEffect.ShowToast(message))
             }.onFailure { throwable ->
-                AppLog.put("选择阅读背景图失败", throwable)
+                AppLog.put("Không chọn được hình nền đọc", throwable)
                 _effects.tryEmit(ReadBookEffect.LongToast(throwable.localizedMessage ?: context.getString(R.string.error)))
             }
         }
@@ -3683,7 +3683,7 @@ class ReadBookViewModel(
             }.onSuccess { message ->
                 _effects.tryEmit(ReadBookEffect.ShowToast(message))
             }.onFailure { throwable ->
-                AppLog.put("导入阅读样式失败", throwable)
+                AppLog.put("Không thể nhập kiểu đọc", throwable)
                 _effects.tryEmit(ReadBookEffect.LongToast(throwable.localizedMessage ?: context.getString(R.string.error)))
             }
         }
@@ -3699,7 +3699,7 @@ class ReadBookViewModel(
             }.onSuccess { message ->
                 _effects.tryEmit(ReadBookEffect.ShowToast(message))
             }.onFailure { throwable ->
-                AppLog.put("导出阅读样式失败", throwable)
+                AppLog.put("Không thể xuất kiểu đọc", throwable)
                 _effects.tryEmit(ReadBookEffect.LongToast(throwable.localizedMessage ?: context.getString(R.string.error)))
             }
         }
@@ -3935,7 +3935,7 @@ class ReadBookViewModel(
                 loadChapterList(book)
             }
         }.onError {
-            AppLog.put("执行购买操作出错\n${it.localizedMessage}", it, true)
+            AppLog.put("Đã xảy ra lỗi khi thực hiện giao dịch mua\n${it.localizedMessage}", it, true)
         }
     }
 
@@ -4002,8 +4002,8 @@ class ReadBookViewModel(
         }.onSuccess {
             success?.invoke()
         }.onError {
-            AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            AppLog.put("Không thể thêm sách vào giá sách", it)
+            context.toastOnUi("Không thể thêm sách")
         }
     }
 }

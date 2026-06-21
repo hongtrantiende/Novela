@@ -212,13 +212,13 @@ fun ThemeConfigScreen(
                             modifier = Modifier.padding(16.dp)
                         ) {
                             AppText(
-                                text = "仍有部分界面未用Compose重构，这些界面会与大部分界面有较大差异。",
+                                text = "Vẫn còn một số giao diện chưa được cấu trúc lại bằng Compose và những giao diện này sẽ khá khác biệt so với hầu hết các giao diện.",
                                 style = LegadoTheme.typography.labelLargeEmphasized,
                                 modifier = Modifier.weight(1f)
                             )
                             SmallPlainButton(
                                 icon = AppIcons.Close,
-                                contentDescription = "关闭",
+                                contentDescription = "đóng cửa",
                                 onClick = {
                                     viewModel.setShowThemeRefactorTip(false)
                                 }

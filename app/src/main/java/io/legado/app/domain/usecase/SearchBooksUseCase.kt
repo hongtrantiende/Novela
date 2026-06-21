@@ -83,7 +83,7 @@ class SearchBooksUseCase(
 
         val sourceParts = gateway.getBookSourceParts(request.scope)
         if (sourceParts.isEmpty()) {
-            throw NoStackTraceException("启用书源为空")
+            throw NoStackTraceException("Bật nguồn sách trống")
         }
 
         val searchableSources = coroutineScope {
@@ -101,7 +101,7 @@ class SearchBooksUseCase(
             }.awaitAll().filterNotNull()
         }
         if (searchableSources.isEmpty()) {
-            throw NoStackTraceException("可搜索书源为空")
+            throw NoStackTraceException("Nguồn sách có thể tìm kiếm trống")
         }
 
         val merger = SearchResultMerger(keyword, request.matchMode)
@@ -147,7 +147,7 @@ class SearchBooksUseCase(
                         if (firstFailureMessage.isNullOrBlank()) {
                             firstFailureMessage = result.throwable.localizedMessage
                         }
-                        AppLog.put("书源搜索出错\n${result.throwable.localizedMessage}", result.throwable)
+                        AppLog.put("Lỗi tìm kiếm nguồn sách\n${result.throwable.localizedMessage}", result.throwable)
                         emit(
                             SearchRunEvent.Progress(
                                 upsertBooks = emptyList(),
@@ -162,7 +162,7 @@ class SearchBooksUseCase(
             }
 
         if (merger.count == 0 && failedSources == searchableSources.size) {
-            val error = firstFailureMessage?.takeIf { it.isNotBlank() } ?: "全部书源搜索失败"
+            val error = firstFailureMessage?.takeIf { it.isNotBlank() } ?: "Tất cả tìm kiếm nguồn sách đều không thành công"
             throw NoStackTraceException(error)
         }
 

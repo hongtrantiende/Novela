@@ -121,7 +121,7 @@ class RssSourceViewModel(
                 groupFilter == FILTER_LOGIN -> filtered.filter { !it.loginUrl.isNullOrEmpty() }
                 groupFilter == FILTER_NO_GROUP -> filtered.filter {
                     it.sourceGroup.isNullOrEmpty() || it.sourceGroup?.contains(
-                        "未分组"
+                        "Không được nhóm"
                     ) == true
                 }
 
@@ -176,7 +176,7 @@ class RssSourceViewModel(
         return when {
             text.isJsonArray() -> GSON.fromJsonArray<RssSource>(text).getOrThrow()
             text.isJsonObject() -> listOf(GSON.fromJsonObject<RssSource>(text).getOrThrow())
-            else -> throw Exception("格式不正确")
+            else -> throw Exception("Định dạng không chính xác")
         }
     }
 

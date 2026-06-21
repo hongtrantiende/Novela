@@ -143,7 +143,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             }
             searchBooks.sortedWith(comparator)
         }.onFailure {
-            AppLog.put("换源排序出错\n${it.localizedMessage}", it)
+            AppLog.put("Lỗi sắp xếp thay đổi nguồn\n${it.localizedMessage}", it)
         }.getOrDefault(searchBooks)
     }.flowOn(IO)
 
@@ -262,7 +262,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
                 _isSearching.value = false
                 searchFinishCallback?.invoke(searchBooks.isEmpty())
             }.catch {
-                AppLog.put("换源搜索出错\n${it.localizedMessage}", it)
+                AppLog.put("Lỗi tìm kiếm thay đổi nguồn\n${it.localizedMessage}", it)
             }.collect()
         }
     }
@@ -343,10 +343,10 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             var content = WebBook.getContentAwait(source, book, bookChapter, nextChapterUrl, false)
             content = contentProcessor.getContent(oldBook!!, bookChapter, content, false).toString()
             val len = content.length
-            len to "[${chapterIndex + 1}] ${title}\n字数：${len}"
+            len to "[${chapterIndex + 1}] ${title}\nSố từ: ${len}"
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
-            -1 to "[${chapterIndex + 1}] ${title}\n获取字数失败：${t.localizedMessage}"
+            -1 to "[${chapterIndex + 1}] ${title}\nKhông đếm được số từ: ${t.localizedMessage}"
         }
         val endTime = System.currentTimeMillis()
         val searchBook = book.toSearchBook().apply {
@@ -403,7 +403,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
                 searchStateData.postValue(false)
                 _isSearching.value = false
             }.catch {
-                AppLog.put("换源刷新列表出错\n${it.localizedMessage}", it)
+                AppLog.put("Lỗi khi thay đổi nguồn và làm mới danh sách\n${it.localizedMessage}", it)
             }.collect()
         }
     }
@@ -495,7 +495,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     suspend fun getToc(book: Book): Result<Pair<List<BookChapter>, BookSource>> {
         return kotlin.runCatching {
             val source = appDb.bookSourceDao.getBookSource(book.origin)
-                ?: throw NoStackTraceException("书源不存在")
+                ?: throw NoStackTraceException("Nguồn sách không tồn tại")
             if (book.tocUrl.isEmpty()) {
                 WebBook.getBookInfoAwait(source, book)
             }
@@ -568,11 +568,11 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
                     }
                 }
             }
-            throw NoStackTraceException("没有有效源")
+            throw NoStackTraceException("không có nguồn hợp lệ")
         }.onSuccess {
             onSuccess.invoke(it.first, it.second, it.third)
         }.onError {
-            context.toastOnUi("自动换源失败\n${it.localizedMessage}")
+            context.toastOnUi("Thay đổi nguồn tự động không thành công\n${it.localizedMessage}")
         }
     }
 

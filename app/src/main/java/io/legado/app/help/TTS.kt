@@ -88,11 +88,11 @@ class TTS {
             text?.splitNotBlank("\n")?.forEachIndexed { i, s ->
                 result = tts.speak(s, TextToSpeech.QUEUE_ADD, null, tag + i)
                 if (result == TextToSpeech.ERROR) {
-                    AppLog.put("tts朗读出错:$text")
+                    AppLog.put("lỗi đọc tts: $text")
                 }
             }
         }.onFailure {
-            AppLog.put("tts朗读出错", it)
+            AppLog.put("lỗi đọc tts", it)
             appCtx.toastOnUi(it.localizedMessage)
         }
     }

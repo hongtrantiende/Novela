@@ -225,7 +225,7 @@ object LibArchiveUtils {
         destDir: File?,
         filter: ((String) -> Boolean)? = null
     ): List<File> {
-        destDir ?: throw NullPointerException("解压路径不能为空")
+        destDir ?: throw NullPointerException("Đường dẫn giải nén không được để trống")
         val files = arrayListOf<File>()
 
 
@@ -238,7 +238,7 @@ object LibArchiveUtils {
                         ?: continue
                 val entryFile = File(destDir, entryName)
                 if (!entryFile.canonicalPath.startsWith(destDir.canonicalPath)) {
-                    throw SecurityException("压缩文件只能解压到指定路径")
+                    throw SecurityException("Các tập tin nén chỉ có thể được giải nén vào đường dẫn đã chỉ định")
                 }
                 val entryStat = ArchiveEntry.stat(entry)
 

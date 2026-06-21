@@ -42,7 +42,7 @@ fun CrashLogSheet(
         title = stringResource(R.string.crash_log),
     ) {
         if (logFiles.isEmpty()) {
-            EmptyMessage(message = "暂无崩溃日志")
+            EmptyMessage(message = "Chưa có nhật ký sự cố")
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),

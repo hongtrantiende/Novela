@@ -86,7 +86,7 @@ class ServersDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
     private fun initData() {
         lifecycleScope.launch {
             viewModel.flowServers().catch {
-                AppLog.put("服务器配置界面获取数据失败\n${it.localizedMessage}", it)
+                AppLog.put("Giao diện cấu hình máy chủ không lấy được dữ liệu\n${it.localizedMessage}", it)
             }.flowOn(IO).collect {
                 adapter.setItems(it)
             }

@@ -24,7 +24,7 @@ class GetChapterContentUseCase(
             }
         } else {
             bookSourceDao.getBookSource(book.origin)
-                ?: throw NoStackTraceException("书源不存在")
+                ?: throw NoStackTraceException("Nguồn sách không tồn tại")
         }
         if (book.tocUrl.isEmpty()) {
             WebBook.getBookInfoAwait(source, book)
@@ -48,7 +48,7 @@ class GetChapterContentUseCase(
             }
         } else {
             bookSourceDao.getBookSource(book.origin)
-                ?: throw NoStackTraceException("书源不存在")
+                ?: throw NoStackTraceException("Nguồn sách không tồn tại")
         }
         return WebBook.getContentAwait(bookSource, book, chapter, nextChapterUrl, false)
     }

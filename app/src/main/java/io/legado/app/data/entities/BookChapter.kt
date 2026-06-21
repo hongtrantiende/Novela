@@ -137,8 +137,8 @@ data class BookChapter(
                     } catch (e: CancellationException) {
                         return@run
                     } catch (e: Exception) {
-                        AppLog.put("${item.name}替换出错\n替换内容\n${displayTitle}", e)
-                        appCtx.toastOnUi("${item.name}替换出错")
+                        AppLog.put("lỗi thay thế ${item.name}\nThay thế nội dung\n${displayTitle}", e)
+                        appCtx.toastOnUi("lỗi thay thế ${item.name}")
                     }
                 }
             }

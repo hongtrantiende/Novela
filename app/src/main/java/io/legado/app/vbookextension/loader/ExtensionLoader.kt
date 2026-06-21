@@ -100,7 +100,33 @@ class ExtensionLoader(
             }
 
             val repo = json.decodeFromString<RepositoryIndex>(body.replace("\uFEFF", ""))
-            repo.data
+            repo.data.map { ext ->
+                if (ext.icon.isBlank() && ext.path.isNotBlank()) {
+                    if (ext.path.contains("/zips/")) {
+                        val base = ext.path.substringBefore("/zips/")
+                        val zipName = ext.path.substringAfter("/zips/").substringBefore(".zip")
+                        val fileExt = when (zipName) {
+                            "me-truyen-chu-vn", "lwxs", "pi12345", "xiaoshubao" -> "ico"
+                            "h528" -> "jpg"
+                            else -> "png"
+                        }
+                        ext.copy(icon = "$base/icons/$zipName.$fileExt")
+                    } else if (ext.path.contains("/plugins/")) {
+                        val base = ext.path.substringBefore("/plugins/")
+                        val zipName = ext.path.substringAfter("/plugins/").substringBefore(".zip")
+                        val fileExt = when (zipName) {
+                            "me-truyen-chu-vn", "lwxs", "pi12345", "xiaoshubao" -> "ico"
+                            "h528" -> "jpg"
+                            else -> "png"
+                        }
+                        ext.copy(icon = "$base/icons/$zipName.$fileExt")
+                    } else {
+                        ext
+                    }
+                } else {
+                    ext
+                }
+            }
         } catch (e: Throwable) {
             Log.e(TAG, "Failed to fetch repo: $repoUrl", e)
             emptyList()

@@ -49,7 +49,7 @@ sealed interface ReadBookMenuRoute {
 @Stable
 data class ReadBookStyleConfig(
     val styleSelect: Int = 0,
-    val styleName: String = "文字",
+    val styleName: String = "Từ",
     val bgAlpha: Float = 1f,
     // Day mode
     val bgType: Int = 0,

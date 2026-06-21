@@ -375,7 +375,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             return
         }
         LocalConfig.appCrash = false
-        alert(getString(R.string.draw), "检测到阅读发生了崩溃，是否打开崩溃日志以便报告问题？") {
+        alert(getString(R.string.draw), "Một sự cố đọc đã được phát hiện. Bạn có muốn mở nhật ký sự cố để có thể báo cáo sự cố không?") {
             yesButton {
                 showDialogFragment<CrashLogsDialog>()
             }

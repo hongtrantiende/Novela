@@ -104,10 +104,10 @@ fun RssSortRouteScreen(
             scope.launch {
                 val source = viewModel.rssSource
                 if (source == null) {
-                    context.toastOnUi("源不存在")
+                    context.toastOnUi("Nguồn không tồn tại")
                     return@launch
                 }
-                val comment = source.getDisplayVariableComment("源变量可在js中通过source.getVariable()获取")
+                val comment = source.getDisplayVariableComment("Các biến nguồn có thể được lấy trong js thông qua source.getVariable()")
                 val variable = withContext(Dispatchers.IO) { source.getVariable() }
                 sourceVariableSheet = RssSourceVariableSheetState(
                     title = setSourceVariableText,
@@ -162,7 +162,7 @@ fun RssSortRouteScreen(
                 viewModel.updateRssSourceRedirectPolicy(source.sourceUrl, policy.name)
                 redirectPolicy = policy
             }
-            context.toastOnUi("重定向策略已更新")
+            context.toastOnUi("Đã cập nhật chính sách chuyển hướng")
         },
         pagerContent = { _, sort, paddingValues ->
             val pageViewModel: RssArticlesViewModel = koinViewModel(

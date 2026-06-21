@@ -121,7 +121,7 @@ class ChangeBookSourceUseCase(
             }
             val newBook = WebBook.preciseSearchAwait(source, book.name, book.author)
                 .onFailure {
-                    AppLog.put("搜索书籍出错\n${it.localizedMessage}", it, true)
+                    AppLog.put("Lỗi tìm kiếm sách\n${it.localizedMessage}", it, true)
                 }.getOrNull()
             if (newBook == null) {
                 failedCount++
@@ -132,7 +132,7 @@ class ChangeBookSourceUseCase(
                     WebBook.getBookInfoAwait(source, newBook)
                 }
             }.onFailure {
-                AppLog.put("获取书籍详情出错\n${it.localizedMessage}", it, true)
+                AppLog.put("Lỗi lấy thông tin sách\n${it.localizedMessage}", it, true)
             }.isSuccess
             if (!infoLoaded) {
                 failedCount++
@@ -140,7 +140,7 @@ class ChangeBookSourceUseCase(
             }
             val chapters = WebBook.getChapterListAwait(source, newBook)
                 .onFailure {
-                    AppLog.put("获取目录出错\n${it.localizedMessage}", it, true)
+                    AppLog.put("Lỗi lấy thư mục\n${it.localizedMessage}", it, true)
                 }.getOrNull()
             if (chapters == null) {
                 failedCount++
@@ -198,7 +198,7 @@ class ChangeBookSourceUseCase(
     ): BatchChangeSourceCandidate? {
         val newBook = WebBook.preciseSearchAwait(source, oldBook.name, oldBook.author)
             .onFailure {
-                AppLog.put("搜索书籍出错\n${it.localizedMessage}", it, true)
+                AppLog.put("Lỗi tìm kiếm sách\n${it.localizedMessage}", it, true)
             }.getOrNull() ?: return null
         val chapters = loadCandidateChapters(source, newBook) ?: return null
         return BatchChangeSourceCandidate(
@@ -217,12 +217,12 @@ class ChangeBookSourceUseCase(
                 WebBook.getBookInfoAwait(source, book)
             }
         }.onFailure {
-            AppLog.put("获取书籍详情出错\n${it.localizedMessage}", it, true)
+            AppLog.put("Lỗi lấy thông tin sách\n${it.localizedMessage}", it, true)
         }.isSuccess
         if (!infoLoaded) return null
         val chapters = WebBook.getChapterListAwait(source, book)
             .onFailure {
-                AppLog.put("获取目录出错\n${it.localizedMessage}", it, true)
+                AppLog.put("Lỗi lấy thư mục\n${it.localizedMessage}", it, true)
             }.getOrNull() ?: return null
         book.totalChapterNum = chapters.size
         return chapters

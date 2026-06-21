@@ -66,7 +66,7 @@ class OpenUrlConfirmDialog() : BaseDialogFragment(R.layout.dialog_open_url_confi
     }
 
     private fun initView() {
-        binding.message.text = "${viewModel.sourceName} 正在请求跳转链接/应用，是否跳转？"
+        binding.message.text = "${viewModel.sourceName} đang yêu cầu liên kết/ứng dụng nhảy, bạn có muốn nhảy không?"
         binding.btnNegative.setOnClickListener { dismiss() }
         binding.btnPositive.setOnClickListener {
             openUrl()
@@ -96,7 +96,7 @@ class OpenUrlConfirmDialog() : BaseDialogFragment(R.layout.dialog_open_url_confi
                 toastOnUi(R.string.can_not_open)
             }
         } catch (e: Exception) {
-            AppLog.put("打开链接失败", e, true)
+            AppLog.put("Không mở được liên kết", e, true)
         }
     }
 

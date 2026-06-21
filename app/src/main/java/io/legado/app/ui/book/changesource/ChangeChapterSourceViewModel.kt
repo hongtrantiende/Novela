@@ -409,7 +409,7 @@ class ChangeChapterSourceViewModel(
                         currentTocIndex = -1,
                     )
                 }
-                _effects.tryEmit(ChangeChapterSourceEffect.ShowToast("获取目录失败"))
+                _effects.tryEmit(ChangeChapterSourceEffect.ShowToast("Không lấy được thư mục"))
             }
         }
     }
@@ -435,7 +435,7 @@ class ChangeChapterSourceViewModel(
                 _uiState.update { it.copy(isLoadingToc = false) }
                 _effects.tryEmit(
                     ChangeChapterSourceEffect.ShowToast(
-                        e.localizedMessage ?: "获取正文出错"
+                        e.localizedMessage ?: "Lỗi nhận văn bản"
                     )
                 )
             }

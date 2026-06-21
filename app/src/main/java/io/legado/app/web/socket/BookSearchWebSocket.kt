@@ -47,7 +47,7 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
                 if (frame is Frame.Text) {
                     val text = frame.readText()
                     if (!text.isJson()) {
-                        session.send("数据必须为Json格式")
+                        session.send("Dữ liệu phải ở định dạng Json")
                         session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
                         break
                     }

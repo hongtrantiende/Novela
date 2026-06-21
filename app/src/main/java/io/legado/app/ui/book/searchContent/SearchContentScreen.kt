@@ -132,8 +132,8 @@ fun SearchContentScreen(
             Column {
                 GlassMediumFlexibleTopAppBar(
                     title = if (searchQuery.isNotBlank() && searchResults.isNotEmpty()) {
-                        "共 ${searchResults.size} 条结果"
-                    } else "搜索内容",
+                        "Tổng số kết quả ${searchResults.size}"
+                    } else "Tìm kiếm nội dung",
                     navigationIcon = { TopBarNavigationButton(onClick = onBack) },
                     actions = {
                         Row(
@@ -144,8 +144,8 @@ fun SearchContentScreen(
                                 onCheckedChange = { viewModel.toggleReplace(it) },
                                 iconChecked = Icons.Default.FindReplace,
                                 iconUnchecked = Icons.Default.FindReplace,
-                                activeText = "替换开启",
-                                inactiveText = "替换关闭"
+                                activeText = "Thay thế trên",
+                                inactiveText = "thay thế đóng"
                             )
 
                             TopBarAnimatedActionButton(
@@ -153,8 +153,8 @@ fun SearchContentScreen(
                                 onCheckedChange = { viewModel.toggleRegex(it) },
                                 iconChecked = Icons.Default.Code,
                                 iconUnchecked = Icons.Default.Code,
-                                activeText = "正则开启",
-                                inactiveText = "正则关闭"
+                                activeText = "Mở thường xuyên",
+                                inactiveText = "Tắt thường xuyên"
                             )
                         }
                     },
@@ -189,16 +189,16 @@ fun SearchContentScreen(
                         scrollToCurrentChapter()
                     }
                 },
-                tooltipText = if (isSearching) "停止搜索" else "跳转到当前章节"
+                tooltipText = if (isSearching) "Dừng tìm kiếm" else "Chuyển đến chương hiện tại"
             ) {
                 AnimatedContent(
                     targetState = isSearching,
                     label = "FabIconTransition"
                 ) { searching ->
                     if (searching) {
-                        AppIcon(Icons.Default.Stop, contentDescription = "停止搜索")
+                        AppIcon(Icons.Default.Stop, contentDescription = "Dừng tìm kiếm")
                     } else {
-                        AppIcon(Icons.Default.MyLocation, contentDescription = "定位当前章节")
+                        AppIcon(Icons.Default.MyLocation, contentDescription = "Xác định vị trí chương hiện tại")
                     }
                 }
             }
@@ -217,7 +217,7 @@ fun SearchContentScreen(
                 when (state) {
                     is SearchContentState.Error -> {
                         EmptyMessage(
-                            message = state.throwable.localizedMessage ?: "发生未知错误",
+                            message = state.throwable.localizedMessage ?: "Đã xảy ra lỗi không xác định",
                             modifier = Modifier
                                 .fillMaxSize()
                                 .wrapContentSize()
@@ -236,7 +236,7 @@ fun SearchContentScreen(
                     }
                     SearchContentState.EmptyResult -> {
                         EmptyMessage(
-                            message = "没有找到相关内容！",
+                            message = "Không tìm thấy nội dung liên quan!",
                             modifier = Modifier
                                 .fillMaxSize()
                                 .wrapContentSize()
@@ -288,7 +288,7 @@ fun SearchHistoryList(
                 .padding(vertical = 4.dp),
         ) {
             AppText(
-                text = "搜索历史",
+                text = "Lịch sử tìm kiếm",
                 style = LegadoTheme.typography.titleSmallEmphasized,
                 color = LegadoTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.Center)
@@ -300,13 +300,13 @@ fun SearchHistoryList(
                 style = ToggleStyle.Tonal,
                 iconChecked = Icons.Default.Book,
                 icon = Icons.Default.CollectionsBookmark,
-                text = "仅本书"
+                text = "chỉ cuốn sách này"
             )
         }
 
         if (history.isEmpty()) {
             EmptyMessage(
-                message = "暂无搜索历史",
+                message = "Chưa có lịch sử tìm kiếm",
                 modifier = Modifier
                     .fillMaxSize()
                     .wrapContentSize()
@@ -332,7 +332,7 @@ fun SearchHistoryList(
                             SmallPlainButton(
                                 onClick = { onDeleteHistory(item) },
                                 icon = Icons.Default.Close,
-                                contentDescription = "删除"
+                                contentDescription = "xóa bỏ"
                             )
                         },
                         colors = ListItemDefaults.colors(
@@ -353,7 +353,7 @@ fun SearchHistoryList(
                             onClick = onClearHistory,
                             modifier = Modifier.fillMaxWidth(0.6f),
                             icon = Icons.Outlined.DeleteSweep,
-                            text = "清除搜索历史"
+                            text = "Xóa lịch sử tìm kiếm"
                         )
                     }
                 }
@@ -420,7 +420,7 @@ fun SearchResultItem(
 
                 if (isCurrentChapter) {
                     TextCard(
-                        text = "当前章节",
+                        text = "Chương hiện tại",
                         backgroundColor = LegadoTheme.colorScheme.secondaryContainer,
                         contentColor = LegadoTheme.colorScheme.onSecondaryContainer,
                         cornerRadius = 8.dp,

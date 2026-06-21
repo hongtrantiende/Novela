@@ -136,7 +136,7 @@ class CoverFetcher(
                 } else {
                     ImageUtils.decode(url, rawBytes, true, source)
                 }
-            } ?: throw IOException("图片解密失败")
+            } ?: throw IOException("Giải mã hình ảnh không thành công")
         }
 
         return SourceResult(

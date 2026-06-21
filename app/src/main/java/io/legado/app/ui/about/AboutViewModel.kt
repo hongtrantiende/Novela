@@ -164,7 +164,7 @@ class AboutViewModel(application: Application) : BaseViewModel(application) {
             copyHeapDump(doc)
             _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_saved_to_backup_dir)))
         }.onError {
-            AppLog.put("保存日志出错\n${it.localizedMessage}", it, true)
+            AppLog.put("Lỗi lưu nhật ký\n${it.localizedMessage}", it, true)
         }
     }
 
@@ -188,7 +188,7 @@ class AboutViewModel(application: Application) : BaseViewModel(application) {
                 _effects.tryEmit(AboutEffect.ShowToast(context.getString(R.string.about_saved_to_backup_dir)))
             }
         }.onError {
-            AppLog.put("保存堆转储失败\n${it.localizedMessage}", it)
+            AppLog.put("Không lưu được vùng báo lỗi\n${it.localizedMessage}", it)
         }
     }
 
@@ -237,7 +237,7 @@ class AboutViewModel(application: Application) : BaseViewModel(application) {
             val process = Runtime.getRuntime().exec("logcat -d")
             file.outputStream().use { process.inputStream.copyTo(it) }
         } catch (e: Exception) {
-            AppLog.put("保存Logcat失败\n$e", e)
+            AppLog.put("Không lưu được Logcat\n$e", e)
         }
     }
 }

@@ -39,7 +39,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         execute {
             this@WebViewModel.intent = intent
             val url = intent.getStringExtra("url")
-                ?: throw NoStackTraceException("url不能为空")
+                ?: throw NoStackTraceException("url không thể trống")
             sourceName = intent.getStringExtra("sourceName") ?: ""
             sourceOrigin = intent.getStringExtra("sourceOrigin") ?: ""
             sourceType = intent.getIntExtra("sourceType", SourceType.book)
@@ -71,12 +71,12 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 folderName = "Legado"
             )
 
-            if (!success) throw Throwable("保存到相册失败")
+            if (!success) throw Throwable("Không lưu được vào album")
         }.onError {
             ACache.get().remove(imagePathKey)
-            context.toastOnUi("保存图片失败: ${it.localizedMessage}")
+            context.toastOnUi("Không lưu được hình ảnh: ${it.localizedMessage}")
         }.onSuccess {
-            context.toastOnUi("已保存到相册")
+            context.toastOnUi("Đã lưu vào album")
         }
     }
 

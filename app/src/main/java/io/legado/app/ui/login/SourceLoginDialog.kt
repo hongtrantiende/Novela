@@ -705,8 +705,8 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
                         dismiss()
                     }
                 } catch (e: Exception) {
-                    AppLog.put("登录出错\n${e.localizedMessage}", e)
-                    context?.toastOnUi("登录出错\n${e.localizedMessage}")
+                    AppLog.put("Lỗi đăng nhập\n${e.localizedMessage}", e)
+                    context?.toastOnUi("Lỗi đăng nhập\n${e.localizedMessage}")
                     e.printOnDebug()
                 }
             }

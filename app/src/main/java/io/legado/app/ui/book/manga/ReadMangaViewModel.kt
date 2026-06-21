@@ -74,7 +74,7 @@ class ReadMangaViewModel(
         }.onSuccess {
             success?.invoke()
         }.onError {
-            val msg = "初始化数据失败\n${it.localizedMessage}"
+            val msg = "Không thể khởi tạo dữ liệu\n${it.localizedMessage}"
             AppLog.put(msg, it)
         }.onFinally {
             ReadManga.saveRead()
@@ -185,7 +185,7 @@ class ReadMangaViewModel(
             WebBook.getBookInfoAwait(source, book, canReName = false)
             return true
         } catch (e: Throwable) {
-            ReadManga.mCallback?.loadFail("详情页出错: ${e.localizedMessage}")
+            ReadManga.mCallback?.loadFail("Lỗi trên trang chi tiết: ${e.localizedMessage}")
             return false
         }
     }
@@ -228,12 +228,12 @@ class ReadMangaViewModel(
             }.take(1).onEach { (book, toc) ->
                 changeTo(book, toc)
             }.onEmpty {
-                throw NoStackTraceException("没有合适书源")
+                throw NoStackTraceException("Không có nguồn sách phù hợp")
             }.onCompletion {
                 // 换源完成
             }.catch {
-                AppLog.put("自动换源失败\n${it.localizedMessage}", it)
-                context.toastOnUi("自动换源失败\n${it.localizedMessage}")
+                AppLog.put("Thay đổi nguồn tự động không thành công\n${it.localizedMessage}", it)
+                context.toastOnUi("Thay đổi nguồn tự động không thành công\n${it.localizedMessage}")
             }.collect()
         }
     }
@@ -249,7 +249,7 @@ class ReadMangaViewModel(
         execute {
             getReadingProgressUseCase.execute(book.name, book.author)?.toBookProgress()
         }.onError {
-            AppLog.put("拉取阅读进度失败《${book.name}》\n${it.localizedMessage}", it)
+            AppLog.put("Không lấy được tiến trình đọc \"${book.name}\"\n${it.localizedMessage}", it)
         }.onSuccess { progress ->
             progress ?: return@onSuccess
             if (progress.durChapterIndex < book.durChapterIndex ||
@@ -259,7 +259,7 @@ class ReadMangaViewModel(
                 alertSync?.invoke(progress)
             } else if (progress.durChapterIndex < book.simulatedTotalChapterNum()) {
                 ReadManga.setProgress(progress)
-                AppLog.put("自动同步阅读进度成功《${book.name}》 ${progress.durChapterTitle}")
+                AppLog.put("Tự động đồng bộ hóa tiến trình đọc thành công \"${book.name}\" ${progress.durChapterTitle}")
             }
         }
     }
@@ -288,7 +288,7 @@ class ReadMangaViewModel(
             ReadManga.resetData(book)
             ReadManga.loadContent()
         }.onError {
-            AppLog.put("换源失败\n$it", it, true)
+            AppLog.put("Đổi nguồn thất bại\n$it", it, true)
         }.onFinally {
             postEvent(EventBus.SOURCE_CHANGED, book.bookUrl)
         }
@@ -354,12 +354,12 @@ class ReadMangaViewModel(
                 )
 
                 if (success) {
-                    context.toastOnUi("图片已保存到相册")
+                    context.toastOnUi("Ảnh đã được lưu vào album")
                 } else {
-                    context.toastOnUi("保存失败")
+                    context.toastOnUi("Lưu không thành công")
                 }
             } catch (e: Exception) {
-                context.toastOnUi("保存出错: ${e.localizedMessage}")
+                context.toastOnUi("Lỗi lưu: ${e.localizedMessage}")
             }
         }
     }
@@ -374,7 +374,7 @@ class ReadMangaViewModel(
         execute {
             appDb.bookDao.update(book)
         }.onError {
-            AppLog.put("更新阅读配置失败\n${it.localizedMessage}", it)
+            AppLog.put("Không cập nhật được cấu hình đọc\n${it.localizedMessage}", it)
         }
     }
 
@@ -405,8 +405,8 @@ class ReadMangaViewModel(
         }.onSuccess {
             success?.invoke()
         }.onError {
-            AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            AppLog.put("Không thể thêm sách vào giá sách", it)
+            context.toastOnUi("Không thể thêm sách")
         }
     }
 }

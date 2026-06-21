@@ -84,7 +84,7 @@ class VisibleWebView(
                                 if (selectedText.isNotBlank()) {
                                     showDictSheet(selectedText)
                                 } else {
-                                    context.toastOnUi("未获取到选中文本，请重试")
+                                    context.toastOnUi("Không thể lấy được văn bản đã chọn, vui lòng thử lại.")
                                 }
                             }
                         }, 200)

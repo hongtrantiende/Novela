@@ -24,8 +24,8 @@ class RssSourceDebugWebSocket(private val session: DefaultWebSocketServerSession
                 if (frame is Frame.Text) {
                     val text = frame.readText()
                     if (!text.isJson()) {
-                        session.send("数据必须为Json格式")
-                        session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                        session.send("Dữ liệu phải ở định dạng Json")
+                        session.close(CloseReason(CloseReason.Codes.NORMAL, "Gỡ lỗi kết thúc"))
                         break
                     }
                     val debugBean = GSON.fromJsonObject<Map<String, String>>(text).getOrNull()
@@ -33,7 +33,7 @@ class RssSourceDebugWebSocket(private val session: DefaultWebSocketServerSession
                         val tag = debugBean["tag"]
                         if (tag.isNullOrBlank()) {
                             session.send(appCtx.getString(R.string.cannot_empty))
-                            session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                            session.close(CloseReason(CloseReason.Codes.NORMAL, "Gỡ lỗi kết thúc"))
                             break
                         }
                         appDb.rssSourceDao.getByKey(tag)?.let {
@@ -59,7 +59,7 @@ class RssSourceDebugWebSocket(private val session: DefaultWebSocketServerSession
                 session.send(msg)
                 if (state == -1 || state == 1000) {
                     Debug.cancelDebug(true)
-                    session.close(CloseReason(CloseReason.Codes.NORMAL, "调试结束"))
+                    session.close(CloseReason(CloseReason.Codes.NORMAL, "Gỡ lỗi kết thúc"))
                 }
             }.onFailure {
                 it.printOnDebug()

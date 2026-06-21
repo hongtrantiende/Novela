@@ -45,7 +45,7 @@ fun JsonRawEditor(
                         }
                     },
                     icon = Icons.Default.AutoFixHigh,
-                    contentDescription = "格式化"
+                    contentDescription = "định dạng"
                 )
                 SmallPlainButton(
                     onClick = {
@@ -56,7 +56,7 @@ fun JsonRawEditor(
                         }
                     },
                     icon = Icons.Default.Compress,
-                    contentDescription = "压缩"
+                    contentDescription = "nén"
                 )
             }
         }

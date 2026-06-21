@@ -77,7 +77,7 @@ fun ChangeChapterSourceSheet(
                         onDismissRequest = { showOptionsMenu = false }
                     ) { dismiss ->
                         RoundDropdownMenuItem(
-                            text = "校验作者",
+                            text = "Xác minh tác giả",
                             isSelected = state.checkAuthor,
                             onClick = {
                                 onIntent(ChangeChapterSourceIntent.SetCheckAuthor(!state.checkAuthor))
@@ -85,7 +85,7 @@ fun ChangeChapterSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "加载详情",
+                            text = "Tải chi tiết",
                             isSelected = state.loadInfo,
                             onClick = {
                                 onIntent(ChangeChapterSourceIntent.SetLoadInfo(!state.loadInfo))
@@ -93,7 +93,7 @@ fun ChangeChapterSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "加载目录",
+                            text = "Tải thư mục",
                             isSelected = state.loadToc,
                             onClick = {
                                 onIntent(ChangeChapterSourceIntent.SetLoadToc(!state.loadToc))
@@ -101,7 +101,7 @@ fun ChangeChapterSourceSheet(
                             }
                         )
                         RoundDropdownMenuItem(
-                            text = "显示更多信息",
+                            text = "Hiển thị thêm thông tin",
                             isSelected = state.loadWordCount,
                             onClick = {
                                 onIntent(ChangeChapterSourceIntent.SetLoadWordCount(!state.loadWordCount))

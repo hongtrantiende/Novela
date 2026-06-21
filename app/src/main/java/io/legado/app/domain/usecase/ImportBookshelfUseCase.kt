@@ -48,7 +48,7 @@ class ImportBookshelfUseCase(
             }
 
             else -> {
-                throw NoStackTraceException("格式不对")
+                throw NoStackTraceException("Định dạng sai")
             }
         }
     }
@@ -67,7 +67,7 @@ class ImportBookshelfUseCase(
         groupId: Long,
         onProgress: suspend (String) -> Unit
     ) {
-        onProgress("导入中...")
+        onProgress("Đang nhập khẩu...")
         val bookSourceParts = bookSourceRepository.getAllEnabledPart()
         val semaphore = Semaphore(AppConfig.threadCount)
         val books = GSON.fromJsonArray<Map<String, String?>>(json).getOrThrow()
@@ -99,7 +99,7 @@ class ImportBookshelfUseCase(
                         }
                     } else {
                         withContext(Dispatchers.Main) {
-                            context.toastOnUi("没有搜索到<$name>$author")
+                            context.toastOnUi("<$name>$author không được tìm thấy")
                         }
                     }
                 }

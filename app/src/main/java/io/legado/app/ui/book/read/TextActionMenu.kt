@@ -187,10 +187,10 @@ class TextActionMenu(
             holder.itemView.setOnLongClickListener {
                 if (ReadConfig.contentSelectSpeakMod == 0) {
                     ReadConfig.contentSelectSpeakMod = 1
-                    context.toastOnUi("切换为从选择的地方开始一直朗读")
+                    context.toastOnUi("Chuyển sang đọc to bắt đầu từ vị trí đã chọn")
                 } else {
                     ReadConfig.contentSelectSpeakMod = 0
-                    context.toastOnUi("切换为朗读选择内容")
+                    context.toastOnUi("Chuyển sang đọc to các lựa chọn")
                 }
                 true
             }
@@ -224,7 +224,7 @@ class TextActionMenu(
                     it.putExtra(Intent.EXTRA_PROCESS_TEXT, callBack.selectedText)
                     context.startActivity(it)
                 }.onFailure { e ->
-                    AppLog.put("执行文本菜单操作出错\n$e", e, true)
+                    AppLog.put("Lỗi khi thực hiện thao tác menu văn bản\n$e", e, true)
                 }
             }
         }
@@ -262,7 +262,7 @@ class TextActionMenu(
                 ).intent = createProcessTextIntentForResolveInfo(resolveInfo)
             }
         }.onFailure {
-            context.toastOnUi("获取文字操作菜单出错:${it.localizedMessage}")
+            context.toastOnUi("Lỗi khi nhận menu thao tác văn bản:${it.localizedMessage}")
         }
     }
 

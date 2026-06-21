@@ -4,8 +4,8 @@
 
     <io.legado.app.lib.prefs.Preference
         android:key="TEST"
-        android:summary="这里存放由 Compose 重写的设置页"
-        android:title="测试" />
+        android:summary="Điều này lưu trữ trang cài đặt được viết lại bởi Compose"
+        android:title="Bài kiểm tra" />
 
     <io.legado.app.lib.prefs.NameListPreference
         android:defaultValue="auto"

@@ -13,7 +13,7 @@ object BookmarkExporter {
     fun formatToMarkdown(bookName: String, author: String?, bookmarks: List<Bookmark>): String {
         return buildString {
             append("# $bookName\n")
-            if (!author.isNullOrBlank()) append("作者：$author\n")
+            if (!author.isNullOrBlank()) append("Tác giả: $author")
             append("\n---\n\n")
 
             bookmarks.forEach {

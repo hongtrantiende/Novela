@@ -240,9 +240,9 @@ abstract class BaseActivity<VB : ViewBinding>(
                     window.decorView.background = it.toDrawable(resources)
                 }
             } catch (e: OutOfMemoryError) {
-                toastOnUi("背景图片太大,内存溢出")
+                toastOnUi("Hình nền quá lớn và tràn bộ nhớ")
             } catch (e: Exception) {
-                AppLog.put("加载背景出错\n${e.localizedMessage}", e)
+                AppLog.put("Lỗi tải nền\n${e.localizedMessage}", e)
             }
         }
     }

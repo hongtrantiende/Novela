@@ -124,7 +124,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         exoPlayer.stop()
         if (!requestFocus()) return
         if (contentList.isEmpty()) {
-            AppLog.putDebug("朗读列表为空")
+            AppLog.putDebug("Danh sách đọc trống")
             ReadBook.readAloud()
         } else {
             super.play()
@@ -170,7 +170,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     val fileName = md5SpeakFileName(text)
                     val speakText = text.replace(AppPattern.notReadAloudRegex, "")
                     if (speakText.isEmpty()) {
-                        AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$text")
+                        AppLog.put("Nội dung của đoạn đọc trống và âm thanh im lặng được sử dụng thay thế.\nĐọc to văn bản: $text")
                         createSilentSound(fileName)
                     } else if (!hasSpeakFile(fileName)) {
                         runCatching {
@@ -197,7 +197,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 preDownloadAudios(httpTts)
             }
         }.onError {
-            AppLog.put("朗读下载出错\n${it.localizedMessage}", it, true)
+            AppLog.put("Lỗi tải xuống đọc to\n${it.localizedMessage}", it, true)
         }
     }
 
@@ -249,7 +249,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 }
             }
         } catch (e: Exception) {
-            AppLog.put("听书预下载异常: ${e.localizedMessage}", e)
+            AppLog.put("Ngoại lệ tải xuống trước sách nói: ${e.localizedMessage}", e)
         }
     }
 
@@ -275,7 +275,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     }
                     val speakText = text.replace(AppPattern.notReadAloudRegex, "")
                     if (speakText.isEmpty()) {
-                        AppLog.put("阅读段落内容为空，使用无声音频代替。\n朗读文本：$speakText")
+                        AppLog.put("Nội dung của đoạn đọc trống và âm thanh im lặng được sử dụng thay thế.\nNói văn bản: $speakText")
                     }
                     val fileName = md5SpeakFileName(text)
                     val dataSourceFactory = createDataSourceFactory(httpTts, speakText)
@@ -289,7 +289,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 preDownloadAudiosStream(httpTts, downloaderChannel)
             }
         }.onError {
-            AppLog.put("朗读下载出错\n${it.localizedMessage}", it, true)
+            AppLog.put("Lỗi tải xuống đọc to\n${it.localizedMessage}", it, true)
         }
     }
 
@@ -326,7 +326,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 }
             }
         } catch (e: Exception) {
-            AppLog.put("听书流式预下载异常: ${e.localizedMessage}", e)
+            AppLog.put("Ngoại lệ tải xuống trước khi phát trực tuyến sách nói: ${e.localizedMessage}", e)
         }
     }
 
@@ -403,7 +403,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     } else if (ct?.isNotBlank() == true) {
                         if (!contentType.matches(ct.toRegex())) {
                             throw NoStackTraceException(
-                                "TTS服务器返回错误：" + response.body.string()
+                                "Máy chủ TTS trả về lỗi:" + response.body.string()
                             )
                         }
                     }
@@ -417,7 +417,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 when (e) {
                     is CancellationException -> throw e
                     is ScriptException, is WrappedException -> {
-                        AppLog.put("js错误\n${e.localizedMessage}", e, true)
+                        AppLog.put("lỗi js\n${e.localizedMessage}", e, true)
                         e.printOnDebug()
                         throw e
                     }
@@ -425,7 +425,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     is SocketTimeoutException, is ConnectException -> {
                         downloadErrorNo++
                         if (downloadErrorNo > 5) {
-                            val msg = "tts超时或连接错误超过5次\n${e.localizedMessage}"
+                            val msg = "tts hết thời gian chờ hoặc lỗi kết nối hơn 5 lần\n${e.localizedMessage}"
                             AppLog.put(msg, e, true)
                             throw e
                         }
@@ -433,15 +433,15 @@ class HttpReadAloudService : BaseReadAloudService(),
 
                     else -> {
                         downloadErrorNo++
-                        val msg = "tts下载错误\n${e.localizedMessage}"
+                        val msg = "lỗi tải xuống tts\n${e.localizedMessage}"
                         AppLog.put(msg, e)
                         e.printOnDebug()
                         if (downloadErrorNo > 5) {
-                            val msg1 = "TTS服务器连续5次错误，已暂停阅读。"
+                            val msg1 = "Máy chủ TTS đã nhận được 5 lỗi liên tiếp và việc đọc đã bị tạm dừng."
                             AppLog.put(msg1, e, true)
                             throw e
                         } else {
-                            AppLog.put("TTS下载音频出错，使用无声音频代替。\n朗读文本：$speakText")
+                            AppLog.put("Lỗi âm thanh tải xuống TTS, thay vào đó hãy sử dụng âm thanh im lặng.\nNói văn bản: $speakText")
                             break
                         }
                     }
@@ -631,12 +631,12 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
-        AppLog.put("朗读错误\n${contentList[nowSpeak]}", error)
+        AppLog.put("Lỗi đọc\n${contentList[nowSpeak]}", error)
         deleteCurrentSpeakFile()
         playErrorNo++
         if (playErrorNo >= 5) {
-            toastOnUi("朗读连续5次错误, 最后一次错误代码(${error.localizedMessage})")
-            AppLog.put("朗读连续5次错误, 最后一次错误代码(${error.localizedMessage})", error)
+            toastOnUi("Đọc 5 lỗi liên tiếp, mã lỗi cuối cùng (${error.localizedMessage})")
+            AppLog.put("Đọc 5 lỗi liên tiếp, mã lỗi cuối cùng (${error.localizedMessage})", error)
             pauseReadAloud()
         } else {
             if (exoPlayer.hasNextMediaItem()) {

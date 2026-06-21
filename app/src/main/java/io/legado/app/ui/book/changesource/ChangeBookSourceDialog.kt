@@ -86,8 +86,8 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             val group = searchScope.display
             if (!searchScope.isAll()) {
                 lifecycleScope.launch {
-                    context?.alert("搜索结果为空") {
-                        setMessage("${group}分组搜索结果为空,是否切换到全部分组")
+                    context?.alert("Kết quả tìm kiếm trống") {
+                        setMessage("Kết quả tìm kiếm nhóm ${group} trống. Bạn có muốn chuyển sang tất cả các nhóm?")
                         cancelButton()
                         okButton {
                             ChangeSourceConfig.searchScope = ""
@@ -423,8 +423,8 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             }
         }, {
             waitDialog.dismiss()
-            AppLog.put("${if (isReplace) "换源" else "添加书籍"}获取目录出错\n$it", it, true)
-            context?.toastOnUi("${if (isReplace) "换源" else "添加书籍"}失败")
+            AppLog.put("${if (isReplace) "换源" else "添加书籍"}Lỗi lấy mục lục\n$it", it, true)
+            context?.toastOnUi("${if (isReplace) "换源" else "添加书籍"}thất bại")
         })
 
         waitDialog.setOnCancelListener {
@@ -480,7 +480,7 @@ class ChangeBookSourceDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_b
             onSuccess?.invoke()
         }, {
             waitDialog.dismiss()
-            AppLog.put("换源获取目录出错\n$it", it, true)
+            AppLog.put("Lỗi đổi nguồn lấy mục lục\n$it", it, true)
         })
         waitDialog.setOnCancelListener {
             coroutine.cancel()

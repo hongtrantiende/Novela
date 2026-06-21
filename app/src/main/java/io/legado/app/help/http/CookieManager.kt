@@ -67,7 +67,7 @@ object CookieManager {
                 .build()
         }.onFailure {
             CookieStore.removeCookie(url)
-            val msg = "设置cookie出错，已清除cookie $domain cookie:$newCookie\n$it"
+            val msg = "Lỗi thiết lập cookie, đã xóa cookie $domain cookie:$newCookie\n$it"
             AppLog.put(msg, it)
         }
 

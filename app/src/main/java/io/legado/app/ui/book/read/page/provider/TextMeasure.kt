@@ -7,7 +7,7 @@ import kotlin.math.ceil
 
 class TextMeasure(private var paint: TextPaint) {
 
-    private var chineseCommonWidth = paint.measureText("一")
+    private var chineseCommonWidth = paint.measureText("một")
     private val asciiWidths = FloatArray(128) { -1f }
     private val codePointWidths = SparseArray<Float>()
 
@@ -135,7 +135,7 @@ class TextMeasure(private var paint: TextPaint) {
     }
 
     private fun invalidate() {
-        chineseCommonWidth = paint.measureText("一")
+        chineseCommonWidth = paint.measureText("một")
         codePointWidths.clear()
         asciiWidths.fill(-1f)
     }

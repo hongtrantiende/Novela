@@ -219,12 +219,12 @@ fun ExploreShowScreen(
             horizontalArrangement = Arrangement.Center
         ) {
             AppText(
-                text = "布局列数",
+                text = "Số cột bố cục",
                 style = LegadoTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
             )
             Spacer(modifier = Modifier.width(12.dp))
             TextCard(
-                text = "${state.gridCount} 列",
+                text = "cột ${state.gridCount}",
                 textStyle = LegadoTheme.typography.titleSmall,
                 backgroundColor = LegadoTheme.colorScheme.onSheetContent,
                 verticalPadding = 4.dp,
@@ -286,20 +286,20 @@ fun ExploreShowScreen(
                                 )
                             },
                             imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                            contentDescription = "列数设置"
+                            contentDescription = "Cài đặt số cột"
                         )
                     }
 
                     TopBarActionButton(
                         onClick = { viewModel.onIntent(ExploreShowIntent.ShowSheet(ExploreShowSheet.KindSelect)) },
                         imageVector = Icons.Outlined.FilterAlt,
-                        contentDescription = "分类"
+                        contentDescription = "Phân loại"
                     )
 
                     TopBarActionButton(
                         onClick = { viewModel.onIntent(ExploreShowIntent.ToggleLayout) },
                         imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
-                        contentDescription = "切换布局"
+                        contentDescription = "Chuyển đổi bố cục"
                     )
 
                     if (state.sourceUrl?.startsWith("ext_") == true && state.extension != null) {

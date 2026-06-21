@@ -85,7 +85,7 @@ object CronetLoader : CronetEngine.Builder.LibraryLoader(), Cronet.LoaderInterfa
         Coroutine.async {
             //md5 = getUrlMd5(md5Url)
             if (soFile.exists() && md5 == getFileMD5(soFile)) {
-                DebugLog.d(javaClass.simpleName, "So 库已存在")
+                DebugLog.d(javaClass.simpleName, "Vậy thư viện đã tồn tại")
             } else {
                 download(soUrl, md5, downloadFile, soFile)
             }

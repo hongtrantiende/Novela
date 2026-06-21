@@ -99,15 +99,15 @@ object RssParserDefault {
             eventType = xmlPullParser.next()
         }
         articleList.firstOrNull()?.let {
-            Debug.log(sourceUrl, "┌获取标题")
+            Debug.log(sourceUrl, "┌Nhận danh hiệu")
             Debug.log(sourceUrl, "└${it.title}")
-            Debug.log(sourceUrl, "┌获取时间")
+            Debug.log(sourceUrl, "┌Nhận thời gian")
             Debug.log(sourceUrl, "└${it.pubDate}")
-            Debug.log(sourceUrl, "┌获取描述")
+            Debug.log(sourceUrl, "┌Nhận mô tả")
             Debug.log(sourceUrl, "└${it.description}")
-            Debug.log(sourceUrl, "┌获取图片url")
+            Debug.log(sourceUrl, "┌Nhận url hình ảnh")
             Debug.log(sourceUrl, "└${it.image}")
-            Debug.log(sourceUrl, "┌获取文章链接")
+            Debug.log(sourceUrl, "┌Nhận link bài viết")
             Debug.log(sourceUrl, "└${it.link}")
         }
         return Pair(articleList, null)

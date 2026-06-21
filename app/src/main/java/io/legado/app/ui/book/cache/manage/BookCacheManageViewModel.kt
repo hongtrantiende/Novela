@@ -456,12 +456,12 @@ class BookCacheManageViewModel(
         }.onSuccess { countOrNull ->
             val count = countOrNull ?: return@onSuccess
             if (count > 0) {
-                _effects.tryEmit(BookCacheManageEffect.ShowMessage("已加入缓存队列: $count 章"))
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("Đã thêm vào hàng đợi bộ đệm: $count chương"))
             } else {
-                _effects.tryEmit(BookCacheManageEffect.ShowMessage("没有可缓存的章节"))
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("Không có chương nào có thể lưu vào bộ nhớ đệm"))
             }
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("加入缓存队列失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Không thể tham gia hàng đợi bộ đệm\n${it.localizedMessage}"))
         }.onFinally {
             reloadAll(forceDatabase = true)
         }
@@ -480,12 +480,12 @@ class BookCacheManageViewModel(
         }.onSuccess { countOrNull ->
             val count = countOrNull ?: return@onSuccess
             if (count > 0) {
-                _effects.tryEmit(BookCacheManageEffect.ShowMessage("已加入缓存队列: $count 章"))
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("Đã thêm vào hàng đợi bộ đệm: $count chương"))
             } else {
-                _effects.tryEmit(BookCacheManageEffect.ShowMessage("没有可缓存的章节"))
+                _effects.tryEmit(BookCacheManageEffect.ShowMessage("Không có chương nào có thể lưu vào bộ nhớ đệm"))
             }
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("加入缓存队列失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Không thể tham gia hàng đợi bộ đệm\n${it.localizedMessage}"))
         }.onFinally {
             scheduleBookReload(bookUrl, debounceMillis = 0)
         }
@@ -525,9 +525,9 @@ class BookCacheManageViewModel(
             CacheBook.removeAwait(context, bookUrl)
             clearBookCacheUseCase.execute(bookUrl)
         }.onSuccess {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("缓存已删除"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("bộ nhớ cache đã bị xóa"))
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("删除缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Không thể xóa bộ nhớ đệm\n${it.localizedMessage}"))
         }.onFinally {
             scheduleBookReload(bookUrl, debounceMillis = 0)
         }
@@ -542,9 +542,9 @@ class BookCacheManageViewModel(
             true
         }.onSuccess { enqueued ->
             if (!enqueued) return@onSuccess
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("章节已加入缓存队列"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Chương đã được thêm vào hàng đợi bộ đệm"))
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("章节缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Bộ nhớ đệm chương không thành công\n${it.localizedMessage}"))
         }.onFinally {
             scheduleBookReload(bookUrl, debounceMillis = 0)
         }
@@ -576,9 +576,9 @@ class BookCacheManageViewModel(
             true
         }.onSuccess { deleted ->
             if (!deleted) return@onSuccess
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("章节缓存已删除"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Đã xóa bộ đệm chương"))
         }.onError {
-            _effects.tryEmit(BookCacheManageEffect.ShowMessage("删除章节缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookCacheManageEffect.ShowMessage("Không thể xóa bộ đệm chương\n${it.localizedMessage}"))
         }.onFinally {
             scheduleBookReload(bookUrl, debounceMillis = 0)
         }
@@ -597,7 +597,7 @@ class BookCacheManageViewModel(
         val pausedCount = items.sumOf { it.pausedCount }
         val errorCount = items.sumOf { it.errorCount }
         val cachedCount = items.sumOf { it.cachedCount }
-        return "下载中:$downloadingCount | 等待:$waitingCount | 暂停:$pausedCount | 失败:$errorCount | 已缓存:$cachedCount"
+        return "Đang tải xuống: $downloadingCount | Đang chờ: $waitingCount | Đang tạm dừng: $pausedCount | Lỗi: $errorCount | Đã lưu vào bộ nhớ đệm: $cachedCount"
     }
 
     private data class LoadedCacheState(

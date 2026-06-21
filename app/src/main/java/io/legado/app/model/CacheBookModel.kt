@@ -309,7 +309,7 @@ class CacheBookModel(
             if (retryCount < 3 && !isStopped) {
                 queue.enqueue(ChapterSelection.Single(chapter.index))
             } else {
-                AppLog.put("下载${book.name}-${chapter.title}失败\n${error.localizedMessage}", error)
+                AppLog.put("Không tải xuống được ${book.name}-${chapter.title}\n${error.localizedMessage}", error)
             }
             waitingRetry = false
         }
@@ -556,7 +556,7 @@ class CacheBookModel(
             onError(chapter, e)
             ReadBook.downloadFailChapters[chapter.index] =
                 (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
-            return "获取正文失败\n${e.localizedMessage}"
+            return "Không thể nhận được văn bản\n${e.localizedMessage}"
         } finally {
             host.onTaskQueuesChanged(book.bookUrl)
         }
@@ -608,7 +608,7 @@ class CacheBookModel(
             onError(chapter, it)
             ReadBook.downloadFailChapters[chapter.index] =
                 (ReadBook.downloadFailChapters[chapter.index] ?: 0) + 1
-            downloadFinish(chapter, "获取正文失败\n${it.localizedMessage}", resetPageOffset)
+            downloadFinish(chapter, "Không thể nhận được văn bản\n${it.localizedMessage}", resetPageOffset)
             emitPendingReadError(chapter, it)
         }.onCancel {
             onCancel(chapter.index, requeue = false)
@@ -650,7 +650,7 @@ class CacheBookModel(
 
     private fun emitPendingReadError(chapter: BookChapter, error: Throwable) {
         val resetPageOffset = consumePendingReadRequest(chapter.index) ?: return
-        downloadFinish(chapter, "获取正文失败\n${error.localizedMessage}", resetPageOffset)
+        downloadFinish(chapter, "Không thể nhận được văn bản\n${error.localizedMessage}", resetPageOffset)
     }
 
     private fun emitPendingReadCanceled(chapter: BookChapter) {

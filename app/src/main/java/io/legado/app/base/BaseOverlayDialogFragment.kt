@@ -50,7 +50,7 @@ abstract class BaseOverlayDialogFragment(
             manager.beginTransaction().remove(this).commitAllowingStateLoss()
             super.show(manager, tag)
         }.onFailure {
-            AppLog.put("显示对话框失败 tag:$tag", it)
+            AppLog.put("Không thể hiển thị thẻ hộp thoại:$tag", it)
         }
     }
 

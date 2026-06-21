@@ -126,7 +126,7 @@ class GroupEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_book_gro
             btnReset.onClick {
                 bookGroup?.let {
                     viewModel.clearCover(it) {
-                        toastOnUi("封面已重置")
+                        toastOnUi("Bìa đã được đặt lại")
                         dismiss()
                     }
                 }
@@ -139,7 +139,7 @@ class GroupEditDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_book_gro
             btnOk.onClick {
                 val groupName = tieGroupName.text?.toString()
                 if (groupName.isNullOrEmpty()) {
-                    toastOnUi("分组名称不能为空")
+                    toastOnUi("Tên nhóm không được để trống")
                 } else {
                     val bookSort = selectedSortIndex
                     val coverPath = binding.ivCover.bitmapPath

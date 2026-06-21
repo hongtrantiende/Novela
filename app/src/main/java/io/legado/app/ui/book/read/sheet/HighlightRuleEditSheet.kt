@@ -82,7 +82,7 @@ fun HighlightRuleEditSheet(
     var targetScope by remember(show, rule) { mutableIntStateOf(initial.targetScope) }
     var enabled by remember(show, rule) { mutableStateOf(initial.enabled) }
     var sampleText by remember(show, rule) {
-        mutableStateOf(initial.sampleText.ifBlank { "她轻声说：今晚就出发。" })
+        mutableStateOf(initial.sampleText.ifBlank { "Cô nhẹ nhàng nói: Tối nay chúng ta khởi hành nhé." })
     }
 
     // Style state
@@ -391,7 +391,7 @@ fun HighlightRuleEditSheet(
 
             // === Section 3: Config Binding ===
             if (allConfigNames.isNotEmpty()) {
-                SectionTitle("应用排版")
+                SectionTitle("Áp dụng kiểu chữ")
                 LazyRow(
                     modifier = Modifier.padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -409,7 +409,7 @@ fun HighlightRuleEditSheet(
                             cornerRadius = 8.dp,
                         ) {
                             AppText(
-                                "全局",
+                                "tình hình chung",
                                 style = LegadoTheme.typography.labelMedium,
                                 color = fg,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -442,9 +442,9 @@ fun HighlightRuleEditSheet(
             }
 
             // === Section 4: Font ===
-            SectionTitle("字体替换")
+            SectionTitle("Thay thế phông chữ")
             TinySwitchSettingItem(
-                title = "自定义字体",
+                title = "Phông chữ tùy chỉnh",
                 checked = hasFont,
                 onCheckedChange = { hasFont = it },
             )

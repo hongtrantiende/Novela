@@ -16,12 +16,12 @@ object MangaScrollMode {
     )
 
     fun labelOf(mode: Int): String = when (mode) {
-        PAGE_LEFT_TO_RIGHT -> "单页式（从左到右）"
-        PAGE_RIGHT_TO_LEFT -> "单页式（从右到左）"
-        PAGE_TOP_TO_BOTTOM -> "单页式（从上到下）"
-        WEBTOON -> "条漫"
-        WEBTOON_WITH_GAP -> "条漫（页面有空隙）"
-        else -> "未知"
+        PAGE_LEFT_TO_RIGHT -> "Một trang (trái sang phải)"
+        PAGE_RIGHT_TO_LEFT -> "Một trang (phải sang trái)"
+        PAGE_TOP_TO_BOTTOM -> "Một trang (từ trên xuống dưới)"
+        WEBTOON -> "truyện tranh"
+        WEBTOON_WITH_GAP -> "Truyện tranh (có những khoảng trống trong trang)"
+        else -> "không rõ"
     }
 }
 

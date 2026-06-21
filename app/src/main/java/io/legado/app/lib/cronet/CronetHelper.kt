@@ -43,7 +43,7 @@ val cronetEngine: ExperimentalCronetEngine? by lazy {
         DebugLog.d("Cronet Version:", engine.versionString)
         return@lazy engine
     } catch (e: Throwable) {
-        AppLog.put("初始化cronetEngine出错", e)
+        AppLog.put("Lỗi khởi tạo cronetEngine", e)
         return@lazy null
     }
 }

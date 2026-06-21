@@ -89,7 +89,7 @@ class AnalyzeRule(
 
     @JvmOverloads
     fun setContent(content: Any?, baseUrl: String? = null): AnalyzeRule {
-        if (content == null) throw AssertionError("内容不可空（Content cannot be null）")
+        if (content == null) throw AssertionError("Nội dung không thể rỗng")
         this.content = content
         isJSON = when (content) {
             is Node -> false
@@ -428,7 +428,7 @@ class AnalyzeRule(
                 .getOrNull()
                 ?.let {
                     if (!loggedNonStandardJSON) {
-                        Debug.log("≡@put 规则 JSON 格式不规范，请改为规范格式")
+                        Debug.log("≡@put quy tắc Định dạng JSON chưa được chuẩn hóa, vui lòng thay đổi nó thành định dạng chuẩn")
                         loggedNonStandardJSON = true
                     }
                     putMap.putAll(it)
@@ -852,9 +852,9 @@ class AnalyzeRule(
      * 重新获取book
      */
     fun reGetBook() {
-        if (!preUpdateJs) throw NoStackTraceException("只能在 preUpdateJs 中调用")
+        if (!preUpdateJs) throw NoStackTraceException("Chỉ có thể được gọi trong preUpdateJs")
         if (isFromBookInfo) {
-            log("重新获取book")
+            log("Nhận lại sách")
         }
         val bookSource = source as? BookSource
         val book = book as? Book
@@ -877,9 +877,9 @@ class AnalyzeRule(
      * 更新tocUrl,有些书源目录url定期更新,可以在js调用更新
      */
     fun refreshTocUrl() {
-        if (!preUpdateJs) throw NoStackTraceException("只能在 preUpdateJs 中调用")
+        if (!preUpdateJs) throw NoStackTraceException("Chỉ có thể được gọi trong preUpdateJs")
         if (isFromBookInfo) {
-            log("已跳过重复加载详情页，请优化代码")
+            log("Việc tải trang chi tiết lặp đi lặp lại đã bị bỏ qua, vui lòng tối ưu hóa mã")
             return
         }
         val bookSource = source as? BookSource

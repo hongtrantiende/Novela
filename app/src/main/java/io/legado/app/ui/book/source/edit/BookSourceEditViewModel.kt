@@ -86,7 +86,7 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
         execute(context = Dispatchers.Main) {
             val text = context.getClipText()
             if (text.isNullOrBlank()) {
-                throw NoStackTraceException("剪贴板为空")
+                throw NoStackTraceException("Bảng tạm trống")
             } else {
                 importSource(text, onSuccess)
             }
@@ -133,7 +133,7 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
                 }
             }
 
-            else -> throw NoStackTraceException("格式不对")
+            else -> throw NoStackTraceException("Định dạng sai")
         }
     }
 

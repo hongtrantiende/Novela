@@ -92,14 +92,14 @@ open class RssJsExtensions(activity: AppCompatActivity?, source: BaseSource?) : 
             when (name) {
                 "login" -> {
                     if (activity is SourceLoginActivity) {
-                        activity.toastOnUi("已在登录界面")
+                        activity.toastOnUi("Đã có trong giao diện đăng nhập")
                         return@launch
                     }
                     val toSource = origin?.let { o ->
                         appDb.bookSourceDao.getBookSource(o)
                     } ?: source
                     if (toSource.loginUrl.isNullOrBlank()) {
-                        activity.toastOnUi("源未配置登录")
+                        activity.toastOnUi("Nguồn không được cấu hình để đăng nhập")
                         return@launch
                     }
                     when (toSource) {

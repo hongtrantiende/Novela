@@ -36,7 +36,7 @@ class ZhLayout(
     private var lineCount = 0
     private val curPaint = textPaint
     private val cnCharWidth = cnCharWidthCache[textPaint]
-        ?: getDesiredWidth("我", textPaint).also {
+        ?: getDesiredWidth("TÔI", textPaint).also {
             cnCharWidthCache[textPaint] = it
         }
 

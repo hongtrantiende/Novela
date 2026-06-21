@@ -294,7 +294,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         Coroutine.async {
             AppWebDav.getBookProgress(book)
         }.onError {
-            AppLog.put("拉取阅读进度失败", it)
+            AppLog.put("Không lấy được tiến trình đọc", it)
         }.onSuccess { progress ->
             if (progress == null || progress.durChapterIndex < book.durChapterIndex ||
                 (progress.durChapterIndex == book.durChapterIndex
@@ -396,7 +396,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         try {
             readRecordRepository.saveReadSession(sessionToSave)
         } catch (e: Exception) {
-            AppLog.put("保存阅读会话出错: ${sessionToSave.bookName}", e)
+            AppLog.put("Lỗi lưu phiên đọc: ${sessionToSave.bookName}", e)
             return
         }
         // 保存成功后立即创建新 session，避免 auto-save 空窗期
@@ -416,7 +416,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         try {
             readRecordRepository.saveReadSession(session)
         } catch (e: Exception) {
-            AppLog.put("保存阅读会话出错: ${session.bookName}", e)
+            AppLog.put("Lỗi lưu phiên đọc: ${session.bookName}", e)
         }
     }
 
@@ -466,11 +466,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curTextChapter = nextTextChapter
             nextTextChapter = null
             if (curTextChapter == null) {
-                AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
+                AppLog.putDebug("moveToNextChapter-Chương chưa được tải, bắt đầu tải")
                 if (upContentInPlace) callBack?.upContent()
                 loadContent(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
-                AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
+                AppLog.putDebug("moveToNextChapter-Chapter đã được tải, hãy làm mới chế độ xem")
                 callBack?.upContent()
             }
             loadContent(durChapterIndex.plus(1), upContent, false)
@@ -480,7 +480,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curPageChanged()
             return true
         } else {
-            AppLog.putDebug("跳转下一章失败,没有下一章")
+            AppLog.putDebug("Chuyển sang chương tiếp theo không thành công, không có chương tiếp theo")
             return false
         }
     }
@@ -497,11 +497,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curTextChapter = nextTextChapter
             nextTextChapter = null
             if (curTextChapter == null) {
-                AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
+                AppLog.putDebug("moveToNextChapter-Chương chưa được tải, bắt đầu tải")
                 if (upContentInPlace) callBack?.upContentAwait()
                 loadContentAwait(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
-                AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
+                AppLog.putDebug("moveToNextChapter-Chapter đã được tải, hãy làm mới chế độ xem")
                 callBack?.upContentAwait()
             }
             loadContent(durChapterIndex.plus(1), upContent, false)
@@ -511,7 +511,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curPageChanged()
             return true
         } else {
-            AppLog.putDebug("跳转下一章失败,没有下一章")
+            AppLog.putDebug("Chuyển sang chương tiếp theo không thành công, không có chương tiếp theo")
             return false
         }
     }
@@ -713,7 +713,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             val book = book!!
             val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: run {
                 if (index == durChapterIndex) {
-                    upMsg("章节不存在")
+                    upMsg("Chương không tồn tại")
                 }
                 return@async
             }
@@ -747,9 +747,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }.onError {
             removeLoading(index)
             if (index == durChapterIndex) {
-                upMsg("加载正文出错\n${it.localizedMessage}")
+                upMsg("Lỗi tải văn bản\n${it.localizedMessage}")
             }
-            AppLog.put("加载正文出错\n${it.localizedMessage}", it)
+            AppLog.put("Lỗi tải văn bản\n${it.localizedMessage}", it)
         }
     }
 
@@ -777,7 +777,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 contentLoadFinishAwait(book, chapter, content, upContent, resetPageOffset)
                 success?.invoke()
             } catch (e: Exception) {
-                AppLog.put("加载正文出错\n${e.localizedMessage}")
+                AppLog.put("Lỗi tải văn bản\n${e.localizedMessage}")
             } finally {
                 removeLoading(index)
             }
@@ -850,11 +850,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 removeLoading(chapter.index)
             }
         } else {
-            val msg = if (book.isLocal) "无内容" else "没有书源"
+            val msg = if (book.isLocal) "Không có nội dung" else "Không có nguồn sách"
             contentLoadFinish(
                 book,
                 chapter,
-                "加载正文失败\n$msg",
+                "Tải chính văn thất bại\n$msg",
                 resetPageOffset = resetPageOffset,
                 success = success
             )
@@ -876,8 +876,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (bookSource != null) {
             return CacheBook.getOrCreate(bookSource, book).downloadAwait(chapter)
         } else {
-            val msg = if (book.isLocal) "无内容" else "没有书源"
-            return "加载正文失败\n$msg"
+            val msg = if (book.isLocal) "Không có nội dung" else "Không có nguồn sách"
+            return "Tải chính văn thất bại\n$msg"
         }
     }
 
@@ -1168,7 +1168,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 }
                 book.update()
             }.onFailure {
-                AppLog.put("保存书籍阅读进度信息出错\n$it", it)
+                AppLog.put("Lưu thông tin tiến độ đọc sách lỗi\n$it", it)
             }
         }
     }

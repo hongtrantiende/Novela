@@ -366,7 +366,7 @@ fun ReadBookRouteScreen(
                             else -> controller.handleEffect(effect)
                         }
                     } catch (e: Exception) {
-                        AppLog.put("ReadBook effect处理异常: ${effect::class.simpleName}", e)
+                        AppLog.put("Hiệu ứng ReadBook xử lý ngoại lệ: ${effect::class.simpleName}", e)
                     }
                 }
         }

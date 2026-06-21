@@ -61,7 +61,7 @@ inline fun <reified T> genericType(): Type = object : TypeToken<T>() {}.type
 inline fun <reified T> Gson.fromJsonObject(json: String?): Result<T> {
     return kotlin.runCatching {
         if (json == null) {
-            throw JsonSyntaxException("解析字符串为空")
+            throw JsonSyntaxException("Chuỗi phân tích trống")
         }
         fromJson(json, genericType<T>()) as T
     }
@@ -70,7 +70,7 @@ inline fun <reified T> Gson.fromJsonObject(json: String?): Result<T> {
 inline fun <reified T> Gson.fromJsonArray(json: String?): Result<List<T>> {
     return kotlin.runCatching {
         if (json == null) {
-            throw JsonSyntaxException("解析字符串为空")
+            throw JsonSyntaxException("Chuỗi phân tích trống")
         }
         val type = TypeToken.getParameterized(List::class.java, T::class.java).type
         val list = fromJson(json, type) as List<T?>
@@ -82,7 +82,7 @@ inline fun <reified T> Gson.fromJsonArray(json: String?): Result<List<T>> {
 inline fun <reified T> Gson.fromJsonObject(inputStream: InputStream?): Result<T> {
     return kotlin.runCatching {
         if (inputStream == null) {
-            throw JsonSyntaxException("解析流为空")
+            throw JsonSyntaxException("Luồng phân tích trống")
         }
         val reader = InputStreamReader(inputStream)
         fromJson(reader, genericType<T>()) as T
@@ -92,7 +92,7 @@ inline fun <reified T> Gson.fromJsonObject(inputStream: InputStream?): Result<T>
 inline fun <reified T> Gson.fromJsonArray(inputStream: InputStream?): Result<List<T>> {
     return kotlin.runCatching {
         if (inputStream == null) {
-            throw JsonSyntaxException("解析流为空")
+            throw JsonSyntaxException("Luồng phân tích trống")
         }
         val reader = InputStreamReader(inputStream)
         val type = TypeToken.getParameterized(List::class.java, T::class.java).type

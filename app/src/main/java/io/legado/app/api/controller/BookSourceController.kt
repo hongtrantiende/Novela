@@ -17,33 +17,33 @@ object BookSourceController {
             val bookSources = appDb.bookSourceDao.all
             val returnData = ReturnData()
             return if (bookSources.isEmpty()) {
-                returnData.setErrorMsg("设备源列表为空")
+                returnData.setErrorMsg("Danh sách nguồn thiết bị trống")
             } else returnData.setData(bookSources)
         }
 
     fun saveSource(postData: String?): ReturnData {
         val returnData = ReturnData()
-        postData ?: return returnData.setErrorMsg("数据不能为空")
+        postData ?: return returnData.setErrorMsg("Dữ liệu không thể trống")
         val bookSource = GSON.fromJsonObject<BookSource>(postData).getOrNull()
         if (bookSource != null) {
             if (TextUtils.isEmpty(bookSource.bookSourceName) || TextUtils.isEmpty(bookSource.bookSourceUrl)) {
-                returnData.setErrorMsg("源名称和URL不能为空")
+                returnData.setErrorMsg("Tên nguồn và URL không được để trống")
             } else {
                 appDb.bookSourceDao.insert(bookSource)
                 returnData.setData("")
             }
         } else {
-            returnData.setErrorMsg("转换源失败")
+            returnData.setErrorMsg("Nguồn chuyển đổi không thành công")
         }
         return returnData
     }
 
     fun saveSources(postData: String?): ReturnData {
-        postData ?: return ReturnData().setErrorMsg("数据为空")
+        postData ?: return ReturnData().setErrorMsg("Dữ liệu trống")
         val okSources = arrayListOf<BookSource>()
         val bookSources = GSON.fromJsonArray<BookSource>(postData).getOrNull()
         if (bookSources.isNullOrEmpty()) {
-            return ReturnData().setErrorMsg("转换源失败")
+            return ReturnData().setErrorMsg("Nguồn chuyển đổi không thành công")
         }
         bookSources.forEach { bookSource ->
             if (bookSource.bookSourceName.isNotBlank()
@@ -60,10 +60,10 @@ object BookSourceController {
         val url = parameters["url"]?.firstOrNull()
         val returnData = ReturnData()
         if (url.isNullOrEmpty()) {
-            return returnData.setErrorMsg("参数url不能为空，请指定源地址")
+            return returnData.setErrorMsg("Url tham số không được để trống, vui lòng chỉ định địa chỉ nguồn")
         }
         val bookSource = appDb.bookSourceDao.getBookSource(url)
-            ?: return returnData.setErrorMsg("未找到源，请检查书源地址")
+            ?: return returnData.setErrorMsg("Không tìm thấy nguồn, vui lòng kiểm tra địa chỉ nguồn sách")
         return returnData.setData(bookSource)
     }
 
@@ -73,8 +73,8 @@ object BookSourceController {
                 SourceHelp.deleteBookSources(it)
             }
         }.onFailure {
-            return ReturnData().setErrorMsg(it.localizedMessage ?: "数据格式错误")
+            return ReturnData().setErrorMsg(it.localizedMessage ?: "Lỗi định dạng dữ liệu")
         }
-        return ReturnData().setData("已执行"/*okSources*/)
+        return ReturnData().setData("Đã thực hiện"/*okSources*/)
     }
 }

@@ -115,7 +115,7 @@ class EpubFile(var book: Book) {
 
 
         }.onFailure {
-            AppLog.put("读取Epub文件失败\n${it.localizedMessage}", it)
+            AppLog.put("Không đọc được tệp Epub\n${it.localizedMessage}", it)
             it.printOnDebug()
         }.getOrThrow()
     }
@@ -271,10 +271,10 @@ class EpubFile(var book: Book) {
                     cover.compress(Bitmap.CompressFormat.JPEG, 90, out)
                     out.flush()
                     out.close()
-                } ?: AppLog.putDebug("Epub: 封面获取为空. path: ${book.bookUrl}")
+                } ?: AppLog.putDebug("Epub: Truy xuất bìa trống. đường dẫn: ${book.bookUrl}")
             }
         } catch (e: Exception) {
-            AppLog.put("加载书籍封面失败\n${e.localizedMessage}", e)
+            AppLog.put("Không tải được bìa sách\n${e.localizedMessage}", e)
             e.printOnDebug()
         }
     }
@@ -282,7 +282,7 @@ class EpubFile(var book: Book) {
     private fun upBookInfo() {
         if (epubBook == null) {
             eFile = null
-            book.intro = "书籍导入异常"
+            book.intro = "Ngoại lệ nhập sách"
         } else {
             upBookCover()
             val metadata = epubBook!!.metadata
@@ -336,7 +336,7 @@ class EpubFile(var book: Book) {
                     chapter.bookUrl = book.bookUrl
                     chapter.url = resource.href
                     if (i == 0 && title.isEmpty()) {
-                        chapter.title = "封面"
+                        chapter.title = "che phủ"
                     } else {
                         chapter.title = title
                     }
@@ -389,7 +389,7 @@ class EpubFile(var book: Book) {
                     if (elements.isNotEmpty() && elements[0].text().isNotBlank())
                         elements[0].text()
                     else
-                        "--卷首--"
+                        "--Tập đầu tiên--"
             }
             chapter.bookUrl = book.bookUrl
             chapter.title = title

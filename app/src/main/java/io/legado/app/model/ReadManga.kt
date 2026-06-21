@@ -225,7 +225,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         try {
             readRecordRepository.saveReadSession(sessionToSave)
         } catch (e: Exception) {
-            AppLog.put("保存阅读会话出错: ${sessionToSave.bookName}", e)
+            AppLog.put("Lỗi lưu phiên đọc: ${sessionToSave.bookName}", e)
         } finally {
             currentActiveSession = null
         }
@@ -276,7 +276,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                 }
             }
         }.onError {
-            AppLog.put("加载正文出错\n${it.localizedMessage}")
+            AppLog.put("Lỗi tải văn bản\n${it.localizedMessage}")
         }
     }
 
@@ -286,7 +286,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
     suspend fun contentLoadFinish(
         chapter: BookChapter,
         content: String?,
-        errorMsg: String = "加载内容失败",
+        errorMsg: String = "Không tải được nội dung",
         canceled: Boolean = false
     ) {
         removeLoading(chapter.index)
@@ -300,12 +300,12 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                     return
                 }
                 if (content.isEmpty() && !chapter.isVolume) {
-                    mCallback?.loadFail("正文内容为空")
+                    mCallback?.loadFail("Nội dung văn bản trống")
                     return
                 }
                 val mangaChapter = getManageChapter(chapter, content)
                 if (mangaChapter.imageCount == 0 && !chapter.isVolume) {
-                    mCallback?.loadFail("正文没有图片")
+                    mCallback?.loadFail("Không có hình ảnh trong văn bản")
                     return
                 }
                 curMangaChapter = mangaChapter
@@ -385,7 +385,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
             curPageChanged()
             return true
         } else {
-            AppLog.putDebug("跳转下一章失败,没有下一章")
+            AppLog.putDebug("Chuyển sang chương tiếp theo không thành công, không có chương tiếp theo")
             return false
         }
     }
@@ -436,7 +436,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                 }
                 appDb.bookDao.update(book)
             }.onFailure {
-                AppLog.put("保存漫画阅读进度信息出错\n$it", it)
+                AppLog.put("Lưu thông tin tiến độ đọc truyện tranh lỗi\n$it", it)
             }
         }
     }
@@ -546,7 +546,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
                 contentLoadFinish(chapter, null, canceled = true)
             })
         } else {
-            contentLoadFinish(chapter, null, "加载内容失败 没有书源")
+            contentLoadFinish(chapter, null, "Không thể tải nội dung. Không có nguồn sách.")
         }
     }
 
@@ -598,7 +598,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         Coroutine.async {
             AppWebDav.getBookProgress(book)
         }.onError {
-            AppLog.put("拉取阅读进度失败", it)
+            AppLog.put("Không lấy được tiến trình đọc", it)
         }.onSuccess { progress ->
             if (progress == null || progress.durChapterIndex < book.durChapterIndex ||
                 (progress.durChapterIndex == book.durChapterIndex
@@ -705,9 +705,9 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         if (imageCount == 0 && chapter.isVolume) {
             pages.add(ReaderLoading(chapter.index, -1, chapter.title, true))
         } else {
-            pages.add(ReaderLoading(chapter.index, -1, "下一章 ${chapter.title}"))
+            pages.add(ReaderLoading(chapter.index, -1, "Chương tiếp theo ${chapter.title}"))
             pages.addAll(list)
-            pages.add(ReaderLoading(chapter.index, imageCount, "已读完 ${chapter.title}"))
+            pages.add(ReaderLoading(chapter.index, imageCount, "Đã đọc xong ${chapter.title}"))
         }
 
         return MangaChapter(chapter, pages, imageCount)

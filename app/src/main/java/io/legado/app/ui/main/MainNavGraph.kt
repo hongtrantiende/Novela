@@ -599,7 +599,7 @@ fun MainActivity.mainEntryProvider(
 
         ExploreShowScreen(
             viewModel = exploreViewModel,
-            title = route.title ?: "探索",
+            title = route.title ?: "khám phá",
             onBack = { onNavigateBack() },
             onBookClick = { book, sharedCoverKey ->
                 onNavigateToRoute(

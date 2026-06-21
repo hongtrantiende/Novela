@@ -113,7 +113,7 @@ internal fun configureRssReadWebView(
             return when (redirectPolicyProvider()) {
                 RedirectPolicy.ALLOW_ALL -> false
                 RedirectPolicy.BLOCK_ALL -> {
-                    context.toastOnUi("已阻止重定向")
+                    context.toastOnUi("Đã chặn chuyển hướng")
                     true
                 }
 
@@ -131,14 +131,14 @@ internal fun configureRssReadWebView(
 
                 RedirectPolicy.BLOCK_CROSS_ORIGIN -> {
                     if (crossOrigin) {
-                        context.toastOnUi("已阻止跨域重定向")
+                        context.toastOnUi("Chuyển hướng tên miền chéo bị chặn")
                         true
                     } else false
                 }
 
                 RedirectPolicy.ASK_SAME_DOMAIN_BLOCK_CROSS -> {
                     if (crossOrigin) {
-                        context.toastOnUi("已阻止域外跳转")
+                        context.toastOnUi("Chuyển hướng ra ngoài miền bị chặn")
                         true
                     } else {
                         askUser(fromUrl, toUrl) { if (it) view.loadUrl(toUrl) }
@@ -150,10 +150,10 @@ internal fun configureRssReadWebView(
 
         private fun askUser(fromUrl: String?, toUrl: String, onResult: (Boolean) -> Unit) {
             AlertDialog.Builder(context)
-                .setTitle("重定向请求")
-                .setMessage("是否允许页面跳转？\n\n来源：${fromUrl ?: "未知"}\n目标：$toUrl")
-                .setPositiveButton("允许") { _, _ -> onResult(true) }
-                .setNegativeButton("拒绝") { _, _ -> onResult(false) }
+                .setTitle("yêu cầu chuyển hướng")
+                .setMessage("Có được phép nhảy trang không?\n\nNguồn: ${fromUrl ?:"未知"}\nMục tiêu: $toUrl")
+                .setPositiveButton("cho phép") { _, _ -> onResult(true) }
+                .setNegativeButton("từ chối") { _, _ -> onResult(false) }
                 .setCancelable(true)
                 .show()
         }
@@ -171,10 +171,10 @@ internal fun configureRssReadWebView(
                         }.toString()
                     }
                 }.onFailure {
-                    AppLog.put("${source.getTag()}: url跳转拦截js出错", it)
+                    AppLog.put("${source.getTag()}: Lỗi js chặn nhảy URL", it)
                 }.getOrNull()
                 if (SystemClock.uptimeMillis() - t > 30) {
-                    AppLog.put("${source.getTag()}: url跳转拦截js执行耗时过长")
+                    AppLog.put("${source.getTag()}: Việc thực thi js chặn bước nhảy URL mất quá nhiều thời gian")
                 }
                 if (result.isTrue()) return true
             }

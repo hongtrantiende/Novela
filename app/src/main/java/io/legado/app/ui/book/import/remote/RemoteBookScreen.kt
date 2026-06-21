@@ -139,9 +139,9 @@ fun RemoteBookScreen(
     AppAlertDialog(
         data = dialogState as? RemoteBookDialog.ReImport,
         onDismissRequest = { dialogState = null },
-        title = "是否重新加入书架？",
+        title = "Tham gia lại giá sách?",
         content = {
-            AppText("将会覆盖书籍")
+            AppText("sẽ bao gồm sách")
         },
         confirmText = stringResource(android.R.string.ok),
         onConfirm = { state ->
@@ -250,22 +250,22 @@ fun RemoteBookScreen(
     }
 
     ListScaffold(
-        title = "远程书籍",
+        title = "sách từ xa",
         state = uiState,
         onBackClick = onBackClick,
         onSearchToggle = { viewModel.dispatch(RemoteBookIntent.SearchToggle(it)) },
         onSearchQueryChange = { viewModel.dispatch(RemoteBookIntent.SearchChange(it)) },
-        searchPlaceholder = "搜索",
+        searchPlaceholder = "tìm kiếm",
         topBarActions = {
             TopBarActionButton(
                 onClick = { showSheet = RemoteBookSheet.Servers },
                 imageVector = Icons.Default.Storage,
-                contentDescription = "服务器"
+                contentDescription = "máy chủ"
             )
         },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
-                text = "按名称排序",
+                text = "Sắp xếp theo tên",
                 onClick = {
                     viewModel.dispatch(RemoteBookIntent.SortToggle(RemoteBookSort.Name))
                     dismiss()
@@ -277,7 +277,7 @@ fun RemoteBookScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "按时间排序",
+                text = "Sắp xếp theo thời gian",
                 onClick = {
                     viewModel.dispatch(RemoteBookIntent.SortToggle(RemoteBookSort.Default))
                     dismiss()
@@ -302,7 +302,7 @@ fun RemoteBookScreen(
             onSelectAll = { viewModel.dispatch(RemoteBookIntent.SelectAll) },
             onSelectInvert = { viewModel.dispatch(RemoteBookIntent.SelectInvert) },
             primaryAction = ActionItem(
-                text = "添加至书架",
+                text = "Thêm vào giá sách",
                 icon = Icons.Default.CloudDownload,
                 onClick = {
                     val selectedBooks = uiState.items
@@ -334,7 +334,7 @@ fun RemoteBookScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState()),
-                        message = "没有内容"
+                        message = "không có nội dung"
                     )
                 }
             } else {
@@ -385,8 +385,8 @@ private fun ServersSheetContent(
         ) {
             item {
                 ServerItem(
-                    name = "默认",
-                    url = "应用备份的 WebDav 配置",
+                    name = "mặc định",
+                    url = "Áp dụng cấu hình WebDav đã sao lưu",
                     isSelected = selectedServerId == AppConst.DEFAULT_WEBDAV_ID,
                     onClick = onDefault
                 )
@@ -479,7 +479,7 @@ private fun ServerConfigSheetContent(
             value = name,
             onValueChange = { name = it },
             backgroundColor = LegadoTheme.colorScheme.onSheetContent,
-            label = "名称",
+            label = "tên",
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -497,7 +497,7 @@ private fun ServerConfigSheetContent(
             value = username,
             onValueChange = { username = it },
             backgroundColor = LegadoTheme.colorScheme.onSheetContent,
-            label = "用户名",
+            label = "tên người dùng",
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -506,7 +506,7 @@ private fun ServerConfigSheetContent(
             value = password,
             onValueChange = { password = it },
             backgroundColor = LegadoTheme.colorScheme.onSheetContent,
-            label = "密码",
+            label = "mật khẩu",
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -536,7 +536,7 @@ private fun ServerConfigSheetContent(
                 onSave(newServer)
             },
             dismissText = stringResource(android.R.string.cancel),
-            confirmText = "保存",
+            confirmText = "cứu",
             confirmEnabled = name.isNotBlank() && url.isNotBlank()
         )
     }
@@ -605,7 +605,7 @@ private fun PathNavigationBar(
             SmallTonalButton(
                 onClick = onNavigateBack,
                 icon = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "返回上级"
+                contentDescription = "Trở về cấp độ trước đó"
             )
         }
     }
@@ -715,7 +715,7 @@ private fun RemoteBookItem(
                         Icons.Outlined.CloudSync
                     else
                         Icons.Outlined.AddCircleOutline,
-                    contentDescription = if (book.isOnBookShelf) "更新" else "加入",
+                    contentDescription = if (book.isOnBookShelf) "gia hạn" else "tham gia vào",
                 )
             }
         }

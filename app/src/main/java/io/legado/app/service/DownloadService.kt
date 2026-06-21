@@ -71,7 +71,7 @@ class DownloadService : BaseService() {
                 if (completeDownloads.contains(id)) {
                     openDownload(id, downloads[id]?.fileName)
                 } else {
-                    toastOnUi("未完成,下载的文件夹Download")
+                    toastOnUi("Thư mục đã tải xuống chưa hoàn thành Tải xuống")
                 }
             }
 
@@ -95,7 +95,7 @@ class DownloadService : BaseService() {
             return
         }
         if (downloads.values.any { it.url == url }) {
-            toastOnUi("已在下载列表")
+            toastOnUi("Đã có trong danh sách tải xuống")
             return
         }
         kotlin.runCatching {
@@ -116,8 +116,8 @@ class DownloadService : BaseService() {
         }.onFailure {
             it.printStackTrace()
             val msg = when (it) {
-                is SecurityException -> "下载出错,没有存储权限"
-                else -> "下载出错,${it.localizedMessage}"
+                is SecurityException -> "Lỗi tải xuống, không có quyền lưu trữ"
+                else -> "Lỗi tải xuống,${it.localizedMessage}"
             }
             toastOnUi(msg)
             AppLog.put(msg, it)
@@ -219,7 +219,7 @@ class DownloadService : BaseService() {
                 openFileUri(uri, type)
             }
         }.onFailure {
-            AppLog.put("打开下载文件${fileName}出错", it)
+            AppLog.put("Lỗi mở tệp tải xuống ${fileName}", it)
         }
     }
 

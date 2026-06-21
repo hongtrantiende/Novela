@@ -69,23 +69,23 @@ fun ChangeSourceMigrationOptionsSheet(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
             }
-            CheckboxItem("阅读进度", checked = migrateReadingProgress) {
+            CheckboxItem("tiến độ đọc", checked = migrateReadingProgress) {
                 migrateReadingProgress = it
             }
             if (migrateReadingProgress) {
                 AppText(
-                    text = "若新源总章节比进度更少，阅读进度将调整至最后一章。",
+                    text = "Nếu tổng số chương trong Tân Nguyên ít hơn tiến độ thì tiến độ đọc sẽ được điều chỉnh về chương cuối cùng.",
                     style = LegadoTheme.typography.bodySmall,
                     color = LegadoTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
             }
-            CheckboxItem("分组和排序", checked = migrateGroup) { migrateGroup = it }
-            CheckboxItem("自定义封面", checked = migrateCover) { migrateCover = it }
-            CheckboxItem("分类与标签", checked = migrateCategory) { migrateCategory = it }
-            CheckboxItem("备注和自定义简介", checked = migrateRemark) { migrateRemark = it }
-            CheckboxItem("阅读设置", checked = migrateReadConfig) { migrateReadConfig = it }
-            CheckboxItem("删除已下载章节", checked = deleteDownloadedChapters) {
+            CheckboxItem("Nhóm và sắp xếp", checked = migrateGroup) { migrateGroup = it }
+            CheckboxItem("Bìa tùy chỉnh", checked = migrateCover) { migrateCover = it }
+            CheckboxItem("Phân loại và thẻ", checked = migrateCategory) { migrateCategory = it }
+            CheckboxItem("Ghi chú và giới thiệu tùy chỉnh", checked = migrateRemark) { migrateRemark = it }
+            CheckboxItem("Cài đặt đọc", checked = migrateReadConfig) { migrateReadConfig = it }
+            CheckboxItem("Xóa các chương đã tải xuống", checked = deleteDownloadedChapters) {
                 deleteDownloadedChapters = it
             }
             Spacer(modifier = Modifier.height(8.dp))

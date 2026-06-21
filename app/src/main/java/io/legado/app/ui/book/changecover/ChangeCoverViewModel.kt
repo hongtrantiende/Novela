@@ -42,7 +42,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
     private val defaultCover by lazy {
         listOf(
             SearchBook(
-                originName = "默认封面",
+                originName = "Bìa mặc định",
                 name = name,
                 author = author,
                 coverUrl = "use_default_cover"
@@ -137,7 +137,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
                 searchStateData.postValue(false)
                 _isSearching.value = false
             }.catch {
-                AppLog.put("封面换源搜索出错\n${it.localizedMessage}", it)
+                AppLog.put("Che lỗi tìm kiếm nguồn thay đổi\n${it.localizedMessage}", it)
             }.collect()
         }
     }

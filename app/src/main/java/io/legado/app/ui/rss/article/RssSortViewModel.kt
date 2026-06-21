@@ -38,7 +38,7 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
     suspend fun loadSorts(sortUrl: String? = null, searchKey: String? = null): List<Pair<String, String>> {
         if (searchKey != null) {
             return rssSource?.searchUrl?.takeIf { it.isNotBlank() }?.let {
-                listOf("搜索" to it)
+                listOf("tìm kiếm" to it)
             }.orEmpty()
         }
         sortUrl?.takeIf { it.isNotBlank() }?.let { url ->
@@ -123,7 +123,7 @@ class RssSortViewModel(application: Application) : BaseViewModel(application) {
             appDb.rssSourceDao.updateRedirectPolicy(sourceUrl, redirectPolicy)
             rssSource?.redirectPolicy = redirectPolicy
         }.onError {
-            appCtx.toastOnUi("保存失败: ${it.localizedMessage}")
+            appCtx.toastOnUi("Lưu không thành công: ${it.localizedMessage}")
         }
     }
 }

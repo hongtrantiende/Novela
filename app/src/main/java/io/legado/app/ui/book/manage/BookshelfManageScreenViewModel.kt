@@ -251,7 +251,7 @@ class BookshelfManageScreenViewModel(
             is BookshelfManageScreenIntent.SetExportUseReplace -> {
                 bookshelfManageScreenConfig.exportUseReplace = intent.enabled
                 syncExportConfig()
-                val msg = if (intent.enabled) "替换净化功能已开启" else "替换净化功能已关闭"
+                val msg = if (intent.enabled) "Chức năng thanh lọc thay thế được bật" else "Chức năng thanh lọc thay thế bị tắt"
                 _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage(msg))
             }
 
@@ -403,7 +403,7 @@ class BookshelfManageScreenViewModel(
                     .keys
                 val failureMsgs = downloadState.books.mapNotNull { (bookUrl, bookState) ->
                     val message = bookState.failureMessage ?: if (bookState.failedIndices.isNotEmpty()) {
-                        "${bookState.failedIndices.size} 章"
+                        "Chương ${bookState.failedIndices.size}"
                     } else {
                         null
                     }
@@ -588,15 +588,15 @@ class BookshelfManageScreenViewModel(
             }.onSuccess { count ->
                 if (count <= 0) {
                     pendingDownloadBookUrls.remove(book.bookUrl)
-                    downloadFailureMessages[book.bookUrl] = "没有可缓存的章节"
+                    downloadFailureMessages[book.bookUrl] = "Không có chương nào có thể lưu vào bộ nhớ đệm"
                     emitBookChanged(book.bookUrl)
-                    _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("没有可缓存的章节"))
+                    _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Không có chương nào có thể lưu vào bộ nhớ đệm"))
                 }
             }.onError { error ->
                 pendingDownloadBookUrls.remove(book.bookUrl)
-                downloadFailureMessages[book.bookUrl] = error.localizedMessage ?: "未知错误"
+                downloadFailureMessages[book.bookUrl] = error.localizedMessage ?: "lỗi không xác định"
                 emitBookChanged(book.bookUrl)
-                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("缓存失败\n${error.localizedMessage}"))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Bộ nhớ đệm không thành công\n${error.localizedMessage}"))
             }.onFinally {
                 syncDownloadRunning()
             }
@@ -609,7 +609,7 @@ class BookshelfManageScreenViewModel(
         execute {
             updateBooksGroupUseCase.replaceGroup(bookUrls, safeGroupId)
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("移动分组失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Không thể di chuyển nhóm\n${it.localizedMessage}"))
         }
     }
 
@@ -621,9 +621,9 @@ class BookshelfManageScreenViewModel(
         }.onSuccess { deletedBookUrls ->
             _uiState.update { it.copy(deleteBookOriginal = deleteOriginal) }
             deletedBookUrls.forEach { cacheCounts.remove(it) }
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("删除成功"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Xóa thành công"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("删除失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Xóa không thành công\n${it.localizedMessage}"))
         }
     }
 
@@ -636,9 +636,9 @@ class BookshelfManageScreenViewModel(
                 cacheCounts[bookUrl] = 0
                 emitBookChanged(bookUrl)
             }
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("缓存已清理"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("đã xóa bộ nhớ đệm"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("清理缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Không xóa được bộ nhớ đệm\n${it.localizedMessage}"))
         }
     }
 
@@ -662,7 +662,7 @@ class BookshelfManageScreenViewModel(
         execute {
             bookRepository.update(*reorderedBooks.toTypedArray())
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("排序保存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Sắp xếp lưu không thành công\n${it.localizedMessage}"))
         }
     }
 
@@ -677,13 +677,13 @@ class BookshelfManageScreenViewModel(
             )
         }.onSuccess { count ->
             if (count > 0) {
-                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("已加入缓存队列: $count 本"))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Đã thêm vào hàng đợi bộ đệm: $count cái này"))
             } else {
-                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("没有可缓存的书籍"))
+                _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Không có sách nào có thể lưu vào bộ nhớ đệm"))
             }
             syncDownloadRunning()
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量缓存失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Bộ nhớ đệm hàng loạt không thành công\n${it.localizedMessage}"))
         }
     }
 
@@ -702,9 +702,9 @@ class BookshelfManageScreenViewModel(
             cacheCounts.remove(result.oldBookUrl)
             cacheCounts[result.book.bookUrl] = 0
             emitBookChanged(result.book.bookUrl)
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("换源完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Thay thế nguồn hoàn tất"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("换源失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Không thể thay đổi nguồn\n${it.localizedMessage}"))
         }
     }
 
@@ -714,11 +714,11 @@ class BookshelfManageScreenViewModel(
         options: ChangeSourceMigrationOptions,
     ) {
         if (bookUrls.isEmpty()) {
-            _uiState.update { it.copy(changeSourceError = "未选择书籍") }
+            _uiState.update { it.copy(changeSourceError = "Không có sách nào được chọn") }
             return
         }
         if (sources.isEmpty()) {
-            _uiState.update { it.copy(changeSourceError = "未选择书源") }
+            _uiState.update { it.copy(changeSourceError = "Không có nguồn nào được chọn") }
             return
         }
         execute {
@@ -727,7 +727,7 @@ class BookshelfManageScreenViewModel(
                 it.copy(
                     isChangingSource = true,
                     changeSourceProgress = "0 / ${bookUrls.size}",
-                    changeSourceMessage = "开始查找：${bookUrls.size} 本，${sources.size} 个书源，并发 $concurrency",
+                    changeSourceMessage = "Bắt đầu tìm kiếm: sách ${bookUrls.size}, nguồn sách ${sources.size}, đồng thời $concurrency",
                     changeSourceError = null,
                     batchChangeOptions = options,
                     batchChangePreviewItems = emptyList()
@@ -758,7 +758,7 @@ class BookshelfManageScreenViewModel(
             val notFoundCount = previewItems.size - matchedCount - skippedCount
             _uiState.update {
                 it.copy(
-                    changeSourceMessage = "查找完成：可迁移 $matchedCount 本，未找到 $notFoundCount 本，跳过 $skippedCount 本",
+                    changeSourceMessage = "Tìm kiếm đã hoàn tất: $matchedCount có thể được di chuyển, không tìm thấy $notFoundCount, $skippedCount bị bỏ qua",
                     changeSourceError = null
                 )
             }
@@ -766,7 +766,7 @@ class BookshelfManageScreenViewModel(
             val progress = uiState.value.changeSourceProgress.orEmpty()
             _uiState.update { state ->
                 state.copy(
-                    changeSourceError = "批量换源查找失败${if (progress.isBlank()) "" else "\n进度：$progress"}\n${it.localizedMessage}"
+                    changeSourceError = "Tìm kiếm thay đổi nguồn hàng loạt không thành công${if (progress.isBlank())"" else "\n进度：$progress"}\n${it.localizedMessage}"
                 )
             }
         }.onFinally {
@@ -789,7 +789,7 @@ class BookshelfManageScreenViewModel(
             val chapters = changeBookSourceUseCase.loadCandidateChapters(
                 candidate.source,
                 candidate.book
-            ) ?: error("获取目录失败")
+            ) ?: error("Không lấy được thư mục")
             changeBookSourceUseCase.changeTo(
                 oldBook = oldBook,
                 newBook = candidate.book,
@@ -801,9 +801,9 @@ class BookshelfManageScreenViewModel(
             cacheCounts[result.book.bookUrl] = 0
             removePreviewItem(oldBookUrl)
             emitBookChanged(result.book.bookUrl)
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("迁移完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Quá trình di chuyển đã hoàn tất"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("迁移失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Di chuyển không thành công\n${it.localizedMessage}"))
         }
     }
 
@@ -881,7 +881,7 @@ class BookshelfManageScreenViewModel(
             val chapters = changeBookSourceUseCase.loadCandidateChapters(
                 candidate.source,
                 candidate.book
-            ) ?: error("获取目录失败")
+            ) ?: error("Không lấy được thư mục")
             candidate.book.removeType(BookType.notShelf)
             if (candidate.book.order == 0) {
                 candidate.book.order = bookRepository.getMinOrder() - 1
@@ -890,9 +890,9 @@ class BookshelfManageScreenViewModel(
             bookRepository.insertChapters(*chapters.toTypedArray())
             candidate.book
         }.onSuccess {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("已添加到书架"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Đã thêm vào giá sách"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("添加书籍失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Không thể thêm sách\n${it.localizedMessage}"))
         }
     }
 
@@ -945,9 +945,9 @@ class BookshelfManageScreenViewModel(
         }.onSuccess {
             cacheCounts.clear()
             _uiState.update { it.copy(batchChangePreviewItems = emptyList()) }
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量迁移完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Di chuyển hàng loạt đã hoàn tất"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量迁移失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Di chuyển hàng loạt không thành công\n${it.localizedMessage}"))
         }.onFinally {
             _uiState.update {
                 it.copy(
@@ -984,9 +984,9 @@ class BookshelfManageScreenViewModel(
             }
         }.onSuccess {
             _uiState.update { it.copy(batchChangePreviewItems = emptyList()) }
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量添加完成"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Việc bổ sung hàng loạt đã hoàn tất"))
         }.onError {
-            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("批量添加失败\n${it.localizedMessage}"))
+            _effects.tryEmit(BookshelfManageScreenEffect.ShowMessage("Thêm hàng loạt không thành công\n${it.localizedMessage}"))
         }.onFinally {
             _uiState.update {
                 it.copy(

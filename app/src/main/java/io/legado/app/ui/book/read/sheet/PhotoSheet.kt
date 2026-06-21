@@ -90,7 +90,7 @@ fun PhotoSheet(
                             val success = saveImageToGallery(context, byteArray)
                             context.toastOnUi(
                                 if (success) context.getString(R.string.save_success)
-                                else "保存失败"
+                                else "Lưu không thành công"
                             )
                         }
                         true

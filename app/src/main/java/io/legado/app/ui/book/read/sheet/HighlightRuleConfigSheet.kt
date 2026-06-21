@@ -116,7 +116,7 @@ private fun HighlightRuleItem(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
 ) {
-    val configLabel = rule.configName?.configNames()?.joinToString("、") ?: "全局"
+    val configLabel = rule.configName?.configNames()?.joinToString("、") ?: "tình hình chung"
     TinySettingItem(
         title = rule.name.ifBlank { rule.displayPattern() },
         description = "${rule.styleSummary()} · $configLabel",

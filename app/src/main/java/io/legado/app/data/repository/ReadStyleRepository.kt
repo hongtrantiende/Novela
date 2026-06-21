@@ -34,7 +34,7 @@ class ReadStyleRepository(
             try {
                 return GSON.fromJsonArray<ReadBookConfig.Config>(configFile.readText()).getOrThrow()
             } catch (e: Exception) {
-                AppLog.put("读取排版配置文件出错", e)
+                AppLog.put("Lỗi đọc tệp cấu hình bố cục", e)
             }
         }
         return DefaultData.readConfigs

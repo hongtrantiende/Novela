@@ -166,12 +166,12 @@ class AllBookmarkViewModel(
                 }
 
                 withContext(Dispatchers.Main) {
-                    context.toastOnUi("导出成功: $fileName")
+                    context.toastOnUi("Xuất thành công: $fileName")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
                 withContext(Dispatchers.Main) {
-                    getApplication<Application>().toastOnUi("导出失败: ${e.message}")
+                    getApplication<Application>().toastOnUi("Xuất không thành công: ${e.message}")
                 }
             }
         }
@@ -188,7 +188,7 @@ class AllBookmarkViewModel(
                 sb.append("\n## ${it.bookName} - ${it.bookAuthor}\n\n")
             }
             sb.append("#### ${it.chapterName}\n")
-            sb.append("> **原文：** ${it.bookText}\n\n")
+            sb.append("> **Văn bản gốc:** ${it.bookText}")
             sb.append("${it.content}\n\n")
             sb.append("---\n")
         }

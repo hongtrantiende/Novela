@@ -29,21 +29,21 @@ object ChineseUtils {
     fun fixT2sDict() {
         fixed = true
         val excludeList = listOf(
-            "槃",
-            "划槳", "列根", "雪梨", "雪糕", "多士", "起司", "芝士", "沙芬", "母音",
-            "华乐", "民乐", "晶元", "晶片", "映像", "明覆", "明瞭", "新力", "新喻",
-            "零錢", "零钱", "離線", "碟片", "模組", "桌球", "案頭", "機車", "電漿",
-            "鳳梨", "魔戒", "載入", "菲林", "整合", "變數", "解碼", "散钱", "插水",
-            "房屋", "房价", "快取", "德士", "建立", "常式", "席丹", "布殊", "布希",
-            "巴哈", "巨集", "夜学", "向量", "半形", "加彭", "列印", "函式", "全形",
-            "光碟", "介面", "乳酪", "沈船", "永珍", "演化", "牛油", "相容", "磁碟",
-            "菲林", "規則", "酵素", "雷根", "饭盒",
-            "路易斯", "非同步", "出租车", "周杰倫", "马铃薯", "馬鈴薯", "機械人", "電單車",
-            "電扶梯", "音效卡", "飆車族", "點陣圖", "個入球", "顆進球", "沃尓沃", "晶片集",
-            "斯瓦巴", "斜角巷", "战列舰", "快速面", "希特拉", "太空梭", "吐瓦魯", "吉布堤",
-            "吉布地", "史太林", "南冰洋", "区域网", "波札那", "解析度", "酷洛米", "金夏沙",
-            "魔獸紀元", "高空彈跳", "铁达尼号", "太空战士", "埃及妖后", "吉里巴斯", "附加元件",
-            "魔鬼終結者", "純文字檔案", "奇幻魔法Melody", "列支敦斯登"
+            "Chảo",
+            "chèo thuyền", "Reagan", "Sydney", "kem", "nướng", "phô mai", "Phô mai", "Shafen", "nguyên âm",
+            "nhạc trung quốc", "nhạc dân gian", "Tĩnh Nguyên", "bánh xốp", "hình ảnh", "Minh Phúc", "thông thoáng", "Xinli", "phép ẩn dụ mới",
+            "thay đổi", "thay đổi nhỏ", "Ngoại tuyến", "Đĩa", "mô-đun", "bi-a", "Bàn làm việc", "đầu máy xe lửa", "Huyết tương",
+            "quả dứa", "Chúa tể của những chiếc nhẫn", "Trọng tải", "phim ảnh", "Tích hợp", "biến", "Giải mã", "mất tiền", "chèn nước",
+            "nhà ở", "giá nhà", "bộ nhớ đệm", "Taxi", "Thành lập", "lịch trình", "Sidan", "bụi cây", "bụi cây",
+            "Baha", "Vĩ mô", "Trường học ban đêm", "vectơ", "hình nửa", "Gabon", "In", "chức năng", "hình dạng đầy đủ",
+            "đĩa", "giao diện", "phô mai", "đắm tàu", "Viêng Chăn", "sự tiến hóa", "bơ", "tương thích", "Đĩa",
+            "phim ảnh", "quy tắc", "enzim", "Reagan", "hộp cơm trưa",
+            "Louis", "không đồng bộ", "Taxi", "Jay Chou", "khoai tây", "khoai tây", "người máy", "xe gắn máy",
+            "Thang cuốn", "card âm thanh", "tay đua kéo", "Bản đồ bit", "mục tiêu", "mục tiêu", "Volvo", "bộ chip",
+            "người svalbard", "Hẻm chéo", "tàu chiến", "mì ăn liền", "Hitler", "tàu con thoi", "Tuvalu", "Djibouti",
+            "Djibouti", "Stalin", "Nam Đại Dương", "mạng khu vực", "Botswana", "Nghị quyết", "Kuromi", "Kinshasa",
+            "Thời đại Warcraft", "bungee", "tàu Titanic", "chiến binh không gian", "nữ hoàng ai cập", "Kiribati", "tiện ích bổ sung",
+            "Kẻ hủy diệt", "tập tin văn bản thuần túy", "Giai điệu ảo thuật kỳ ảo", "liechtenstein"
         )
         ChineseUtils.loadExcludeDict(TransType.TRADITIONAL_TO_SIMPLE, excludeList)
     }

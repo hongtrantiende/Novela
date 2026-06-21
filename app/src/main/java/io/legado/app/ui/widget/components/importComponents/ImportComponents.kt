@@ -56,8 +56,8 @@ import io.legado.app.utils.GSON
 @Composable
 fun SourceInputDialog(
     show: Boolean,
-    title: String = "网络导入",
-    hint: String = "请输入 URL 或 JSON",
+    title: String = "Nhập mạng",
+    hint: String = "Vui lòng nhập URL hoặc JSON",
     initialValue: String = "",
     historyValues: List<String> = emptyList(),
     onDismissRequest: () -> Unit,
@@ -82,7 +82,7 @@ fun SourceInputDialog(
 
                 if (historyValues.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(8.dp))
-                    AppText("历史记录:", style = LegadoTheme.typography.labelSmall)
+                    AppText("Lịch sử:", style = LegadoTheme.typography.labelSmall)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(historyValues) { history ->
                             AssistChip(
@@ -186,7 +186,7 @@ fun <T> BatchImportDialog(
                 SmallPlainButton(
                     onClick = { editingIndex = null },
                     icon = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "返回"
+                    contentDescription = "trở lại"
                 )
             }
         } else {
@@ -199,7 +199,7 @@ fun <T> BatchImportDialog(
                     SmallPlainButton(
                         onClick = { onToggleAll(!allSelected) },
                         icon = Icons.Default.SelectAll,
-                        contentDescription = if (allSelected) "全不选" else "全选"
+                        contentDescription = if (allSelected) "Chọn không có" else "Chọn tất cả"
                     )
                 }
             }
@@ -254,8 +254,8 @@ fun <T> BatchImportDialog(
                 val selectedData = currentState.items.filter { it.isSelected }.map { it.data }
                 onConfirm(selectedData)
             },
-            dismissText = "取消",
-            confirmText = "导入",
+            dismissText = "Hủy bỏ",
+            confirmText = "nhập khẩu",
             confirmEnabled = selectedCount > 0
         )
     }
@@ -271,7 +271,7 @@ private fun <T> BatchImportJsonEditContent(
     val jsonObject = remember(version) { data.toImportJsonObject() }
 
     if (jsonObject == null) {
-        AppText("不支持编辑")
+        AppText("Chỉnh sửa không được hỗ trợ")
         return
     }
 
@@ -356,10 +356,10 @@ fun ImportItemRow(
         trailingAction = {
             AppText(
                 text = when (status) {
-                    ImportStatus.New -> "新增"
-                    ImportStatus.Update -> "更新"
-                    ImportStatus.Existing -> "已有"
-                    ImportStatus.Error -> "错误"
+                    ImportStatus.New -> "Mới"
+                    ImportStatus.Update -> "gia hạn"
+                    ImportStatus.Existing -> "Đã"
+                    ImportStatus.Error -> "sai lầm"
                 },
                 style = LegadoTheme.typography.labelMedium,
                 color = when (status) {
@@ -374,7 +374,7 @@ fun ImportItemRow(
             SmallPlainButton(
                 onClick = onInfoClick,
                 icon = Icons.Default.Info,
-                contentDescription = "详情"
+                contentDescription = "Chi tiết"
             )
         }
     )

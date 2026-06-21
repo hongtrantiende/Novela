@@ -461,18 +461,18 @@ private fun BookInfoTopBarActions(
         TopBarActionButton(
             onClick = { onMenuAction(BookInfoMenuAction.Edit) },
             imageVector = Icons.Default.Edit,
-            contentDescription = "编辑"
+            contentDescription = "biên tập"
         )
     }
     TopBarActionButton(
         onClick = { onMenuAction(BookInfoMenuAction.Share) },
         imageVector = Icons.Default.Share,
-        contentDescription = "分享"
+        contentDescription = "chia sẻ"
     )
     TopBarActionButton(
         onClick = { onShowMenuChange(true) },
         imageVector = Icons.Default.MoreVert,
-        contentDescription = "更多"
+        contentDescription = "Hơn"
     )
     BookInfoOverflowMenu(
         expanded = showMenu,
@@ -986,7 +986,7 @@ private fun BookInfoSummary(
                 color = LegadoTheme.colorScheme.secondary
             )
             AnimatedTextLine(
-                text = if (book.durChapterIndex + 1 == book.totalChapterNum && book.totalChapterNum > 0) "已读完" else stringResource(R.string.read_chapter_index, book.durChapterIndex + 1),
+                text = if (book.durChapterIndex + 1 == book.totalChapterNum && book.totalChapterNum > 0) "Đọc" else stringResource(R.string.read_chapter_index, book.durChapterIndex + 1),
                 style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.secondary,
             )
@@ -1140,7 +1140,7 @@ private fun BookInfoDialogs(
         data = dialog as? BookInfoDialog.PhotoPreview,
         onDismissRequest = { onIntent(BookInfoIntent.DismissDialog) },
         title = stringResource(R.string.img_cover),
-        confirmText = "保存到相册",
+        confirmText = "Lưu vào album",
         onConfirm = { d ->
             onIntent(BookInfoIntent.SaveCover(d.path))
             onIntent(BookInfoIntent.DismissDialog)

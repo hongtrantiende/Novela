@@ -439,7 +439,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
                 lifecycle,
                 table = AppDatabase.BOOK_SOURCE_TABLE_NAME
             ).catch {
-                AppLog.put("书源界面更新书源出错", it)
+                AppLog.put("Xảy ra lỗi khi cập nhật nguồn sách trên giao diện nguồn sách.", it)
             }.flowOn(IO).conflate().collect { data ->
                 adapter.setItems(data, adapter.diffItemCallback, !Debug.isChecking)
                 itemTouchCallback.isCanDrag =

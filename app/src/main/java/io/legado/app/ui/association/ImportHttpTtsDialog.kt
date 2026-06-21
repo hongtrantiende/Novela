@@ -144,9 +144,9 @@ class ImportHttpTtsDialog() : BaseDialogFragment(R.layout.dialog_recycler_view),
                 cbSourceName.text = item.name
                 val localSource = viewModel.checkSources[holder.layoutPosition]
                 tvSourceState.text = when {
-                    localSource == null -> "新增"
-                    item.lastUpdateTime > localSource.lastUpdateTime -> "更新"
-                    else -> "已有"
+                    localSource == null -> "Mới"
+                    item.lastUpdateTime > localSource.lastUpdateTime -> "gia hạn"
+                    else -> "Đã"
                 }
             }
         }

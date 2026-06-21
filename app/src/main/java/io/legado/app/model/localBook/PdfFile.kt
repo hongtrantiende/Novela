@@ -181,7 +181,7 @@ class PdfFile(var book: Book) {
                     val chapter = BookChapter()
                     chapter.index = it
                     chapter.bookUrl = book.bookUrl
-                    chapter.title = "分段_${it}"
+                    chapter.title = "Phân đoạn_${it}"
                     chapter.url = "pdf_${it}"
                     chapterList.add(chapter)
                 }
@@ -205,7 +205,7 @@ class PdfFile(var book: Book) {
                 }
             }
         } catch (e: Exception) {
-            AppLog.put("加载书籍封面失败\n${e.localizedMessage}", e)
+            AppLog.put("Không tải được bìa sách\n${e.localizedMessage}", e)
             e.printOnDebug()
         }
     }
@@ -213,7 +213,7 @@ class PdfFile(var book: Book) {
     private fun upBookInfo() {
         if (pdfRenderer == null) {
             pFile = null
-            book.intro = "书籍导入异常"
+            book.intro = "Ngoại lệ nhập sách"
         } else {
             upBookCover()
             if (book.name.isEmpty()) {

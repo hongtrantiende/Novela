@@ -320,8 +320,8 @@ fun DictRuleScreen(
             ) {
                 items(rules, key = { it.id }) { item ->
                     val translatedTitle = when (item.id) {
-                        "百度汉语" -> "Baidu Hán ngữ"
-                        "海词英文" -> "Hải từ tiếng Anh"
+                        "Baidu tiếng Trung" -> "Baidu Hán ngữ"
+                        "HảiCi Tiếng Anh" -> "Hải từ tiếng Anh"
                         else -> item.id
                     }
                     ReorderableSelectionItem(

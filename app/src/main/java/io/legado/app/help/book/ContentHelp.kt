@@ -234,7 +234,7 @@ object ContentHelp {
                             //if(char_b2=='.' || char_b2=='。')
                             if (match(MARK_SENTENCES_END_P, charB2)) {
                                 insN.add(p - 1)
-                            } else if (!match("的", charB2)) {
+                            } else if (!match("của", charB2)) {
                                 val lastEnd = seekLast(str, MARK_SENTENCES_END, i, lastQuote)
                                 if (lastEnd > 0) insN.add(lastEnd) else insN.add(lastQuote)
                             }

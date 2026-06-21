@@ -98,7 +98,7 @@ data class SearchBook(
                 return it
             }
         }
-        return "无最新章节"
+        return "Không có chương mới nhất"
     }
 
     fun trimIntro(context: Context): String {

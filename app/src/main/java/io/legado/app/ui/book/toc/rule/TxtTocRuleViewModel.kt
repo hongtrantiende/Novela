@@ -118,7 +118,7 @@ class TxtTocRuleViewModel(
         return when {
             text.isJsonArray() -> GSON.fromJsonArray<TxtTocRule>(text).getOrThrow()
             text.isJsonObject() -> listOf(GSON.fromJsonObject<TxtTocRule>(text).getOrThrow())
-            else -> throw Exception("格式不正确")
+            else -> throw Exception("Định dạng không chính xác")
         }
     }
 

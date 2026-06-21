@@ -373,7 +373,7 @@ class ReadBookController(
             listOf(
                 SelectItem(activity.getString(R.string.show), "show"),
                 SelectItem(activity.getString(R.string.refresh), "refresh"),
-                SelectItem("保存到相册", "save"),
+                SelectItem("Lưu vào album", "save"),
                 SelectItem(activity.getString(R.string.menu), "menu"),
             )
         )
@@ -434,7 +434,7 @@ class ReadBookController(
                             }
                         }
                     } catch (e: Throwable) {
-                        AppLog.put("执行图片链接click键值出错\n${e.localizedMessage}", e, true)
+                        AppLog.put("Lỗi khi thực hiện giá trị khóa nhấp vào liên kết hình ảnh\n${e.localizedMessage}", e, true)
                     }
                 }
                 return true
@@ -456,7 +456,7 @@ class ReadBookController(
                         evalJS(jsStr, urlNoOption)
                     }
                 } catch (e: Throwable) {
-                    AppLog.put("执行图片链接js键值出错\n${e.localizedMessage}", e, true)
+                    AppLog.put("Lỗi khi thực thi giá trị khóa liên kết hình ảnh js\n${e.localizedMessage}", e, true)
                 }
             }
             return true
@@ -482,7 +482,7 @@ class ReadBookController(
                     }
                 }
             } catch (e: Throwable) {
-                AppLog.put("执行图片链接click键值出错\n${e.localizedMessage}", e, true)
+                AppLog.put("Lỗi khi thực hiện giá trị khóa nhấp vào liên kết hình ảnh\n${e.localizedMessage}", e, true)
             }
         }
     }

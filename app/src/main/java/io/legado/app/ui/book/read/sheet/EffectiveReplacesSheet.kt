@@ -48,7 +48,7 @@ fun EffectiveReplacesSheet(
 ) {
     val scope = rememberCoroutineScope()
     val chineseConvertActive = ReadConfig.chineseConverterType > 0
-    val chineseConvertItem = remember { ReplaceRule(CHINESE_CONVERT_ID, "繁简转换") }
+    val chineseConvertItem = remember { ReplaceRule(CHINESE_CONVERT_ID, "Chuyển đổi truyền thống và đơn giản hóa") }
 
     val effectiveRules = remember(show) {
         ReadBook.curTextChapter?.effectiveReplaceRules ?: emptyList()

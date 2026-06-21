@@ -97,7 +97,7 @@ interface JsEncodeUtils {
      * @param iv ECB模式的偏移向量
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decrypt(str)")
     )
     fun aesDecodeToByteArray(
@@ -114,7 +114,7 @@ interface JsEncodeUtils {
      * @param iv ECB模式的偏移向量
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decryptStr(str)")
     )
     fun aesDecodeToString(
@@ -134,7 +134,7 @@ interface JsEncodeUtils {
      * @return 解密后的字符串
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decryptStr(data)")
     )
     fun aesDecodeArgsBase64Str(
@@ -159,7 +159,7 @@ interface JsEncodeUtils {
      * @param iv ECB模式的偏移向量
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decrypt(str)")
     )
     fun aesBase64DecodeToByteArray(
@@ -176,7 +176,7 @@ interface JsEncodeUtils {
      * @param iv ECB模式的偏移向量
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decryptStr(str)")
     )
     fun aesBase64DecodeToString(
@@ -193,7 +193,7 @@ interface JsEncodeUtils {
      * @param iv ECB模式的偏移向量
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decrypt(data)")
     )
     fun aesEncodeToByteArray(
@@ -210,7 +210,7 @@ interface JsEncodeUtils {
      * @param iv ECB模式的偏移向量
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decryptStr(data)")
     )
     fun aesEncodeToString(
@@ -227,7 +227,7 @@ interface JsEncodeUtils {
      * @param iv ECB模式的偏移向量
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).encryptBase64(data).toByteArray()")
     )
     fun aesEncodeToBase64ByteArray(
@@ -244,7 +244,7 @@ interface JsEncodeUtils {
      * @param iv ECB模式的偏移向量
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).encryptBase64(data)")
     )
     fun aesEncodeToBase64String(
@@ -265,7 +265,7 @@ interface JsEncodeUtils {
      * @return 加密后的Base64
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).encryptBase64(data)")
     )
     fun aesEncodeArgsBase64Str(
@@ -280,7 +280,7 @@ interface JsEncodeUtils {
 
     /////DES
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decryptStr(data)")
     )
     fun desDecodeToString(
@@ -290,7 +290,7 @@ interface JsEncodeUtils {
     }
 
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decryptStr(data)")
     )
     fun desBase64DecodeToString(
@@ -300,7 +300,7 @@ interface JsEncodeUtils {
     }
 
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).encrypt(data)")
     )
     fun desEncodeToString(
@@ -310,7 +310,7 @@ interface JsEncodeUtils {
     }
 
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).encryptBase64(data)")
     )
     fun desEncodeToBase64String(
@@ -331,7 +331,7 @@ interface JsEncodeUtils {
      * @return 解密后的字符串
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decryptStr(data)")
     )
     fun tripleDESDecodeStr(
@@ -355,7 +355,7 @@ interface JsEncodeUtils {
      * @return 解密后的字符串
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).decryptStr(data)")
     )
     fun tripleDESDecodeArgsBase64Str(
@@ -384,7 +384,7 @@ interface JsEncodeUtils {
      * @return 加密后的Base64
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).encryptBase64(data)")
     )
     fun tripleDESEncodeBase64Str(
@@ -409,7 +409,7 @@ interface JsEncodeUtils {
      * @return 加密后的Base64
      */
     @Deprecated(
-        "过于繁琐弃用",
+        "Quá cồng kềnh và bị bỏ rơi",
         ReplaceWith("createSymmetricCrypto(transformation, key, iv).encryptBase64(data)")
     )
     fun tripleDESEncodeArgsBase64Str(

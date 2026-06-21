@@ -114,7 +114,7 @@ object AppWebDav {
                     names.add(name)
                 }
             }
-        } ?: throw NoStackTraceException("webDav没有配置")
+        } ?: throw NoStackTraceException("webDav chưa được định cấu hình")
         return names
     }
 
@@ -163,19 +163,19 @@ object AppWebDav {
             val account = BackupConfig.webDavAccount
             val password = BackupConfig.webDavPassword
             if (account.isNullOrEmpty() || password.isNullOrEmpty()) {
-                appCtx.toastOnUi("账号或密码为空")
+                appCtx.toastOnUi("Tài khoản hoặc mật khẩu trống")
                 return false
             }
 
             val auth = Authorization(account, password)
             checkAuthorization(auth)
 
-            appCtx.toastOnUi("WebDAV 服务可用")
+            appCtx.toastOnUi("Dịch vụ WebDAV có sẵn")
             true
         }.getOrElse {
             it.printStackTrace()
             if (it !is WebDavException) {
-                appCtx.toastOnUi(it.message ?: "未知错误")
+                appCtx.toastOnUi(it.message ?: "lỗi không xác định")
             }
             false
         }
@@ -202,9 +202,9 @@ object AppWebDav {
     private suspend fun getAllBgWebDavFiles(): Result<List<WebDavFile>> {
         return kotlin.runCatching {
             if (!NetworkUtils.isAvailable())
-                throw NoStackTraceException("网络未连接")
+                throw NoStackTraceException("Mạng không được kết nối")
             authorization.let {
-                it ?: throw NoStackTraceException("webDav未配置")
+                it ?: throw NoStackTraceException("webDav chưa được định cấu hình")
                 WebDav(bgWebDavUrl, it).listFiles()
             }
         }
@@ -249,7 +249,7 @@ object AppWebDav {
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
-            AppLog.put("WebDav导出失败\n${e.localizedMessage}", e, true)
+            AppLog.put("Xuất WebDav không thành công\n${e.localizedMessage}", e, true)
         }
     }
 
@@ -263,7 +263,7 @@ object AppWebDav {
             }
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
-            AppLog.put("WebDav导出失败\n${e.localizedMessage}", e, true)
+            AppLog.put("Xuất WebDav không thành công\n${e.localizedMessage}", e, true)
         }
     }
 
@@ -284,7 +284,7 @@ object AppWebDav {
             onSuccess?.invoke()
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
-            AppLog.put("上传进度失败\n${e.localizedMessage}", e, toast)
+            AppLog.put("Tiến trình tải lên không thành công\n${e.localizedMessage}", e, toast)
         }
     }
 
@@ -303,7 +303,7 @@ object AppWebDav {
             return true
         } catch (e: Exception) {
             currentCoroutineContext().ensureActive()
-            AppLog.put("上传进度失败\n${e.localizedMessage}", e)
+            AppLog.put("Tiến trình tải lên không thành công\n${e.localizedMessage}", e)
             return false
         }
     }
@@ -342,7 +342,7 @@ object AppWebDav {
             }
         }.onFailure {
             currentCoroutineContext().ensureActive()
-            AppLog.put("获取书籍进度失败\n${it.localizedMessage}", it)
+            AppLog.put("Không thể nhận được tiến độ sách\n${it.localizedMessage}", it)
         }
         return null
     }

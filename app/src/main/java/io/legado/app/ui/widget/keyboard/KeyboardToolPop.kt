@@ -110,7 +110,7 @@ class KeyboardToolPop(
     fun upAdapterData() {
         scope.launch {
             appDb.keyboardAssistsDao.flowByType(0).catch {
-                AppLog.put("键盘帮助浮窗获取数据失败\n${it.localizedMessage}", it)
+                AppLog.put("Cửa sổ nổi trợ giúp bàn phím không lấy được dữ liệu\n${it.localizedMessage}", it)
             }.flowOn(IO).collect {
                 adapter.setItems(it)
             }

@@ -270,7 +270,7 @@ fun RssSourceScreen(
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
                 onClick = { showGroupManageSheet = true },
-                text = "分组管理",
+                text = "Quản lý nhóm",
             )
             Box {
                 RoundDropdownMenuItem(

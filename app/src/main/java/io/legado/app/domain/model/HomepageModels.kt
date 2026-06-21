@@ -58,15 +58,15 @@ data class ModuleDef(
 
 /** 首页模块类型枚举 — 定义在 Domain 层以便 UseCase 和 ViewModel 共享 */
 enum class HomepageModuleType(val key: String, val title: String) {
-    Banner("banner", "横滑轮播"),
-    Ranking("ranking", "排行榜"),
-    GridRanking("gridRanking", "网格排行榜"),
-    Grid("grid", "网格"),
-    Card("card", "推荐卡片"),
-    InfiniteGrid("infiniteGrid", "无限网格"),
-    ButtonGroup("buttonGroup", "按钮组"),
-    Waterfall("waterfall", "错位瀑布流"),
-    Unknown("", "未知");
+    Banner("banner", "Băng chuyền trượt"),
+    Ranking("ranking", "Danh sách xếp hạng"),
+    GridRanking("gridRanking", "Bảng xếp hạng dạng lưới"),
+    Grid("grid", "lưới"),
+    Card("card", "Thẻ được đề xuất"),
+    InfiniteGrid("infiniteGrid", "lưới vô hạn"),
+    ButtonGroup("buttonGroup", "nhóm nút"),
+    Waterfall("waterfall", "Dòng thác sai hướng"),
+    Unknown("", "không rõ");
 
     companion object {
         fun fromKey(key: String?): HomepageModuleType =

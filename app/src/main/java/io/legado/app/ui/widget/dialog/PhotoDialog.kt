@@ -91,7 +91,7 @@ class PhotoDialog() : BaseBottomSheetDialogFragment(R.layout.dialog_photo_view) 
         val success = saveImageToGallery(requireContext(), byteArray)
 
         toastOnUi(
-            if (success) "已保存到相册" else "保存失败"
+            if (success) "Đã lưu vào album" else "Lưu không thành công"
         )
     }
 

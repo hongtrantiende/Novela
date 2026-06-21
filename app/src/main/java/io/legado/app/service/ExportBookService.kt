@@ -193,7 +193,7 @@ class ExportBookService : BaseService(), KoinComponent {
         exportJob = lifecycleScope.launch(IO) {
             while (isActive) {
                 val (bookUrl, exportConfig) = waitExportBooks.entries.firstOrNull() ?: let {
-                    notificationContentText = "导出完成"
+                    notificationContentText = "Đã xuất xong"
                     upExportNotification(true)
                     stopSelf()
                     return@launch
@@ -202,7 +202,7 @@ class ExportBookService : BaseService(), KoinComponent {
                 waitExportBooks.remove(bookUrl)
                 val book = appDb.bookDao.getBook(bookUrl)
                 try {
-                    book ?: throw NoStackTraceException("获取${bookUrl}书籍出错")
+                    book ?: throw NoStackTraceException("Lỗi khi tải sách ${bookUrl}")
                     refreshChapterList(book)
                     notificationContentText = getString(
                         R.string.export_book_notification_content,
@@ -235,7 +235,7 @@ class ExportBookService : BaseService(), KoinComponent {
                 } catch (e: Throwable) {
                     ensureActive()
                     exportMsg[bookUrl] = e.localizedMessage ?: "ERROR"
-                    AppLog.put("导出书籍<${book?.name ?: bookUrl}>出错", e)
+                    AppLog.put("Lỗi xuất sách <${book?.name ?: bookUrl}>", e)
                 } finally {
                     exportProgress.remove(bookUrl)
                     notifyExportBookChanged(bookUrl)
@@ -596,7 +596,7 @@ class ExportBookService : BaseService(), KoinComponent {
             }
             epubBook.coverImage = LazyResource(provider, "Images/cover.jpg")
         }.onFailure {
-            AppLog.put("获取书籍封面出错\n${it.localizedMessage}", it)
+            AppLog.put("Lỗi lấy bìa sách\n${it.localizedMessage}", it)
         }
     }
 
@@ -782,7 +782,7 @@ class ExportBookService : BaseService(), KoinComponent {
             }
 
             val elapsed = System.currentTimeMillis() - currentTimeMillis
-            AppLog.put("分割导出书籍 ${book.name} 一共耗时 $elapsed")
+            AppLog.put("Phân tách xuất bản sách ${book.name} mất tổng cộng $elapsed")
         }
 
 
@@ -815,7 +815,7 @@ class ExportBookService : BaseService(), KoinComponent {
             }
             // val totalChapterNum = book.totalChapterNum / scope.size
             if (chapterList.isEmpty()) {
-                throw RuntimeException("书籍<${book.name}>(${epubBookIndex + 1})未找到章节信息")
+                throw RuntimeException("Không tìm thấy thông tin chương của sách <${book.name}>(${epubBookIndex + 1})")
             }
             chapterList = chapterList.subList(
                 epubBookIndex * size,

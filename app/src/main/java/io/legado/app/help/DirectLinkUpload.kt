@@ -31,11 +31,11 @@ object DirectLinkUpload {
     ): String {
         val url = rule.uploadUrl
         if (url.isBlank()) {
-            throw NoStackTraceException("上传url未配置")
+            throw NoStackTraceException("Url tải lên không được định cấu hình")
         }
         val downloadUrlRule = rule.downloadUrlRule
         if (downloadUrlRule.isBlank()) {
-            throw NoStackTraceException("下载地址规则未配置")
+            throw NoStackTraceException("Quy tắc địa chỉ tải xuống chưa được định cấu hình")
         }
         var mFileName = fileName
         var mFile = file
@@ -65,7 +65,7 @@ object DirectLinkUpload {
             .setCoroutineContext(coroutineContext)
         val downloadUrl = analyzeRule.getString(downloadUrlRule)
         if (downloadUrl.isBlank()) {
-            throw NoStackTraceException("上传失败,${res.body}")
+            throw NoStackTraceException("Tải lên không thành công, ${res.body}")
         }
         return downloadUrl
     }

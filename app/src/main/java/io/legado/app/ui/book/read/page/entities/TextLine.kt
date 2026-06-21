@@ -626,7 +626,7 @@ data class TextLine(
 
         private val wordSpacingWorking by lazy {
             val paint = PaintPool.obtain()
-            val text = "一二 三"
+            val text = "một hai ba"
             val width1 = paint.measureText(text)
             try {
                 paint.wordSpacing = 10f

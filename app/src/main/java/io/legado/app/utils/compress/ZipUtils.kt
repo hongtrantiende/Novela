@@ -239,7 +239,7 @@ object ZipUtils {
             val entryName = entry!!.name
             val entryFile = File(dir, entryName)
             if (!entryFile.canonicalPath.startsWith(dir.canonicalPath)) {
-                throw SecurityException("压缩文件只能解压到指定路径")
+                throw SecurityException("Các tập tin nén chỉ có thể được giải nén vào đường dẫn đã chỉ định")
             }
             if (entry.isDirectory) {
                 if (!entryFile.exists()) {

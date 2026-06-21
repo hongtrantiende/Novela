@@ -49,7 +49,7 @@ abstract class BaseBottomSheetDialogFragment(
             manager.beginTransaction().remove(this).commit()
             super.show(manager, tag)
         }.onFailure {
-            AppLog.put("显示BottomSheetDialog失败 tag:$tag\n$it")
+            AppLog.put("Hiển thị BottomSheetDialog thất bại tag:$tag\n$it")
         }
     }
 

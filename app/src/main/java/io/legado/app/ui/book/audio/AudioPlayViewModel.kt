@@ -58,7 +58,7 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
             WebBook.getBookInfoAwait(bookSource, book)
             return true
         } catch (e: Exception) {
-            AppLog.put("详情页出错: ${e.localizedMessage}", e, true)
+            AppLog.put("Lỗi trên trang chi tiết: ${e.localizedMessage}", e, true)
             return false
         }
     }
@@ -129,8 +129,8 @@ class AudioPlayViewModel(application: Application) : BaseViewModel(application) 
         }.onSuccess {
             success?.invoke()
         }.onError {
-            AppLog.put("添加书籍到书架失败", it)
-            context.toastOnUi("添加书籍失败")
+            AppLog.put("Không thể thêm sách vào giá sách", it)
+            context.toastOnUi("Không thể thêm sách")
         }
     }
 

@@ -396,7 +396,7 @@ private fun BookshelfManageScreen(
         },
         FabMenuItem(
             Icons.Default.Download,
-            "缓存选中"
+            "Đã chọn bộ đệm"
         ) {
             if (selectedBookUrls.isNotEmpty()) {
                 showBatchDownloadConfirmDialog = true
@@ -404,7 +404,7 @@ private fun BookshelfManageScreen(
         },
         FabMenuItem(
             Icons.Default.Refresh,
-            "批量换源"
+            "Thay đổi nguồn hàng loạt"
         ) {
             if (selectedBookUrls.isNotEmpty()) {
                 showBatchSourcePickerSheet = true
@@ -422,7 +422,7 @@ private fun BookshelfManageScreen(
         },
         FabMenuItem(
             Icons.Default.Upload,
-            "导出选中"
+            "Xuất đã chọn"
         ) {
             exportSelected()
         },
@@ -458,7 +458,7 @@ private fun BookshelfManageScreen(
     }
     ListScaffold(
         title = if (inSelectionMode) {
-            "已选 ${selectedBookUrls.size}/${filteredBooks.size}"
+            "Đã chọn ${selectedBookUrls.size}/${filteredBooks.size}"
         } else {
             state.groupName ?: stringResource(R.string.offline_cache)
         },
@@ -472,7 +472,7 @@ private fun BookshelfManageScreen(
         },
         onClearSelection = clearSelection,
         onSearchQueryChange = { searchKey = it },
-        searchPlaceholder = "筛选书名/作者/书源/分组",
+        searchPlaceholder = "Lọc tên sách/tác giả/nguồn sách/nhóm",
         topBarActions = {
             if (state.groupList.isNotEmpty()) {
                 TopBarActionButton(
@@ -556,7 +556,7 @@ private fun BookshelfManageScreen(
                     }
                     PillDivider()
                     RoundDropdownMenuItem(
-                        text = "自定义...",
+                        text = "Tùy chỉnh...",
                         onClick = {
                             subDismiss()
                             exportCharsetInput = state.exportConfig.exportCharset
@@ -567,7 +567,7 @@ private fun BookshelfManageScreen(
             }
             PillDivider()
             RoundDropdownMenuItem(
-                text = "替换净化",
+                text = "Thay thế thanh lọc",
                 isSelected = state.exportConfig.exportUseReplace,
                 onClick = {
                     dismiss()
@@ -577,7 +577,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "自定义导出",
+                text = "Xuất tùy chỉnh",
                 isSelected = state.exportConfig.enableCustomExport,
                 onClick = {
                     dismiss()
@@ -587,7 +587,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "导出包含章节名",
+                text = "Xuất chứa tên chương",
                 isSelected = !state.exportConfig.exportNoChapterName,
                 onClick = {
                     dismiss()
@@ -597,7 +597,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "导出到WebDav",
+                text = "Xuất sang WebDav",
                 isSelected = state.exportConfig.exportToWebDav,
                 onClick = {
                     dismiss()
@@ -607,7 +607,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "导出插图文件",
+                text = "Xuất file minh họa",
                 isSelected = state.exportConfig.exportPictureFile,
                 onClick = {
                     dismiss()
@@ -617,7 +617,7 @@ private fun BookshelfManageScreen(
                 }
             )
             RoundDropdownMenuItem(
-                text = "并行导出",
+                text = "Xuất song song",
                 isSelected = state.exportConfig.parallelExportBook,
                 onClick = {
                     dismiss()
@@ -767,14 +767,14 @@ private fun BookshelfManageScreen(
                                         onDismissRequest = { moreMenuBookUrl = null }
                                     ) { dismiss ->
                                         RoundDropdownMenuItem(
-                                            text = "换源",
+                                            text = "Thay đổi nguồn",
                                             onClick = {
                                                 singleChangeSourceBook = book
                                                 dismiss()
                                             }
                                         )
                                         RoundDropdownMenuItem(
-                                            text = "删除书籍",
+                                            text = "xóa sách",
                                             onClick = {
                                                 pendingDeleteBookUrls = setOf(book.bookUrl)
                                                 deleteOriginalBookFile = state.deleteBookOriginal
@@ -783,7 +783,7 @@ private fun BookshelfManageScreen(
                                             }
                                         )
                                         RoundDropdownMenuItem(
-                                            text = "删除缓存",
+                                            text = "Xóa bộ nhớ đệm",
                                             onClick = {
                                                 viewModel.dispatch(
                                                     BookshelfManageScreenIntent.ClearCachesForBooks(
@@ -847,13 +847,13 @@ private fun BookshelfManageScreen(
             singleChangeSourceBook = null
         },
         onAddAsNew = { _: Book, _: List<BookChapter> ->
-            context.toastOnUi("请在书籍详情页添加为新书")
+            context.toastOnUi("Vui lòng thêm nó dưới dạng sách mới trên trang chi tiết sách")
         },
     )
 
     BookSourcePickerSheet(
         show = showBatchSourcePickerSheet,
-        title = "选择目标书源",
+        title = "Chọn nguồn sách mục tiêu",
         onDismissRequest = { showBatchSourcePickerSheet = false },
         onConfirm = { sources ->
             pendingBatchSources = sources
@@ -863,8 +863,8 @@ private fun BookshelfManageScreen(
 
     ChangeSourceMigrationOptionsSheet(
         show = pendingBatchSources.isNotEmpty(),
-        title = "批量换源选项",
-        subtitle = "将对已选 ${selectedBookUrls.size} 本书执行换源；选项只对本次操作生效。",
+        title = "Tùy chọn thay đổi nguồn hàng loạt",
+        subtitle = "Nguồn của sách ${selectedBookUrls.size} đã chọn sẽ được thực thi; tùy chọn sẽ chỉ có hiệu lực cho thao tác này.",
         onDismissRequest = { pendingBatchSources = emptyList() },
         onConfirm = { options ->
             viewModel.dispatch(
@@ -911,7 +911,7 @@ private fun BookshelfManageScreen(
             manualSearchPreviewBook = null
         },
         onAddAsNew = { _: Book, _: List<BookChapter> ->
-            context.toastOnUi("请先选择替换候选后再新增至书架")
+            context.toastOnUi("Vui lòng chọn một ứng cử viên thay thế trước khi thêm nó vào giá sách")
         },
     )
 
@@ -945,7 +945,7 @@ private fun BookshelfManageScreen(
                     AppCircularProgressIndicator()
                 }
                 AppText(
-                    text = state.changeSourceError ?: state.changeSourceProgress ?: "准备中",
+                    text = state.changeSourceError ?: state.changeSourceProgress ?: "Đang chuẩn bị",
                     style = LegadoTheme.typography.bodyMedium,
                     color = if (state.changeSourceError == null) {
                         LegadoTheme.colorScheme.onSurface
@@ -1333,7 +1333,7 @@ private fun BookSourcePickerSheet(
         Spacer(modifier = Modifier.height(12.dp))
         if (selectedSources.isNotEmpty()) {
             AppText(
-                text = "已选书源（长按拖拽排序）",
+                text = "Nguồn sách đã chọn (nhấn và kéo để sắp xếp)",
                 style = LegadoTheme.typography.labelMedium,
                 color = LegadoTheme.colorScheme.primary,
             )
@@ -1364,7 +1364,7 @@ private fun BookSourcePickerSheet(
             Spacer(modifier = Modifier.height(12.dp))
         }
         AppText(
-            text = "可选书源",
+            text = "Nguồn sách tùy chọn",
             style = LegadoTheme.typography.labelMedium,
             color = LegadoTheme.colorScheme.onSurfaceVariant,
         )
@@ -1426,19 +1426,19 @@ private fun BatchChangePreviewSheet(
     AppModalBottomSheet(
         data = data,
         onDismissRequest = onDismissRequest,
-        title = "批量换源预览",
+        title = "Xem trước thay đổi nguồn hàng loạt",
         startAction = {
             SmallTonalButton(
                 onClick = onAddAllToShelf,
                 icon = Icons.Default.Add,
-                text = "新增全部"
+                text = "Thêm tất cả"
             )
         },
         endAction = {
             SmallTonalButton(
                 onClick = onMigrateAll,
                 icon = Icons.Default.PlayArrow,
-                text = "迁移全部"
+                text = "Di chuyển tất cả"
             )
         }
     ) { items ->
@@ -1492,7 +1492,7 @@ private fun BatchChangePreviewRow(
                 verticalAlignment = Alignment.Top,
             ) {
                 PreviewBookInfo(
-                    title = "原书籍",
+                    title = "sách gốc",
                     book = item.oldBook,
                     chapterCount = item.oldBook.totalChapterNum,
                     onClick = { onOpenBook(item.oldBook, true) },
@@ -1531,23 +1531,23 @@ private fun BatchChangePreviewRow(
                 SmallTonalButton(
                     onClick = { onSkip(item.oldBook.bookUrl) },
                     icon = Icons.Default.Clear,
-                    text = "不迁移"
+                    text = "Không di chuyển"
                 )
                 SmallTonalButton(
                     onClick = { onMigrate(item.oldBook.bookUrl) },
                     icon = Icons.Default.PlayArrow,
-                    text = "迁移"
+                    text = "di cư"
                 )
                 SmallTonalButton(
                     onClick = { onAddToShelf(item.oldBook.bookUrl) },
                     icon = Icons.Default.Add,
-                    text = "新增"
+                    text = "Mới"
                 )
                 if (item.candidates.size > 1) {
                     SmallTonalButton(
                         onClick = { onShowOtherSources(item) },
                         icon = Icons.Default.Info,
-                        text = "查看其他源信息"
+                        text = "Xem thông tin nguồn khác"
                     )
                 }
             }
@@ -1583,7 +1583,7 @@ private fun PreviewBookInfo(
                 overflow = TextOverflow.Ellipsis
             )
             AppText(
-                text = "${book.getRealAuthor()} · ${chapterCount ?: 0}章",
+                text = "${book.getRealAuthor()} · ${chapterCount ?: 0} chương",
                 style = LegadoTheme.typography.labelSmall,
                 color = LegadoTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -1609,7 +1609,7 @@ private fun OtherSourceOptionsSheet(
     AppModalBottomSheet(
         data = item,
         onDismissRequest = onDismissRequest,
-        title = "其他源信息",
+        title = "Nguồn thông tin khác",
     ) { currentItem ->
         LazyColumn(
             modifier = Modifier
@@ -1621,7 +1621,7 @@ private fun OtherSourceOptionsSheet(
                 val candidate = currentItem.candidates[index]
                 SelectionItemCard(
                     title = candidate.source.bookSourceName,
-                    subtitle = "${candidate.book.name} · ${candidate.chapterCount}章",
+                    subtitle = "${candidate.book.name} · ${candidate.chapterCount} chương",
                     supportingContent = {
                         AppText(
                             text = candidate.book.getRealAuthor(),
@@ -1647,9 +1647,9 @@ private fun OtherSourceOptionsSheet(
 
 private fun statusText(status: BatchChangeSourcePreviewStatus): String {
     return when (status) {
-        BatchChangeSourcePreviewStatus.Matched -> "已匹配"
-        BatchChangeSourcePreviewStatus.NotFound -> "未找到"
-        BatchChangeSourcePreviewStatus.Skipped -> "不迁移"
+        BatchChangeSourcePreviewStatus.Matched -> "Đã khớp"
+        BatchChangeSourcePreviewStatus.NotFound -> "không tìm thấy"
+        BatchChangeSourcePreviewStatus.Skipped -> "Không di chuyển"
     }
 }
 

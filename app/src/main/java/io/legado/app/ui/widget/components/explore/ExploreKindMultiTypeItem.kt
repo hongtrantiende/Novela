@@ -166,13 +166,13 @@ fun ExploreKindMultiTypeItem(
     AppAlertDialog(
         data = showFullError,
         onDismissRequest = { showFullError = null },
-        title = "错误详情",
-        confirmText = "复制",
+        title = "Chi tiết lỗi",
+        confirmText = "sao chép",
         onConfirm = { error ->
             context.sendToClip(error)
             showFullError = null
         },
-        dismissText = "关闭",
+        dismissText = "đóng cửa",
         onDismiss = { showFullError = null },
         content = { error ->
             SelectionContainer {

@@ -63,7 +63,7 @@ fun BookmarkEditContent(
         AppTextFieldSurface(
             value = bookText,
             onValueChange = { bookText = it },
-            label = "原文",
+            label = "nguyên bản",
             modifier = Modifier.fillMaxWidth(),
             maxLines = 10
         )
@@ -73,7 +73,7 @@ fun BookmarkEditContent(
         AppTextFieldSurface(
             value = content,
             onValueChange = { content = it },
-            label = "摘要/笔记",
+            label = "Tóm tắt/Ghi chú",
             modifier = Modifier.fillMaxWidth(),
             maxLines = 5
         )
@@ -88,7 +88,7 @@ fun BookmarkEditContent(
             SecondaryButton(
                 onClick = { showDeleteConfirmDialog = true },
                 modifier = Modifier.weight(1f),
-                text = "删除"
+                text = "xóa bỏ"
             )
 
             PrimaryButton(
@@ -100,7 +100,7 @@ fun BookmarkEditContent(
                     onSave(newBookmark)
                 },
                 modifier = Modifier.weight(1f),
-                text = "保存"
+                text = "cứu"
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -109,14 +109,14 @@ fun BookmarkEditContent(
     AppAlertDialog(
         show = showDeleteConfirmDialog,
         onDismissRequest = { showDeleteConfirmDialog = false },
-        title = "确认删除",
-        text = "你确定要删除这条书签吗？",
-        confirmText = "删除",
+        title = "Xác nhận xóa",
+        text = "Bạn có chắc chắn muốn xóa dấu trang này không?",
+        confirmText = "xóa bỏ",
         onConfirm = {
             showDeleteConfirmDialog = false
             onDelete(bookmark)
         },
-        dismissText = "取消",
+        dismissText = "Hủy bỏ",
         onDismiss = { showDeleteConfirmDialog = false }
     )
 }

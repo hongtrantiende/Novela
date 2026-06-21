@@ -71,7 +71,7 @@ object Restore : KoinComponent {
 
     suspend fun restore(context: Context, uri: Uri) {
         BackupRestoreLock.withLock {
-            LogUtils.d(TAG, "开始恢复备份 uri:$uri")
+            LogUtils.d(TAG, "Bắt đầu khôi phục bản sao lưu uri:$uri")
             val unzipResult = kotlin.runCatching {
                 FileUtils.delete(Backup.backupPath)
                 if (uri.isContentScheme()) {
@@ -82,15 +82,15 @@ object Restore : KoinComponent {
                     ZipUtils.unZipToPath(File(uri.path!!), Backup.backupPath)
                 }
             }.onFailure {
-                AppLog.put("复制解压文件出错\n${it.localizedMessage}", it)
+                AppLog.put("Lỗi sao chép và giải nén tập tin\n${it.localizedMessage}", it)
             }
             if (unzipResult.isSuccess) {
                 kotlin.runCatching {
                     restoreUnzipped(Backup.backupPath)
                     LocalConfig.lastBackup = System.currentTimeMillis()
                 }.onFailure {
-                    appCtx.toastOnUi("恢复备份出错\n${it.localizedMessage}")
-                    AppLog.put("恢复备份出错\n${it.localizedMessage}", it)
+                    appCtx.toastOnUi("Lỗi khôi phục bản sao lưu\n${it.localizedMessage}")
+                    AppLog.put("Lỗi khôi phục bản sao lưu\n${it.localizedMessage}", it)
                 }
             }
         }
@@ -261,7 +261,7 @@ object Restore : KoinComponent {
                 }
             }
         }?.onFailure {
-            AppLog.put("恢复服务器配置出错\n${it.localizedMessage}", it)
+            AppLog.put("Lỗi cấu hình máy chủ khôi phục\n${it.localizedMessage}", it)
         }
         File(path, DirectLinkUpload.ruleFileName).takeIf {
             it.exists()
@@ -269,7 +269,7 @@ object Restore : KoinComponent {
             val json = readText()
             ACache.get(cacheDir = false).put(DirectLinkUpload.ruleFileName, json)
         }?.onFailure {
-            AppLog.put("恢复直链上传出错\n${it.localizedMessage}", it)
+            AppLog.put("Lỗi khôi phục tải lên liên kết trực tiếp\n${it.localizedMessage}", it)
         }
         //恢复主题配置
         if (!BackupConfig.ignoreThemeConfig) {
@@ -280,7 +280,7 @@ object Restore : KoinComponent {
                 copyTo(File(ThemeConfigStore.configFilePath))
                 ThemeConfigStore.upConfig()
             }?.onFailure {
-                AppLog.put("恢复主题出错\n${it.localizedMessage}", it)
+                AppLog.put("Lỗi khôi phục chủ đề\n${it.localizedMessage}", it)
             }
         }
         File(path, BookCover.configFileName).takeIf {
@@ -289,7 +289,7 @@ object Restore : KoinComponent {
             val json = readText()
             BookCover.saveCoverRule(json)
         }?.onFailure {
-            AppLog.put("恢复封面规则出错\n${it.localizedMessage}", it)
+            AppLog.put("Lỗi khôi phục quy tắc bìa\n${it.localizedMessage}", it)
         }
         if (!BackupConfig.ignoreReadConfig) {
             //恢复阅读界面配置
@@ -300,7 +300,7 @@ object Restore : KoinComponent {
                 copyTo(File(ReadBookConfig.configFilePath))
                 ReadBookConfig.initConfigs()
             }?.onFailure {
-                AppLog.put("恢复阅读界面出错\n${it.localizedMessage}", it)
+                AppLog.put("Lỗi khôi phục giao diện đọc\n${it.localizedMessage}", it)
             }
             File(path, ReadBookConfig.shareConfigFileName).takeIf {
                 it.exists()
@@ -309,7 +309,7 @@ object Restore : KoinComponent {
                 copyTo(File(ReadBookConfig.shareConfigFilePath))
                 ReadBookConfig.initShareConfig()
             }?.onFailure {
-                AppLog.put("恢复阅读界面出错\n${it.localizedMessage}", it)
+                AppLog.put("Lỗi khôi phục giao diện đọc\n${it.localizedMessage}", it)
             }
         }
         // 恢复配置文件 (手动解析 XML，替代反射逻辑)
@@ -321,7 +321,7 @@ object Restore : KoinComponent {
                     applyConfigMap(map, aes)
                 }
             } catch (e: Exception) {
-                AppLog.put("恢复配置 XML 出错\n${e.localizedMessage}", e)
+                AppLog.put("Lỗi khôi phục cấu hình XML\n${e.localizedMessage}", e)
             }
         }
 
@@ -414,18 +414,18 @@ object Restore : KoinComponent {
         try {
             val file = File(path, fileName)
             if (file.exists()) {
-                LogUtils.d(TAG, "阅读恢复备份 $fileName 文件大小 ${file.length()}")
+                LogUtils.d(TAG, "Đọc khôi phục kích thước tệp sao lưu $fileName ${file.length()}")
                 FileInputStream(file).use {
                     return GSON.fromJsonArray<T>(it).getOrThrow().also { list ->
-                        LogUtils.d(TAG, "阅读恢复备份 $fileName 列表大小 ${list.size}")
+                        LogUtils.d(TAG, "Đọc khôi phục kích thước danh sách $fileName sao lưu ${list.size}")
                     }
                 }
             } else {
-                LogUtils.d(TAG, "阅读恢复备份 $fileName 文件不存在")
+                LogUtils.d(TAG, "Đọc tệp $fileName sao lưu khôi phục không tồn tại")
             }
         } catch (e: Exception) {
-            AppLog.put("$fileName\n读取解析出错\n${e.localizedMessage}", e)
-            appCtx.toastOnUi("$fileName\n读取文件出错\n${e.localizedMessage}")
+            AppLog.put("$fileName\nĐọc lỗi phân tích cú pháp\n${e.localizedMessage}", e)
+            appCtx.toastOnUi("$fileName\nLỗi đọc tập tin\n${e.localizedMessage}")
         }
         return null
     }
