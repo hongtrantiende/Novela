@@ -75,6 +75,7 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
     val hasNextChapter get() = durChapterIndex < simulatedChapterSize - 1
 
     private val readRecordRepository: ReadRecordRepository by inject()
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository by inject()
 
     private val ioScope = CoroutineScope(IO)
 
@@ -523,15 +524,30 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
         }
     }
 
-    /**
-     * 获取正文
-     */
     private suspend fun download(
         scope: CoroutineScope,
         chapter: BookChapter,
         semaphore: Semaphore? = null,
     ) {
         val book = book ?: return removeLoading(chapter.index)
+        if (book.origin.startsWith("ext_")) {
+            scope.launch {
+                try {
+                    val content = extensionRepository.getChapterContent(book.origin, chapter.url) ?: "Không có nội dung"
+                    BookHelp.saveText(book, chapter, content)
+                    downloadedChapters.add(chapter.index)
+                    downloadFailChapters.remove(chapter.index)
+                    contentLoadFinish(chapter, content)
+                } catch (e: Exception) {
+                    downloadFailChapters[chapter.index] =
+                        (downloadFailChapters[chapter.index] ?: 0) + 1
+                    contentLoadFinish(chapter, null, "Lỗi tải chương: ${e.localizedMessage}")
+                } finally {
+                    removeLoading(chapter.index)
+                }
+            }
+            return
+        }
         val bookSource = bookSource
         if (bookSource != null) {
             downloadNetworkContent(bookSource, scope, chapter, book, semaphore, success = {

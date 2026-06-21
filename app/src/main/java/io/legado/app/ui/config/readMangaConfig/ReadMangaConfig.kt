@@ -106,13 +106,13 @@ object ReadMangaConfig {
     // -1无操作 1下一页 2上一页 0显示菜单 3下一章 4上一章
     var mangaClickActionTL by prefDelegate(PreferKey.mangaClickActionTL, -1)
     var mangaClickActionTC by prefDelegate(PreferKey.mangaClickActionTC, -1)
-    var mangaClickActionTR by prefDelegate(PreferKey.mangaClickActionTR, 1)
-    var mangaClickActionML by prefDelegate(PreferKey.mangaClickActionML, 2)
+    var mangaClickActionTR by prefDelegate(PreferKey.mangaClickActionTR, -1)
+    var mangaClickActionML by prefDelegate(PreferKey.mangaClickActionML, -1)
     var mangaClickActionMC by prefDelegate(PreferKey.mangaClickActionMC, 0)
-    var mangaClickActionMR by prefDelegate(PreferKey.mangaClickActionMR, 1)
-    var mangaClickActionBL by prefDelegate(PreferKey.mangaClickActionBL, 2)
-    var mangaClickActionBC by prefDelegate(PreferKey.mangaClickActionBC, 1)
-    var mangaClickActionBR by prefDelegate(PreferKey.mangaClickActionBR, 1)
+    var mangaClickActionMR by prefDelegate(PreferKey.mangaClickActionMR, -1)
+    var mangaClickActionBL by prefDelegate(PreferKey.mangaClickActionBL, -1)
+    var mangaClickActionBC by prefDelegate(PreferKey.mangaClickActionBC, -1)
+    var mangaClickActionBR by prefDelegate(PreferKey.mangaClickActionBR, -1)
 
     fun detectMangaClickArea() {
         if (mangaClickActionTL * mangaClickActionTC * mangaClickActionTR

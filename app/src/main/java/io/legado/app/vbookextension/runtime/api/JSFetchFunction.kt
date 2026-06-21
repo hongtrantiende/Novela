@@ -35,6 +35,7 @@ object JSFetchFunction {
 
     private const val TAG = "JSFetch"
     private val semaphores = ConcurrentHashMap<String, Semaphore>()
+    private val lastVerificationMap = ConcurrentHashMap<String, Long>()
 
     fun inject(
         ctx: RhinoContext,
@@ -194,16 +195,23 @@ object JSFetchFunction {
             if (isCloudflareChallenge(response, bodyBytes)) {
                 Log.d(TAG, "Cloudflare challenge detected for $url, launching WebView verification...")
                 try {
-                    val pair = SourceVerificationHelp.getVerificationResult(
-                        sourceKey = "ext_$extensionId",
-                        sourceTag = extensionName,
-                        sourceType = 0, // SourceType.book
-                        url = url,
-                        title = extensionName,
-                        useBrowser = true,
-                        refetchAfterSuccess = false,
-                        html = if (bodyBytes != null) String(bodyBytes) else null
-                    )
+                    val lastTime = lastVerificationMap[extensionId] ?: 0L
+                    val timeDiff = System.currentTimeMillis() - lastTime
+                    if (timeDiff > 300000L) {
+                        SourceVerificationHelp.getVerificationResult(
+                            sourceKey = "ext_$extensionId",
+                            sourceTag = extensionName,
+                            sourceType = 0, // SourceType.book
+                            url = url,
+                            title = extensionName,
+                            useBrowser = true,
+                            refetchAfterSuccess = false,
+                            html = if (bodyBytes != null) String(bodyBytes) else null
+                        )
+                        lastVerificationMap[extensionId] = System.currentTimeMillis()
+                    } else {
+                        Log.d(TAG, "Skipping WebView verification popup for $extensionId (cooldown: ${timeDiff}ms)")
+                    }
                     
                     // Update final cookie from cookieManager after verification
                     val webViewCookie = cookieManager.getCookie(url)
@@ -240,8 +248,10 @@ object JSFetchFunction {
 
             // Save updated cookies to preferences for persistence
             val updatedCookie = cookieManager.getCookie(url)
-            if (!updatedCookie.isNullOrBlank()) {
-                prefs.edit().putString("ext_cookies_$extensionId", updatedCookie).apply()
+            val oldCookie = prefs.getString("ext_cookies_$extensionId", null)
+            val mergedCookie = mergeCookies(oldCookie, updatedCookie)
+            if (mergedCookie.isNotBlank()) {
+                prefs.edit().putString("ext_cookies_$extensionId", mergedCookie).apply()
             }
             
             // Build response headers JS object & raw maps
@@ -322,13 +332,15 @@ object JSFetchFunction {
 
     private fun isCloudflareChallenge(response: Response, bodyBytes: ByteArray?): Boolean {
         if (response.code == 403 || response.code == 503) {
-            val server = response.header("Server") ?: ""
-            if (server.contains("cloudflare", ignoreCase = true)) {
-                return true
-            }
             bodyBytes?.let {
                 val html = String(it)
-                if (html.contains("cf-challenge") || html.contains("window._cf_chl_opt") || html.contains("Just a moment...")) {
+                if (html.contains("cf-challenge") || 
+                    html.contains("window._cf_chl_opt") || 
+                    html.contains("Just a moment...") ||
+                    html.contains("challenge-running") ||
+                    html.contains("cf_challenge") ||
+                    html.contains("cdn-cgi/challenge-platform")
+                ) {
                     return true
                 }
             }

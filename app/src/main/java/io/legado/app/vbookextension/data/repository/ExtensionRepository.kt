@@ -64,7 +64,12 @@ class ExtensionRepository(
         return (this as? JsonPrimitive)?.content ?: ""
     }
 
-    private fun parseNovelFromJson(obj: JsonObject, extensionId: String, sourceUrl: String): SearchBook {
+    private fun parseNovelFromJson(
+        obj: JsonObject,
+        extensionId: String,
+        sourceUrl: String,
+        extensionType: String
+    ): SearchBook {
         val rawUrl = obj["url"]?.safeString()
             ?: obj["link"]?.safeString()
             ?: obj["path"]?.safeString()
@@ -113,10 +118,19 @@ class ExtensionRepository(
 
         val capitalizedName = extensionId.replace("-", " ").replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
+        val parsedType = obj["type"]?.safeString()
+            ?: obj["is_comic"]?.safeString()?.let { if (it == "true" || it == "1" || it == "comic") "comic" else "novel" }
+        val finalTypeStr = parsedType ?: extensionType
+        val isComic = finalTypeStr.equals("comic", ignoreCase = true)
+                || finalTypeStr.equals("manga", ignoreCase = true)
+                || finalTypeStr.equals("image", ignoreCase = true)
+        val bookType = if (isComic) io.legado.app.constant.BookType.image else io.legado.app.constant.BookType.text
+
         return SearchBook(
             bookUrl = resolvedUrl,
             origin = "ext_$extensionId",
             originName = capitalizedName,
+            type = bookType,
             name = title,
             author = author,
             coverUrl = resolvedCover,
@@ -180,7 +194,7 @@ class ExtensionRepository(
                             }
                         }
                     }
-                    items?.mapNotNull { (it as? JsonObject)?.let { item -> parseNovelFromJson(item, extensionId, extSourceUrl) } } ?: emptyList()
+                    items?.mapNotNull { (it as? JsonObject)?.let { item -> parseNovelFromJson(item, extensionId, extSourceUrl, extension.pluginJson.metadata.type) } } ?: emptyList()
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to parse novels list for $extensionId: ${e.message}")
                     emptyList()
@@ -188,6 +202,51 @@ class ExtensionRepository(
             }
             is ExtensionResult.Error -> {
                 Log.e(TAG, "Extension error: ${result.message}")
+                emptyList()
+            }
+        }
+    }
+
+    suspend fun searchBooks(sourceUrl: String, keyword: String, page: Int): List<SearchBook> = withContext(Dispatchers.IO) {
+        val extensionId = getSlugFromId(sourceUrl)
+        val extension = extensionLoader.loadExtension(extensionId) ?: return@withContext emptyList()
+        val extSourceUrl = extension.pluginJson.metadata.source ?: ""
+
+        if (!extension.pluginJson.script.containsKey(ScriptType.SEARCH.key)) {
+            Log.e(TAG, "Search script not found in plugin.json for extension $extensionId")
+            return@withContext emptyList()
+        }
+
+        val searchScript = extension.pluginJson.script[ScriptType.SEARCH.key] ?: ""
+        val result = extensionRunner.execute(extension, searchScript, keyword, page.toString())
+        return@withContext when (result) {
+            is ExtensionResult.Success -> {
+                try {
+                    val element = json.parseToJsonElement(result.data)
+                    checkExtensionErrorCode(element)
+                    val items = if (element is JsonArray) {
+                        element
+                    } else {
+                        val obj = element as? JsonObject
+                        val dataElement = obj?.get("data")
+                        val itemsElement = obj?.get("items")
+                        when {
+                            dataElement is JsonArray -> dataElement
+                            itemsElement is JsonArray -> itemsElement
+                            dataElement is JsonObject && dataElement.containsKey("items") -> dataElement["items"] as? JsonArray
+                            else -> {
+                                (obj?.get("list") as? JsonArray) ?: JsonArray(emptyList())
+                            }
+                        }
+                    }
+                    items?.mapNotNull { (it as? JsonObject)?.let { item -> parseNovelFromJson(item, extensionId, extSourceUrl, extension.pluginJson.metadata.type) } } ?: emptyList()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to parse search books list for $extensionId: ${e.message}")
+                    emptyList()
+                }
+            }
+            is ExtensionResult.Error -> {
+                Log.e(TAG, "Extension search error: ${result.message}")
                 emptyList()
             }
         }
@@ -265,7 +324,7 @@ class ExtensionRepository(
                     val rootObj = element as? JsonObject ?: return@withContext null
                     val dataObj = rootObj["data"]
                     val targetObj = if (dataObj is JsonObject) dataObj else rootObj
-                    val searchBook = parseNovelFromJson(targetObj, extensionId, extSourceUrl)
+                    val searchBook = parseNovelFromJson(targetObj, extensionId, extSourceUrl, extension.pluginJson.metadata.type)
                     val book = searchBook.toBook()
                     if (book.bookUrl.isBlank()) {
                         book.bookUrl = bookUrl

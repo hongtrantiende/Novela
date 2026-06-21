@@ -35,15 +35,15 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     var isEInkMode = appCtx.getPrefString("app_theme", "0") == "4"
     var isTransparent = appCtx.getPrefString("app_theme", "0") == "13"
     val customMode get() = ThemeConfig.customMode
-    var clickActionTL = appCtx.getPrefInt(PreferKey.clickActionTL, 2)
-    var clickActionTC = appCtx.getPrefInt(PreferKey.clickActionTC, 2)
-    var clickActionTR = appCtx.getPrefInt(PreferKey.clickActionTR, 1)
-    var clickActionML = appCtx.getPrefInt(PreferKey.clickActionML, 2)
+    var clickActionTL = appCtx.getPrefInt(PreferKey.clickActionTL, -1)
+    var clickActionTC = appCtx.getPrefInt(PreferKey.clickActionTC, -1)
+    var clickActionTR = appCtx.getPrefInt(PreferKey.clickActionTR, -1)
+    var clickActionML = appCtx.getPrefInt(PreferKey.clickActionML, -1)
     var clickActionMC = appCtx.getPrefInt(PreferKey.clickActionMC, 0)
-    var clickActionMR = appCtx.getPrefInt(PreferKey.clickActionMR, 1)
-    var clickActionBL = appCtx.getPrefInt(PreferKey.clickActionBL, 2)
-    var clickActionBC = appCtx.getPrefInt(PreferKey.clickActionBC, 1)
-    var clickActionBR = appCtx.getPrefInt(PreferKey.clickActionBR, 1)
+    var clickActionMR = appCtx.getPrefInt(PreferKey.clickActionMR, -1)
+    var clickActionBL = appCtx.getPrefInt(PreferKey.clickActionBL, -1)
+    var clickActionBC = appCtx.getPrefInt(PreferKey.clickActionBC, -1)
+    var clickActionBR = appCtx.getPrefInt(PreferKey.clickActionBR, -1)
 
     //    -1无操作 1下一页 2上一页 0显示菜单
     var mangaClickActionTL
@@ -155,31 +155,31 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
         when (key) {
 
             PreferKey.clickActionTL -> clickActionTL =
-                appCtx.getPrefInt(PreferKey.clickActionTL, 2)
+                appCtx.getPrefInt(PreferKey.clickActionTL, -1)
 
             PreferKey.clickActionTC -> clickActionTC =
-                appCtx.getPrefInt(PreferKey.clickActionTC, 2)
+                appCtx.getPrefInt(PreferKey.clickActionTC, -1)
 
             PreferKey.clickActionTR -> clickActionTR =
-                appCtx.getPrefInt(PreferKey.clickActionTR, 1)
+                appCtx.getPrefInt(PreferKey.clickActionTR, -1)
 
             PreferKey.clickActionML -> clickActionML =
-                appCtx.getPrefInt(PreferKey.clickActionML, 2)
+                appCtx.getPrefInt(PreferKey.clickActionML, -1)
 
             PreferKey.clickActionMC -> clickActionMC =
                 appCtx.getPrefInt(PreferKey.clickActionMC, 0)
 
             PreferKey.clickActionMR -> clickActionMR =
-                appCtx.getPrefInt(PreferKey.clickActionMR, 1)
+                appCtx.getPrefInt(PreferKey.clickActionMR, -1)
 
             PreferKey.clickActionBL -> clickActionBL =
-                appCtx.getPrefInt(PreferKey.clickActionBL, 2)
+                appCtx.getPrefInt(PreferKey.clickActionBL, -1)
 
             PreferKey.clickActionBC -> clickActionBC =
-                appCtx.getPrefInt(PreferKey.clickActionBC, 1)
+                appCtx.getPrefInt(PreferKey.clickActionBC, -1)
 
             PreferKey.clickActionBR -> clickActionBR =
-                appCtx.getPrefInt(PreferKey.clickActionBR, 1)
+                appCtx.getPrefInt(PreferKey.clickActionBR, -1)
 
             PreferKey.readBodyToLh -> ReadBookConfig.readBodyToLh =
                 appCtx.getPrefBoolean(PreferKey.readBodyToLh, true)

@@ -753,8 +753,8 @@ fun BookshelfScreen(
                             bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp,
                             horizontal = 4.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
-                        horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (isGridMode) 4.dp else 0.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 4.dp else 0.dp),
                         showFastScroll = BookshelfConfig.showBookshelfFastScrollerState.value
                     ) {
                         itemsIndexed(
@@ -1328,10 +1328,10 @@ fun BookshelfPage(
             contentPadding = adaptiveContentPaddingBookshelf(
                 top = paddingValues.calculateTopPadding(),
                 bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp,
-                horizontal = 8.dp
+                horizontal = 4.dp
             ),
-            verticalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
-            horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 8.dp else 0.dp),
+            verticalArrangement = Arrangement.spacedBy(if (isGridMode) 4.dp else 0.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 4.dp else 0.dp),
             showFastScroll = showFastScroll
         ) {
             items(displayBooks, key = { it.book.bookUrl }) { bookUi ->

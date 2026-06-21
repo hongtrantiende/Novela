@@ -152,13 +152,17 @@ class MangaAdapter(private val context: Context) :
                 binding.text.text = message
                 binding.textChapter.text = ""
             }
+            val isWebtoon = ReadMangaConfig.mangaScrollMode == io.legado.app.ui.book.manga.config.MangaScrollMode.WEBTOON
             itemView.updateLayoutParams {
-                height = if (isHorizontal) {
+                height = if (isWebtoon) {
+                    0
+                } else if (isHorizontal) {
                     MATCH_PARENT
                 } else {
                     96.dpToPx()
                 }
             }
+            itemView.visibility = if (isWebtoon) android.view.View.GONE else android.view.View.VISIBLE
         }
     }
 

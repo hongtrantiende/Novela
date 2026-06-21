@@ -88,6 +88,14 @@ import io.legado.app.vbookextension.ui.ExtensionViewModel
 import io.legado.app.vbookextension.data.entity.ExtensionEntity
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.platform.LocalContext
+import io.legado.app.ui.book.search.SearchActivity
+import io.legado.app.ui.book.search.SearchScope
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.saveable.rememberSaveable
+import io.legado.app.ui.widget.components.SearchBar
 
 private enum class BookFilterState(val id: Int) {
     SHOW_ALL(0),
@@ -115,6 +123,16 @@ fun ExploreShowScreen(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    var isSearchMode by rememberSaveable { mutableStateOf(false) }
+    var queryInput by rememberSaveable { mutableStateOf("") }
+
+    BackHandler(isSearchMode) {
+        isSearchMode = false
+        queryInput = ""
+        viewModel.onIntent(ExploreShowIntent.Search(null))
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -266,50 +284,107 @@ fun ExploreShowScreen(
             val translatedTitle by io.legado.app.utils.translateAsState(rawTitle)
             GlassMediumFlexibleTopAppBar(
                 modifier = Modifier.responsiveHazeEffect(state = hazeState),
-                title = translatedTitle,
+                title = if (isSearchMode) "Tìm kiếm" else translatedTitle,
                 navigationIcon = {
-                    TopBarNavigationButton(onClick = onBack)
+                    TopBarNavigationButton(onClick = {
+                        if (isSearchMode) {
+                            isSearchMode = false
+                            queryInput = ""
+                            viewModel.onIntent(ExploreShowIntent.Search(null))
+                        } else {
+                            onBack()
+                        }
+                    })
                 },
                 actions = {
+                    if (!isSearchMode) {
+                        if (state.showSearchIcon) {
+                            TopBarActionButton(
+                                onClick = {
+                                    val isExtension = state.sourceUrl?.startsWith("ext_") == true
+                                    if (isExtension) {
+                                        isSearchMode = true
+                                    } else {
+                                        state.bookSource?.let { bookSource ->
+                                            SearchActivity.start(context, null, SearchScope(bookSource).toString())
+                                        }
+                                    }
+                                },
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Tìm kiếm"
+                            )
+                        }
 
-                    AnimatedVisibility(
-                        visible = isGridMode,
-                        enter = fadeIn(tween(300)),
-                        exit = fadeOut(tween(300))
-                    ) {
-                        TopBarActionButton(
-                            onClick = {
-                                viewModel.onIntent(
-                                    ExploreShowIntent.ShowSheet(
-                                        ExploreShowSheet.GridCount
+                        AnimatedVisibility(
+                            visible = isGridMode,
+                            enter = fadeIn(tween(300)),
+                            exit = fadeOut(tween(300))
+                        ) {
+                            TopBarActionButton(
+                                onClick = {
+                                    viewModel.onIntent(
+                                        ExploreShowIntent.ShowSheet(
+                                            ExploreShowSheet.GridCount
+                                        )
                                     )
-                                )
-                            },
-                            imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
-                            contentDescription = "Cài đặt số cột"
-                        )
-                    }
+                                },
+                                imageVector = Icons.AutoMirrored.Outlined.FormatListBulleted,
+                                contentDescription = "Cài đặt số cột"
+                            )
+                        }
 
-                    TopBarActionButton(
-                        onClick = { viewModel.onIntent(ExploreShowIntent.ShowSheet(ExploreShowSheet.KindSelect)) },
-                        imageVector = Icons.Outlined.FilterAlt,
-                        contentDescription = "Phân loại"
-                    )
-
-                    TopBarActionButton(
-                        onClick = { viewModel.onIntent(ExploreShowIntent.ToggleLayout) },
-                        imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
-                        contentDescription = "Chuyển đổi bố cục"
-                    )
-
-                    if (state.sourceUrl?.startsWith("ext_") == true && state.extension != null) {
                         TopBarActionButton(
-                            onClick = { activeDetailExtension = state.extension },
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Cài đặt nguồn"
+                            onClick = { viewModel.onIntent(ExploreShowIntent.ShowSheet(ExploreShowSheet.KindSelect)) },
+                            imageVector = Icons.Outlined.FilterAlt,
+                            contentDescription = "Phân loại"
                         )
+
+                        TopBarActionButton(
+                            onClick = { viewModel.onIntent(ExploreShowIntent.ToggleLayout) },
+                            imageVector = if (!isGridMode) Icons.AutoMirrored.Outlined.FormatListBulleted else Icons.Default.GridView,
+                            contentDescription = "Chuyển đổi bố cục"
+                        )
+
+                        if (state.sourceUrl?.startsWith("ext_") == true && state.extension != null) {
+                            TopBarActionButton(
+                                onClick = { activeDetailExtension = state.extension },
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Cài đặt nguồn"
+                            )
+                        }
                     }
                 },
+                bottomContent = if (isSearchMode) {
+                    {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            SearchBar(
+                                query = queryInput,
+                                onQueryChange = { queryInput = it },
+                                onSearch = { q ->
+                                    if (q.trim().isNotBlank()) {
+                                        viewModel.onIntent(ExploreShowIntent.Search(q.trim()))
+                                    }
+                                },
+                                placeholder = "Tìm kiếm truyện...",
+                                autoFocus = true,
+                                trailingIcon = {
+                                    if (queryInput.isNotEmpty()) {
+                                        IconButton(onClick = { queryInput = "" }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Close,
+                                                contentDescription = "Xóa"
+                                            )
+                                        }
+                                    }
+                                }
+                            )
+                        }
+                    }
+                } else null,
                 scrollBehavior = scrollBehavior
             )
         }
@@ -319,7 +394,7 @@ fun ExploreShowScreen(
                 .fillMaxSize()
                 .padding(top = paddingValues.calculateTopPadding())
         ) {
-            if (state.sourceUrl?.startsWith("ext_") == true && state.homeKinds.isNotEmpty()) {
+            if (state.sourceUrl?.startsWith("ext_") == true && state.homeKinds.isNotEmpty() && !isSearchMode && state.searchQuery == null) {
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()

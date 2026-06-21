@@ -45,6 +45,10 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
 import java.net.URLDecoder
 import io.legado.app.help.http.CookieManager as AppCookieManager
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
@@ -54,6 +58,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     private var webPic: String? = null
     private var isCloudflareChallenge = false
     private var isFullScreen = false
+    private var extensionEntity: io.legado.app.vbookextension.data.entity.ExtensionEntity? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +73,16 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 binding.webView.loadUrl(url, headerMap)
             } else {
                 binding.webView.loadDataWithBaseURL(url, html, "text/html", "utf-8", url)
+            }
+            if (viewModel.sourceOrigin.startsWith("ext_")) {
+                val extId = viewModel.sourceOrigin.substringAfter("ext_")
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        extensionEntity = io.legado.app.data.appDb.extensionDao.getExtensionById(extId)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         }
         onBackPressedDispatcher.addCallback(this) {
@@ -106,6 +121,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             R.id.menu_open_in_browser -> openUrl(viewModel.baseUrl)
             R.id.menu_copy_url -> sendToClip(viewModel.baseUrl)
             R.id.menu_ok -> {
+                saveExtensionCookies()
                 if (viewModel.sourceVerificationEnable) {
                     viewModel.saveVerificationResult(binding.webView) {
                         finish()
@@ -219,6 +235,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     override fun finish() {
+        saveExtensionCookies()
         SourceVerificationHelp.checkResult(viewModel.sourceOrigin)
         super.finish()
     }
@@ -282,7 +299,9 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 if (viewModel.sourceOrigin.startsWith("ext_")) {
                     val extId = viewModel.sourceOrigin.substringAfter("ext_")
                     val prefs = getSharedPreferences("novel_reader_prefs", MODE_PRIVATE)
-                    prefs.edit().putString("ext_cookies_$extId", cookie ?: "").apply()
+                    val oldCookie = prefs.getString("ext_cookies_$extId", null)
+                    val mergedCookie = mergeCookies(oldCookie, cookie ?: "")
+                    prefs.edit().putString("ext_cookies_$extId", mergedCookie).apply()
                 }
             }
             view?.title?.let { title ->
@@ -334,6 +353,100 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             handler?.proceed()
         }
 
+    }
+
+    private fun saveExtensionCookies() {
+        if (viewModel.sourceOrigin.startsWith("ext_")) {
+            val extId = viewModel.sourceOrigin.substringAfter("ext_")
+            try {
+                val currentUrl = binding.webView.url ?: viewModel.baseUrl
+                val extBaseUrl = extensionEntity?.source?.let { src ->
+                    val secure = if (src.startsWith("http://")) src.replaceFirst("http://", "https://") else src
+                    val host = try { java.net.URI(secure).host } catch (_: Exception) { null }
+                    if (host != null) "https://$host" else secure
+                }
+                
+                CookieManager.getInstance().flush()
+                val cookieStr = getCookiesForExtension(
+                    CookieManager.getInstance(),
+                    currentUrl,
+                    extBaseUrl
+                )
+                val prefs = getSharedPreferences("novel_reader_prefs", MODE_PRIVATE)
+                val oldCookie = prefs.getString("ext_cookies_$extId", null)
+                val mergedCookie = mergeCookies(oldCookie, cookieStr)
+                
+                if (mergedCookie.isNotBlank()) {
+                    val userAgentStr = binding.webView.settings.userAgentString
+                    val editor = prefs.edit().putString("ext_cookies_$extId", mergedCookie)
+                    if (!userAgentStr.isNullOrBlank()) {
+                        editor.putString("ext_user_agent_$extId", userAgentStr)
+                    }
+                    editor.apply()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun getCookiesForExtension(
+        cookieManager: CookieManager,
+        currentUrl: String,
+        extBaseUrl: String?
+    ): String {
+        val cookies = mutableListOf<String>()
+
+        val currentBaseUrl = try {
+            val secure = if (currentUrl.startsWith("http://")) {
+                currentUrl.replaceFirst("http://", "https://")
+            } else {
+                currentUrl
+            }
+            val host = java.net.URI(secure).host
+            if (host != null) "https://$host" else secure
+        } catch (e: Exception) {
+            currentUrl
+        }
+
+        val currentCookies = cookieManager.getCookie(currentBaseUrl)
+        if (!currentCookies.isNullOrBlank()) {
+            cookies.add(currentCookies)
+        }
+
+        if (extBaseUrl != null && extBaseUrl != currentBaseUrl) {
+            val extCookies = cookieManager.getCookie(extBaseUrl)
+            if (!extCookies.isNullOrBlank()) {
+                cookies.add(extCookies)
+            }
+        }
+
+        var merged = ""
+        cookies.forEach { c ->
+            merged = mergeCookies(merged, c)
+        }
+        return merged
+    }
+
+    private fun mergeCookies(oldCookie: String?, newCookie: String?): String {
+        val cookieMap = mutableMapOf<String, String>()
+        if (!oldCookie.isNullOrBlank()) {
+            oldCookie.split(";").forEach { part ->
+                val pair = part.trim().split("=", limit = 2)
+                if (pair.size == 2) {
+                    cookieMap[pair[0].trim()] = pair[1].trim()
+                }
+            }
+        }
+        if (!newCookie.isNullOrBlank()) {
+            newCookie.split(";").forEach { part ->
+                val pair = part.trim().split("=", limit = 2)
+                if (pair.size == 2) {
+                    cookieMap[pair[0].trim()] = pair[1].trim()
+                }
+            }
+        }
+        return cookieMap.map { "${it.key}=${it.value}" }.joinToString("; ")
     }
 
 }

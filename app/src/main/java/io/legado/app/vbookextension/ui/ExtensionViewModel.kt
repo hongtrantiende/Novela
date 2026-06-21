@@ -44,7 +44,7 @@ class ExtensionViewModel(
         val prefs = appContext.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
         _selectedCookie.value = prefs.getString("ext_cookies_$extensionId", "") ?: ""
         _selectedParallelConnections.value = prefs.getInt("ext_parallel_connections_$extensionId", 3)
-        _selectedConnectionInterval.value = prefs.getInt("ext_connection_interval_$extensionId", 0)
+        _selectedConnectionInterval.value = prefs.getInt("ext_connection_interval_$extensionId", 33)
         _selectedIsPinned.value = prefs.getBoolean("ext_pinned_$extensionId", false)
 
         val storagePrefs = appContext.getSharedPreferences("ext_storage_$extensionId", Context.MODE_PRIVATE)

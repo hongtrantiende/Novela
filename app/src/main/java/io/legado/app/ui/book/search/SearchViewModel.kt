@@ -40,6 +40,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import coil.ImageLoader
+import coil.request.ImageRequest
+import splitties.init.appCtx
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(
@@ -49,6 +52,7 @@ class SearchViewModel(
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
     private val localPreferencesRepository: LocalPreferencesRepository,
+    private val imageLoader: ImageLoader,
 ) : ViewModel() {
 
     val searchLayoutMode = localPreferencesRepository
@@ -545,6 +549,7 @@ class SearchViewModel(
                         totalSources = event.totalSources,
                     )
                 }
+                preloadBookCovers(event.upsertBooks)
             }
 
             is SearchRunEvent.Finished -> {
@@ -807,6 +812,7 @@ class SearchViewModel(
                         expandedSourcePage = page + 1,
                     )
                 }
+                preloadBookCovers(newBooks)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -870,6 +876,24 @@ class SearchViewModel(
         val name: String,
         val author: String,
     )
+
+    private fun preloadBookCovers(books: List<SearchBook>) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            books.take(30).forEach { book ->
+                val coverUrl = book.coverUrl
+                if (!coverUrl.isNullOrBlank()) {
+                    val request = io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest(
+                        context = appCtx,
+                        data = coverUrl,
+                        sourceOrigin = book.origin,
+                        loadOnlyWifi = io.legado.app.ui.config.coverConfig.CoverConfig.loadCoverOnlyWifi,
+                        memoryCacheKey = coverUrl
+                    )
+                    imageLoader.enqueue(request)
+                }
+            }
+        }
+    }
 
     private companion object {
         const val EXACT_SEARCH_SINGLE_PAGE_RESULT_THRESHOLD = 3

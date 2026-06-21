@@ -407,8 +407,10 @@ object JSHttpBuilderBridge {
 
             // Save updated cookies to preferences for persistence
             val updatedCookie = cookieManager.getCookie(url)
-            if (!updatedCookie.isNullOrBlank()) {
-                prefs.edit().putString("ext_cookies_$extensionId", updatedCookie).apply()
+            val oldCookie = prefs.getString("ext_cookies_$extensionId", null)
+            val mergedCookie = mergeCookies(oldCookie, updatedCookie)
+            if (mergedCookie.isNotBlank()) {
+                prefs.edit().putString("ext_cookies_$extensionId", mergedCookie).apply()
             }
 
             val bodyBytes = response.body?.use { it.bytes() }

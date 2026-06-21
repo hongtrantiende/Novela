@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.withSave
 import coil.compose.AsyncImage
+import kotlinx.coroutines.delay
 import coil.request.ImageRequest
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.theme.LegadoTheme
@@ -93,8 +94,21 @@ fun BookCoverImage(
         }
     }
 
+    var showPlaceholder by remember(finalPath) {
+        mutableStateOf(finalPath == null)
+    }
+
+    LaunchedEffect(finalPath, isOnlineCoverLoaded) {
+        if (finalPath != null && !isOnlineCoverLoaded) {
+            delay(150)
+            showPlaceholder = true
+        } else {
+            showPlaceholder = false
+        }
+    }
+
     Box(modifier = modifier) {
-        if (hasCustomDefault && !isOnlineCoverLoaded) {
+        if (hasCustomDefault && showPlaceholder) {
             AsyncImage(
                 model = buildCoverImageRequest(
                     context = context,
@@ -185,6 +199,19 @@ fun CoilBookCover(
         }
     }
 
+    var showPlaceholder by remember(finalPath) {
+        mutableStateOf(finalPath == null)
+    }
+
+    LaunchedEffect(finalPath, isOnlineCoverLoaded) {
+        if (finalPath != null && !isOnlineCoverLoaded) {
+            delay(150)
+            showPlaceholder = true
+        } else {
+            showPlaceholder = false
+        }
+    }
+
     val transitionRadius = rememberSharedCoverTransitionRadius(
         sharedCoverKey = sharedCoverKey,
         radius = radius,
@@ -212,7 +239,7 @@ fun CoilBookCover(
                 } else Modifier
             )
             .background(
-                if (!hasCustomDefault && !isOnlineCoverLoaded) {
+                if (!hasCustomDefault && showPlaceholder) {
                     LegadoTheme.colorScheme.surfaceContainerLow
                 } else Color.Transparent,
                 shape
@@ -238,7 +265,7 @@ fun CoilBookCover(
             sharedCoverKey = sharedCoverKey
         )
 
-        if (showLoadingPlaceholder && !isOnlineCoverLoaded) {
+        if (showLoadingPlaceholder && showPlaceholder) {
             if (!hasCustomDefault) {
                 Icon(
                     Icons.Default.Book,

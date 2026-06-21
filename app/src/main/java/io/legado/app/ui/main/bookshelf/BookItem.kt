@@ -117,12 +117,12 @@ fun BookshelfItem(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .width(coverWidth.dp)
+                    .fillMaxWidth()
             ) {
 
                 Box(
                     modifier = Modifier
-                        .padding(4.dp)
+                        .padding(horizontal = 2.dp, vertical = 4.dp)
                         .fillMaxWidth()
                         .aspectRatio(5f / 7f)
                         .then(

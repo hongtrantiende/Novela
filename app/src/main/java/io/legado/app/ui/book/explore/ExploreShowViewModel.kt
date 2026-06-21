@@ -26,7 +26,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import splitties.init.appCtx
 import io.legado.app.vbookextension.data.dao.ExtensionDao
+import coil.ImageLoader
+import coil.request.ImageRequest
 import io.legado.app.vbookextension.data.entity.ExtensionEntity
+import io.legado.app.data.entities.BookSource
+import io.legado.app.data.appDb
 
 private data class ExploreShowLoadState(
     val isLoading: Boolean = false,
@@ -57,6 +61,8 @@ class ExploreShowViewModel(
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
     private val localPreferencesRepository: LocalPreferencesRepository,
     private val extensionDao: ExtensionDao,
+    private val extensionLoader: io.legado.app.vbookextension.loader.ExtensionLoader,
+    private val imageLoader: ImageLoader,
 ) : ViewModel() {
 
     private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
@@ -70,6 +76,9 @@ class ExploreShowViewModel(
         )
     )
     private val _extension = MutableStateFlow<ExtensionEntity?>(null)
+    private val _bookSource = MutableStateFlow<BookSource?>(null)
+    private val _searchQuery = MutableStateFlow<String?>(null)
+    private val _showSearchIcon = MutableStateFlow(false)
 
     private var sourceUrl: String? = null
     private var exploreUrl: String? = null
@@ -125,6 +134,15 @@ class ExploreShowViewModel(
             is ExploreShowIntent.AddToShelf -> viewModelScope.launch {
                 addToBookshelfUseCase.execute(intent.book)
             }
+
+            is ExploreShowIntent.Search -> {
+                _searchQuery.value = intent.query
+                page = 1
+                autoPageCount = 0
+                _rawBooks.value = emptyList()
+                _loadState.update { it.copy(isEnd = false) }
+                loadMore(isRefresh = true)
+            }
         }
     }
 
@@ -147,6 +165,9 @@ class ExploreShowViewModel(
                 _kindState,
                 _displayState,
                 _extension,
+                _bookSource,
+                _searchQuery,
+                _showSearchIcon,
             ) { array ->
                 val rawBooks = array[0] as List<SearchBook>
                 val bookshelf = array[1] as Set<BookShelfKey>
@@ -154,6 +175,11 @@ class ExploreShowViewModel(
                 val kindState = array[3] as ExploreShowKindState
                 val displayState = array[4] as ExploreShowDisplayState
                 val extension = array[5] as ExtensionEntity?
+                val bookSource = array[6] as BookSource?
+                val searchQuery = array[7] as String?
+                val showSearchIconExt = array[8] as Boolean
+
+                val showSearchIcon = bookSource != null || (extension != null && showSearchIconExt)
 
                 val books = rawBooks.map { item ->
                     ExploreBookItemUi(
@@ -182,6 +208,9 @@ class ExploreShowViewModel(
                     errorMsg = loadState.errorMsg,
                     sheet = displayState.sheet,
                     extension = extension,
+                    bookSource = bookSource,
+                    searchQuery = searchQuery,
+                    showSearchIcon = showSearchIcon,
                 )
             }.collect { newState ->
                 _uiState.value = newState
@@ -199,10 +228,22 @@ class ExploreShowViewModel(
         if (incomingSourceUrl.startsWith("ext_")) {
             val extId = incomingSourceUrl.substringAfter("ext_")
             viewModelScope.launch {
-                _extension.value = extensionDao.getExtensionById(extId)
+                val extEntity = extensionDao.getExtensionById(extId)
+                _extension.value = extEntity
+                if (extEntity != null) {
+                    val loaded = extensionLoader.loadExtension(extId)
+                    _showSearchIcon.value = loaded?.pluginJson?.script?.containsKey(io.legado.app.vbookextension.model.ScriptType.SEARCH.key) == true
+                } else {
+                    _showSearchIcon.value = false
+                }
             }
         } else {
             _extension.value = null
+            _showSearchIcon.value = false
+        }
+
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            _bookSource.value = appDb.bookSourceDao.getBookSource(incomingSourceUrl)
         }
 
         viewModelScope.launch {
@@ -262,6 +303,7 @@ class ExploreShowViewModel(
             val cachedBooks = ExploreShowCache.getBooks(cacheKey)
             if (cachedBooks != null) {
                 _rawBooks.value = cachedBooks
+                preloadBookCovers(cachedBooks)
                 page = ExploreShowCache.getPage(cacheKey) ?: 1
                 val cachedSelected = ExploreShowCache.getSelectedKind(cacheKey) ?: run {
                     val matchedKind = finalKinds.find { 
@@ -362,7 +404,12 @@ class ExploreShowViewModel(
                 page = 1
                 autoPageCount = 0
                 _rawBooks.value = emptyList()
-                val cacheKey = "$source##$url"
+                val query = _searchQuery.value
+                val cacheKey = if (query != null) {
+                    "$source##search##$query"
+                } else {
+                    "$source##$url"
+                }
                 ExploreShowCache.remove(cacheKey)
             }
 
@@ -376,7 +423,7 @@ class ExploreShowViewModel(
 
     private suspend fun fetchPage(sourceUrl: String, url: String?) {
         kotlin.runCatching {
-            exploreBooksUseCase.execute(sourceUrl, url, args = null, page)
+            exploreBooksUseCase.execute(sourceUrl, url, args = null, page, key = _searchQuery.value)
         }.onSuccess { result ->
             val currentList = _rawBooks.value
             val existingUrls = currentList.map { it.bookUrl }.toSet()
@@ -396,8 +443,14 @@ class ExploreShowViewModel(
                 page++
                 autoPageCount = 0
                 _loadState.update { it.copy(isEnd = false) }
+                preloadBookCovers(uniqueNewBooks)
                 
-                val cacheKey = "$sourceUrl##$url"
+                val query = _searchQuery.value
+                val cacheKey = if (query != null) {
+                    "$sourceUrl##search##$query"
+                } else {
+                    "$sourceUrl##$url"
+                }
                 ExploreShowCache.putBooks(cacheKey, newBooksList)
                 ExploreShowCache.putPage(cacheKey, page)
                 ExploreShowCache.putIsEnd(cacheKey, false)
@@ -416,7 +469,12 @@ class ExploreShowViewModel(
         autoPageCount++
         if (autoPageCount >= MAX_AUTO_PAGES) {
             _loadState.update { it.copy(isEnd = true) }
-            val cacheKey = "$sourceUrl##$url"
+            val query = _searchQuery.value
+            val cacheKey = if (query != null) {
+                "$sourceUrl##search##$query"
+            } else {
+                "$sourceUrl##$url"
+            }
             ExploreShowCache.putPage(cacheKey, page)
             ExploreShowCache.putIsEnd(cacheKey, true)
             finishLoading()
@@ -437,5 +495,23 @@ class ExploreShowViewModel(
 
     private fun emitEffect(effect: ExploreShowEffect) {
         _effects.tryEmit(effect)
+    }
+
+    private fun preloadBookCovers(books: List<SearchBook>) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            books.take(30).forEach { book ->
+                val coverUrl = book.coverUrl
+                if (!coverUrl.isNullOrBlank()) {
+                    val request = io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest(
+                        context = appCtx,
+                        data = coverUrl,
+                        sourceOrigin = book.origin,
+                        loadOnlyWifi = io.legado.app.ui.config.coverConfig.CoverConfig.loadCoverOnlyWifi,
+                        memoryCacheKey = coverUrl
+                    )
+                    imageLoader.enqueue(request)
+                }
+            }
+        }
     }
 }

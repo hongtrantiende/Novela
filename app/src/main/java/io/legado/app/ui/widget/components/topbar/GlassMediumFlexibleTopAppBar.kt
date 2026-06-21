@@ -221,7 +221,7 @@ object GlassTopAppBarDefaults {
         val containerBaseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
             Color(ThemeConfig.secondaryThemeColor)
         } else {
-            MaterialTheme.colorScheme.surface
+            LegadoTheme.colorScheme.background
         }
         val containerColor = GlassDefaults.glassColor(
             noBlurColor = containerBaseColor,
@@ -231,7 +231,7 @@ object GlassTopAppBarDefaults {
         val scrolledBaseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
             Color(ThemeConfig.secondaryThemeColor)
         } else {
-            MaterialTheme.colorScheme.surfaceContainer
+            LegadoTheme.colorScheme.background
         }
         val scrolledContainerColor = if (ThemeConfig.enableBlur) {
             scrolledBaseColor.copy(alpha = GlassDefaults.TransparentAlpha)
@@ -250,7 +250,7 @@ object GlassTopAppBarDefaults {
         val baseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
             Color(ThemeConfig.secondaryThemeColor)
         } else {
-            MaterialTheme.colorScheme.surface
+            LegadoTheme.colorScheme.background
         }
         val glassColor = GlassDefaults.glassColor(
             noBlurColor = baseColor,
@@ -264,7 +264,7 @@ object GlassTopAppBarDefaults {
         val baseColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
             Color(ThemeConfig.secondaryThemeColor)
         } else {
-            MaterialTheme.colorScheme.surfaceContainer
+            LegadoTheme.colorScheme.background
         }
         val glassColor = GlassDefaults.glassColor(
             noBlurColor = baseColor,

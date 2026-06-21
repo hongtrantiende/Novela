@@ -14,7 +14,7 @@ object ExtensionRequestRateLimiter {
         val prefs = context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
 
         // 1. Connection Interval (delay in milliseconds)
-        val delayMs = prefs.getInt("ext_connection_interval_$extensionId", 0)
+        val delayMs = prefs.getInt("ext_connection_interval_$extensionId", 33)
         if (delayMs > 0) {
             try {
                 Thread.sleep(delayMs.toLong())

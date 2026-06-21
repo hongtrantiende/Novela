@@ -54,22 +54,22 @@ object ReadMenuConfig {
 
     var clickActionTL by prefDelegate(
         PreferKey.clickActionTL,
-        2
+        -1
     )
 
     var clickActionTC by prefDelegate(
         PreferKey.clickActionTC,
-        2
+        -1
     )
 
     var clickActionTR by prefDelegate(
         PreferKey.clickActionTR,
-        1
+        -1
     )
 
     var clickActionML by prefDelegate(
         PreferKey.clickActionML,
-        2
+        -1
     )
 
     var clickActionMC by prefDelegate(
@@ -79,22 +79,22 @@ object ReadMenuConfig {
 
     var clickActionMR by prefDelegate(
         PreferKey.clickActionMR,
-        1
+        -1
     )
 
     var clickActionBL by prefDelegate(
         PreferKey.clickActionBL,
-        2
+        -1
     )
 
     var clickActionBC by prefDelegate(
         PreferKey.clickActionBC,
-        1
+        -1
     )
 
     var clickActionBR by prefDelegate(
         PreferKey.clickActionBR,
-        1
+        -1
     )
 
     fun hasMenuClickArea(): Boolean {

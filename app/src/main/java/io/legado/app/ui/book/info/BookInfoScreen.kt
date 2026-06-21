@@ -365,23 +365,17 @@ private fun BookInfoTransparentTopAppBar(
     onBackPressed: () -> Unit,
     scrollBehavior: GlassTopAppBarScrollBehavior,
 ) {
-    val hazeState = LocalHazeState.current
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
-    val collapsedColor = if (isMiuix) {
-        GlassTopAppBarDefaults.getMiuixAppBarColor()
-    } else {
-        GlassTopAppBarDefaults.scrolledContainerColor()
-    }
-    val isAtTop = scrollBehavior.collapsedFraction <= 0.001f
-    val resolvedColor = if (isAtTop) Color.Transparent else collapsedColor
+    val resolvedColor = Color.Transparent
     val topBarColors = TopAppBarDefaults.topAppBarColors(
         containerColor = resolvedColor,
         scrolledContainerColor = resolvedColor,
     )
+    val modifier = Modifier
 
     if (isMiuix) {
         MiuixTopAppBar(
-            modifier = hazeState?.let { Modifier.responsiveHazeEffectFixedStyle(it) } ?: Modifier,
+            modifier = modifier,
             title = "",
             subtitle = "",
             navigationIcon = {
@@ -400,7 +394,7 @@ private fun BookInfoTransparentTopAppBar(
         )
     } else {
         MediumFlexibleTopAppBar(
-            modifier = hazeState?.let { Modifier.responsiveHazeEffectFixedStyle(it) } ?: Modifier,
+            modifier = modifier,
             title = { Text(text = "", maxLines = 1) },
             navigationIcon = {
                 TopBarNavigationButton(onClick = onBackPressed)
@@ -721,7 +715,7 @@ private fun BookInfoHeader(
                     var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
                     val translatedBookName by io.legado.app.utils.translateAsState(book.name)
                     Box {
-                        AnimatedTextLine(
+                        AppText(
                             text = translatedBookName,
                             style = LegadoTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
@@ -752,7 +746,7 @@ private fun BookInfoHeader(
                         }
                     }
                     val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor)
-                    AnimatedTextLine(
+                    AppText(
                         text = stringResource(R.string.author_show, translatedAuthor),
                         style = LegadoTheme.typography.bodyLarge,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
@@ -761,7 +755,7 @@ private fun BookInfoHeader(
                             onLongClick = { onAuthorClick(true) }
                         )
                     )
-                    AnimatedTextLine(
+                    AppText(
                         text = stringResource(R.string.origin_show, book.originName),
                         style = LegadoTheme.typography.labelMedium,
                         color = LegadoTheme.colorScheme.primary,

@@ -26,7 +26,11 @@ class ExploreBooksUseCase(
         key: String? = null,
     ): ExploreResult = withContext(Dispatchers.IO) {
         if (sourceUrl.startsWith("ext_")) {
-            val books = extensionRepository.exploreBooks(sourceUrl, moduleUrl ?: "", page)
+            val books = if (key != null) {
+                extensionRepository.searchBooks(sourceUrl, key, page)
+            } else {
+                extensionRepository.exploreBooks(sourceUrl, moduleUrl ?: "", page)
+            }
             return@withContext ExploreResult(moduleUrl ?: "", books)
         }
         val request = resolveRequest(sourceUrl, moduleUrl, args, key)

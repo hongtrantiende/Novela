@@ -8,6 +8,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 
 import io.legado.app.vbookextension.data.entity.ExtensionEntity
+import io.legado.app.data.entities.BookSource
 
 @Stable
 data class ExploreShowUiState(
@@ -25,6 +26,9 @@ data class ExploreShowUiState(
     val errorMsg: String? = null,
     val sheet: ExploreShowSheet = ExploreShowSheet.None,
     val extension: ExtensionEntity? = null,
+    val bookSource: BookSource? = null,
+    val searchQuery: String? = null,
+    val showSearchIcon: Boolean = false,
 )
 
 @Stable
@@ -55,6 +59,7 @@ sealed interface ExploreShowIntent {
     data object DismissSheet : ExploreShowIntent
     data class OpenBook(val book: SearchBook, val sharedCoverKey: String?) : ExploreShowIntent
     data class AddToShelf(val book: SearchBook) : ExploreShowIntent
+    data class Search(val query: String?) : ExploreShowIntent
 }
 
 sealed interface ExploreShowEffect {
