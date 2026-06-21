@@ -111,12 +111,16 @@ class ExtensionViewModel(
         viewModelScope.launch {
             extensionLoader.ensureDefaultRepository()
             extensionLoader.autoFixExtensionTypes()
-            fetchAllExtensions()
+            fetchAllExtensions(force = false)
         }
     }
 
-    fun fetchAllExtensions() {
+    fun fetchAllExtensions(force: Boolean = false) {
         viewModelScope.launch {
+            if (!force && ExtensionCache.availableExtensions != null) {
+                _availableExtensions.value = ExtensionCache.availableExtensions!!
+                return@launch
+            }
             _isLoading.value = true
             _error.value = null
             try {
@@ -144,6 +148,7 @@ class ExtensionViewModel(
                     list.maxByOrNull { it.version } ?: list.first()
                 }
                 
+                ExtensionCache.availableExtensions = distinctExts
                 _availableExtensions.value = distinctExts
             } catch (e: Exception) {
                 _error.value = e.message
@@ -203,14 +208,14 @@ class ExtensionViewModel(
                     isEnabled = true
                 )
             )
-            fetchAllExtensions()
+            fetchAllExtensions(force = true)
         }
     }
 
     fun removeRepository(repo: RepositoryEntity) {
         viewModelScope.launch {
             repositoryDao.delete(repo)
-            fetchAllExtensions()
+            fetchAllExtensions(force = true)
         }
     }
 

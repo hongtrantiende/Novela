@@ -180,30 +180,83 @@ class BookInfoViewModel(
         relatedBooksLoadJob?.cancel()
         syncUiState()
         execute {
-            val dbBook = appDb.bookDao.getBook(bookUrl)
-            if (dbBook != null) {
-                inBookshelf = !dbBook.isNotShelf
-                dbBook
+            val cachedBook = BookInfoCache.getBook(bookUrl)
+            val cachedChapters = BookInfoCache.getChapters(bookUrl)
+            val cachedSource = origin?.let { BookInfoCache.getSource(it) }
+
+            if (cachedBook != null && cachedChapters != null) {
+                Triple(cachedBook, cachedChapters, cachedSource)
             } else {
-                val searchBook = appDb.searchBookDao.getSearchBook(bookUrl)?.toBook()
-                if (searchBook != null) {
-                    inBookshelf = false
-                    searchBook
+                val dbBook = appDb.bookDao.getBook(bookUrl)
+                val book = if (dbBook != null) {
+                    inBookshelf = !dbBook.isNotShelf
+                    dbBook
                 } else {
-                    currentBook ?: throw NoStackTraceException("Không tìm thấy sách nào")
+                    val searchBook = appDb.searchBookDao.getSearchBook(bookUrl)?.toBook()
+                    if (searchBook != null) {
+                        inBookshelf = false
+                        searchBook
+                    } else {
+                        currentBook ?: throw NoStackTraceException("Không tìm thấy sách nào")
+                    }
+                }
+                if (book.coverUrl.isNullOrBlank() && !coverPath.isNullOrBlank()) {
+                    book.coverUrl = coverPath
+                }
+                val source = if (book.isLocal) {
+                    null
+                } else {
+                    appDb.bookSourceDao.getBookSource(book.origin)
+                }
+                val chapters = if (book.isLocal) {
+                    LocalBook.getChapterList(book)
+                } else {
+                    appDb.bookChapterDao.getChapterList(book.bookUrl)
+                }
+                Triple(book, chapters, source)
+            }
+        }.onSuccess { (book, chapters, source) ->
+            if (source != null) {
+                BookInfoCache.putSource(book.origin, source)
+            }
+            currentBook = book
+            bookSource = source
+
+            val finalKinds = BookInfoCache.getKindLabels(bookUrl) ?: book.kind?.splitNotBlank(",", "\n").orEmpty().toList()
+            val normalizedGroupNames = BookInfoCache.getGroupNames(bookUrl) ?: run {
+                val groupNames = appDb.bookGroupDao.getGroupNames(book.group).joinToString(",")
+                groupNames.ifBlank { null }
+            }
+            val customGroup = BookInfoCache.getHasCustomGroup(bookUrl) ?: run {
+                val userGroupIds = appDb.bookGroupDao.idsSum
+                val groupAnd = userGroupIds and book.group
+                book.group > 0L && groupAnd != 0L
+            }
+
+            currentKindLabels = finalKinds
+            currentGroupNames = normalizedGroupNames
+            currentHasCustomGroup = customGroup
+
+            if (chapters.isNotEmpty()) {
+                currentChapterList = chapters
+                BookInfoCache.putBook(bookUrl, book)
+                BookInfoCache.putChapters(bookUrl, chapters)
+                if (normalizedGroupNames != null) BookInfoCache.putGroupNames(bookUrl, normalizedGroupNames)
+                BookInfoCache.putKindLabels(bookUrl, finalKinds)
+                BookInfoCache.putHasCustomGroup(bookUrl, customGroup)
+
+                syncUiState(isTocLoading = false)
+                source?.let { scheduleRelatedBooksLoad(book, it) }
+            } else {
+                syncUiState(isTocLoading = true)
+                refreshMeta(book)
+                upCoverByRule(book)
+                if (book.tocUrl.isEmpty() && !book.isLocal) {
+                    loadBookInfo(book, runPreUpdateJs = inBookshelf)
+                } else {
+                    loadChapter(book)
                 }
             }
-        }.onSuccess { book ->
-            // 如果从数据库/搜索中拿到的书没有封面，但我们有传入的封面，则保留传入的封面
-            if (book.coverUrl.isNullOrBlank() && !coverPath.isNullOrBlank()) {
-                book.coverUrl = coverPath
-            }
-            val source = if (book.isLocal) {
-                null
-            } else {
-                appDb.bookSourceDao.getBookSource(book.origin)
-            }
-            upBook(book, source)
         }.onError {
             context.toastOnUi(it.localizedMessage ?: "Không tìm thấy sách nào")
             emitEffect(BookInfoEffect.Finish(afterTransition = true))
@@ -684,6 +737,7 @@ class BookInfoViewModel(
     }
 
     fun refreshBook(book: Book) {
+        BookInfoCache.remove(book.bookUrl)
         syncUiState(isTocLoading = true)
         execute {
             if (book.isLocal) {
@@ -745,6 +799,7 @@ class BookInfoViewModel(
                     if (inBookshelf) {
                         loadedBook.save()
                     }
+                    BookInfoCache.putBook(loadedBook.bookUrl, loadedBook)
                     syncUiState(isTocLoading = true)
                     refreshMeta(loadedBook)
                     if (loadedBook.isWebFile) {
@@ -778,6 +833,7 @@ class BookInfoViewModel(
                 if (inBookshelf) {
                     appDb.bookDao.update(loadedBook)
                 }
+                BookInfoCache.putBook(loadedBook.bookUrl, loadedBook)
                 syncUiState(isTocLoading = true)
                 refreshMeta(loadedBook)
                 loadExtensionChapterList(loadedBook, scope)
@@ -816,6 +872,8 @@ class BookInfoViewModel(
             }
             currentBook = book
             currentChapterList = chapters
+            BookInfoCache.putBook(book.bookUrl, book)
+            BookInfoCache.putChapters(book.bookUrl, chapters)
             syncUiState(isTocLoading = false)
         }.onError {
             currentChapterList = emptyList()
@@ -920,6 +978,9 @@ class BookInfoViewModel(
             currentKindLabels = it.first
             currentGroupNames = it.second
             currentHasCustomGroup = it.third
+            BookInfoCache.putKindLabels(book.bookUrl, it.first)
+            if (it.second != null) BookInfoCache.putGroupNames(book.bookUrl, it.second!!)
+            BookInfoCache.putHasCustomGroup(book.bookUrl, it.third)
             syncUiState()
         }
     }
@@ -945,6 +1006,8 @@ class BookInfoViewModel(
             }.onSuccess {
                 currentBook = book
                 currentChapterList = it
+                BookInfoCache.putBook(book.bookUrl, book)
+                BookInfoCache.putChapters(book.bookUrl, it)
                 syncUiState(isTocLoading = false)
             }.onError {
                 currentChapterList = emptyList()
@@ -972,6 +1035,8 @@ class BookInfoViewModel(
                     }
                     currentBook = book
                     currentChapterList = chapters
+                    BookInfoCache.putBook(book.bookUrl, book)
+                    BookInfoCache.putChapters(book.bookUrl, chapters)
                     syncUiState(isTocLoading = false)
                 }.onError {
                     currentChapterList = emptyList()

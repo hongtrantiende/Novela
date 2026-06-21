@@ -289,7 +289,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
-                onClick = { viewModel.fetchAllExtensions() },
+                onClick = { viewModel.fetchAllExtensions(force = true) },
                 modifier = Modifier.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
             ) {
                 if (isLoading) {

@@ -581,7 +581,7 @@ fun MainActivity.mainEntryProvider(
             },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
-            sharedCoverKey = route.sharedCoverKey ?: bookCoverSharedElementKey(route.bookUrl),
+            sharedCoverKey = null,
             onRegisterVariableSetter = { setter ->
                 onRegisterVariableSetter(setter)
             }
