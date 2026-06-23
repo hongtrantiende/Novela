@@ -52,9 +52,17 @@ fun AppScaffold(
     val contentDrawsBehindBars =
         alwaysDrawBehindBars || ThemeConfig.enableBlur || ThemeConfig.enableProgressiveBlur
 
-    val containerColor = Color.Transparent
+    val containerColor = if (hasImageBg) {
+        Color.Transparent
+    } else {
+        LegadoTheme.colorScheme.background
+    }
 
-    val miuixContainerColor = Color.Transparent
+    val miuixContainerColor = if (hasImageBg) {
+        Color.Transparent
+    } else {
+        MiuixTheme.colorScheme.surface
+    }
 
     CompositionLocalProvider(
         LocalHazeState provides if (ThemeConfig.enableBlur) hazeState else null
@@ -185,33 +193,6 @@ private fun BackgroundImageContent(
                     .fillMaxSize()
                     .blur(blur.dp),
                 contentScale = ContentScale.Crop
-            )
-        }
-    } else {
-        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-            // Base background color #12100E
-            drawRect(color = androidx.compose.ui.graphics.Color(0xFF12100E))
-            
-            // Top-right radial glow centered at (width, 0)
-            drawCircle(
-                brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                    colors = listOf(androidx.compose.ui.graphics.Color(0x26D29C6C), androidx.compose.ui.graphics.Color(0x00D29C6C)),
-                    center = androidx.compose.ui.geometry.Offset(size.width, 0f),
-                    radius = size.minDimension * 0.7f
-                ),
-                radius = size.minDimension * 0.7f,
-                center = androidx.compose.ui.geometry.Offset(size.width, 0f)
-            )
-
-            // Bottom-left radial glow centered at (0, height)
-            drawCircle(
-                brush = androidx.compose.ui.graphics.Brush.radialGradient(
-                    colors = listOf(androidx.compose.ui.graphics.Color(0x20D29C6C), androidx.compose.ui.graphics.Color(0x00D29C6C)),
-                    center = androidx.compose.ui.geometry.Offset(0f, size.height),
-                    radius = size.minDimension * 0.7f
-                ),
-                radius = size.minDimension * 0.7f,
-                center = androidx.compose.ui.geometry.Offset(0f, size.height)
             )
         }
     }
