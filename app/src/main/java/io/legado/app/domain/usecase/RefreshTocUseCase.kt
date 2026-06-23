@@ -23,7 +23,11 @@ class RefreshTocUseCase(
         onSuccess: suspend (BookSource, Book) -> Unit = { _, _ -> }
     ): Result<Unit> = kotlin.runCatching {
         val book = bookRepository.getBook(bookUrl) ?: throw Exception("Book not found")
-        val source = bookSourceRepository.getBookSource(book.origin)
+        val source = if (book.origin.startsWith("ext_")) {
+            BookSource(bookSourceUrl = book.origin, bookSourceName = book.originName)
+        } else {
+            bookSourceRepository.getBookSource(book.origin)
+        }
         if (source == null) {
             if (!book.isUpError) {
                 book.addType(BookType.updateError)

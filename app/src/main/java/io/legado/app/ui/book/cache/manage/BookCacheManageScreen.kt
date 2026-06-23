@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
@@ -44,6 +45,7 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
@@ -52,7 +54,7 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
-import io.legado.app.ui.widget.components.AppTextField
+import io.legado.app.ui.widget.components.dialog.DownloadSettingsDialog
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
@@ -92,6 +94,8 @@ private fun BookCacheManageScreen(
     var pendingDeleteBook by remember { mutableStateOf<BookCacheBookItem?>(null) }
     var pendingDeleteChapter by remember { mutableStateOf<Pair<BookCacheBookItem, BookCacheChapterItem>?>(null) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var pendingStartAllDownloads by remember { mutableStateOf(false) }
+    var pendingStartBookUrl by remember { mutableStateOf<String?>(null) }
     val allBooks = state.shelfBooks + state.notShelfBooks
     val hasRunningDownload = allBooks.any { it.hasActiveDownload }
     val hasDownloadTarget = allBooks.any { it.cachedCount < it.totalCount }
@@ -127,7 +131,7 @@ private fun BookCacheManageScreen(
                         if (hasRunningDownload) {
                             onIntent(BookCacheManageIntent.StopAllDownloads)
                         } else {
-                            onIntent(BookCacheManageIntent.StartAllDownloads)
+                            pendingStartAllDownloads = true
                         }
                     },
                     icon = if (hasRunningDownload) Icons.Default.Stop else Icons.Default.Download,
@@ -164,7 +168,13 @@ private fun BookCacheManageScreen(
                     onToggleExpanded = { bookUrl ->
                         onIntent(BookCacheManageIntent.ToggleBookExpanded(bookUrl))
                     },
-                    onIntent = onIntent,
+                    onIntent = { intent ->
+                        if (intent is BookCacheManageIntent.StartBookDownload) {
+                            pendingStartBookUrl = intent.bookUrl
+                        } else {
+                            onIntent(intent)
+                        }
+                    },
                     onDeleteBook = { pendingDeleteBook = it },
                     onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
                 )
@@ -177,7 +187,13 @@ private fun BookCacheManageScreen(
                     onToggleExpanded = { bookUrl ->
                         onIntent(BookCacheManageIntent.ToggleBookExpanded(bookUrl))
                     },
-                    onIntent = onIntent,
+                    onIntent = { intent ->
+                        if (intent is BookCacheManageIntent.StartBookDownload) {
+                            pendingStartBookUrl = intent.bookUrl
+                        } else {
+                            onIntent(intent)
+                        }
+                    },
                     onDeleteBook = { pendingDeleteBook = it },
                     onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
                 )
@@ -211,45 +227,30 @@ private fun BookCacheManageScreen(
 
     if (showSettingsDialog) {
         DownloadSettingsDialog(
-            onDismiss = { showSettingsDialog = false }
+            onDismiss = { showSettingsDialog = false },
+            onConfirm = {}
         )
     }
-}
 
-@Composable
-private fun DownloadSettingsDialog(
-    onDismiss: () -> Unit
-) {
-    var threadCount by remember { mutableStateOf(OtherConfig.cacheBookThreadCount.toString()) }
-    var downloadDelay by remember { mutableStateOf((OtherConfig.downloadDelay / 1000).toString()) }
-
-    AppAlertDialog(
-        show = true,
-        onDismissRequest = onDismiss,
-        title = "Cài đặt tải truyện",
-        content = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                AppTextField(
-                    value = threadCount,
-                    onValueChange = { threadCount = it },
-                    label = "Số luồng tải"
-                )
-                AppTextField(
-                    value = downloadDelay,
-                    onValueChange = { downloadDelay = it },
-                    label = "Độ trễ tải (giây)"
-                )
+    if (pendingStartAllDownloads) {
+        DownloadSettingsDialog(
+            onDismiss = { pendingStartAllDownloads = false },
+            onConfirm = {
+                onIntent(BookCacheManageIntent.StartAllDownloads)
+                pendingStartAllDownloads = false
             }
-        },
-        confirmText = stringResource(android.R.string.ok),
-        onConfirm = {
-            OtherConfig.cacheBookThreadCount = threadCount.toIntOrNull() ?: 1
-            OtherConfig.downloadDelay = (downloadDelay.toLongOrNull() ?: 2L) * 1000L
-            onDismiss()
-        },
-        dismissText = stringResource(android.R.string.cancel),
-        onDismiss = onDismiss
-    )
+        )
+    }
+
+    pendingStartBookUrl?.let { bookUrl ->
+        DownloadSettingsDialog(
+            onDismiss = { pendingStartBookUrl = null },
+            onConfirm = {
+                onIntent(BookCacheManageIntent.StartBookDownload(bookUrl))
+                pendingStartBookUrl = null
+            }
+        )
+    }
 }
 
 private fun LazyListScope.cacheSection(
@@ -361,6 +362,12 @@ private fun BookCacheBookCard(
                     modifier = Modifier
                         .size(20.dp)
                         .graphicsLayer(rotationZ = arrowRotation)
+                )
+                CoilBookCover(
+                    name = item.name,
+                    author = item.author,
+                    path = item.coverUrl,
+                    modifier = Modifier.width(40.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     AppText(

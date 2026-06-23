@@ -8,6 +8,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.isLocal
 import io.legado.app.model.cache.CacheDownloadRequest
 import io.legado.app.model.cache.CacheDownloadStateStore
@@ -201,7 +202,7 @@ object CacheBook {
 
     suspend fun getOrCreate(bookUrl: String): CacheBookModel? = withContext(Dispatchers.IO) {
         val book = appDb.bookDao.getBook(bookUrl) ?: return@withContext null
-        val source = appDb.bookSourceDao.getBookSource(book.origin) ?: return@withContext null
+        val source = book.getBookSource() ?: return@withContext null
         getOrCreate(source, book)
     }
 

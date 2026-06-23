@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.manage
 
+import io.legado.app.ui.widget.components.dialog.DownloadSettingsDialog
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -162,6 +163,7 @@ private fun BookshelfManageScreen(
     var showCustomExportDialog by remember { mutableStateOf(false) }
     var showBatchSourcePickerSheet by remember { mutableStateOf(false) }
     var pendingBatchSources by remember { mutableStateOf<List<BookSource>>(emptyList()) }
+    var pendingSingleDownloadBook by remember { mutableStateOf<Book?>(null) }
     var singleChangeSourceBook by remember { mutableStateOf<Book?>(null) }
     var manualSearchPreviewBook by remember { mutableStateOf<Book?>(null) }
     var otherSourcePreviewItem by remember { mutableStateOf<BatchChangeSourcePreviewItem?>(null) }
@@ -706,8 +708,15 @@ private fun BookshelfManageScreen(
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
+                                CoilBookCover(
+                                    name = book.name,
+                                    author = book.author,
+                                    path = book.getDisplayCover(),
+                                    modifier = Modifier.width(40.dp)
+                                )
                                 Column(
                                     modifier = Modifier.weight(1f),
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -797,7 +806,11 @@ private fun BookshelfManageScreen(
                                     SmallTonalButton(
                                         onClick = {
                                             if (!book.isLocal) {
-                                                viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
+                                                if (isDownloading) {
+                                                    viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
+                                                } else {
+                                                    pendingSingleDownloadBook = book
+                                                }
                                             }
                                         },
                                         icon = if (isDownloading) Icons.Default.Stop else Icons.Default.Download,
@@ -973,24 +986,20 @@ private fun BookshelfManageScreen(
         }
     )
 
-    AppAlertDialog(
-        show = showBatchDownloadConfirmDialog,
-        onDismissRequest = { showBatchDownloadConfirmDialog = false },
-        title = stringResource(R.string.draw),
-        text = stringResource(R.string.sure_cache_book),
-        confirmText = stringResource(android.R.string.ok),
-        onConfirm = {
-            showBatchDownloadConfirmDialog = false
-            viewModel.dispatch(
-                BookshelfManageScreenIntent.DownloadBooks(
-                    bookUrls = selectedBookUrls,
-                    downloadAllChapters = false
+    if (showBatchDownloadConfirmDialog) {
+        DownloadSettingsDialog(
+            onDismiss = { showBatchDownloadConfirmDialog = false },
+            onConfirm = {
+                showBatchDownloadConfirmDialog = false
+                viewModel.dispatch(
+                    BookshelfManageScreenIntent.DownloadBooks(
+                        bookUrls = selectedBookUrls,
+                        downloadAllChapters = false
+                    )
                 )
-            )
-        },
-        dismissText = stringResource(android.R.string.cancel),
-        onDismiss = { showBatchDownloadConfirmDialog = false }
-    )
+            }
+        )
+    }
 
     AppAlertDialog(
         show = showDeleteBookConfirmDialog,
@@ -1055,24 +1064,30 @@ private fun BookshelfManageScreen(
         }
     )
 
-    AppAlertDialog(
-        show = showDownloadAllConfirmDialog,
-        onDismissRequest = { showDownloadAllConfirmDialog = false },
-        title = stringResource(R.string.draw),
-        text = stringResource(R.string.sure_cache_book),
-        confirmText = stringResource(android.R.string.ok),
-        onConfirm = {
-            showDownloadAllConfirmDialog = false
-            viewModel.dispatch(
-                BookshelfManageScreenIntent.StartDownloadForVisibleBooks(
-                    books = state.books,
-                    downloadAllChapters = true
+    if (showDownloadAllConfirmDialog) {
+        DownloadSettingsDialog(
+            onDismiss = { showDownloadAllConfirmDialog = false },
+            onConfirm = {
+                showDownloadAllConfirmDialog = false
+                viewModel.dispatch(
+                    BookshelfManageScreenIntent.StartDownloadForVisibleBooks(
+                        books = state.books,
+                        downloadAllChapters = true
+                    )
                 )
-            )
-        },
-        dismissText = stringResource(android.R.string.cancel),
-        onDismiss = { showDownloadAllConfirmDialog = false }
-    )
+            }
+        )
+    }
+
+    pendingSingleDownloadBook?.let { book ->
+        DownloadSettingsDialog(
+            onDismiss = { pendingSingleDownloadBook = null },
+            onConfirm = {
+                viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
+                pendingSingleDownloadBook = null
+            }
+        )
+    }
 
     OptionSheet(
         show = showExportTypeDialog,

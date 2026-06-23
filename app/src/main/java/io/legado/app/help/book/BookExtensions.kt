@@ -407,6 +407,9 @@ fun Book.getFolderNameNoCache(): String {
 }
 
 fun Book.getBookSource(): BookSource? {
+    if (origin.startsWith("ext_")) {
+        return BookSource(bookSourceUrl = origin, bookSourceName = originName)
+    }
     return appDb.bookSourceDao.getBookSource(origin)
 }
 

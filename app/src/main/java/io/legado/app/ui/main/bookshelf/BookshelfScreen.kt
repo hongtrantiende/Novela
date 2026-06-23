@@ -1,5 +1,6 @@
 package io.legado.app.ui.main.bookshelf
 
+import io.legado.app.ui.widget.components.dialog.DownloadSettingsDialog
 import android.content.ClipData
 import android.content.res.Configuration
 import android.net.Uri
@@ -1160,19 +1161,15 @@ private fun BookshelfOverlays(
         onDismissRequest = { viewModel.dismissOverlay() }
     )
 
-    AppAlertDialog(
-        show = activeOverlay == BookshelfOverlay.BatchDownloadConfirmDialog,
-        onDismissRequest = { viewModel.dismissOverlay() },
-        title = stringResource(R.string.draw),
-        text = stringResource(R.string.sure_cache_book),
-        confirmText = stringResource(android.R.string.ok),
-        onConfirm = {
-            viewModel.dismissOverlay()
-            viewModel.downloadBooks(selectedBookUrls)
-        },
-        dismissText = stringResource(android.R.string.cancel),
-        onDismiss = { viewModel.dismissOverlay() }
-    )
+    if (activeOverlay == BookshelfOverlay.BatchDownloadConfirmDialog) {
+        DownloadSettingsDialog(
+            onDismiss = { viewModel.dismissOverlay() },
+            onConfirm = {
+                viewModel.dismissOverlay()
+                viewModel.downloadBooks(selectedBookUrls)
+            }
+        )
+    }
 
     if (uiState.isLoading) {
         Dialog(onDismissRequest = {}) {
