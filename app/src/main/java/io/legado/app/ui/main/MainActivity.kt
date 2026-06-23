@@ -318,7 +318,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     private fun checkStartupRoute(): Boolean {
         return when {
-            LocalConfig.isFirstOpenApp -> {
+            !LocalConfig.isLoggedIn -> {
                 startActivity<WelcomeActivity>()
                 finish()
                 true

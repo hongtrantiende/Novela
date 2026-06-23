@@ -187,12 +187,13 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
     }
 
     private suspend fun importSourceUrl(url: String) {
+        val convertedUrl = convertYckceoUrl(url)
         okHttpClient.newCallResponseBody {
-            if (url.endsWith("#requestWithoutUA")) {
-                url(url.substringBeforeLast("#requestWithoutUA"))
+            if (convertedUrl.endsWith("#requestWithoutUA")) {
+                url(convertedUrl.substringBeforeLast("#requestWithoutUA"))
                 header(AppConst.UA_NAME, "null")
             } else {
-                url(url)
+                url(convertedUrl)
             }
         }.decompressed().byteStream().use {
             GSON.fromJsonArray<BookSource>(it).getOrThrow().let { list ->
@@ -203,6 +204,19 @@ class ImportBookSourceViewModel(app: Application) : BaseViewModel(app) {
                 allSources.addAll(list)
             }
         }
+    }
+
+    private fun convertYckceoUrl(url: String): String {
+        if (url.contains("yckceo.com")) {
+            val regex = Regex("""yckceo\.com/yuedu/(shuyuan|shuyuans|rss|rsss)/content/id/(\d+)\.html""")
+            val matchResult = regex.find(url)
+            if (matchResult != null) {
+                val type = matchResult.groupValues[1]
+                val id = matchResult.groupValues[2]
+                return "https://www.yckceo.com/yuedu/$type/json/id/$id.json"
+            }
+        }
+        return url
     }
 
     private fun comparisonSource() {

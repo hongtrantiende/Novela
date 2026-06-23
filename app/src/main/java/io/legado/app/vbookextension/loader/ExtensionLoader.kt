@@ -283,6 +283,84 @@ class ExtensionLoader(
         }
     }
 
+    suspend fun installExtensionFromUrl(url: String): LoadedExtension? = withContext(Dispatchers.IO) {
+        try {
+            Log.d(TAG, "Downloading extension from URL: $url")
+            val zipRequest = newRequest(url)
+            val zipResponse = httpClient.newCall(zipRequest).execute()
+            val zipBytes = zipResponse.body?.bytes() ?: throw ExtensionException("Tải tiện ích thất bại: empty body")
+
+            val tempDir = File(appContext.cacheDir, "temp_ext_${System.currentTimeMillis()}")
+            tempDir.deleteRecursively()
+            tempDir.mkdirs()
+
+            ZipInputStream(zipBytes.inputStream()).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    val normalizedName = entry.name.replace('\\', '/')
+                    val outFile = File(tempDir, normalizedName)
+                    if (entry.isDirectory || normalizedName.endsWith("/")) {
+                        outFile.mkdirs()
+                    } else {
+                        outFile.parentFile?.mkdirs()
+                        FileOutputStream(outFile).use { out ->
+                            zip.copyTo(out)
+                        }
+                    }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
+                }
+            }
+
+            val pluginJsonFile = File(tempDir, "plugin.json")
+            if (!pluginJsonFile.exists()) {
+                tempDir.deleteRecursively()
+                throw ExtensionException("plugin.json not found in extension zip")
+            }
+
+            val pluginJson = json.decodeFromString<PluginJson>(pluginJsonFile.readText().replace("\uFEFF", ""))
+            val meta = pluginJson.metadata
+            val extId = meta.name.toSlug()
+            val extDir = File(extensionsDir, extId)
+            extDir.deleteRecursively()
+            
+            if (!tempDir.renameTo(extDir)) {
+                tempDir.copyRecursively(extDir, overwrite = true)
+                tempDir.deleteRecursively()
+            }
+
+            val normalizedType = getNormalizedType(meta.name, meta.source, meta.type)
+            val normalizedLocale = getNormalizedLocale(meta.name, meta.source, meta.locale)
+            
+            val iconFile = File(extDir, "icon.png")
+            val iconPath = if (iconFile.exists()) iconFile.absolutePath else null
+
+            val entity = ExtensionEntity(
+                id = extId,
+                name = meta.name,
+                author = meta.author,
+                version = meta.version.toInt(),
+                source = meta.source,
+                type = normalizedType,
+                locale = normalizedLocale,
+                description = meta.description,
+                localPath = extDir.absolutePath,
+                iconPath = iconPath,
+                isInstalled = true,
+                isEnabled = true,
+            )
+            extensionDao.insert(entity)
+
+            val loaded = LoadedExtension(pluginJson, extDir)
+            cache[extId] = loaded
+            Log.d(TAG, "✅ Installed extension from URL: ${meta.name}")
+            loaded
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to install extension from URL: $url", e)
+            throw e
+        }
+    }
+
     suspend fun loadExtension(extensionId: String): LoadedExtension? {
         cache[extensionId]?.let { return it }
 

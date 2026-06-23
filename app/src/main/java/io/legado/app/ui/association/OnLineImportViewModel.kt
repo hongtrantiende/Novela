@@ -108,4 +108,38 @@ class OnLineImportViewModel(app: Application) : BaseAssociationViewModel(app) {
         }
     }
 
+    fun importExtension(url: String, finally: (title: String, msg: String) -> Unit) {
+        execute {
+            val extensionLoader: io.legado.app.vbookextension.loader.ExtensionLoader =
+                org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+            extensionLoader.installExtensionFromUrl(url)
+        }.onSuccess {
+            finally.invoke("Thành công", "Đã cài đặt tiện ích thành công!")
+        }.onError {
+            finally.invoke("Lỗi", it.localizedMessage ?: "Cài đặt tiện ích thất bại")
+        }
+    }
+
+    fun importExtensionRepo(url: String, finally: (title: String, msg: String) -> Unit) {
+        execute {
+            val repositoryDao: io.legado.app.vbookextension.data.dao.RepositoryDao =
+                org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+            val finalUrl = url.trim()
+            val repoName = finalUrl.substringAfterLast("/").substringBefore(".")
+                .ifBlank { "Repository" }
+            repositoryDao.insert(
+                io.legado.app.vbookextension.data.entity.RepositoryEntity(
+                    url = finalUrl,
+                    name = repoName,
+                    addedAt = System.currentTimeMillis(),
+                    isEnabled = true
+                )
+            )
+        }.onSuccess {
+            finally.invoke("Thành công", "Đã thêm kho tiện ích thành công!")
+        }.onError {
+            finally.invoke("Lỗi", it.localizedMessage ?: "Thêm kho tiện ích thất bại")
+        }
+    }
+
 }

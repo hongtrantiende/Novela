@@ -24,8 +24,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.koin.core.context.GlobalContext
 import splitties.init.appCtx
 
@@ -38,6 +43,7 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
     private val searchControl = BookSearchControl()
     private val sentBookUrls = linkedSetOf<String>()
     private var searchJob: Job? = null
+    private val sendMutex = Mutex()
 
     private val SEARCH_FINISH = "Search finish"
 
@@ -47,16 +53,32 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
                 if (frame is Frame.Text) {
                     val text = frame.readText()
                     if (!text.isJson()) {
-                        session.send("Dữ liệu phải ở định dạng Json")
-                        session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
+                        sendMutex.withLock {
+                            if (session.isActive) {
+                                session.send("Dữ liệu phải ở định dạng Json")
+                            }
+                        }
+                        sendMutex.withLock {
+                            if (session.isActive) {
+                                session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
+                            }
+                        }
                         break
                     }
                     val searchMap = GSON.fromJsonObject<Map<String, String>>(text).getOrNull()
                     if (searchMap != null) {
                         val key = searchMap["key"]?.trim()
                         if (key.isNullOrBlank()) {
-                            session.send(appCtx.getString(R.string.cannot_empty))
-                            session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
+                            sendMutex.withLock {
+                                if (session.isActive) {
+                                    session.send(appCtx.getString(R.string.cannot_empty))
+                                }
+                            }
+                            sendMutex.withLock {
+                                if (session.isActive) {
+                                    session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
+                                }
+                            }
                             break
                         }
                         startSearch(key)
@@ -76,45 +98,100 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
         searchControl.resume()
         searchJob = launch(Dispatchers.IO) {
             try {
-                searchBooksUseCase
-                    .execute(
-                        BookSearchRequest(
-                            keyword = key,
-                            page = 1,
-                            scope = BookSearchScope(
-                                localPreferencesRepository
-                                    .getPreference(LocalPreferencesKeys.SEARCH_SCOPE, "")
-                                    .first()
-                            ),
-                            matchMode = MatchMode.of(
-                                localPreferencesRepository
-                                    .getPreference(
-                                        LocalPreferencesKeys.MATCH_MODE,
-                                        MatchMode.DEFAULT.value
-                                    )
-                                    .first()
-                            ),
-                            concurrency = OtherConfig.threadCount,
-                        ),
-                        searchControl
-                    )
-                    .collect { event ->
-                        when (event) {
-                            SearchRunEvent.Started -> Unit
-                            is SearchRunEvent.Progress -> {
-                                val newBooks = event.upsertBooks.filter { sentBookUrls.add(it.bookUrl) }
-                                if (newBooks.isNotEmpty()) {
-                                    session.send(GSON.toJson(newBooks))
+                // 1. Search database sources
+                val regularSearchJob = launch {
+                    try {
+                        searchBooksUseCase
+                            .execute(
+                                BookSearchRequest(
+                                    keyword = key,
+                                    page = 1,
+                                    scope = BookSearchScope(
+                                        localPreferencesRepository
+                                            .getPreference(LocalPreferencesKeys.SEARCH_SCOPE, "")
+                                            .first()
+                                    ),
+                                    matchMode = MatchMode.of(
+                                        localPreferencesRepository
+                                            .getPreference(
+                                                LocalPreferencesKeys.MATCH_MODE,
+                                                MatchMode.DEFAULT.value
+                                            )
+                                            .first()
+                                    ),
+                                    concurrency = OtherConfig.threadCount,
+                                ),
+                                searchControl
+                            )
+                            .collect { event ->
+                                when (event) {
+                                    SearchRunEvent.Started -> Unit
+                                    is SearchRunEvent.Progress -> {
+                                        val newBooks = event.upsertBooks.filter { sentBookUrls.add(it.bookUrl) }
+                                        if (newBooks.isNotEmpty()) {
+                                            sendMutex.withLock {
+                                                if (session.isActive) {
+                                                    session.send(GSON.toJson(newBooks))
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    is SearchRunEvent.Finished -> Unit
                                 }
                             }
-
-                            is SearchRunEvent.Finished -> session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
-                        }
+                    } catch (e: Exception) {
+                        e.printOnDebug()
                     }
+                }
+
+                // 2. Search extension sources in parallel
+                val extensionSearchJob = launch {
+                    try {
+                        val extensionDao: io.legado.app.vbookextension.data.dao.ExtensionDao =
+                            org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+                        val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository =
+                            org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+                        val enabledExtensions = extensionDao.getEnabledExtensions()
+
+                        enabledExtensions.map { ext ->
+                            async {
+                                try {
+                                    val books = extensionRepository.searchBooks("ext_${ext.id}", key, 1)
+                                    val newBooks = books.filter { sentBookUrls.add(it.bookUrl) }
+                                    if (newBooks.isNotEmpty()) {
+                                        sendMutex.withLock {
+                                            if (session.isActive) {
+                                                session.send(GSON.toJson(newBooks))
+                                            }
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    e.printOnDebug()
+                                }
+                            }
+                        }.awaitAll()
+                    } catch (e: Exception) {
+                        e.printOnDebug()
+                    }
+                }
+
+                regularSearchJob.join()
+                extensionSearchJob.join()
+
+                sendMutex.withLock {
+                    if (session.isActive) {
+                        session.close(CloseReason(CloseReason.Codes.NORMAL, SEARCH_FINISH))
+                    }
+                }
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Throwable) {
-                session.close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, exception.toString()))
+                sendMutex.withLock {
+                    if (session.isActive) {
+                        session.close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, exception.toString()))
+                    }
+                }
             }
         }
     }

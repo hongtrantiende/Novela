@@ -14,6 +14,7 @@ import io.legado.app.help.CacheManager
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.getBookSource
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.glide.ImageLoader
 import io.legado.app.model.BookCover
@@ -102,11 +103,11 @@ object BookController {
             ?: return returnData.setErrorMsg("url sách trống")
         val src = parameters["path"]?.firstOrNull()
             ?: return returnData.setErrorMsg("Liên kết hình ảnh trống")
-        val width = parameters["width"]?.firstOrNull()?.toInt() ?: 640
+                val width = parameters["width"]?.firstOrNull()?.toInt() ?: 640
         if (this.bookUrl != bookUrl) {
             this.book = appDb.bookDao.getBook(bookUrl)
                 ?: return returnData.setErrorMsg("url sách sai")
-            this.bookSource = appDb.bookSourceDao.getBookSource(book.origin)
+            this.bookSource = book.getBookSource()
         }
         this.bookUrl = bookUrl
         val bitmap = runBlocking {
@@ -130,6 +131,16 @@ object BookController {
                 ?: return returnData.setErrorMsg("Không tìm thấy cuốn sách tương ứng trong cơ sở dữ liệu, vui lòng thêm nó trước")
             if (book.isLocal) {
                 val toc = LocalBook.getChapterList(book)
+                appDb.bookChapterDao.delByBook(book.bookUrl)
+                appDb.bookChapterDao.insert(*toc.toTypedArray())
+                appDb.bookDao.update(book)
+                return returnData.setData(toc)
+            } else if (book.origin.startsWith("ext_")) {
+                val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository =
+                    org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+                val toc = runBlocking {
+                    extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+                }
                 appDb.bookChapterDao.delByBook(book.bookUrl)
                 appDb.bookChapterDao.insert(*toc.toTypedArray())
                 appDb.bookDao.update(book)
@@ -204,6 +215,23 @@ object BookController {
                     .toString()
             }
             return returnData.setData(content)
+        }
+        if (book.origin.startsWith("ext_")) {
+            val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository =
+                org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+            try {
+                content = runBlocking {
+                    extensionRepository.getChapterContent(book.origin, chapter.url).let {
+                        val contentProcessor = ContentProcessor.get(book.name, book.origin)
+                        contentProcessor.getContent(book, chapter, it ?: "", includeTitle = false)
+                            .toString()
+                    }
+                }
+                returnData.setData(content)
+            } catch (e: Exception) {
+                returnData.setErrorMsg(e.stackTraceStr)
+            }
+            return returnData
         }
         val bookSource = appDb.bookSourceDao.getBookSource(book.origin)
             ?: return returnData.setErrorMsg("Không tìm thấy nguồn")

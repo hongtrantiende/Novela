@@ -18,11 +18,11 @@
 	
 	//不支持拖拽上传，或者 不支持FormData ，显示WiFi表示
 	if(!isSupportFileUpload){
-		$("#drag tbody tr:last-child td span").html('您的浏览器不支持拖拽上传');
+		$("#drag tbody tr:last-child td span").html('Trình duyệt của bạn không hỗ trợ kéo thả tệp');
 		return;
 	//更换样式
 	}else{
-		$("#drag tbody tr:last-child td span").html('请将图书或字体拖拽至此即可上传');
+		$("#drag tbody tr:last-child td span").html('Kéo thả sách hoặc phông chữ vào đây để tải lên');
 	}
 
 	addEvent();
@@ -94,7 +94,7 @@
 				alert(errorMsgs[0]);
 				
 			}else{
-				alert("你选择了"+len+"个文件，只能上传"+(len - errorMsgs.length)+"个文件。\n请选择可支持文件格式且文件名不能重复。");
+				alert("Bạn đã chọn "+len+" tệp, chỉ có thể tải lên "+(len - errorMsgs.length)+" tệp.\nVui lòng chọn định dạng được hỗ trợ và tên tệp không được trùng lặp.");
 			}			
 		}
 

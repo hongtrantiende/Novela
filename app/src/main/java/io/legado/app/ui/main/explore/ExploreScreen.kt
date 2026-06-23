@@ -7,6 +7,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,6 +87,18 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+
+import io.legado.app.ui.association.ImportBookSourceDialog
+import io.legado.app.utils.showDialogFragment
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -189,6 +202,25 @@ fun ExploreScreen(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.hideUninstalled = !uiState.hideUninstalled }
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppText(
+                        text = "Ẩn chưa cài",
+                        style = LegadoTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Switch(
+                        checked = uiState.hideUninstalled,
+                        onCheckedChange = { viewModel.hideUninstalled = it }
+                    )
+                }
+
                 Box(modifier = Modifier.weight(1f)) {
                     if (uiState.items.isEmpty()) {
                         EmptyMessage(
@@ -214,16 +246,29 @@ fun ExploreScreen(
                         is ExploreListItem.Header -> {
                             val item = listItem.source
                             val isExpanded = uiState.expandedId == item.bookSourceUrl
+                            val isInstalled = !item.bookSourceUrl.startsWith("ext_online_") && !item.bookSourceUrl.startsWith("online_yckceo_")
+                            val isInstalling = uiState.installingIds.contains(item.bookSourceUrl.substringAfter("ext_online_"))
                         ExploreSourceHeader(
                             modifier = Modifier.animateItem(),
                             item = item,
                             isExpanded = isExpanded,
+                            isInstalled = isInstalled,
+                            isInstalling = isInstalling,
                             loadingKinds = if (isExpanded) uiState.loadingKinds else false,
                             onClick = {
                                 if (item.bookSourceUrl.startsWith("ext_")) {
                                     onOpenExploreShow(item.bookSourceName, item.bookSourceUrl, null)
                                 } else {
                                     viewModel.toggleExpand(item)
+                                }
+                            },
+                            onInstall = {
+                                if (item.bookSourceUrl.startsWith("ext_online_")) {
+                                    viewModel.installExtensionBySlug(item.bookSourceUrl.substringAfter("ext_online_"))
+                                } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
+                                    val id = item.bookSourceUrl.substringAfter("online_yckceo_").substringBefore("_")
+                                    val jsonUrl = "https://www.yckceo.com/yuedu/shuyuan/json/id/${id}.json"
+                                    (context as? AppCompatActivity)?.showDialogFragment(ImportBookSourceDialog(jsonUrl))
                                 }
                             },
                             onTop = { viewModel.topSource(item) },
@@ -295,8 +340,15 @@ fun ExploreScreen(
                                 .align(Alignment.TopStart)
                                 .padding(top = 4.dp, start = 8.dp)
                         ) { item ->
+                            val displayName = if (item.bookSourceUrl.startsWith("ext_")) {
+                                item.bookSourceName
+                            } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
+                                item.bookSourceUrl.substringAfter("online_yckceo_").substringAfter("_")
+                            } else {
+                                io.legado.app.utils.NetworkUtils.getDomain(item.bookSourceUrl)
+                            }
                             TextCard(
-                                text = item.bookSourceName,
+                                text = displayName,
                                 textStyle = LegadoTheme.typography.labelMediumEmphasized,
                                 cornerRadius = 12.dp,
                                 horizontalPadding = 12.dp,
@@ -339,8 +391,11 @@ fun ExploreSourceHeader(
     modifier: Modifier = Modifier,
     item: BookSourcePart,
     isExpanded: Boolean,
+    isInstalled: Boolean = true,
+    isInstalling: Boolean = false,
     loadingKinds: Boolean,
     onClick: () -> Unit,
+    onInstall: () -> Unit = {},
     onTop: () -> Unit,
     onEdit: () -> Unit,
     onSearch: () -> Unit,
@@ -370,6 +425,41 @@ fun ExploreSourceHeader(
         label = "CardColor"
     )
 
+    val isOnlineExtension = item.bookSourceUrl.startsWith("ext_online_")
+    val isExtension = isExtensionNameUrl(item.bookSourceUrl)
+
+    val finalIconPath = if (isExtension && item.bookSourceGroup != null) {
+        item.bookSourceGroup!!.substringBefore("|")
+    } else {
+        item.bookSourceGroup
+    }
+
+    val displayGroup = if (isExtension && item.bookSourceGroup != null && item.bookSourceGroup!!.contains("|")) {
+        val parts = item.bookSourceGroup!!.split("|")
+        val type = parts.getOrNull(1).orEmpty()
+        val locale = parts.getOrNull(2).orEmpty()
+        val typeStr = when (type.lowercase()) {
+            "novel" -> "Truyện chữ"
+            "comic" -> "Truyện tranh"
+            "movie", "video" -> "Phim"
+            "audio" -> "Sách nói"
+            else -> "Tiện ích"
+        }
+        val localeStr = when {
+            locale.contains("vi", ignoreCase = true) -> "Tiếng Việt 🇻🇳"
+            locale.contains("zh", ignoreCase = true) || locale.contains("cn", ignoreCase = true) -> "Trung Quốc 🇨🇳"
+            locale.contains("en", ignoreCase = true) -> "Tiếng Anh 🇺🇸"
+            else -> "Quốc tế 🌐"
+        }
+        "$typeStr · $localeStr"
+    } else if (isOnlineExtension) {
+        "Extension trực tuyến"
+    } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
+        "Nguồn Legado trực tuyến"
+    } else {
+        item.bookSourceGroup
+    }
+
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
@@ -381,7 +471,7 @@ fun ExploreSourceHeader(
             modifier = Modifier
                 .combinedClickable(
                     onClick = onClick,
-                    onLongClick = { if (!item.bookSourceUrl.startsWith("ext_")) showMenu = true }
+                    onLongClick = { if (isInstalled && !item.bookSourceUrl.startsWith("ext_")) showMenu = true }
                 )
                 .fillMaxWidth(),
             colors = ListItemDefaults.colors(
@@ -390,82 +480,137 @@ fun ExploreSourceHeader(
             leadingContent = if (item.bookSourceUrl.startsWith("ext_")) {
                 {
                     SourceIcon(
-                        path = item.bookSourceGroup,
+                        path = finalIconPath,
                         modifier = Modifier.size(40.dp)
                     )
                 }
             } else null,
             headlineContent = {
+                val displayName = if (isExtensionNameUrl(item.bookSourceUrl)) {
+                    item.bookSourceName
+                } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
+                    item.bookSourceUrl.substringAfter("online_yckceo_").substringAfter("_")
+                } else {
+                    io.legado.app.utils.NetworkUtils.getDomain(item.bookSourceUrl)
+                }
                 AppText(
-                    text = item.bookSourceName,
+                    text = displayName,
                     style = LegadoTheme.typography.titleMedium,
                     color = contentColor
                 )
             },
-            trailingContent = {
-                AnimatedContent(
-                    targetState = loadingKinds,
-                    label = "LoadingSwitch"
-                ) { loading ->
-                    if (loading) {
-                        AppContainedLoadingIndicator(
-                            modifier = Modifier.size(18.dp)
+            supportingContent = {
+                Column {
+                    if (!isExtensionNameUrl(item.bookSourceUrl)) {
+                        AppText(
+                            text = item.bookSourceName,
+                            style = LegadoTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.ChevronRight,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .rotate(rotation)
-                                .size(20.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    } else if (!displayGroup.isNullOrBlank()) {
+                        AppText(
+                            text = displayGroup,
+                            style = LegadoTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
                 }
-                RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    PillHeaderDivider(title = item.bookSourceName)
-                    RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                        text = stringResource(R.string.to_top),
-                        onClick = { onTop(); showMenu = false }
-                    )
-                    RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                        text = stringResource(R.string.edit),
-                        onClick = { onEdit(); showMenu = false }
-                    )
-                    RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.Default.Search) },
-                        text = stringResource(R.string.search),
-                        onClick = { onSearch(); showMenu = false }
-                    )
-                    if (item.hasLoginUrl) {
-                        RoundDropdownMenuItem(
-                            leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                            text = stringResource(R.string.login),
-                            onClick = { onLogin(); showMenu = false }
+            },
+            trailingContent = {
+                if (!isInstalled) {
+                    Button(
+                        onClick = onInstall,
+                        enabled = !isInstalling,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Text(
+                            text = if (isInstalling) "Đang cài..." else "Cài đặt",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                    RoundDropdownMenuItem(
-                        leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
-                        text = stringResource(R.string.refresh),
-                        onClick = { onRefresh(); showMenu = false }
-                    )
-                    RoundDropdownMenuItem(
-                        leadingIcon = {
-                            MenuItemIcon(
-                                Icons.Default.Delete,
-                                tint = MaterialTheme.colorScheme.error
+                } else {
+                    AnimatedContent(
+                        targetState = loadingKinds,
+                        label = "LoadingSwitch"
+                    ) { loading ->
+                        if (loading) {
+                            AppContainedLoadingIndicator(
+                                modifier = Modifier.size(18.dp)
                             )
-                        },
-                        text = stringResource(R.string.delete),
-                        color = LegadoTheme.colorScheme.error,
-                        onClick = { onDelete(); showMenu = false }
-                    )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.ChevronRight,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .rotate(rotation)
+                                    .size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                if (isInstalled) {
+                    RoundDropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        val menuTitle = if (item.bookSourceUrl.startsWith("ext_")) {
+                            item.bookSourceName
+                        } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
+                            item.bookSourceUrl.substringAfter("online_yckceo_").substringAfter("_")
+                        } else {
+                            io.legado.app.utils.NetworkUtils.getDomain(item.bookSourceUrl)
+                        }
+                        PillHeaderDivider(title = menuTitle)
+                        RoundDropdownMenuItem(
+                            leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
+                            text = stringResource(R.string.to_top),
+                            onClick = { onTop(); showMenu = false }
+                        )
+                        RoundDropdownMenuItem(
+                            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                            text = stringResource(R.string.edit),
+                            onClick = { onEdit(); showMenu = false }
+                        )
+                        RoundDropdownMenuItem(
+                            leadingIcon = { MenuItemIcon(Icons.Default.Search) },
+                            text = stringResource(R.string.search),
+                            onClick = { onSearch(); showMenu = false }
+                        )
+                        if (item.hasLoginUrl) {
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                                text = stringResource(R.string.login),
+                                onClick = { onLogin(); showMenu = false }
+                            )
+                        }
+                        RoundDropdownMenuItem(
+                            leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
+                            text = stringResource(R.string.refresh),
+                            onClick = { onRefresh(); showMenu = false }
+                        )
+                        RoundDropdownMenuItem(
+                            leadingIcon = {
+                                MenuItemIcon(
+                                    Icons.Default.Delete,
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                            },
+                            text = stringResource(R.string.delete),
+                            color = LegadoTheme.colorScheme.error,
+                            onClick = { onDelete(); showMenu = false }
+                        )
+                    }
                 }
             }
         )
     }
 }
 
-
+private fun isExtensionNameUrl(url: String): Boolean {
+    return url.startsWith("ext_") || url.startsWith("ext_online_")
+}

@@ -606,300 +606,246 @@ fun ExtensionDetailDialog(
 
     val cookie by viewModel.selectedCookie.collectAsStateWithLifecycle()
     val localStorage by viewModel.selectedLocalStorage.collectAsStateWithLifecycle()
-    val parallelConnections by viewModel.selectedParallelConnections.collectAsStateWithLifecycle()
-    val connectionInterval by viewModel.selectedConnectionInterval.collectAsStateWithLifecycle()
     val isPinned by viewModel.selectedIsPinned.collectAsStateWithLifecycle()
 
     var showEditCookieDialog by remember { mutableStateOf(false) }
     var showAddStorageDialog by remember { mutableStateOf(false) }
-    var showEditParallelDialog by remember { mutableStateOf(false) }
-    var showEditIntervalDialog by remember { mutableStateOf(false) }
 
     Dialog(
         onDismissRequest = onDismissRequest,
         properties = DialogProperties(
-            usePlatformDefaultWidth = false
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
         )
     ) {
-        AppScaffold(
-            topBar = {
-                GlassMediumFlexibleTopAppBar(
-                    title = "Thông tin chi tiết",
-                    navigationIcon = {
-                        IconButton(onClick = onDismissRequest) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
-                        }
-                    }
-                )
-            }
-        ) { contentPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-                    .padding(contentPadding)
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                GlassCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    cornerRadius = 16.dp
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        SourceIcon(
-                            path = extension.iconPath,
-                            modifier = Modifier.size(72.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        AppText(
-                            text = extension.name,
-                            style = LegadoTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val flag = if (extension.locale.startsWith("vi")) "🇻🇳 TIẾNG VIỆT" else extension.locale.uppercase()
-                            Badge(flag)
-
-                            val sourceTypeName = when (extension.type) {
-                                "novel" -> "TRUYỆN CHỮ"
-                                "comic", "manga" -> "TRUYỆN TRANH"
-                                "audio" -> "SÁCH NÓI"
-                                else -> extension.type.uppercase()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            AppScaffold(
+                topBar = {
+                    GlassMediumFlexibleTopAppBar(
+                        title = "Thông tin chi tiết",
+                        navigationIcon = {
+                            IconButton(onClick = onDismissRequest) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
                             }
-                            Badge(sourceTypeName)
-                            Badge("vBook")
-                            Badge("${extension.version}")
                         }
+                    )
+                }
+            ) { contentPadding ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .padding(contentPadding)
+                        .padding(horizontal = 24.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 24.dp
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp, vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(96.dp)
+                                    .clip(RoundedCornerShape(24.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .border(
+                                        width = 1.dp,
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(24.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                SourceIcon(
+                                    path = extension.iconPath,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
 
-                        if (extension.source.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(8.dp))
                             AppText(
-                                text = extension.source,
-                                style = LegadoTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.clickable {
-                                    try {
-                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(extension.source))
-                                        context.startActivity(intent)
-                                    } catch (e: Exception) {
-                                        Toast.makeText(context, "Không thể mở trang web", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            )
-                        }
-
-                        if (extension.description.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            AppText(
-                                text = extension.description,
-                                style = LegadoTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                text = extension.name,
+                                style = LegadoTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onSurface,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            DetailQuickAction(
-                                icon = Icons.Outlined.Language,
-                                label = "Trang nguồn",
-                                onClick = {
-                                    if (extension.source.isNotBlank()) {
-                                        try {
-                                            val intent = Intent(context, WebViewActivity::class.java).apply {
-                                                putExtra("url", extension.source)
-                                                putExtra("title", extension.name)
-                                                putExtra("sourceName", extension.name)
-                                                putExtra("sourceOrigin", "ext_${extension.id}")
-                                                putExtra("sourceVerificationEnable", true)
-                                                putExtra("refetchAfterSuccess", false)
-                                            }
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            Toast.makeText(context, "Lỗi mở URL", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } else {
-                                        Toast.makeText(context, "Nguồn không có URL", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            )
-                            DetailQuickAction(
-                                icon = Icons.Outlined.Delete,
-                                label = "Gỡ",
-                                tint = MaterialTheme.colorScheme.error,
-                                onClick = onUninstallClick
-                            )
-                            DetailQuickAction(
-                                icon = Icons.Outlined.PushPin,
-                                label = if (isPinned) "Gỡ ghim" else "Ghim",
-                                tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                onClick = { viewModel.togglePinnedState(extension.id) }
-                            )
-                        }
-                    }
-                }
-
-                SectionCard(
-                    title = "Cookie",
-                    onAddClick = { showEditCookieDialog = true }
-                ) {
-                    if (cookie.isBlank()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
+                            Spacer(modifier = Modifier.height(6.dp))
                             AppText(
-                                text = "Chưa có lịch sử cookie",
-                                style = LegadoTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "Phiên bản ${extension.version}",
+                                style = LegadoTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
-                        }
-                    } else {
-                        AppText(
-                            text = cookie,
-                            style = LegadoTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 4.dp, vertical = 6.dp)
-                        )
-                    }
-                }
 
-                SectionCard(
-                    title = "Bộ nhớ cục bộ",
-                    onAddClick = { showAddStorageDialog = true }
-                ) {
-                    if (localStorage.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            AppText(
-                                text = "Không có dữ liệu cục bộ",
-                                style = LegadoTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            localStorage.forEach { (k, v) ->
-                                Row(
+                            if (extension.source.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                AppText(
+                                    text = extension.source,
+                                    style = LegadoTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        AppText(
-                                            text = k,
-                                            fontWeight = FontWeight.Bold,
-                                            style = LegadoTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        AppText(
-                                            text = v,
-                                            style = LegadoTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable {
+                                            try {
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(extension.source))
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Không thể mở trang web", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(28.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                DetailQuickAction(
+                                    icon = Icons.Outlined.Language,
+                                    label = "Trang nguồn",
+                                    onClick = {
+                                        if (extension.source.isNotBlank()) {
+                                            try {
+                                                val intent = Intent(context, WebViewActivity::class.java).apply {
+                                                    putExtra("url", extension.source)
+                                                    putExtra("title", extension.name)
+                                                    putExtra("sourceName", extension.name)
+                                                    putExtra("sourceOrigin", "ext_${extension.id}")
+                                                    putExtra("sourceVerificationEnable", true)
+                                                    putExtra("refetchAfterSuccess", false)
+                                                }
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Lỗi mở URL", Toast.LENGTH_SHORT).show()
+                                            }
+                                        } else {
+                                            Toast.makeText(context, "Nguồn không có URL", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
-                                    IconButton(
-                                        onClick = { viewModel.removeLocalStorageItem(extension.id, k) },
-                                        modifier = Modifier.size(28.dp)
+                                )
+                                DetailQuickAction(
+                                    icon = Icons.Outlined.Delete,
+                                    label = "Gỡ",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    onClick = onUninstallClick
+                                )
+                                DetailQuickAction(
+                                    icon = Icons.Outlined.PushPin,
+                                    label = if (isPinned) "Gỡ ghim" else "Ghim",
+                                    tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    onClick = { viewModel.togglePinnedState(extension.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    SectionCard(
+                        title = "Cookie",
+                        onAddClick = { showEditCookieDialog = true }
+                    ) {
+                        if (cookie.isBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AppText(
+                                    text = "Chưa có lịch sử cookie",
+                                    style = LegadoTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            AppText(
+                                text = cookie,
+                                style = LegadoTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+
+                    SectionCard(
+                        title = "Bộ nhớ cục bộ",
+                        onAddClick = { showAddStorageDialog = true }
+                    ) {
+                        if (localStorage.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 12.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AppText(
+                                    text = "Không có dữ liệu cục bộ",
+                                    style = LegadoTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                localStorage.forEach { (k, v) ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Xóa",
-                                            tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(16.dp)
-                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            AppText(
+                                                text = k,
+                                                fontWeight = FontWeight.Bold,
+                                                style = LegadoTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            AppText(
+                                                text = v,
+                                                style = LegadoTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { viewModel.removeLocalStorageItem(extension.id, k) },
+                                            modifier = Modifier.size(28.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Xóa",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
-
-                SectionCard(
-                    title = "Kết nối",
-                    showAddButton = false
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showEditParallelDialog = true }
-                                .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                AppText(
-                                    text = "Kết nối song song",
-                                    style = LegadoTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                AppText(
-                                    text = "$parallelConnections luồng",
-                                    style = LegadoTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
-                        }
-
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showEditIntervalDialog = true }
-                                .padding(vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                AppText(
-                                    text = "Giãn cách kết nối",
-                                    style = LegadoTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                AppText(
-                                    text = "$connectionInterval ms",
-                                    style = LegadoTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                            Icon(Icons.Default.KeyboardArrowRight, contentDescription = null)
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -968,72 +914,6 @@ fun ExtensionDetailDialog(
             },
             dismissButton = {
                 TextButton(onClick = { showAddStorageDialog = false }) {
-                    Text("Hủy")
-                }
-            }
-        )
-    }
-
-    if (showEditParallelDialog) {
-        var tempCount by remember { mutableStateOf(parallelConnections.toString()) }
-        AlertDialog(
-            onDismissRequest = { showEditParallelDialog = false },
-            title = { Text("Kết nối song song") },
-            text = {
-                OutlinedTextField(
-                    value = tempCount,
-                    onValueChange = { tempCount = it },
-                    label = { Text("Số luồng kết nối song song (1-32)") },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val count = tempCount.toIntOrNull()?.coerceIn(1, 32) ?: 3
-                    viewModel.updateParallelConnections(extension.id, count)
-                    showEditParallelDialog = false
-                }) {
-                    Text("Xác nhận")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditParallelDialog = false }) {
-                    Text("Hủy")
-                }
-            }
-        )
-    }
-
-    if (showEditIntervalDialog) {
-        var tempInterval by remember { mutableStateOf(connectionInterval.toString()) }
-        AlertDialog(
-            onDismissRequest = { showEditIntervalDialog = false },
-            title = { Text("Giãn cách kết nối") },
-            text = {
-                OutlinedTextField(
-                    value = tempInterval,
-                    onValueChange = { tempInterval = it },
-                    label = { Text("Độ trễ giữa các kết nối (ms)") },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val interval = tempInterval.toIntOrNull()?.coerceAtLeast(0) ?: 0
-                    viewModel.updateConnectionInterval(extension.id, interval)
-                    showEditIntervalDialog = false
-                }) {
-                    Text("Xác nhận")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditIntervalDialog = false }) {
                     Text("Hủy")
                 }
             }

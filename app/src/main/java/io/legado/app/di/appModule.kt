@@ -135,6 +135,7 @@ import io.legado.app.ui.rss.read.ReadRssViewModel
 import io.legado.app.ui.rss.source.manage.RssSourceViewModel
 import io.legado.app.ui.rss.subscription.RuleSubViewModel
 import io.legado.app.vbookextension.ui.ExtensionViewModel
+import io.legado.app.vbookextension.ui.LegadoStoreViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -237,6 +238,7 @@ val appModule = module {
     }
 
     viewModelOf(::ExtensionViewModel)
+    viewModelOf(::LegadoStoreViewModel)
     viewModelOf(::DictRuleViewModel)
     viewModelOf(::DictViewModel)
     viewModelOf(::RssSourceViewModel)

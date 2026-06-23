@@ -383,14 +383,7 @@ private fun ServersSheetContent(
                 .weight(1f, fill = false),
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
-            item {
-                ServerItem(
-                    name = "mặc định",
-                    url = "Áp dụng cấu hình WebDav đã sao lưu",
-                    isSelected = selectedServerId == AppConst.DEFAULT_WEBDAV_ID,
-                    onClick = onDefault
-                )
-            }
+
             items(servers, key = { it.id }) { server ->
                 ServerItem(
                     name = server.name,

@@ -85,6 +85,8 @@ class OnLineImportActivity :
                 "/addToBookshelf" -> showDialogFragment(
                     AddToBookshelfDialog(url, true)
                 )
+                "/extension" -> showImportExtensionDialog(url)
+                "/extensionRepo" -> showImportExtensionRepoDialog(url)
                 "/importonline" -> when (it.host) {
                     "booksource" -> showDialogFragment(
                         ImportBookSourceDialog(url, true)
@@ -100,6 +102,38 @@ class OnLineImportActivity :
                     }
                 }
                 else -> viewModel.determineType(url, this::finallyDialog)
+            }
+        }
+    }
+
+    private fun showImportExtensionDialog(url: String) {
+        alert("Cài đặt Tiện ích", "Bạn có muốn tải và cài đặt tiện ích này không?\n\nNguồn: $url") {
+            yesButton {
+                viewModel.importExtension(url) { title, msg ->
+                    finallyDialog(title, msg)
+                }
+            }
+            noButton {
+                finish()
+            }
+            onDismiss {
+                finish()
+            }
+        }
+    }
+
+    private fun showImportExtensionRepoDialog(url: String) {
+        alert("Thêm Kho Tiện ích", "Bạn có muốn thêm kho tiện ích này vào danh sách không?\n\nNguồn: $url") {
+            yesButton {
+                viewModel.importExtensionRepo(url) { title, msg ->
+                    finallyDialog(title, msg)
+                }
+            }
+            noButton {
+                finish()
+            }
+            onDismiss {
+                finish()
             }
         }
     }

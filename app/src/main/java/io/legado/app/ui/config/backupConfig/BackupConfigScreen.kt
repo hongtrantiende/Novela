@@ -223,136 +223,24 @@ fun BackupConfigScreen(
             )
         ) {
             item {
-                SplicedColumnGroup(title = stringResource(R.string.web_dav_set)) {
-                    InputSettingItem(
-                        title = stringResource(R.string.web_dav_url),
-                        description = stringResource(R.string.web_dav_url_s),
-                        value = BackupConfig.webDavUrl,
-                        defaultValue = "",
-                        onConfirm = { BackupConfig.webDavUrl = it }
-                    )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.web_dav_account),
-                    description = stringResource(R.string.web_dav_account_d),
-                    onClick = {
-                        tempAccount = viewModel.getWebDavAccount()
-                        tempPassword = viewModel.getWebDavPassword()
-                        showWebDavAuthDialog = true
-                    }
-                )
-
-                InputSettingItem(
-                    title = stringResource(R.string.sub_dir),
-                    value = BackupConfig.webDavDir,
-                    defaultValue = "legado",
-                    onConfirm = { BackupConfig.webDavDir = it }
-                )
-
-                InputSettingItem(
-                    title = stringResource(R.string.webdav_device_name),
-                    value = BackupConfig.webDavDeviceName,
-                    defaultValue = "",
-                    onConfirm = { BackupConfig.webDavDeviceName = it }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.test_sync_t),
-                    description = stringResource(R.string.test_sync_d),
-                    
-                    onClick = {
-                        scope.launch {
-                            showLoadingDialog = true
-                            loadingText = context.getString(R.string.test_sync_loading_text)
-                            val success = viewModel.testWebDav()
-                            showLoadingDialog = false
-                            if (success) {
-                                snackbarHostState.showSnackbar(context.getString(R.string.test_sync_status_success))
-                            } else {
-                                snackbarHostState.showSnackbar(context.getString(R.string.test_sync_status_fail))
-                            }
-                        }
-                    }
-                )
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.sync_book_progress_t),
-                    description = stringResource(R.string.sync_book_progress_s),
-                    checked = BackupConfig.syncBookProgress,
-                    onCheckedChange = {
-                        BackupConfig.syncBookProgress = it
-                        if (!it) {
-                            BackupConfig.syncBookProgressPlus = false
-                        }
-                    }
-                )
-
-                if (BackupConfig.syncBookProgress) {
-                    SwitchSettingItem(
-                        title = stringResource(R.string.sync_book_progress_plus_t),
-                        description = stringResource(R.string.sync_book_progress_plus_s),
-                        checked = BackupConfig.syncBookProgressPlus,
-                        onCheckedChange = { BackupConfig.syncBookProgressPlus = it }
-                    )
-                }
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.auto_check_new_backup_t),
-                    description = stringResource(R.string.auto_check_new_backup_s),
-                    checked = BackupConfig.autoCheckNewBackup,
-                    onCheckedChange = { BackupConfig.autoCheckNewBackup = it }
-                )
-
-                DropdownListSettingItem(
-                    title = stringResource(R.string.backup_sync_mode),
-                    description = stringResource(R.string.backup_sync_mode_summary),
-                    selectedValue = BackupConfig.backupSyncMode,
-                    displayEntries = stringArrayResource(R.array.backup_sync_mode),
-                    entryValues = stringArrayResource(R.array.backup_sync_mode_value),
-                    onValueChange = { BackupConfig.backupSyncMode = it }
-                )
-            }
-
                 SplicedColumnGroup(title = stringResource(R.string.backup_restore)) {
-                ClickableSettingItem(
-                    title = stringResource(R.string.backup_path),
-                    description = BackupConfig.backupPath
-                        ?: stringResource(R.string.select_backup_path),
-                    onClick = { showBackupFilePicker = true }
-                )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.backup),
+                        description = stringResource(R.string.backup_summary),
+                        onClick = {
+                            executeBackup("local", context, viewModel, scope, snackbarHostState, {
+                                showLoadingDialog = false
+                            }, { showLoadingDialog = true; loadingText = it })
+                        }
+                    )
 
-                ClickableSettingItem(
-                    title = stringResource(R.string.backup),
-                    description = stringResource(R.string.backup_summary),
-                    onClick = { showBackupOptionSheet = true }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.restore),
-                    description = stringResource(R.string.restore_summary),
-                    onClick = { showRestoreOptionSheet = true }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.restore_ignore),
-                    description = stringResource(R.string.restore_ignore_summary),
-                    onClick = { showBackupIgnoreDialog = true }
-                )
-
-                ClickableSettingItem(
-                    title = stringResource(R.string.menu_import_old_version),
-                    description = stringResource(R.string.import_old_summary),
-                    onClick = {
-                        importOldLauncher.launch(arrayOf("*/*"))
-                    }
-                )
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.only_latest_backup_t),
-                    description = stringResource(R.string.only_latest_backup_s),
-                    checked = BackupConfig.onlyLatestBackup,
-                    onCheckedChange = { BackupConfig.onlyLatestBackup = it }
-                )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.restore),
+                        description = stringResource(R.string.restore_summary),
+                        onClick = {
+                            restoreFileLauncher.launch(arrayOf("application/zip"))
+                        }
+                    )
                 }
             }
         }

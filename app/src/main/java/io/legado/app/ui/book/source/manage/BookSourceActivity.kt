@@ -9,8 +9,10 @@ import android.view.View
 import android.view.WindowManager
 import com.google.android.material.tabs.TabLayout
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.runtime.Composable
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.vbookextension.ui.ExtensionScreens
+import io.legado.app.vbookextension.ui.LegadoStoreScreen
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
@@ -157,12 +159,16 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         initSelectActionBar()
         resumeCheckSource()
 
+        val composeTabIndex = androidx.compose.runtime.mutableStateOf(0)
+
         // Setup TabLayout
         val tabLayout = binding.tabLayout
         val tabSources = tabLayout.newTab().setText("Nguồn sách")
         val tabExtensions = tabLayout.newTab().setText("Nguồn Extension")
+        val tabLegado = tabLayout.newTab().setText("Kho nguồn Legado")
         tabLayout.addTab(tabSources)
         tabLayout.addTab(tabExtensions)
+        tabLayout.addTab(tabLegado)
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -179,10 +185,21 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
                     }
                     1 -> {
                         currentTab = 1
+                        composeTabIndex.value = 0
                         binding.recyclerView.visibility = View.GONE
                         binding.selectActionBar.visibility = View.GONE
                         binding.composeView.visibility = View.VISIBLE
                         binding.titleBar.title = "Nguồn Extension"
+                        searchView.visibility = View.GONE
+                        invalidateOptionsMenu()
+                    }
+                    2 -> {
+                        currentTab = 2
+                        composeTabIndex.value = 1
+                        binding.recyclerView.visibility = View.GONE
+                        binding.selectActionBar.visibility = View.GONE
+                        binding.composeView.visibility = View.VISIBLE
+                        binding.titleBar.title = "Kho nguồn Legado"
                         searchView.visibility = View.GONE
                         invalidateOptionsMenu()
                     }
@@ -197,7 +214,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 AppTheme {
-                    ExtensionScreens()
+                    BookSourceComposeWrapper(composeTabIndex.value)
                 }
             }
         }
@@ -844,4 +861,12 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         }
     }
 
+}
+
+@Composable
+fun BookSourceComposeWrapper(tabIndex: Int) {
+    when (tabIndex) {
+        0 -> ExtensionScreens()
+        1 -> LegadoStoreScreen()
+    }
 }

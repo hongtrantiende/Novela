@@ -29,6 +29,7 @@ sealed interface BookshelfOverlay {
     data object GroupSelectSheet : BookshelfOverlay
     data class GroupEditSheet(val groupId: Long) : BookshelfOverlay
     data object BatchDownloadConfirmDialog : BookshelfOverlay
+    data class BookLongClickMenu(val book: BookShelfItem) : BookshelfOverlay
 }
 
 @Stable

@@ -5,12 +5,12 @@ import io.legado.app.ui.config.prefDelegate
 
 object MainConfig {
     var showDiscovery by prefDelegate(PreferKey.showDiscovery, true)
-    var showRSS by prefDelegate(PreferKey.showRss, true)
+    var showRSS by prefDelegate(PreferKey.showRss, false)
     var showBottomView by prefDelegate(PreferKey.showBottomView, true)
-    var useFloatingBottomBar by prefDelegate(PreferKey.useFloatingBottomBar, false)
+    var useFloatingBottomBar by prefDelegate(PreferKey.useFloatingBottomBar, true)
     var useFloatingBottomBarLiquidGlass by prefDelegate(
         PreferKey.useFloatingBottomBarLiquidGlass,
-        false
+        true
     )
     var defaultHomePage by prefDelegate(PreferKey.defaultHomePage, "bookshelf")
     var tabletInterface by prefDelegate(PreferKey.tabletInterface, "auto")

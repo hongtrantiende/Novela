@@ -116,6 +116,13 @@ class ExtensionRepository(
 
         val latestChapter = cleanHtmlText(obj["latestChapter"]?.safeString() ?: obj["lastChapter"]?.safeString() ?: "")
 
+        val wordCountRaw = obj["wordCount"]?.safeString()
+            ?: obj["words"]?.safeString()
+            ?: obj["word_count"]?.safeString()
+            ?: obj["wordCountText"]?.safeString()
+            ?: ""
+        val wordCount = cleanHtmlText(wordCountRaw)
+
         val capitalizedName = extensionId.replace("-", " ").replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
 
         val parsedType = obj["type"]?.safeString()
@@ -135,7 +142,8 @@ class ExtensionRepository(
             author = author,
             coverUrl = resolvedCover,
             intro = intro,
-            kind = kind,
+            kind = kind.takeIf { it.isNotBlank() },
+            wordCount = wordCount.takeIf { it.isNotBlank() },
             latestChapterTitle = latestChapter,
             time = System.currentTimeMillis()
         )

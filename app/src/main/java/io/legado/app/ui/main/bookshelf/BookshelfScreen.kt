@@ -1,6 +1,13 @@
 package io.legado.app.ui.main.bookshelf
 
 import io.legado.app.ui.widget.components.dialog.DownloadSettingsDialog
+import io.legado.app.ui.widget.components.dialog.BookExportDialog
+import io.legado.app.help.book.BookHelp
+import io.legado.app.utils.ACache
+import io.legado.app.utils.share
+import io.legado.app.utils.startService
+import io.legado.app.constant.IntentAction
+import androidx.compose.ui.platform.LocalContext
 import android.content.ClipData
 import android.content.res.Configuration
 import android.net.Uri
@@ -225,8 +232,52 @@ fun BookshelfScreen(
     var showDeleteBookConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteBookDoubleConfirmDialog by remember { mutableStateOf(false) }
     var deleteOriginalBookFile by remember { mutableStateOf(true) }
-    val hasLocalBookInDeleteTarget = remember(uiState.items, selectedBookUrls) {
-        uiState.items.any { selectedBookUrls.contains(it.book.bookUrl) && it.book.isLocal }
+    var booksToDelete by remember { mutableStateOf<Set<String>>(emptySet()) }
+    val hasLocalBookInDeleteTarget = remember(uiState.items, booksToDelete) {
+        uiState.items.any { booksToDelete.contains(it.book.bookUrl) && it.book.isLocal }
+    }
+
+    var showExportDialogForBook by remember { mutableStateOf<BookShelfItem?>(null) }
+    var cacheCountForExport by remember { mutableStateOf(0) }
+    var showDownloadSettingsForBook by remember { mutableStateOf<BookShelfItem?>(null) }
+
+    var pendingExportBook by remember { mutableStateOf<BookShelfItem?>(null) }
+    var pendingExportType by remember { mutableStateOf("") }
+    var pendingExportScope by remember { mutableStateOf<String?>(null) }
+
+    val context = LocalContext.current
+
+    val exportDir = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        var isReadyPath = false
+        var dirPath = ""
+        uri?.let {
+            if (uri.toString().startsWith("content://") || uri.toString().startsWith("file://")) {
+                ACache.get().put("exportBookPath", uri.toString())
+                dirPath = uri.toString()
+                isReadyPath = true
+            } else {
+                uri.path?.let { path ->
+                    ACache.get().put("exportBookPath", path)
+                    dirPath = path
+                    isReadyPath = true
+                }
+            }
+        }
+        if (!isReadyPath) return@rememberLauncherForActivityResult
+        val exportBook = pendingExportBook
+        if (exportBook != null) {
+            context.startService<io.legado.app.service.ExportBookService> {
+                action = IntentAction.start
+                putExtra("bookUrl", exportBook.bookUrl)
+                putExtra("exportType", pendingExportType)
+                putExtra("exportPath", dirPath)
+                pendingExportScope?.let {
+                    putExtra("epubScope", it)
+                }
+            }
+            pendingExportBook = null
+            pendingExportScope = null
+        }
     }
 
     val transitionState = remember { SeekableTransitionState(isInFolderRoot) }
@@ -302,6 +353,9 @@ fun BookshelfScreen(
     }
     val toggleBookSelection: (String) -> Unit = { bookUrl ->
         viewModel.toggleBookSelection(bookUrl)
+    }
+    val bookshelfOnBookLongClick: (BookShelfItem, String?) -> Unit = { book, _ ->
+        viewModel.showOverlay(BookshelfOverlay.BookLongClickMenu(book))
     }
 
     LaunchedEffect(pagerState.currentPage, isInFolderRoot) {
@@ -449,6 +503,7 @@ fun BookshelfScreen(
                         TopBarActionButton(
                             onClick = {
                                 if (selectedBookUrls.isNotEmpty()) {
+                                    booksToDelete = selectedBookUrls
                                     showDeleteBookConfirmDialog = true
                                 }
                             },
@@ -468,11 +523,6 @@ fun BookshelfScreen(
                                 expanded = showTopBarMenu,
                                 onDismissRequest = { showTopBarMenu = false }
                             ) { dismiss ->
-                                RoundDropdownMenuItem(
-                                    text = stringResource(R.string.add_remote_book),
-                                    onClick = { onNavigateToRemoteImport(); dismiss() },
-                                    leadingIcon = { Icon(Icons.Default.Wifi, null) }
-                                )
                                 RoundDropdownMenuItem(
                                     text = stringResource(R.string.book_local),
                                     onClick = { onNavigateToLocalImport(); dismiss() },
@@ -846,7 +896,7 @@ fun BookshelfScreen(
                             onDragFinished = {},
                             onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                             onBookClick = onBookClick,
-                            onBookLongClick = onBookLongClick,
+                            onBookLongClick = bookshelfOnBookLongClick,
                             isCurrentPage = true,
                             sharedTransitionScope = sharedTransitionScope,
                             animatedVisibilityScope = animatedVisibilityScope,
@@ -908,7 +958,7 @@ fun BookshelfScreen(
                                     },
                                     onGlobalSearch = { onNavigateToSearch(uiState.searchKey.trim()) },
                                     onBookClick = onBookClick,
-                                    onBookLongClick = onBookLongClick,
+                                    onBookLongClick = bookshelfOnBookLongClick,
                                     isCurrentPage = isSelectedGroup,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = animatedVisibilityScope,
@@ -1060,7 +1110,7 @@ fun BookshelfScreen(
     )
 
     if (showDeleteBookDoubleConfirmDialog) {
-        val deleteBookMsg = if (selectedBookUrls.size <= 1) {
+        val deleteBookMsg = if (booksToDelete.size <= 1) {
             "Bạn có thực sự chắc chắn muốn xóa sách này không? Thao tác này không thể hoàn tác!"
         } else {
             "Bạn có thực sự chắc chắn muốn xóa những sách đã chọn không? Thao tác này không thể hoàn tác!"
@@ -1077,10 +1127,77 @@ fun BookshelfScreen(
             confirmText = "Xác nhận xóa",
             onConfirm = {
                 showDeleteBookDoubleConfirmDialog = false
-                viewModel.deleteBooks(selectedBookUrls, deleteOriginalBookFile)
+                viewModel.deleteBooks(booksToDelete, deleteOriginalBookFile)
             },
             dismissText = stringResource(android.R.string.cancel),
             onDismiss = { showDeleteBookDoubleConfirmDialog = false }
+        )
+    }
+
+    if (activeOverlay is BookshelfOverlay.BookLongClickMenu) {
+        val book = activeOverlay.book
+        BookLongClickMenuSheet(
+            show = true,
+            book = book,
+            onDismissRequest = { viewModel.dismissOverlay() },
+            onExport = {
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val lightBook = book.toLightBook()
+                    val cacheNames = BookHelp.getChapterFiles(lightBook)
+                    val cachedFileCount = cacheNames.count { it.endsWith(".nb") }
+                    cacheCountForExport = cachedFileCount
+                    showExportDialogForBook = book
+                }
+            },
+            onDownload = {
+                showDownloadSettingsForBook = book
+            },
+            onShare = {
+                val lightBook = book.toLightBook()
+                val bookJson = io.legado.app.utils.GSON.toJson(lightBook)
+                context.share("${book.bookUrl}#$bookJson", book.name)
+            },
+            onDelete = {
+                booksToDelete = setOf(book.bookUrl)
+                showDeleteBookConfirmDialog = true
+            }
+        )
+    }
+
+    showExportDialogForBook?.let { book ->
+        BookExportDialog(
+            book = book.toLightBook(),
+            cacheCount = cacheCountForExport,
+            onDismiss = { showExportDialogForBook = null },
+            onConfirm = { scopeVal, type ->
+                val path = ACache.get().getAsString("exportBookPath")
+                if (path.isNullOrEmpty()) {
+                    pendingExportBook = book
+                    pendingExportType = type
+                    pendingExportScope = scopeVal
+                    exportDir.launch(null)
+                } else {
+                    context.startService<io.legado.app.service.ExportBookService> {
+                        action = IntentAction.start
+                        putExtra("bookUrl", book.bookUrl)
+                        putExtra("exportType", type)
+                        putExtra("exportPath", path)
+                        if (scopeVal != null) {
+                            putExtra("epubScope", scopeVal)
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    showDownloadSettingsForBook?.let { book ->
+        DownloadSettingsDialog(
+            onDismiss = { showDownloadSettingsForBook = null },
+            onConfirm = {
+                viewModel.downloadBooks(setOf(book.bookUrl), downloadAllChapters = true)
+                showDownloadSettingsForBook = null
+            }
         )
     }
 

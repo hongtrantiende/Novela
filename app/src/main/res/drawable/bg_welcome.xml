@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Base background (pitch black/dark) -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#12100E" />
+        </shape>
+    </item>
+
+    <!-- Top Right radial glow (warm orange/peach) -->
+    <item
+        android:width="400dp"
+        android:height="400dp"
+        android:top="-150dp"
+        android:right="-150dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="200dp"
+                android:startColor="#26D29C6C"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+
+    <!-- Bottom Left radial glow -->
+    <item
+        android:width="400dp"
+        android:height="400dp"
+        android:bottom="-150dp"
+        android:left="-150dp">
+        <shape android:shape="oval">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="200dp"
+                android:startColor="#20D29C6C"
+                android:endColor="#00000000" />
+        </shape>
+    </item>
+</layer-list>

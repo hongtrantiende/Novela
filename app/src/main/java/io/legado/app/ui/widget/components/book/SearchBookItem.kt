@@ -44,6 +44,7 @@ import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.translateAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -132,31 +133,73 @@ fun SearchBookListItem(
                 }
             }
 
-            Row {
-                val translatedAuthor by translateAsState(book.author)
+            if (book.origin.startsWith("ext_")) {
+                val authorParts = remember(book.author) { book.author.split(" · ") }
+                val rawAuthor = authorParts.getOrNull(0) ?: book.author
+                val rawStatus = authorParts.getOrNull(1) ?: book.latestChapterTitle
+                val rawSource = authorParts.getOrNull(2) ?: book.originName
+
+                val translatedAuthor by translateAsState(rawAuthor)
+                val translatedStatus by translateAsState(rawStatus ?: "")
+                val translatedSource by translateAsState(rawSource)
+                
+                val rawGenre = book.kind ?: ""
+                val translatedGenre by translateAsState(rawGenre)
+                
+                val rawWordCount = book.wordCount ?: ""
+                val translatedWordCount by translateAsState(rawWordCount)
+
+                val subtitleText = remember(translatedAuthor, translatedStatus, translatedSource, translatedGenre, translatedWordCount) {
+                    val list = mutableListOf<String>()
+                    if (translatedAuthor.isNotBlank()) list.add(translatedAuthor)
+                    if (translatedStatus.isNotBlank()) list.add(translatedStatus)
+                    if (translatedSource.isNotBlank()) list.add(translatedSource)
+                    if (translatedGenre.isNotBlank()) {
+                        val genres = translatedGenre.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                        if (genres.isNotEmpty()) {
+                            list.add(genres.joinToString(", "))
+                        }
+                    }
+                    if (translatedWordCount.isNotBlank()) {
+                        list.add(translatedWordCount)
+                    }
+                    list.joinToString(" · ")
+                }
+
                 AppText(
-                    text = translatedAuthor,
+                    text = subtitleText,
                     style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-
-                val latestChapter = book.latestChapterTitle
-                if (!latestChapter.isNullOrEmpty()) {
+            } else {
+                Row {
+                    val translatedAuthor by translateAsState(book.author)
                     AppText(
-                        text = " • ",
+                        text = translatedAuthor,
                         style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                     )
 
-                    val translatedLatest by translateAsState(latestChapter)
-                    AppText(
-                        text = "Mới nhất: $translatedLatest",
-                        style = LegadoTheme.typography.bodySmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    val latestChapter = book.latestChapterTitle
+                    if (!latestChapter.isNullOrEmpty()) {
+                        AppText(
+                            text = " • ",
+                            style = LegadoTheme.typography.bodySmall,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                        )
+
+                        val translatedLatest by translateAsState(latestChapter)
+                        AppText(
+                            text = "Mới nhất: $translatedLatest",
+                            style = LegadoTheme.typography.bodySmall,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
 

@@ -63,6 +63,9 @@ class BookDomainRepositoryImpl(
     override suspend fun deleteBooks(bookUrls: Set<String>) {
         val books = getBooks(bookUrls)
         if (books.isNotEmpty()) {
+            books.forEach { book ->
+                io.legado.app.help.book.BookHelp.clearCache(book)
+            }
             bookDao.delete(*books.toTypedArray())
         }
     }

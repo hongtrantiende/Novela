@@ -151,4 +151,10 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
             putBoolean("appCrash", value)
         }
 
+    var isLoggedIn: Boolean
+        get() = getBoolean("isLoggedIn", false)
+        set(value) {
+            putBoolean("isLoggedIn", value)
+        }
+
 }

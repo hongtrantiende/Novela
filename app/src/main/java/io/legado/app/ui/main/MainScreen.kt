@@ -387,7 +387,14 @@ fun MainScreen(
 
                             MainDestination.Bookshelf -> BookshelfScreen(
                                 onBookClick = { book ->
-                                    context.startActivityForBook(book)
+                                    onNavigateToBookInfo(
+                                        book.name,
+                                        book.author,
+                                        book.bookUrl,
+                                        book.origin,
+                                        book.getDisplayCover(),
+                                        null
+                                    )
                                 },
                                 onBookLongClick = { book, sharedCoverKey ->
                                     onNavigateToBookInfo(

@@ -578,16 +578,7 @@ private fun BookInfoOverflowMenu(
             text = stringResource(R.string.read_record),
             onClick = { onMenuAction(BookInfoMenuAction.ReadRecord) }
         )
-        if (book?.isLocal == true) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.re_sync_webdav),
-                onClick = { onMenuAction(BookInfoMenuAction.SyncRemote) }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.upload_to_remote),
-                onClick = { onMenuAction(BookInfoMenuAction.Upload) }
-            )
-        }
+
         if (state.bookSource?.hasLogin == true) {
             RoundDropdownMenuItem(
                 text = stringResource(R.string.login),

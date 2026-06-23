@@ -146,7 +146,7 @@ object ThemeConfig {
 
     var showHome by prefDelegate(PreferKey.showHome, true)
 
-    var showRss by prefDelegate(PreferKey.showRss, true)
+    var showRss by prefDelegate(PreferKey.showRss, false)
 
     var showStatusBar by prefDelegate(PreferKey.showStatusBar, true)
 
@@ -154,11 +154,11 @@ object ThemeConfig {
 
     var showBottomView by prefDelegate(PreferKey.showBottomView, true)
 
-    var useFloatingBottomBar by prefDelegate(PreferKey.useFloatingBottomBar, false)
+    var useFloatingBottomBar by prefDelegate(PreferKey.useFloatingBottomBar, true)
 
     var useFloatingBottomBarLiquidGlass by prefDelegate(
         PreferKey.useFloatingBottomBarLiquidGlass,
-        false
+        true
     )
 
     var tabletInterface by prefDelegate(PreferKey.tabletInterface, "auto")
