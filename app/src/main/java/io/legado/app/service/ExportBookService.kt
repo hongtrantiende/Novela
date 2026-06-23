@@ -2,6 +2,8 @@ package io.legado.app.service
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
@@ -73,6 +75,7 @@ import org.koin.core.component.inject
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import java.nio.charset.Charset
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.coroutineContext
 import kotlin.math.min
@@ -210,25 +213,37 @@ class ExportBookService : BaseService(), KoinComponent {
                         waitExportBooks.size
                     )
                     upExportNotification()
-                    if (exportConfig.type == "epub") {
-                        if (exportConfig.epubScope.isNullOrBlank()) {
-                            exportEpub(exportConfig.path, book)
+                    when (exportConfig.type) {
+                        "epub" -> {
+                            if (exportConfig.epubScope.isNullOrBlank()) {
+                                exportEpub(exportConfig.path, book)
+                                // Also export translation if cache exists
+                                if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
+                                    exportEpub(exportConfig.path, book, ContentSource.Translation)
+                                }
+                            } else {
+                                CustomExporter(
+                                    exportConfig.epubScope,
+                                    exportConfig.epubSize
+                                ).export(exportConfig.path, book)
+                            }
+                        }
+                        "zip" -> {
+                            exportZip(exportConfig.path, book, exportConfig.epubScope)
+                        }
+                        "cbz" -> {
+                            exportCbz(exportConfig.path, book, exportConfig.epubScope, false)
+                        }
+                        "webp+cbz" -> {
+                            exportCbz(exportConfig.path, book, exportConfig.epubScope, true)
+                        }
+                        else -> {
+                            exportTxt(exportConfig.path, book, exportConfig.epubScope)
                             // Also export translation if cache exists
                             if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
-                                exportEpub(exportConfig.path, book, ContentSource.Translation)
+                                val fileDoc = FileDoc.fromDir(exportConfig.path)
+                                exportTxt(fileDoc, book, ContentSource.Translation, exportConfig.epubScope)
                             }
-                        } else {
-                            CustomExporter(
-                                exportConfig.epubScope,
-                                exportConfig.epubSize
-                            ).export(exportConfig.path, book)
-                        }
-                    } else {
-                        exportTxt(exportConfig.path, book)
-                        // Also export translation if cache exists
-                        if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
-                            val fileDoc = FileDoc.fromDir(exportConfig.path)
-                            exportTxt(fileDoc, book, ContentSource.Translation)
                         }
                     }
                     exportMsg[book.bookUrl] = getString(R.string.export_success)
@@ -264,14 +279,14 @@ class ExportBookService : BaseService(), KoinComponent {
         val src: String
     )
 
-    private suspend fun exportTxt(path: String, book: Book) {
+    private suspend fun exportTxt(path: String, book: Book, scopeStr: String? = null) {
         exportMsg.remove(book.bookUrl)
         notifyExportBookChanged(book.bookUrl)
         val fileDoc = FileDoc.fromDir(path)
-        exportTxt(fileDoc, book, ContentSource.Original)
+        exportTxt(fileDoc, book, ContentSource.Original, scopeStr)
     }
 
-    private suspend fun exportTxt(fileDoc: FileDoc, book: Book, source: ContentSource) {
+    private suspend fun exportTxt(fileDoc: FileDoc, book: Book, source: ContentSource, scopeStr: String? = null) {
         val targetLanguage = TranslationConfig.llmTargetLanguage
         val filename = when (source) {
             ContentSource.Original -> book.getExportFileName("txt")
@@ -282,7 +297,7 @@ class ExportBookService : BaseService(), KoinComponent {
         val bookDoc = fileDoc.createFileIfNotExist(filename)
         val charset = Charset.forName(AppConfig.exportCharset)
         bookDoc.openOutputStream().getOrThrow().bufferedWriter(charset).use { bw ->
-            getAllContents(book, source) { text, srcList ->
+            getAllContents(book, source, scopeStr) { text, srcList ->
                 bw.write(text)
                 // Only export images for original source
                 if (source == ContentSource.Original) {
@@ -304,6 +319,165 @@ class ExportBookService : BaseService(), KoinComponent {
         }
         if (AppConfig.exportToWebDav) {
             // 导出到webdav
+            AppWebDav.exportWebDav(bookDoc.uri, filename)
+        }
+    }
+
+    private suspend fun exportZip(path: String, book: Book, scopeStr: String? = null) {
+        exportMsg.remove(book.bookUrl)
+        notifyExportBookChanged(book.bookUrl)
+        val fileDoc = FileDoc.fromDir(path)
+        val filename = book.getExportFileName("zip")
+        fileDoc.find(filename)?.delete()
+        val bookDoc = fileDoc.createFileIfNotExist(filename)
+
+        val charset = Charset.forName(AppConfig.exportCharset)
+        val useReplace = AppConfig.exportUseReplace && book.getUseReplaceRule()
+        val contentProcessor = ContentProcessor.get(book.name, book.origin)
+
+        val scopeSet = scopeStr?.takeIf { it.isNotBlank() }?.let { parseScope(it) }
+        val allChapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
+        val targetChapters = allChapters.filterIndexed { idx, _ ->
+            scopeSet == null || scopeSet.contains(idx)
+        }
+
+        val threads = if (AppConfig.parallelExportBook) {
+            AppConst.MAX_THREAD
+        } else {
+            1
+        }
+
+        java.util.zip.ZipOutputStream(bookDoc.openOutputStream().getOrThrow().buffered()).use { zos ->
+            val intro = HtmlFormatter.format(book.getDisplayIntro())
+                .split("\n")
+                .filter { it.isNotBlank() }
+                .joinToString("\n\n")
+            val infoText = "${book.name}\n\n${getString(R.string.author_show, book.getRealAuthor())}\n\n${
+                getString(R.string.intro_show, "\n\n$intro")
+            }"
+            zos.putNextEntry(java.util.zip.ZipEntry("Readme.txt"))
+            zos.write(infoText.toByteArray(charset))
+            zos.closeEntry()
+
+            flow {
+                targetChapters.forEachIndexed { index, chapter ->
+                    emit(index to chapter)
+                }
+            }.mapAsync(threads) { (index, chapter) ->
+                val result = getExportData(book, chapter, contentProcessor, useReplace, ContentSource.Original)
+                val safeTitle = chapter.title.replace("[\\\\/:*?\"<>|]".toRegex(), "_")
+                val entryName = String.format("%04d - %s.txt", chapter.index + 1, safeTitle)
+                entryName to result.first
+            }.collectIndexed { idx, (entryName, text) ->
+                notifyExportBookChanged(book.bookUrl)
+                exportProgress[book.bookUrl] = idx
+                
+                zos.putNextEntry(java.util.zip.ZipEntry(entryName))
+                zos.write(text.toByteArray(charset))
+                zos.closeEntry()
+            }
+        }
+
+        if (AppConfig.exportToWebDav) {
+            AppWebDav.exportWebDav(bookDoc.uri, filename)
+        }
+    }
+
+    private fun compressToWebp(sourceFile: File, outputStream: java.io.OutputStream): Boolean {
+        return try {
+            val bitmap = BitmapFactory.decodeFile(sourceFile.absolutePath) ?: return false
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                bitmap.compress(Bitmap.CompressFormat.WEBP_LOSSY, 90, outputStream)
+            } else {
+                @Suppress("DEPRECATION")
+                bitmap.compress(Bitmap.CompressFormat.WEBP, 90, outputStream)
+            }
+            bitmap.recycle()
+            true
+        } catch (e: Throwable) {
+            AppLog.put("Lỗi chuyển đổi ảnh sang WebP: ${e.localizedMessage}", e)
+            false
+        }
+    }
+
+    private suspend fun exportCbz(
+        path: String,
+        book: Book,
+        scopeStr: String? = null,
+        convertToWebp: Boolean = false
+    ) {
+        exportMsg.remove(book.bookUrl)
+        notifyExportBookChanged(book.bookUrl)
+        val fileDoc = FileDoc.fromDir(path)
+        val ext = if (convertToWebp) "webp.cbz" else "cbz"
+        val filename = book.getExportFileName(ext)
+        fileDoc.find(filename)?.delete()
+        val bookDoc = fileDoc.createFileIfNotExist(filename)
+
+        val scopeSet = scopeStr?.takeIf { it.isNotBlank() }?.let { parseScope(it) }
+        val allChapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
+        val targetChapters = allChapters.filterIndexed { idx, _ ->
+            scopeSet == null || scopeSet.contains(idx)
+        }
+
+        val threads = if (AppConfig.parallelExportBook) {
+            AppConst.MAX_THREAD
+        } else {
+            1
+        }
+
+        java.util.zip.ZipOutputStream(bookDoc.openOutputStream().getOrThrow().buffered()).use { zos ->
+            flow {
+                targetChapters.forEachIndexed { index, chapter ->
+                    emit(index to chapter)
+                }
+            }.mapAsync(threads) { (index, chapter) ->
+                val content = BookHelp.getContent(book, chapter)
+                val srcList = arrayListOf<String>()
+                if (content != null) {
+                    val matcher = AppPattern.imgPattern.matcher(content)
+                    while (matcher.find()) {
+                        matcher.group(1)?.let {
+                            val src = NetworkUtils.getAbsoluteURL(chapter.url, it)
+                            srcList.add(src)
+                        }
+                    }
+                }
+                chapter to srcList
+            }.collectIndexed { idx, (chapter, srcList) ->
+                notifyExportBookChanged(book.bookUrl)
+                exportProgress[book.bookUrl] = idx
+
+                val safeTitle = chapter.title.replace("[\\\\/:*?\"<>|]".toRegex(), "_")
+                val chapterFolder = String.format("%04d - %s", chapter.index + 1, safeTitle)
+
+                srcList.forEachIndexed { imgIdx, src ->
+                    val imgFile = BookHelp.getImage(book, src)
+                    if (imgFile.exists()) {
+                        val originalSuffix = BookHelp.getImageSuffix(src).lowercase()
+                        val isOriginalWebp = originalSuffix == "webp"
+
+                        if (convertToWebp && !isOriginalWebp) {
+                            val entryName = String.format("%s/%03d.webp", chapterFolder, imgIdx + 1)
+                            zos.putNextEntry(java.util.zip.ZipEntry(entryName))
+                            val compressed = compressToWebp(imgFile, zos)
+                            if (!compressed) {
+                                zos.write(imgFile.readBytes())
+                            }
+                            zos.closeEntry()
+                        } else {
+                            val suffix = if (isOriginalWebp) "webp" else originalSuffix
+                            val entryName = String.format("%s/%03d.%s", chapterFolder, imgIdx + 1, suffix)
+                            zos.putNextEntry(java.util.zip.ZipEntry(entryName))
+                            zos.write(imgFile.readBytes())
+                            zos.closeEntry()
+                        }
+                    }
+                }
+            }
+        }
+
+        if (AppConfig.exportToWebDav) {
             AppWebDav.exportWebDav(bookDoc.uri, filename)
         }
     }
@@ -334,16 +508,21 @@ class ExportBookService : BaseService(), KoinComponent {
     private suspend fun getAllContents(
         book: Book,
         source: ContentSource,
+        scopeStr: String? = null,
         append: (text: String, srcList: ArrayList<SrcData>?) -> Unit
     ) = coroutineScope {
         val useReplace = AppConfig.exportUseReplace && book.getUseReplaceRule()
         val contentProcessor = ContentProcessor.get(book.name, book.origin)
-        val qy = "${book.name}\n${
+        val intro = HtmlFormatter.format(book.getDisplayIntro())
+            .split("\n")
+            .filter { it.isNotBlank() }
+            .joinToString("\n\n")
+        val qy = "${book.name}\n\n${
             getString(R.string.author_show, book.getRealAuthor())
-        }\n${
+        }\n\n${
             getString(
                 R.string.intro_show,
-                "\n" + HtmlFormatter.format(book.getDisplayIntro())
+                "\n\n$intro"
             )
         }"
         append(qy, null)
@@ -352,9 +531,13 @@ class ExportBookService : BaseService(), KoinComponent {
         } else {
             1
         }
+        val scopeSet = scopeStr?.takeIf { it.isNotBlank() }?.let { parseScope(it) }
         flow {
-            appDb.bookChapterDao.getChapterList(book.bookUrl).forEach { chapter ->
-                emit(chapter)
+            val allChapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
+            allChapters.forEachIndexed { idx, chapter ->
+                if (scopeSet == null || scopeSet.contains(idx)) {
+                    emit(chapter)
+                }
             }
         }.mapAsync(threads) { chapter ->
             getExportData(book, chapter, contentProcessor, useReplace, source)
@@ -363,7 +546,6 @@ class ExportBookService : BaseService(), KoinComponent {
             exportProgress[book.bookUrl] = index
             append.invoke(result.first, result.second)
         }
-
     }
 
     private fun notifyExportBookChanged(bookUrl: String) {
@@ -393,7 +575,7 @@ class ExportBookService : BaseService(), KoinComponent {
                 useReplace = useReplace,
                 chineseConvert = false,
                 reSegment = false
-            ).toString()
+            ).toTxtString()
         if (AppConfig.exportPictureFile && source == ContentSource.Original) {
             //txt导出图片文件 - only for original source
             val srcList = arrayListOf<SrcData>()
@@ -947,26 +1129,27 @@ class ExportBookService : BaseService(), KoinComponent {
          * @since 2023/5/22
          * @author Discut
          */
-        private fun parseScope(scope: String): Set<Int> {
-            val split = scope.split(",")
+    }
 
-            val result = linkedSetOf<Int>()
-            for (s in split) {
-                val v = s.split("-")
-                if (v.size != 2) {
-                    result.add(s.toInt() - 1)
-                    continue
-                }
-                val left = v[0].toInt()
-                val right = v[1].toInt()
-                if (left > right) {
-                    AppLog.put("Error expression : $s; left > right")
-                    continue
-                }
-                for (i in left..right)
-                    result.add(i - 1)
+    private fun parseScope(scope: String): Set<Int> {
+        val split = scope.split(",")
+
+        val result = linkedSetOf<Int>()
+        for (s in split) {
+            val v = s.split("-")
+            if (v.size != 2) {
+                result.add(s.toInt() - 1)
+                continue
             }
-            return result
+            val left = v[0].toInt()
+            val right = v[1].toInt()
+            if (left > right) {
+                AppLog.put("Error expression : $s; left > right")
+                continue
+            }
+            for (i in left..right)
+                result.add(i - 1)
         }
+        return result
     }
 }

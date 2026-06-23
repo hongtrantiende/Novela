@@ -21,6 +21,7 @@ import io.legado.app.data.repository.BookshelfRepository
 import io.legado.app.data.repository.UploadRepository
 import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.BatchCacheDownloadUseCase
+import io.legado.app.domain.usecase.DeleteBooksUseCase
 import io.legado.app.domain.usecase.ExportBookshelfUseCase
 import io.legado.app.domain.usecase.ImportBookshelfUseCase
 import io.legado.app.domain.usecase.RefreshTocUseCase
@@ -68,6 +69,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.LinkedList
 import java.util.concurrent.ConcurrentHashMap
@@ -85,7 +87,8 @@ class BookshelfViewModel(
     private val refreshTocUseCase: RefreshTocUseCase,
     private val addBookUseCase: AddBookUseCase,
     private val importBookshelfUseCase: ImportBookshelfUseCase,
-    private val exportBookshelfUseCase: ExportBookshelfUseCase
+    private val exportBookshelfUseCase: ExportBookshelfUseCase,
+    private val deleteBooksUseCase: DeleteBooksUseCase
 ) : BaseViewModel(application) {
     private var addBookJob: Coroutine<*>? = null
 
@@ -611,6 +614,15 @@ class BookshelfViewModel(
 
     fun clearSelection() {
         selectedBookUrlsFlow.value = emptySet()
+    }
+
+    fun deleteBooks(bookUrls: Set<String>, deleteOriginal: Boolean) {
+        viewModelScope.launch(Dispatchers.IO) {
+            deleteBooksUseCase.execute(bookUrls, deleteOriginal)
+            withContext(Dispatchers.Main) {
+                exitEditMode()
+            }
+        }
     }
 
     fun selectAllVisible() {

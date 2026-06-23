@@ -389,8 +389,18 @@ class BookInfoViewModel(
 
     fun onTocResult(result: Triple<Int, Int, Boolean>?) {
         if (result == null) {
-            if (!inBookshelf) {
-                delBook()
+            execute {
+                val dbBook = appDb.bookDao.getBook(currentBook?.bookUrl ?: "")
+                dbBook != null && !dbBook.isNotShelf
+            }.onSuccess { hasAdded ->
+                if (hasAdded) {
+                    inBookshelf = true
+                    syncUiState()
+                } else {
+                    if (!inBookshelf) {
+                        delBook()
+                    }
+                }
             }
             return
         }

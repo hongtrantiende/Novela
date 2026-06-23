@@ -8,6 +8,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseRuleViewModel
+import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -18,10 +19,14 @@ import io.legado.app.domain.usecase.CacheBookChaptersUseCase
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isNotShelf
+import io.legado.app.help.book.isSameNameAuthor
+import io.legado.app.help.book.removeType
 import io.legado.app.help.bookmark.BookmarkExporter
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.CacheBook
 import io.legado.app.model.ReadBook
+import io.legado.app.model.SourceCallBack
 import io.legado.app.model.cache.CacheBookDownloadState
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
@@ -554,11 +559,32 @@ class TocViewModel(
         }
     }
 
+    private fun checkAndAddToShelf(book: Book) {
+        if (book.isNotShelf) {
+            book.removeType(BookType.notShelf)
+            if (book.order == 0) {
+                book.order = appDb.bookDao.minOrder - 1
+            }
+            appDb.bookDao.getBook(book.name, book.author)?.let {
+                book.durChapterIndex = it.durChapterIndex
+                book.durChapterPos = it.durChapterPos
+                book.durChapterTitle = it.durChapterTitle
+            }
+            if (ReadBook.book?.isSameNameAuthor(book) == true) {
+                ReadBook.book = book
+            }
+            book.save()
+            val source = appDb.bookSourceDao.getBookSource(book.origin)
+            SourceCallBack.callBackBook(SourceCallBack.ADD_BOOK_SHELF, source, book)
+        }
+    }
+
     fun downloadSelected() {
         val book = bookState.value ?: return
         val indices = uiState.value.selectedIds.toList()
         if (indices.isEmpty()) return
         execute {
+            checkAndAddToShelf(book)
             cacheBookChaptersUseCase.execute(book.bookUrl, indices)
         }.onSuccess { count ->
             getApplication<Application>().toastOnUi(
@@ -571,6 +597,7 @@ class TocViewModel(
     fun downloadChapter(index: Int) {
         val book = bookState.value ?: return
         execute {
+            checkAndAddToShelf(book)
             cacheBookChaptersUseCase.execute(book.bookUrl, listOf(index))
         }.onSuccess {
             getApplication<Application>().toastOnUi(R.string.start_downloading_chapter)
@@ -589,6 +616,7 @@ class TocViewModel(
         }
 
         execute {
+            checkAndAddToShelf(book)
             cacheBookChaptersUseCase.execute(book.bookUrl, targetIndices)
         }.onSuccess { count ->
             getApplication<Application>().toastOnUi(

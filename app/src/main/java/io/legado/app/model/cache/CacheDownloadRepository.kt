@@ -5,6 +5,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.help.book.BookHelp
+import io.legado.app.help.book.isImage
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.webBook.WebBook
 import kotlinx.coroutines.CoroutineScope
@@ -78,7 +79,11 @@ class CacheDownloadRepository {
             start = start,
             executeContext = executeContext,
         ) {
-            WebBook.getContentAwait(bookSource, book, chapter)
+            val content = WebBook.getContentAwait(bookSource, book, chapter)
+            if (book.isImage && content.isNotBlank()) {
+                BookHelp.saveImages(bookSource, book, chapter, content, 1)
+            }
+            content
         }
     }
 
@@ -87,6 +92,10 @@ class CacheDownloadRepository {
         book: Book,
         chapter: BookChapter,
     ): String {
-        return WebBook.getContentAwait(bookSource, book, chapter)
+        val content = WebBook.getContentAwait(bookSource, book, chapter)
+        if (book.isImage && content.isNotBlank()) {
+            BookHelp.saveImages(bookSource, book, chapter, content, 1)
+        }
+        return content
     }
 }

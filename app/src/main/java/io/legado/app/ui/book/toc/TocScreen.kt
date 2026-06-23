@@ -99,6 +99,7 @@ import io.legado.app.ui.widget.components.button.series.SmallToggleButton
 import io.legado.app.ui.widget.components.button.series.ToggleStyle
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.card.TextCard
+import io.legado.app.ui.widget.components.dialog.DownloadSettingsDialog
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.divider.PillHeaderDivider
 import io.legado.app.ui.widget.components.lazylist.FastScrollLazyColumn
@@ -116,6 +117,12 @@ import org.koin.androidx.compose.koinViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+sealed interface TocDownloadAction {
+    object DownloadAll : TocDownloadAction
+    object DownloadSelected : TocDownloadAction
+    data class DownloadChapter(val index: Int) : TocDownloadAction
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -151,6 +158,7 @@ fun TocScreen(
     val focusRequester = remember { FocusRequester() }
 
     var editingBookmark by remember { mutableStateOf<Bookmark?>(null) }
+    var pendingDownloadAction by remember { mutableStateOf<TocDownloadAction?>(null) }
 
     val useReplace = state.useReplace
     val showWordCount = state.showWordCount
@@ -244,7 +252,7 @@ fun TocScreen(
                 scope.launch { listState.animateScrollToItem(state.items.size) }
             },
             FabMenuItem(Icons.Default.DownloadForOffline, downloadAllText) {
-                viewModel.downloadAll()
+                pendingDownloadAction = TocDownloadAction.DownloadAll
             }
         )
     }
@@ -571,7 +579,7 @@ fun TocScreen(
                             state.selectedIds.size
                         ),
                         icon = Icons.Default.Download,
-                        onClick = { viewModel.downloadSelected() }
+                        onClick = { pendingDownloadAction = TocDownloadAction.DownloadSelected }
                     ),
                     secondaryActions = selectionSecondaryActions
                 )
@@ -583,6 +591,9 @@ fun TocScreen(
                         viewModel = viewModel,
                         listState = listState,
                         onChapterClick = onChapterClick,
+                        onDownloadClick = { id ->
+                            pendingDownloadAction = TocDownloadAction.DownloadChapter(id)
+                        },
                         contentPadding = adaptiveContentPaddingOnlyVertical(
                             top = padding.calculateTopPadding(),
                             bottom = 120.dp
@@ -645,6 +656,22 @@ fun TocScreen(
                 editingBookmark = null
             }
         )
+
+        if (pendingDownloadAction != null) {
+            DownloadSettingsDialog(
+                onDismiss = { pendingDownloadAction = null },
+                onConfirm = {
+                    val action = pendingDownloadAction
+                    pendingDownloadAction = null
+                    when (action) {
+                        is TocDownloadAction.DownloadAll -> viewModel.downloadAll()
+                        is TocDownloadAction.DownloadSelected -> viewModel.downloadSelected()
+                        is TocDownloadAction.DownloadChapter -> viewModel.downloadChapter(action.index)
+                        null -> {}
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -654,6 +681,7 @@ fun ChapterListContent(
     viewModel: TocViewModel,
     listState: LazyListState,
     onChapterClick: (Int) -> Unit,
+    onDownloadClick: (Int) -> Unit,
     contentPadding: PaddingValues
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -697,7 +725,7 @@ fun ChapterListContent(
                             viewModel.toggleSelection(uiItem.id)
                         },
                         onDownloadClick = {
-                            viewModel.downloadChapter(uiItem.id)
+                            onDownloadClick(uiItem.id)
                         }
                     )
                 }

@@ -55,9 +55,11 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material3.Checkbox
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.MoreVert
@@ -219,6 +221,13 @@ fun BookshelfScreen(
     val selectedBookUrls = uiState.selectedBookUrls
     val isInFolderRoot = uiState.isInFolderRoot
     val bookGroupStyle = uiState.bookGroupStyle
+
+    var showDeleteBookConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteBookDoubleConfirmDialog by remember { mutableStateOf(false) }
+    var deleteOriginalBookFile by remember { mutableStateOf(true) }
+    val hasLocalBookInDeleteTarget = remember(uiState.items, selectedBookUrls) {
+        uiState.items.any { selectedBookUrls.contains(it.book.bookUrl) && it.book.isLocal }
+    }
 
     val transitionState = remember { SeekableTransitionState(isInFolderRoot) }
     val folderTransition = rememberTransition(transitionState, label = "FolderTransition")
@@ -434,6 +443,17 @@ fun BookshelfScreen(
                             },
                             imageVector = Icons.Default.Bookmarks,
                             contentDescription = stringResource(R.string.move_to_group)
+                        )
+                    }
+                    AnimatedVisibility(visible = isEditMode) {
+                        TopBarActionButton(
+                            onClick = {
+                                if (selectedBookUrls.isNotEmpty()) {
+                                    showDeleteBookConfirmDialog = true
+                                }
+                            },
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = stringResource(R.string.delete)
                         )
                     }
 
@@ -1002,6 +1022,66 @@ fun BookshelfScreen(
             }
 
         }
+    }
+
+    AppAlertDialog(
+        show = showDeleteBookConfirmDialog,
+        onDismissRequest = { showDeleteBookConfirmDialog = false },
+        title = stringResource(R.string.draw),
+        content = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppText(text = stringResource(R.string.sure_del))
+                if (hasLocalBookInDeleteTarget) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        Checkbox(
+                            checked = deleteOriginalBookFile,
+                            onCheckedChange = { checked ->
+                                deleteOriginalBookFile = checked
+                            }
+                        )
+                        AppText(
+                            text = stringResource(R.string.delete_book_file),
+                            modifier = Modifier.padding(top = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmText = stringResource(android.R.string.ok),
+        onConfirm = {
+            showDeleteBookConfirmDialog = false
+            showDeleteBookDoubleConfirmDialog = true
+        },
+        dismissText = stringResource(android.R.string.cancel),
+        onDismiss = { showDeleteBookConfirmDialog = false }
+    )
+
+    if (showDeleteBookDoubleConfirmDialog) {
+        val deleteBookMsg = if (selectedBookUrls.size <= 1) {
+            "Bạn có thực sự chắc chắn muốn xóa sách này không? Thao tác này không thể hoàn tác!"
+        } else {
+            "Bạn có thực sự chắc chắn muốn xóa những sách đã chọn không? Thao tác này không thể hoàn tác!"
+        }
+        AppAlertDialog(
+            show = showDeleteBookDoubleConfirmDialog,
+            onDismissRequest = { 
+                showDeleteBookDoubleConfirmDialog = false
+            },
+            title = "Xác nhận xóa sách lần 2",
+            content = {
+                AppText(text = deleteBookMsg)
+            },
+            confirmText = "Xác nhận xóa",
+            onConfirm = {
+                showDeleteBookDoubleConfirmDialog = false
+                viewModel.deleteBooks(selectedBookUrls, deleteOriginalBookFile)
+            },
+            dismissText = stringResource(android.R.string.cancel),
+            onDismiss = { showDeleteBookDoubleConfirmDialog = false }
+        )
     }
 
     BookshelfOverlays(

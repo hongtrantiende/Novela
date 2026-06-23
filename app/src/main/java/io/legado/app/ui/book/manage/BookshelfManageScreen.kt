@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.manage
 
 import io.legado.app.ui.widget.components.dialog.DownloadSettingsDialog
+import io.legado.app.ui.widget.components.dialog.BookExportDialog
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -160,6 +161,10 @@ private fun BookshelfManageScreen(
     var showLogSheet by remember { mutableStateOf(false) }
     var showGroupSelectSheet by remember { mutableStateOf(false) }
     var showDeleteBookConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteBookDoubleConfirmDialog by remember { mutableStateOf(false) }
+    var showClearCacheConfirmDialog by remember { mutableStateOf(false) }
+    var showClearCacheDoubleConfirmDialog by remember { mutableStateOf(false) }
+    var pendingClearCacheBookUrls by remember { mutableStateOf<Set<String>>(emptySet()) }
     var showCustomExportDialog by remember { mutableStateOf(false) }
     var showBatchSourcePickerSheet by remember { mutableStateOf(false) }
     var pendingBatchSources by remember { mutableStateOf<List<BookSource>>(emptyList()) }
@@ -178,6 +183,10 @@ private fun BookshelfManageScreen(
     var customExportPath by remember { mutableStateOf("") }
     var customExportBook by remember { mutableStateOf<Book?>(null) }
     var customExportAllChapter by remember { mutableStateOf(false) }
+    var pendingExportBook by remember { mutableStateOf<Book?>(null) }
+    var pendingExportScope by remember { mutableStateOf<String?>(null) }
+    var pendingExportType by remember { mutableStateOf("txt") }
+    var showBookExportDialogBook by remember { mutableStateOf<Book?>(null) }
     var customEpubScopeInput by remember { mutableStateOf("") }
     var customEpubScopeError by remember { mutableStateOf<String?>(null) }
     var customEpubSizeInput by remember { mutableStateOf("1") }
@@ -281,6 +290,21 @@ private fun BookshelfManageScreen(
             }
         }
         if (!isReadyPath) return@rememberLauncherForActivityResult
+        val exportBook = pendingExportBook
+        if (exportBook != null) {
+            context.startService<ExportBookService> {
+                action = IntentAction.start
+                putExtra("bookUrl", exportBook.bookUrl)
+                putExtra("exportType", pendingExportType)
+                putExtra("exportPath", dirPath)
+                pendingExportScope?.let {
+                    putExtra("epubScope", it)
+                }
+            }
+            pendingExportBook = null
+            pendingExportScope = null
+            return@rememberLauncherForActivityResult
+        }
         if (pendingExportSelection.isNotEmpty()) {
             pendingExportSelection.forEach { bookUrl ->
                 booksByUrl[bookUrl]?.let { book ->
@@ -335,21 +359,7 @@ private fun BookshelfManageScreen(
     }
 
     fun exportBook(book: Book) {
-        val path = ACache.get().getAsString(exportBookPathKey)
-        if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
-            selectExportFolder(book.bookUrl)
-        } else if (state.exportConfig.enableCustomExport) {
-            customExportPath = path
-            customExportBook = book
-            customExportAllChapter = false
-            customEpubScopeInput = ""
-            customEpubScopeError = null
-            customEpubSizeInput = "1"
-            customEpisodeExportNameInput = state.exportConfig.episodeExportFileName
-            showCustomExportDialog = true
-        } else {
-            startExport(context, path, book, state.exportConfig.exportType)
-        }
+        showBookExportDialogBook = book
     }
 
     fun exportAll() {
@@ -432,8 +442,10 @@ private fun BookshelfManageScreen(
             Icons.Default.Delete,
             stringResource(R.string.clear_cache)
         ) {
-            viewModel.dispatch(BookshelfManageScreenIntent.ClearCachesForBooks(selectedBookUrls))
-            clearSelection()
+            if (selectedBookUrls.isNotEmpty()) {
+                pendingClearCacheBookUrls = selectedBookUrls
+                showClearCacheConfirmDialog = true
+            }
         },
         FabMenuItem(
             Icons.Default.Delete,
@@ -794,11 +806,8 @@ private fun BookshelfManageScreen(
                                         RoundDropdownMenuItem(
                                             text = "Xóa bộ nhớ đệm",
                                             onClick = {
-                                                viewModel.dispatch(
-                                                    BookshelfManageScreenIntent.ClearCachesForBooks(
-                                                        setOf(book.bookUrl)
-                                                    )
-                                                )
+                                                pendingClearCacheBookUrls = setOf(book.bookUrl)
+                                                showClearCacheConfirmDialog = true
                                                 dismiss()
                                             }
                                         )
@@ -1030,18 +1039,111 @@ private fun BookshelfManageScreen(
         confirmText = stringResource(android.R.string.ok),
         onConfirm = {
             showDeleteBookConfirmDialog = false
-            viewModel.dispatch(
-                BookshelfManageScreenIntent.DeleteBooks(
-                    bookUrls = pendingDeleteBookUrls,
-                    deleteOriginal = deleteOriginalBookFile
-                )
-            )
-            pendingDeleteBookUrls = emptySet()
-            clearSelection()
+            showDeleteBookDoubleConfirmDialog = true
         },
         dismissText = stringResource(android.R.string.cancel),
         onDismiss = { showDeleteBookConfirmDialog = false }
     )
+
+    if (showDeleteBookDoubleConfirmDialog) {
+        val deleteBookMsg = if (pendingDeleteBookUrls.size <= 1) {
+            "Bạn có thực sự chắc chắn muốn xóa sách này không? Thao tác này không thể hoàn tác!"
+        } else {
+            "Bạn có thực sự chắc chắn muốn xóa những sách đã chọn không? Thao tác này không thể hoàn tác!"
+        }
+        AppAlertDialog(
+            show = showDeleteBookDoubleConfirmDialog,
+            onDismissRequest = { 
+                showDeleteBookDoubleConfirmDialog = false
+                pendingDeleteBookUrls = emptySet()
+            },
+            title = "Xác nhận xóa sách lần 2",
+            content = {
+                AppText(text = deleteBookMsg)
+            },
+            confirmText = "Xác nhận xóa",
+            onConfirm = {
+                showDeleteBookDoubleConfirmDialog = false
+                viewModel.dispatch(
+                    BookshelfManageScreenIntent.DeleteBooks(
+                        bookUrls = pendingDeleteBookUrls,
+                        deleteOriginal = deleteOriginalBookFile
+                    )
+                )
+                pendingDeleteBookUrls = emptySet()
+                clearSelection()
+            },
+            dismissText = stringResource(android.R.string.cancel),
+            onDismiss = { 
+                showDeleteBookDoubleConfirmDialog = false
+                pendingDeleteBookUrls = emptySet()
+            }
+        )
+    }
+
+    if (showClearCacheConfirmDialog) {
+        val clearCacheMsg = if (pendingClearCacheBookUrls.size <= 1) {
+            "Bạn có muốn xóa bộ nhớ đệm của sách này không?"
+        } else {
+            "Bạn có muốn xóa bộ nhớ đệm của các sách đã chọn không?"
+        }
+        AppAlertDialog(
+            show = showClearCacheConfirmDialog,
+            onDismissRequest = { 
+                showClearCacheConfirmDialog = false
+                pendingClearCacheBookUrls = emptySet()
+            },
+            title = "Xóa bộ nhớ đệm",
+            content = {
+                AppText(text = clearCacheMsg)
+            },
+            confirmText = stringResource(android.R.string.ok),
+            onConfirm = {
+                showClearCacheConfirmDialog = false
+                showClearCacheDoubleConfirmDialog = true
+            },
+            dismissText = stringResource(android.R.string.cancel),
+            onDismiss = { 
+                showClearCacheConfirmDialog = false
+                pendingClearCacheBookUrls = emptySet()
+            }
+        )
+    }
+
+    if (showClearCacheDoubleConfirmDialog) {
+        val clearCacheDoubleMsg = if (pendingClearCacheBookUrls.size <= 1) {
+            "Bạn chắc chắn muốn xóa bộ nhớ đệm chứ? Toàn bộ chương truyện đã tải của sách này sẽ bị xóa khỏi máy!"
+        } else {
+            "Bạn chắc chắn muốn xóa bộ nhớ đệm chứ? Toàn bộ chương truyện đã tải của các sách này sẽ bị xóa khỏi máy!"
+        }
+        AppAlertDialog(
+            show = showClearCacheDoubleConfirmDialog,
+            onDismissRequest = { 
+                showClearCacheDoubleConfirmDialog = false
+                pendingClearCacheBookUrls = emptySet()
+            },
+            title = "Xác nhận xóa bộ nhớ đệm lần 2",
+            content = {
+                AppText(text = clearCacheDoubleMsg)
+            },
+            confirmText = "Xác nhận xóa",
+            onConfirm = {
+                showClearCacheDoubleConfirmDialog = false
+                viewModel.dispatch(
+                    BookshelfManageScreenIntent.ClearCachesForBooks(
+                        pendingClearCacheBookUrls
+                    )
+                )
+                pendingClearCacheBookUrls = emptySet()
+                clearSelection()
+            },
+            dismissText = stringResource(android.R.string.cancel),
+            onDismiss = { 
+                showClearCacheDoubleConfirmDialog = false
+                pendingClearCacheBookUrls = emptySet()
+            }
+        )
+    }
 
     GroupSelectSheet(
         show = showGroupSelectSheet,
@@ -1085,6 +1187,33 @@ private fun BookshelfManageScreen(
             onConfirm = {
                 viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))
                 pendingSingleDownloadBook = null
+            }
+        )
+    }
+
+    showBookExportDialogBook?.let { book ->
+        BookExportDialog(
+            book = book,
+            cacheCount = viewModel.getCacheCount(book.bookUrl) ?: 0,
+            onDismiss = { showBookExportDialogBook = null },
+            onConfirm = { scope, type ->
+                val path = ACache.get().getAsString(exportBookPathKey)
+                if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
+                    pendingExportBook = book
+                    pendingExportScope = scope
+                    pendingExportType = type
+                    selectExportFolder(book.bookUrl)
+                } else {
+                    context.startService<io.legado.app.service.ExportBookService> {
+                        action = IntentAction.start
+                        putExtra("bookUrl", book.bookUrl)
+                        putExtra("exportType", type)
+                        putExtra("exportPath", path)
+                        if (scope != null) {
+                            putExtra("epubScope", scope)
+                        }
+                    }
+                }
             }
         )
     }

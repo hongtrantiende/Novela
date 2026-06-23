@@ -1,5 +1,7 @@
 package io.legado.app.help.http
 
+import android.content.Context
+import io.legado.app.data.appDb
 import io.legado.app.constant.AppConst
 import io.legado.app.help.CacheManager
 import io.legado.app.help.config.AppConfig
@@ -91,6 +93,70 @@ val okHttpClient: OkHttpClient by lazy {
         .followRedirects(true)
         .followSslRedirects(true)
         .addInterceptor(OkHttpExceptionInterceptor)
+        .addInterceptor { chain ->
+            val original = chain.request()
+            val extensionId = original.header("X-Extension-Id")
+            if (extensionId.isNullOrBlank()) {
+                return@addInterceptor chain.proceed(original)
+            }
+
+            val requestBuilder = original.newBuilder()
+            requestBuilder.removeHeader("X-Extension-Id")
+
+            val prefs = appCtx.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+            val customCookie = prefs.getString("ext_cookies_$extensionId", null)
+            val customUa = prefs.getString("ext_user_agent_$extensionId", null)
+
+            // Inject custom user agent
+            if (!customUa.isNullOrBlank()) {
+                requestBuilder.header("User-Agent", customUa)
+            } else {
+                val defaultUa = io.legado.app.vbookextension.util.UserAgentUtils.getCleanUserAgent(appCtx)
+                requestBuilder.header("User-Agent", defaultUa)
+            }
+
+            // Inject cookies
+            val host = original.url.host
+            val baseDomainUrl = "https://$host"
+            val cookieManager = android.webkit.CookieManager.getInstance()
+            val webViewCookie = cookieManager.getCookie(baseDomainUrl)
+            val existingCookie = original.header("Cookie")
+
+            val finalCookie = kotlin.run {
+                val cookieMap = mutableMapOf<String, String>()
+                listOf(webViewCookie, customCookie, existingCookie).forEach { cookieStr ->
+                    if (!cookieStr.isNullOrBlank()) {
+                        cookieStr.split(";").forEach { part ->
+                            val pair = part.trim().split("=", limit = 2)
+                            if (pair.size == 2) {
+                                cookieMap[pair[0].trim()] = pair[1].trim()
+                            }
+                        }
+                    }
+                }
+                cookieMap.map { "${it.key}=${it.value}" }.joinToString("; ")
+            }
+
+            if (finalCookie.isNotBlank()) {
+                requestBuilder.header("Cookie", finalCookie)
+            } else {
+                requestBuilder.removeHeader("Cookie")
+            }
+
+            // Inject Referer if possible
+            val extSourceUrl = try {
+                kotlinx.coroutines.runBlocking {
+                    appDb.extensionDao.getExtensionById(extensionId)?.source
+                }
+            } catch (e: Exception) {
+                null
+            }
+            if (!extSourceUrl.isNullOrBlank()) {
+                requestBuilder.header("Referer", extSourceUrl)
+            }
+
+            chain.proceed(requestBuilder.build())
+        }
         .addInterceptor { chain ->
             val request = chain.request()
             val builder = request.newBuilder()

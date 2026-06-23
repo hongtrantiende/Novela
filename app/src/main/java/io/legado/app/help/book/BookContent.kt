@@ -13,4 +13,8 @@ data class BookContent(
         return textList.joinToString("\n")
     }
 
+    fun toTxtString(): String {
+        return textList.joinToString("\n\n")
+    }
+
 }

@@ -139,6 +139,12 @@ class AnalyzeUrl(
                 headerMap.remove("proxy")
             }
         }
+        source?.getKey()?.let { key ->
+            if (key.startsWith("ext_")) {
+                val extId = key.removePrefix("ext_")
+                headerMap["X-Extension-Id"] = extId
+            }
+        }
         initUrl()
         domain = NetworkUtils.getSubDomain(source?.getKey() ?: url)
     }
