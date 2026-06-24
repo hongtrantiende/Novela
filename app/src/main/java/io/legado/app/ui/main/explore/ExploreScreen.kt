@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -92,6 +93,7 @@ import io.legado.app.ui.association.ImportBookSourceDialog
 import io.legado.app.utils.showDialogFragment
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.unit.sp
@@ -1271,6 +1273,29 @@ fun AiExtensionWorkspaceDialog(
                                             Text("Thử lại B3", fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                         }
                                     }
+                                }
+                            }
+                            
+                            val isZipEnabled = uiState.step1Files != null
+                            if (isZipEnabled) {
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Button(
+                                    onClick = { viewModel.exportExtensionZip(context) },
+                                    enabled = !uiState.isGenerating,
+                                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text("Xuất ZIP", fontWeight = FontWeight.Bold)
                                 }
                             }
                         }

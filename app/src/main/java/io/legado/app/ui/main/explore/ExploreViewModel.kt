@@ -48,6 +48,12 @@ import io.legado.app.help.http.okHttpClient
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import java.io.File
+import java.io.FileOutputStream
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipEntry
+import android.os.Build
+import io.legado.app.utils.share
+import io.legado.app.utils.toastOnUi
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
@@ -1771,6 +1777,121 @@ class ExploreViewModel(
                         isGenerating = false,
                         generationStatus = "Lỗi hoàn tất: ${e.localizedMessage}"
                     )
+                }
+            }
+        }
+    }
+
+    fun exportExtensionZip(context: Context) {
+        val currentState = _uiState.value
+        val extName = currentState.generatedExtName ?: return
+        val extSlug = currentState.generatedExtSlug ?: extName.toSlug()
+        
+        viewModelScope.launch(IO) {
+            try {
+                val zipFile = File(context.externalCacheDir ?: context.cacheDir, "$extSlug.zip")
+                if (zipFile.exists()) zipFile.delete()
+                
+                ZipOutputStream(FileOutputStream(zipFile)).use { zos ->
+                    // 1. plugin.json
+                    val pluginJsonContent = currentState.step1Files?.get("plugin.json")
+                    if (pluginJsonContent != null) {
+                        zos.putNextEntry(ZipEntry("plugin.json"))
+                        zos.write(pluginJsonContent.toByteArray())
+                        zos.closeEntry()
+                    }
+                    
+                    // 2. icon.png
+                    val extDir = File(getApplication<Application>().filesDir, "extensions/$extSlug")
+                    val localIcon = File(extDir, "icon.png")
+                    val iconBytes = if (localIcon.exists()) {
+                        localIcon.readBytes()
+                    } else {
+                        try {
+                            val drawable = androidx.core.content.ContextCompat.getDrawable(context, io.legado.app.R.mipmap.ic_launcher)
+                            val bitmap = if (drawable is android.graphics.drawable.BitmapDrawable) {
+                                drawable.bitmap
+                            } else {
+                                val bmp = android.graphics.Bitmap.createBitmap(drawable?.intrinsicWidth ?: 100, drawable?.intrinsicHeight ?: 100, android.graphics.Bitmap.Config.ARGB_8888)
+                                val canvas = android.graphics.Canvas(bmp)
+                                drawable?.setBounds(0, 0, canvas.width, canvas.height)
+                                drawable?.draw(canvas)
+                                bmp
+                            }
+                            val stream = java.io.ByteArrayOutputStream()
+                            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream)
+                            stream.toByteArray()
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+                    if (iconBytes != null) {
+                        zos.putNextEntry(ZipEntry("icon.png"))
+                        zos.write(iconBytes)
+                        zos.closeEntry()
+                    }
+                    
+                    // 3. src/ config.js, home.js, gen.js, detail.js, toc.js, chap.js, search.js etc.
+                    currentState.step1Files?.forEach { (name, content) ->
+                        if (name != "plugin.json") {
+                            zos.putNextEntry(ZipEntry("src/$name"))
+                            zos.write(content.toByteArray())
+                            zos.closeEntry()
+                        }
+                    }
+                    
+                    currentState.step2File?.let { content ->
+                        zos.putNextEntry(ZipEntry("src/detail.js"))
+                        zos.write(content.toByteArray())
+                        zos.closeEntry()
+                    }
+                    
+                    currentState.step3Files?.forEach { (name, content) ->
+                        zos.putNextEntry(ZipEntry("src/$name"))
+                        zos.write(content.toByteArray())
+                        zos.closeEntry()
+                    }
+                }
+                
+                // Copy to public Downloads directory
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        val resolver = context.contentResolver
+                        val contentValues = android.content.ContentValues().apply {
+                            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "$extSlug.zip")
+                            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/zip")
+                            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS)
+                        }
+                        val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                        if (uri != null) {
+                            resolver.openOutputStream(uri)?.use { out ->
+                                zipFile.inputStream().use { input ->
+                                    input.copyTo(out)
+                                }
+                            }
+                        }
+                    } else {
+                        val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS)
+                        if (!downloadsDir.exists()) downloadsDir.mkdirs()
+                        val destFile = File(downloadsDir, "$extSlug.zip")
+                        zipFile.copyTo(destFile, overwrite = true)
+                    }
+                    withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        context.toastOnUi("Đã xuất ZIP và lưu vào mục Tải xuống (Downloads)!")
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                
+                // Trigger sharing sheet
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    context.share(zipFile, "application/zip")
+                }
+                
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    context.toastOnUi("Lỗi xuất file ZIP: ${e.localizedMessage}")
                 }
             }
         }
