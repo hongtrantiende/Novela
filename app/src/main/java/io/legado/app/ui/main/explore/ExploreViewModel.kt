@@ -494,6 +494,7 @@ class ExploreViewModel(
         val aiSelectedModel: String = "",
         val isAiConfigExpanded: Boolean = false,
         val generatingSourceUrl: String? = null,
+        val isWorkspaceOpen: Boolean = false,
         val generationStep: Int = 0,
         val generationStatus: String = "",
         val isGenerating: Boolean = false,
@@ -806,10 +807,16 @@ class ExploreViewModel(
 
     fun startGeneration(sourceUrl: String) {
         viewModelScope.launch(IO) {
+            val currentState = _uiState.value
+            if (currentState.generatingSourceUrl == sourceUrl) {
+                _uiState.update { it.copy(isWorkspaceOpen = true) }
+                return@launch
+            }
             val fullSource = appDb.bookSourceDao.getBookSource(sourceUrl) ?: return@launch
             _uiState.update {
                 it.copy(
                     generatingSourceUrl = sourceUrl,
+                    isWorkspaceOpen = true,
                     generationStep = 0,
                     generationStatus = "Đã chọn nguồn: ${fullSource.bookSourceName}. Cấu hình AI đã sẵn sàng. Hãy bấm 'Tạo Bước 1 (Menu)' để bắt đầu.",
                     isGenerating = false,
@@ -835,23 +842,7 @@ class ExploreViewModel(
     fun cancelGeneration() {
         _uiState.update {
             it.copy(
-                generatingSourceUrl = null,
-                generationStep = 0,
-                generationStatus = "",
-                isGenerating = false,
-                generatedExtName = null,
-                generatedExtSlug = null,
-                customRequirement = "",
-                referenceUrl = "",
-                step1Files = null,
-                step2File = null,
-                step3Files = null,
-                lastStep1Response = null,
-                lastStep2Response = null,
-                lastStep3Response = null,
-                isStep1Installed = false,
-                isStep2Installed = false,
-                isStep3Installed = false
+                isWorkspaceOpen = false
             )
         }
     }

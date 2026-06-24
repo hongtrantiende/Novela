@@ -425,7 +425,7 @@ fun ExploreScreen(
         )
     }
 
-    if (uiState.generatingSourceUrl != null) {
+    if (uiState.isWorkspaceOpen && uiState.generatingSourceUrl != null) {
         AiExtensionWorkspaceDialog(
             viewModel = viewModel,
             uiState = uiState
