@@ -78,7 +78,12 @@ fun HeatmapCalendarSection(
                         onModeChanged = {}
                     )
                 }
-                item { NoEarlierDataIndicator(cellSize = config.cellSize) }
+                item {
+                    NoEarlierDataIndicator(
+                        cellSize = config.cellSize,
+                        cellSpacing = config.cellSpacing
+                    )
+                }
             }
         }
     }

@@ -144,7 +144,11 @@ object ThemeConfig {
 
     var showDiscovery by prefDelegate(PreferKey.showDiscovery, true)
 
-    var showHome by prefDelegate(PreferKey.showHome, true)
+    var showHome by prefDelegate(PreferKey.showHome, false)
+
+    var showReadRecord by prefDelegate(PreferKey.showReadRecord, false)
+
+    var showUpdates by prefDelegate(PreferKey.showUpdates, true)
 
     var showRss by prefDelegate(PreferKey.showRss, false)
 

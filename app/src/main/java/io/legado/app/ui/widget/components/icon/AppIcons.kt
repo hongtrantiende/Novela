@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Explore
@@ -142,6 +143,18 @@ object AppIcons {
                 if (selected) MiuixIcons.Regular.Favorites else MiuixIcons.Regular.Favorites
             } else {
                 if (selected) Icons.Default.RssFeed else Icons.Outlined.RssFeed
+            }
+
+            MainDestination.Updates -> if (isMiuix) {
+                MiuixIcons.Refresh
+            } else {
+                Icons.Default.Refresh
+            }
+
+            MainDestination.ReadRecord -> if (isMiuix) {
+                MiuixIcons.WorldClock
+            } else {
+                Icons.Default.History
             }
 
             MainDestination.My -> if (isMiuix) {

@@ -67,6 +67,8 @@ import io.legado.app.vbookextension.data.dao.ExtensionDao
 import io.legado.app.vbookextension.data.dao.RepositoryDao
 import org.intellij.lang.annotations.Language
 import splitties.init.appCtx
+import io.legado.app.utils.getPrefBoolean
+import io.legado.app.utils.putPrefBoolean
 import java.util.Locale
 
 val appDb by lazy {
@@ -221,6 +223,13 @@ abstract class AppDatabase : RoomDatabase() {
                     where not exists (select * from book_groups where groupId = ${BookGroup.IdAudio})
                 """.trimIndent()
                 db.execSQL(insertBookGroupMusicSql)
+                @Language("sql")
+                val insertBookGroupVideoSql = """
+                    insert into book_groups(groupId, groupName, 'order', show) 
+                    select ${BookGroup.IdVideo}, 'Phim', -29, 1
+                    where not exists (select * from book_groups where groupId = ${BookGroup.IdVideo})
+                """.trimIndent()
+                db.execSQL(insertBookGroupVideoSql)
                 Language("sql")
                 val insertGroupReading = """
                     insert into book_groups(groupId, groupName, 'order', show) 
@@ -295,6 +304,23 @@ abstract class AppDatabase : RoomDatabase() {
                             )
                         }
                     }
+                }
+                
+                // One-time group initialization / updates to match user's custom layout defaults
+                if (!appCtx.getPrefBoolean("has_initialized_group_default_v3", false)) {
+                    db.execSQL("UPDATE book_groups SET `order` = -35, show = 1 WHERE groupId = ${BookGroup.IdAll}")
+                    db.execSQL("UPDATE book_groups SET `order` = -34, show = 1 WHERE groupId = ${BookGroup.IdReading}")
+                    db.execSQL("UPDATE book_groups SET `order` = -33, show = 0 WHERE groupId = ${BookGroup.IdUnread}")
+                    db.execSQL("UPDATE book_groups SET `order` = -32, show = 1 WHERE groupId = ${BookGroup.IdReadFinished}")
+                    db.execSQL("UPDATE book_groups SET `order` = -31, show = 1 WHERE groupId = ${BookGroup.IdText}")
+                    db.execSQL("UPDATE book_groups SET `order` = -30, show = 1 WHERE groupId = ${BookGroup.IdManga}")
+                    db.execSQL("UPDATE book_groups SET `order` = -29, show = 1 WHERE groupId = ${BookGroup.IdVideo}")
+                    db.execSQL("UPDATE book_groups SET `order` = -28, show = 0 WHERE groupId = ${BookGroup.IdAudio}")
+                    db.execSQL("UPDATE book_groups SET `order` = -27, show = 0 WHERE groupId = ${BookGroup.IdLocal}")
+                    db.execSQL("UPDATE book_groups SET `order` = -26, show = 0 WHERE groupId = ${BookGroup.IdNetNone}")
+                    db.execSQL("UPDATE book_groups SET `order` = -25, show = 0 WHERE groupId = ${BookGroup.IdLocalNone}")
+                    db.execSQL("UPDATE book_groups SET `order` = -24, show = 0 WHERE groupId = ${BookGroup.IdError}")
+                    appCtx.putPrefBoolean("has_initialized_group_default_v3", true)
                 }
             }
         }

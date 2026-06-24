@@ -391,6 +391,16 @@ fun ThemeConfigScreen(
                         onCheckedChange = { ThemeConfig.showRss = it }
                     )
                     SwitchSettingItem(
+                        title = stringResource(R.string.show_updates),
+                        checked = ThemeConfig.showUpdates,
+                        onCheckedChange = { ThemeConfig.showUpdates = it }
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.read_record),
+                        checked = ThemeConfig.showReadRecord,
+                        onCheckedChange = { ThemeConfig.showReadRecord = it }
+                    )
+                    SwitchSettingItem(
                         title = stringResource(R.string.show_status),
                         checked = ThemeConfig.showStatusBar,
                         onCheckedChange = {

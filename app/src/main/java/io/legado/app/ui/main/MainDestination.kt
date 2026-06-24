@@ -29,13 +29,23 @@ sealed class MainDestination(
         labelId = R.string.rss
     )
 
+    object Updates : MainDestination(
+        route = "updates",
+        labelId = R.string.sc_updated
+    )
+
+    object ReadRecord : MainDestination(
+        route = "readRecord",
+        labelId = R.string.read_record
+    )
+
     object My : MainDestination(
         route = "my",
         labelId = R.string.my
     )
 
     companion object {
-        val mainDestinations = persistentListOf<MainDestination>(Home, Bookshelf, Explore, Rss, My)
+        val mainDestinations = persistentListOf<MainDestination>(Bookshelf, Updates, Explore, ReadRecord, My, Home, Rss)
     }
 }
 
@@ -45,5 +55,7 @@ val MainDestination.customIconPath: String
         MainDestination.Bookshelf -> ThemeConfig.navIconBookshelf
         MainDestination.Explore -> ThemeConfig.navIconExplore
         MainDestination.Rss -> ThemeConfig.navIconRss
+        MainDestination.Updates -> ""
+        MainDestination.ReadRecord -> ""
         MainDestination.My -> ThemeConfig.navIconMy
     }

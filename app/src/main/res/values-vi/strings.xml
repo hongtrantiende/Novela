@@ -646,6 +646,7 @@
     <string name="tone_colour">Âm sắc đọc trực tuyến</string>
     <string name="select_count">(%1$d/%2$d)</string>
     <string name="show_rss">Hiển thị nguồn cấp RSS</string>
+    <string name="show_updates">Hiển thị Cập nhật</string>
     <string name="service_stop">Dịch vụ đã dừng</string>
     <string name="service_start">Đang khởi động dịch vụ\nKiểm tra thanh thông báo để biết chi tiết</string>
     <string name="default_path">Đường dẫn mặc định</string>
@@ -1445,7 +1446,7 @@
     <string name="view_code">Xem mã</string>
     <string name="show_bookname">Hiển thị tên sách</string>
     <string name="float_permission_rationale">Việc đọc yêu cầu quyền của cửa sổ nổi để hiển thị cửa sổ phát</string>
-    <string name="video">băng hình</string>
+    <string name="video">Phim</string>
     <string name="float_window">cửa sổ nổi</string>
     <string name="video_play">phát lại video</string>
     <string name="no_more_chapter">không còn chương nào nữa</string>
@@ -2093,6 +2094,7 @@
     <string name="is_read_finished">Hoàn thành</string>
     <string name="manga">truyện tranh</string>
     <string name="noval">Cuốn tiểu thuyết</string>
+    <string name="movie">Phim</string>
     <string name="cover_show_shadow">Hiển thị bóng phông chữ</string>
     <string name="cover_show_stroke">Hiển thị nét chữ</string>
     <string name="default_color">Sử dụng màu phông chữ mặc định</string>

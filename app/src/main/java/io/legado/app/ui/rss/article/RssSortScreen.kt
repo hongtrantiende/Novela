@@ -93,7 +93,7 @@ fun RssSortScreen(
     showReadRecordSheet: Boolean,
     readRecords: List<RssReadRecord>,
     sourceVariableSheet: RssSourceVariableSheetState?,
-    onBackClick: () -> Unit,
+    onBackClick: (() -> Unit)? = null,
     onSearch: (String) -> Unit,
     onLogin: () -> Unit,
     onRefreshSort: () -> Unit,
@@ -158,7 +158,9 @@ fun RssSortScreen(
                 title = title,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
-                    TopBarNavigationButton(onClick = onBackClick, imageVector = AppIcons.Back)
+                    if (onBackClick != null) {
+                        TopBarNavigationButton(onClick = onBackClick, imageVector = AppIcons.Back)
+                    }
                 },
                 actions = {
                     if (hasSearch) {

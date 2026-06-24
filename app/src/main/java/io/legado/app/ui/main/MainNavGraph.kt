@@ -74,6 +74,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import io.legado.app.data.appDb
+import io.legado.app.data.repository.BookRepository
+import io.legado.app.help.book.isVideo
+import io.legado.app.ui.book.video.VideoReaderScreen
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 fun MainActivity.mainEntryProvider(
@@ -157,6 +171,9 @@ fun MainActivity.mainEntryProvider(
             },
             onNavigateToReadRecord = {
                 onNavigateToRoute(MainRouteReadRecord)
+            },
+            onNavigateToReadRecordOverview = {
+                onNavigateToRoute(MainRouteReadRecordOverview)
             },
             onNavigateToAbout = {
                 onNavigateToRoute(MainRouteAbout)
@@ -261,101 +278,146 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteReadBook> { route ->
-        val readBookViewModel = koinViewModel<ReadBookViewModel>(
-            key = "ReadBook:${route.bookUrl ?: "last-read"}"
-        )
-        val controller = remember(readBookViewModel) {
-            ReadBookController(this@mainEntryProvider, readBookViewModel)
-        }
-        val lifecycleOwner = LocalLifecycleOwner.current
-        val readIntent = remember(route) {
-            MainActivity.createReadBookIntent(
-                context = this@mainEntryProvider,
-                bookUrl = route.bookUrl,
-                readAloud = route.readAloud,
-                inBookshelf = route.inBookshelf,
-                chapterChanged = route.chapterChanged,
-            )
-        }
-        val effectsReady = remember(readBookViewModel) { CompletableDeferred<Unit>() }
-        val readerResumeState = remember(controller, lifecycleOwner) { booleanArrayOf(false) }
-        val collectorReady = remember(readBookViewModel) { booleanArrayOf(false) }
-        fun resumeReader() {
-            if (readerResumeState[0]) return
-            readerResumeState[0] = true
-            controller.onResume()
-            readBookViewModel.onIntent(ReadBookIntent.OnResume)
-        }
+        val bookRepository = org.koin.compose.koinInject<BookRepository>()
+        var isVideoBook by remember(route.bookUrl) { mutableStateOf<Boolean?>(null) }
+        var extensionId by remember(route.bookUrl) { mutableStateOf("") }
+        var novelUrl by remember(route.bookUrl) { mutableStateOf("") }
+        var chapterUrl by remember(route.bookUrl) { mutableStateOf("") }
 
-        fun pauseReader() {
-            if (!readerResumeState[0]) return
-            readerResumeState[0] = false
-            controller.onPause()
-            readBookViewModel.onIntent(ReadBookIntent.OnPause)
-        }
-
-        ReadBookRouteScreen(
-            viewModel = readBookViewModel,
-            host = controller,
-            controller = controller,
-            onEffectsReady = { effectsReady.complete(Unit) },
-            onOpenSearch = { word, bookUrl ->
-                onNavigateToRoute(
-                    MainRouteSearchContent(
-                        bookUrl = bookUrl,
-                        searchWord = word,
-                        searchResultIndex = readBookViewModel.uiState.value.searchResultIndex
-                    )
-                )
-            },
-        )
-
-        DisposableEffect(controller, lifecycleOwner, route.readAloud) {
-            activeReadBookInputHandler = controller
-            activeReadBookRoute = route
-            MainActivity.hasActiveReadBookRoute = true
-            controller.onClose = { onNavigateBack() }
-            controller.onStartContentLoadFinish = {
-                if (route.readAloud) {
-                    io.legado.app.model.ReadBook.readAloud()
-                }
-            }
-
-            val lifecycleObserver = LifecycleEventObserver { _, event ->
-                when (event) {
-                    Lifecycle.Event.ON_RESUME -> {
-                        if (collectorReady[0]) resumeReader()
+        LaunchedEffect(route.bookUrl) {
+            val url = route.bookUrl ?: io.legado.app.model.ReadBook.book?.bookUrl
+            if (url != null) {
+                val book = bookRepository.getBook(url)
+                if (book != null && book.isVideo) {
+                    extensionId = book.origin
+                    novelUrl = book.bookUrl
+                    val chapterList = withContext(IO) {
+                        appDb.bookChapterDao.getChapterList(url)
                     }
-                    Lifecycle.Event.ON_PAUSE -> pauseReader()
-                    else -> Unit
+                    val currentChapter = chapterList.getOrNull(book.durChapterIndex) ?: chapterList.firstOrNull()
+                    chapterUrl = currentChapter?.url ?: ""
+                    isVideoBook = true
+                } else {
+                    isVideoBook = false
                 }
-            }
-            lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
-            onDispose {
-                pauseReader()
-                readBookViewModel.onIntent(ReadBookIntent.OnDispose)
-                lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
-                if (activeReadBookInputHandler === controller) {
-                    activeReadBookInputHandler = null
-                }
-                if (activeReadBookRoute == route) {
-                    activeReadBookRoute = null
-                }
-                MainActivity.hasActiveReadBookRoute = false
-                controller.clearTts()
-                this@mainEntryProvider.toggleSystemBar(AppConfig.showStatusBar)
+            } else {
+                isVideoBook = false
             }
         }
 
-        LaunchedEffect(route, readBookViewModel, lifecycleOwner) {
-            effectsReady.await()
-            collectorReady[0] = true
-            readBookViewModel.initReadBookConfig(readIntent)
-            readBookViewModel.initData(readIntent) {
-                readBookViewModel.markJustInitData()
-                controller.onRouteInitialized()
-                if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
-                    resumeReader()
+        if (isVideoBook == null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (isVideoBook == true) {
+            VideoReaderScreen(
+                extensionId = extensionId,
+                novelUrl = novelUrl,
+                chapterUrl = chapterUrl,
+                onBackClick = { onNavigateBack() }
+            )
+        } else {
+            val readBookViewModel = koinViewModel<ReadBookViewModel>(
+                key = "ReadBook:${route.bookUrl ?: "last-read"}"
+            )
+            val controller = remember(readBookViewModel) {
+                ReadBookController(this@mainEntryProvider, readBookViewModel)
+            }
+            val lifecycleOwner = LocalLifecycleOwner.current
+            val readIntent = remember(route) {
+                MainActivity.createReadBookIntent(
+                    context = this@mainEntryProvider,
+                    bookUrl = route.bookUrl,
+                    readAloud = route.readAloud,
+                    inBookshelf = route.inBookshelf,
+                    chapterChanged = route.chapterChanged,
+                )
+            }
+            val effectsReady = remember(readBookViewModel) { CompletableDeferred<Unit>() }
+            val readerResumeState = remember(controller, lifecycleOwner) { booleanArrayOf(false) }
+            val collectorReady = remember(readBookViewModel) { booleanArrayOf(false) }
+            fun resumeReader() {
+                if (readerResumeState[0]) return
+                readerResumeState[0] = true
+                controller.onResume()
+                readBookViewModel.onIntent(ReadBookIntent.OnResume)
+            }
+
+            fun pauseReader() {
+                if (!readerResumeState[0]) return
+                readerResumeState[0] = false
+                controller.onPause()
+                readBookViewModel.onIntent(ReadBookIntent.OnPause)
+            }
+
+            ReadBookRouteScreen(
+                viewModel = readBookViewModel,
+                host = controller,
+                controller = controller,
+                onEffectsReady = { effectsReady.complete(Unit) },
+                onOpenSearch = { word, bookUrl ->
+                    onNavigateToRoute(
+                        MainRouteSearchContent(
+                            bookUrl = bookUrl,
+                            searchWord = word,
+                            searchResultIndex = readBookViewModel.uiState.value.searchResultIndex
+                        )
+                    )
+                },
+            )
+
+            DisposableEffect(controller, lifecycleOwner, route.readAloud) {
+                activeReadBookInputHandler = controller
+                activeReadBookRoute = route
+                MainActivity.hasActiveReadBookRoute = true
+                controller.onClose = { onNavigateBack() }
+                controller.onStartContentLoadFinish = {
+                    if (route.readAloud) {
+                        io.legado.app.model.ReadBook.readAloud()
+                    }
+                }
+
+                val lifecycleObserver = LifecycleEventObserver { _, event ->
+                    when (event) {
+                        Lifecycle.Event.ON_RESUME -> {
+                            if (collectorReady[0]) resumeReader()
+                        }
+                        Lifecycle.Event.ON_PAUSE -> pauseReader()
+                        else -> Unit
+                    }
+                }
+                lifecycleOwner.lifecycle.addObserver(lifecycleObserver)
+                onDispose {
+                    pauseReader()
+                    readBookViewModel.onIntent(ReadBookIntent.OnDispose)
+                    lifecycleOwner.lifecycle.removeObserver(lifecycleObserver)
+                    if (activeReadBookInputHandler === controller) {
+                        activeReadBookInputHandler = null
+                    }
+                    if (activeReadBookRoute == route) {
+                        activeReadBookRoute = null
+                    }
+                    MainActivity.hasActiveReadBookRoute = false
+                    controller.clearTts()
+                    this@mainEntryProvider.toggleSystemBar(AppConfig.showStatusBar)
+                }
+            }
+
+            LaunchedEffect(route, readBookViewModel, lifecycleOwner) {
+                effectsReady.await()
+                collectorReady[0] = true
+                readBookViewModel.initReadBookConfig(readIntent)
+                readBookViewModel.initData(readIntent) {
+                    readBookViewModel.markJustInitData()
+                    controller.onRouteInitialized()
+                    if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+                        resumeReader()
+                    }
                 }
             }
         }

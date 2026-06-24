@@ -89,18 +89,22 @@ fun WeekdayLabelsColumn(
 ) {
     Column(
         modifier = modifier
-            .padding(top = 20.dp, end = 8.dp)
+            .padding(top = 24.dp, end = 8.dp)
     ) {
         val labels = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
 
         labels.forEachIndexed { index, label ->
             if (index % 2 == 0) {
-                AppText(
-                    text = label,
-                    fontSize = 10.sp,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.height(cellSize)
-                )
+                Box(
+                    modifier = Modifier.height(cellSize),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AppText(
+                        text = label,
+                        fontSize = 10.sp,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                }
             } else {
                 Spacer(modifier = Modifier.height(cellSize))
             }
@@ -116,6 +120,7 @@ fun WeekdayLabelsColumn(
 @Composable
 fun NoEarlierDataIndicator(
     cellSize: Dp,
+    cellSpacing: Dp,
     modifier: Modifier = Modifier
 ) {
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
@@ -126,7 +131,7 @@ fun NoEarlierDataIndicator(
             .padding(top = 24.dp, start = 8.dp, end = 16.dp)
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(cellSpacing)
         ) {
             repeat(7) {
                 Box(
@@ -151,20 +156,19 @@ fun NoEarlierDataIndicator(
             }
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(8.dp))
 
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(56.dp),
             verticalArrangement = Arrangement.Center
         ) {
-            "Không có dữ liệu cũ hơn".forEach { char ->
-                AppText(
-                    text = char.toString(),
-                    fontSize = 9.sp,
-                    lineHeight = 12.sp,
-                    fontWeight = FontWeight.Light
-                )
-            }
+            AppText(
+                text = "Không có\ndữ liệu\ncũ hơn",
+                fontSize = 9.sp,
+                lineHeight = 12.sp,
+                fontWeight = FontWeight.Light,
+                color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
         }
     }
 }

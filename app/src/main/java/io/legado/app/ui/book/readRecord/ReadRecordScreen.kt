@@ -20,14 +20,19 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.ArrowLeft
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Merge
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Timeline
+import java.time.YearMonth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
@@ -87,6 +92,12 @@ import io.legado.app.ui.widget.components.heatmap.WeekdayLabelsColumn
 import io.legado.app.ui.widget.components.heatmap.rememberDateRange
 import io.legado.app.ui.widget.components.heatmap.rememberDaysInRange
 import io.legado.app.ui.widget.components.heatmap.rememberWeeks
+import io.legado.app.ui.widget.components.heatmap.rememberHeatmapLevel
+import io.legado.app.ui.widget.components.heatmap.heatmapColorForLevel
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
 import io.legado.app.ui.widget.components.icon.AppIcon
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.list.TopFloatingStickyItem
@@ -114,7 +125,7 @@ data class TimelineItem(
 @Composable
 fun ReadRecordScreen(
     viewModel: ReadRecordViewModel = koinViewModel(),
-    onBackClick: () -> Unit,
+    onBackClick: (() -> Unit)? = null,
     onBookClick: (String, String) -> Unit,
     onSummaryClick: () -> Unit
 ) {
@@ -191,8 +202,10 @@ fun ReadRecordScreen(
                         }
                         subTitle
                     },
-                    navigationIcon = {
-                        TopBarNavigationButton(onClick = onBackClick)
+                    navigationIcon = if (onBackClick != null) {
+                        { TopBarNavigationButton(onClick = onBackClick) }
+                    } else {
+                        {}
                     },
                     actions = {
                         AppIconButton(onClick = {
@@ -461,7 +474,7 @@ fun SummarySection(
             val dailyTime = dailyDetails.sumOf { it.readTime }
 
             ReadingSummaryCard(
-                title = selectedDate.format(DateTimeFormatter.ofPattern("Tổng quan đọc ngày d tháng M")),
+                title = selectedDate.format(DateTimeFormatter.ofPattern("'Tổng quan đọc ngày' d 'tháng' M")),
                 bookCount = distinctBooks.size,
                 totalTimeMillis = dailyTime,
                 bookNamesForCover = distinctBooks.take(3),
@@ -486,7 +499,6 @@ fun SummarySection(
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HeatmapCalendarSection(
     modifier: Modifier = Modifier,
@@ -497,58 +509,139 @@ fun HeatmapCalendarSection(
     onDateSelected: (LocalDate) -> Unit,
     config: HeatmapConfig = HeatmapConfig()
 ) {
-    val (startDate, endDate) = rememberDateRange(dailyReadCounts, dailyReadTimes)
-    val days = rememberDaysInRange(startDate, endDate)
-    val weeks = rememberWeeks(days, startDate)
-
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(weeks) {
-        if (weeks.isNotEmpty()) {
-            listState.scrollToItem(weeks.size - 1)
-        }
+    // Current month displayed in the calendar
+    var displayedMonth by remember(selectedDate) {
+        mutableStateOf(YearMonth.from(selectedDate ?: LocalDate.now()))
     }
+
+    val daysInMonth = displayedMonth.lengthOfMonth()
+    val firstDayOfMonth = displayedMonth.atDay(1)
+    val firstDayOfWeek = firstDayOfMonth.dayOfWeek.value // 1 for Monday, 7 for Sunday
+
+    // Number of empty padding days at start of month (Monday start)
+    val paddingDaysStart = firstDayOfWeek - 1
+    val totalCells = paddingDaysStart + daysInMonth
+    // Pad weeks to 7 elements
+    val weeks = (0 until totalCells).map { cellIndex ->
+        if (cellIndex < paddingDaysStart) {
+            null
+        } else {
+            displayedMonth.atDay(cellIndex - paddingDaysStart + 1)
+        }
+    }.chunked(7)
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .padding(bottom = 32.dp)
+            .padding(bottom = 16.dp)
     ) {
-        Row(modifier = Modifier.fillMaxWidth()) {
-            WeekdayLabelsColumn(
-                cellSize = config.cellSize,
-                cellSpacing = config.cellSpacing
+        // Month navigation header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            AppIconButton(onClick = {
+                displayedMonth = displayedMonth.minusMonths(1)
+            }) {
+                AppIcon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowLeft,
+                    contentDescription = "Previous Month"
+                )
+            }
+
+            AppText(
+                text = "Tháng ${displayedMonth.monthValue}, ${displayedMonth.year}",
+                style = LegadoTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = LegadoTheme.colorScheme.onSurface
             )
 
-            LazyRow(
-                state = listState,
-                horizontalArrangement = Arrangement.spacedBy(config.cellSpacing),
-                modifier = Modifier
-                    .weight(1f)
-                    .fadingEdge(listState, config.gradientWidth)
-            ) {
-                val firstReadDate = listOfNotNull(
-                    dailyReadCounts.filterValues { it > 0 }.keys.minOrNull(),
-                    dailyReadTimes.filterValues { it > 0L }.keys.minOrNull()
-                ).minOrNull()
+            AppIconButton(onClick = {
+                displayedMonth = displayedMonth.plusMonths(1)
+            }) {
+                AppIcon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowRight,
+                    contentDescription = "Next Month"
+                )
+            }
+        }
 
-                if (firstReadDate != null) {
-                    item {
-                        NoEarlierDataIndicator(cellSize = config.cellSize)
+        // Weekday header row (T2 to CN)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            val weekdays = listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN")
+            weekdays.forEach { day ->
+                AppText(
+                    text = day,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    style = LegadoTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+            }
+        }
+
+        // Weeks grid
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            weeks.forEach { week ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    for (i in 0 until 7) {
+                        val day = week.getOrNull(i)
+                        if (day == null) {
+                            Spacer(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                            )
+                        } else {
+                            val level = rememberHeatmapLevel(day, currentMode, dailyReadCounts, dailyReadTimes)
+                            val isSelected = day == selectedDate
+                            val cellColor = heatmapColorForLevel(level)
+                            
+                            // Determine text color based on level
+                            val textColor = when {
+                                isSelected -> LegadoTheme.colorScheme.primary
+                                level > 0 -> LegadoTheme.colorScheme.onPrimary
+                                else -> LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            }
+                            
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(cellColor)
+                                    .border(
+                                        width = if (isSelected) 2.dp else 0.5.dp,
+                                        color = if (isSelected) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    )
+                                    .clickable { onDateSelected(day) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AppText(
+                                    text = day.dayOfMonth.toString(),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (level > 0 || isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = textColor
+                                )
+                            }
+                        }
                     }
-                }
-
-                items(weeks.size) { weekIndex ->
-                    HeatmapWeekColumn(
-                        week = weeks[weekIndex],
-                        mode = currentMode,
-                        dailyReadCounts = dailyReadCounts,
-                        dailyReadTimes = dailyReadTimes,
-                        selectedDate = selectedDate,
-                        config = config,
-                        onDateSelected = onDateSelected
-                    )
                 }
             }
         }

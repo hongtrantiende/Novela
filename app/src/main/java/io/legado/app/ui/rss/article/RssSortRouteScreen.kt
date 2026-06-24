@@ -30,7 +30,7 @@ fun RssSortRouteScreen(
     sourceUrl: String?,
     initialSortUrl: String?,
     initialSearchKey: String?,
-    onBackClick: () -> Unit,
+    onBackClick: (() -> Unit)? = null,
     onSearch: (String) -> Unit,
     onOpenRead: (title: String?, origin: String, link: String?, openUrl: String?) -> Unit,
     viewModel: RssSortViewModel = koinViewModel()

@@ -12,6 +12,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 
 interface SearchRepository {
@@ -34,7 +36,31 @@ class SearchRepositoryImpl(
 ) : SearchRepository, BookSearchGateway {
 
     override val enabledGroups: Flow<List<String>> = appDb.bookSourceDao.flowEnabledGroups()
-    override val enabledSources: Flow<List<BookSourcePart>> = appDb.bookSourceDao.flowEnabled()
+    override val enabledSources: Flow<List<BookSourcePart>> = combine(
+        appDb.bookSourceDao.flowEnabled(),
+        appDb.extensionDao.getInstalledExtensions()
+    ) { sources, extensions ->
+        val list = mutableListOf<BookSourcePart>()
+        list.addAll(sources)
+        extensions.filter { it.isEnabled }.forEach { ext ->
+            list.add(
+                BookSourcePart(
+                    bookSourceUrl = "ext_${ext.id}",
+                    bookSourceName = ext.name,
+                    bookSourceGroup = ext.type,
+                    customOrder = 0,
+                    enabled = ext.isEnabled,
+                    enabledExplore = ext.isEnabled,
+                    hasLoginUrl = false,
+                    lastUpdateTime = 0,
+                    respondTime = 0,
+                    weight = 0,
+                    hasExploreUrl = true
+                )
+            )
+        }
+        list.sortedBy { it.customOrder }
+    }.flowOn(Dispatchers.IO)
 
     override val bookshelfKeys: Flow<Set<BookShelfKey>> = appDb.bookDao.flowBookShelf().map { books ->
         books.filterNot { it.isNotShelf }
@@ -84,18 +110,97 @@ class SearchRepositoryImpl(
         withContext(Dispatchers.IO) {
             val selectedSources = linkedSetOf<BookSourcePart>()
             when {
-                scope.isAll -> selectedSources.addAll(appDb.bookSourceDao.allEnabledPart)
+                scope.isAll -> {
+                    selectedSources.addAll(appDb.bookSourceDao.allEnabledPart)
+                    val enabledExts = appDb.extensionDao.getEnabledExtensions()
+                    enabledExts.forEach { ext ->
+                        selectedSources.add(
+                            BookSourcePart(
+                                bookSourceUrl = "ext_${ext.id}",
+                                bookSourceName = ext.name,
+                                bookSourceGroup = ext.type,
+                                customOrder = 0,
+                                enabled = ext.isEnabled,
+                                enabledExplore = ext.isEnabled,
+                                hasLoginUrl = false,
+                                lastUpdateTime = 0,
+                                respondTime = 0,
+                                weight = 0,
+                                hasExploreUrl = true
+                            )
+                        )
+                    }
+                }
                 scope.isSource -> scope.sourceUrls.forEach { sourceUrl ->
-                    appDb.bookSourceDao.getBookSourcePart(sourceUrl)?.let { selectedSources.add(it) }
+                    if (sourceUrl.startsWith("ext_")) {
+                        val extId = sourceUrl.substringAfter("ext_")
+                        appDb.extensionDao.getExtensionById(extId)?.let { ext ->
+                            selectedSources.add(
+                                BookSourcePart(
+                                    bookSourceUrl = "ext_${ext.id}",
+                                    bookSourceName = ext.name,
+                                    bookSourceGroup = ext.type,
+                                    customOrder = 0,
+                                    enabled = ext.isEnabled,
+                                    enabledExplore = ext.isEnabled,
+                                    hasLoginUrl = false,
+                                    lastUpdateTime = 0,
+                                    respondTime = 0,
+                                    weight = 0,
+                                    hasExploreUrl = true
+                                )
+                            )
+                        }
+                    } else {
+                        appDb.bookSourceDao.getBookSourcePart(sourceUrl)?.let { selectedSources.add(it) }
+                    }
                 }
 
                 else -> scope.groupNames.forEach { groupName ->
                     selectedSources.addAll(appDb.bookSourceDao.getEnabledPartByGroup(groupName))
+                    val enabledExts = appDb.extensionDao.getEnabledExtensions()
+                    enabledExts.filter { it.type.equals(groupName, ignoreCase = true) }.forEach { ext ->
+                        selectedSources.add(
+                            BookSourcePart(
+                                bookSourceUrl = "ext_${ext.id}",
+                                bookSourceName = ext.name,
+                                bookSourceGroup = ext.type,
+                                customOrder = 0,
+                                enabled = ext.isEnabled,
+                                enabledExplore = ext.isEnabled,
+                                hasLoginUrl = false,
+                                lastUpdateTime = 0,
+                                respondTime = 0,
+                                weight = 0,
+                                hasExploreUrl = true
+                            )
+                        )
+                    }
                 }
             }
 
             if (selectedSources.isEmpty()) {
-                appDb.bookSourceDao.allEnabledPart
+                val list = mutableListOf<BookSourcePart>()
+                list.addAll(appDb.bookSourceDao.allEnabledPart)
+                val enabledExts = appDb.extensionDao.getEnabledExtensions()
+                enabledExts.forEach { ext ->
+                    list.add(
+                        BookSourcePart(
+                            bookSourceUrl = "ext_${ext.id}",
+                            bookSourceName = ext.name,
+                            bookSourceGroup = ext.type,
+                            customOrder = 0,
+                            enabled = ext.isEnabled,
+                            enabledExplore = ext.isEnabled,
+                            hasLoginUrl = false,
+                            lastUpdateTime = 0,
+                            respondTime = 0,
+                            weight = 0,
+                            hasExploreUrl = true
+                        )
+                    )
+                }
+                list.sortedBy { it.customOrder }
             } else {
                 selectedSources.toList().sortedBy { it.customOrder }
             }

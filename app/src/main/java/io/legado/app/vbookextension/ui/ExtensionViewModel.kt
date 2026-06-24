@@ -117,7 +117,7 @@ class ExtensionViewModel(
 
     fun fetchAllExtensions(force: Boolean = false) {
         viewModelScope.launch {
-            if (!force && ExtensionCache.availableExtensions != null) {
+            if (!force && ExtensionCache.availableExtensions != null && ExtensionCache.availableExtensions!!.isNotEmpty()) {
                 _availableExtensions.value = ExtensionCache.availableExtensions!!
                 return@launch
             }

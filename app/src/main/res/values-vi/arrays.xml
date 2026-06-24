@@ -262,7 +262,9 @@
 		<item>@string/bookshelf</item>
 		<item>@string/discovery</item>
 		<item>@string/rss</item>
+		<item>@string/sc_updated</item>
 		<item>@string/my</item>
+		<item>@string/read_record</item>
 	</string-array>
 
 	<string-array name="default_app_variant">
@@ -277,7 +279,9 @@
 		<item>bookshelf</item>
 		<item>explore</item>
 		<item>rss</item>
+		<item>updates</item>
 		<item>my</item>
+		<item>readRecord</item>
 	</string-array>
 
 	<string-array name="default_app_variant_value">

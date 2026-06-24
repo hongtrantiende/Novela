@@ -1,7 +1,15 @@
 package io.legado.app.ui.book.read.sheet
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import coil.compose.AsyncImage
+import io.legado.app.help.config.ReadStyleResolver
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +50,7 @@ import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.button.series.SmallTonalButton
 import io.legado.app.ui.widget.components.card.NormalCard
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.dialog.TextListInputDialog
@@ -74,8 +83,12 @@ fun BgTextConfigSheet(
     val nightBgColor = if (styleConfig.bgTypeNight == 0) {
         runCatching { styleConfig.bgStrNight.toColorInt() }.getOrDefault(0xFF000000.toInt())
     } else 0
-    val dayBgImage = if (styleConfig.bgType != 0) styleConfig.bgStr else null
-    val nightBgImage = if (styleConfig.bgTypeNight != 0) styleConfig.bgStrNight else null
+    val dayBgImage = if (styleConfig.bgType != 0) {
+        if (styleConfig.bgType == 1) "file:///android_asset/bg/${styleConfig.bgStr}" else styleConfig.bgStr
+    } else null
+    val nightBgImage = if (styleConfig.bgTypeNight != 0) {
+        if (styleConfig.bgTypeNight == 1) "file:///android_asset/bg/${styleConfig.bgStrNight}" else styleConfig.bgStrNight
+    } else null
 
     var showColorPicker by remember { mutableStateOf(false) }
     var colorPickerIsNight by remember { mutableStateOf(false) }
@@ -211,7 +224,102 @@ fun BgTextConfigSheet(
                 },
             )
 
-            // TODO: Add background image grid from assets
+            Spacer(Modifier.height(8.dp))
+            AppText(
+                text = "Danh sách ảnh nền mặc định",
+                style = LegadoTheme.typography.titleSmallEmphasized,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+
+            // Selector for Day/Night target
+            val isDarkTheme = LegadoTheme.isDark
+            var targetIsNight by remember { mutableStateOf(isDarkTheme) }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SmallTonalButton(
+                    onClick = { targetIsNight = false },
+                    text = stringResource(R.string.day),
+                    selected = !targetIsNight
+                )
+                SmallTonalButton(
+                    onClick = { targetIsNight = true },
+                    text = stringResource(R.string.night),
+                    selected = targetIsNight
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // LazyRow of all background images
+            val bgImages = listOf(
+                "bg7.jpg", "bg7.png", "bg6.png", "bg6_d.png", "bg5.jpg", "bg5.png",
+                "bg4.jpg", "bg4.png", "bg3.png", "bg1.png",
+                "宁静夜色.jpg", "午后沙滩.jpg", "山水墨影.jpg", "山水画.jpg",
+                "护眼漫绿.jpg", "新羊皮纸.jpg", "明媚倾城.jpg", "深宫魅影.jpg",
+                "清新时光.jpg", "羊皮纸1.jpg", "羊皮纸2.jpg", "羊皮纸3.jpg", "羊皮纸4.jpg",
+                "边彩画布.jpg"
+            )
+
+
+            LazyRow(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                itemsIndexed(bgImages) { _, bgName ->
+                    val bgPath = "file:///android_asset/bg/$bgName"
+                    val isSelected = if (targetIsNight) {
+                        styleConfig.bgTypeNight == 1 && styleConfig.bgStrNight == bgName
+                    } else {
+                        styleConfig.bgType == 1 && styleConfig.bgStr == bgName
+                    }
+
+                    NormalCard(
+                        onClick = {
+                            if (targetIsNight) {
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgTypeNight(1)))
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStrNight(bgName)))
+                            } else {
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgType(1)))
+                                onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BgStr(bgName)))
+                            }
+                        },
+                        modifier = Modifier.size(60.dp, 80.dp),
+                        cornerRadius = 8.dp,
+                        border = if (isSelected) {
+                            BorderStroke(2.dp, LegadoTheme.colorScheme.primary)
+                        } else {
+                            BorderStroke(1.dp, LegadoTheme.colorScheme.outlineVariant)
+                        }
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            AsyncImage(
+                                model = bgPath,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .size(20.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

@@ -46,6 +46,8 @@ object PreferKey {
     const val nextKeys = "nextKeyCodes"
     const val showDiscovery = "showDiscovery"
     const val showHome = "showHome"
+    const val showReadRecord = "showReadRecord"
+    const val showUpdates = "showUpdates"
     const val enableReview = "enableReview"
     const val showRss = "showRss"
     const val showStatusBar = "showStatusBar"

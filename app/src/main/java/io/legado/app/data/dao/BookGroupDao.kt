@@ -60,6 +60,11 @@ interface BookGroupDao {
             where type & ${BookType.text} > 0
             and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
         ))
+        or (groupId = ${BookGroup.IdVideo} and exists (
+            select 1 FROM books
+            where type & ${BookType.video} > 0
+            and (`group` = 0 or (const.sumPrivateGroupId & `group`) = 0)
+        ))
         or (groupId = ${BookGroup.IdReading} and exists (
             SELECT 1 FROM books 
             WHERE totalChapterNum > 0 

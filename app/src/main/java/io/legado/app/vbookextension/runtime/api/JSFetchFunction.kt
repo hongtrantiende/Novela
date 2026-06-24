@@ -198,17 +198,23 @@ object JSFetchFunction {
                     val lastTime = lastVerificationMap[extensionId] ?: 0L
                     val timeDiff = System.currentTimeMillis() - lastTime
                     if (timeDiff > 300000L) {
-                        SourceVerificationHelp.getVerificationResult(
-                            sourceKey = "ext_$extensionId",
-                            sourceTag = extensionName,
-                            sourceType = 0, // SourceType.book
-                            url = url,
-                            title = extensionName,
-                            useBrowser = true,
-                            refetchAfterSuccess = false,
-                            html = if (bodyBytes != null) String(bodyBytes) else null
-                        )
-                        lastVerificationMap[extensionId] = System.currentTimeMillis()
+                        try {
+                            SourceVerificationHelp.getVerificationResult(
+                                sourceKey = "ext_$extensionId",
+                                sourceTag = extensionName,
+                                sourceType = 0, // SourceType.book
+                                url = url,
+                                title = extensionName,
+                                useBrowser = true,
+                                refetchAfterSuccess = false,
+                                html = if (bodyBytes != null) String(bodyBytes) else null
+                            )
+                            lastVerificationMap[extensionId] = System.currentTimeMillis()
+                        } catch (e: Exception) {
+                            // Set a 20-second cooldown on cancellation/failure to avoid verification loop and allow the user to back out
+                            lastVerificationMap[extensionId] = System.currentTimeMillis() - 280000L
+                            throw e
+                        }
                     } else {
                         Log.d(TAG, "Skipping WebView verification popup for $extensionId (cooldown: ${timeDiff}ms)")
                     }

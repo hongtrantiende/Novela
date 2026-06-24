@@ -123,7 +123,7 @@ object ReadBookConfig {
 
     @Synchronized
     fun getConfig(index: Int): Config {
-        if (configList.size < 5) {
+        if (configList.isEmpty()) {
             resetAll()
         }
         return configList.getOrNull(index) ?: configList[0]
@@ -163,7 +163,7 @@ object ReadBookConfig {
     }
 
     fun deleteDur(): Boolean {
-        if (configList.size > 5) {
+        if (configList.size > 1) {
             val removeIndex = styleSelect
             configList.removeAt(removeIndex)
             if (removeIndex <= readStyleSelect) {
@@ -214,7 +214,7 @@ object ReadBookConfig {
     var showBrightnessView by prefDelegate(PreferKey.showBrightnessView, "1")
     var brightnessVwPos by prefDelegate(PreferKey.brightnessVwPos, "1")
     var readBrightness by prefDelegate(PreferKey.brightness, 100)
-    var brightnessAuto by prefDelegate(PreferKey.brightnessAuto, false)
+    var brightnessAuto by prefDelegate(PreferKey.brightnessAuto, true)
 
     var styleSelect: Int
         get() = if (isComic) comicStyleSelect else readStyleSelect
@@ -231,8 +231,8 @@ object ReadBookConfig {
     var readMenuIconItemsPerRow by clampedPrefDelegate(PreferKey.readMenuIconItemsPerRow, 5, 2..8)
     var readMenuIconRowCount by clampedPrefDelegate(PreferKey.readMenuIconRowCount, 1, 1..2)
     var readMenuBottomCornerRadius by clampedPrefDelegate(PreferKey.readMenuBottomCornerRadius, 0, 0..32)
-    var readMenuTopBarBlurMode by clampedPrefDelegate(PreferKey.readMenuTopBarBlurMode, ReadMenuBlurMode.None, 0..2)
-    var readMenuBottomBarBlurMode by clampedPrefDelegate(PreferKey.readMenuBottomBarBlurMode, ReadMenuBlurMode.None, 0..2)
+    var readMenuTopBarBlurMode by clampedPrefDelegate(PreferKey.readMenuTopBarBlurMode, ReadMenuBlurMode.Haze, 0..2)
+    var readMenuBottomBarBlurMode by clampedPrefDelegate(PreferKey.readMenuBottomBarBlurMode, ReadMenuBlurMode.Haze, 0..2)
     var readMenuTopBarBlurStyle by clampedPrefDelegate(PreferKey.readMenuTopBarBlurStyle, ReadMenuBlurStyle.Progressive, 0..1)
     var readMenuBottomBarBlurStyle by clampedPrefDelegate(PreferKey.readMenuBottomBarBlurStyle, ReadMenuBlurStyle.Solid, 0..1)
     var readMenuBlurRadius by clampedPrefDelegate(PreferKey.readMenuBlurRadius, 24, 0..32)
@@ -864,9 +864,9 @@ object ReadBookConfig {
 
     @Keep
     data class Config(
-        var name: String = "",
-        var bgStr: String = "#EEEEEE",//白天背景
-        var bgStrNight: String = "#000000",//夜间背景
+        var name: String = "Mặc định",
+        var bgStr: String = "羊皮纸1.jpg",//白天背景
+        var bgStrNight: String = "羊皮纸1.jpg",//夜间背景
         @Transient
         var menuBgColor: String = "#EEEFE3",
         @Transient
@@ -877,19 +877,19 @@ object ReadBookConfig {
         var menuAcColorNight: String = "#586249",
         var bgStrEInk: String = "#FFFFFF",//EInk背景
         var bgAlpha: Int = 100,//背景透明度
-        var bgType: Int = 0,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
-        var bgTypeNight: Int = 0,//夜间背景类型
+        var bgType: Int = 1,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
+        var bgTypeNight: Int = 1,//夜间背景类型
         var bgTypeEInk: Int = 0,//EInk背景类型
         private var darkStatusIcon: Boolean = true,//白天是否暗色状态栏
         private var darkStatusIconNight: Boolean = false,//晚上是否暗色状态栏
         private var darkStatusIconEInk: Boolean = true,
-        private var textColor: String = "#3E3D3B",//白天文字颜色
-        private var textColorNight: String = "#ADADAD",//夜间文字颜色
+        private var textColor: String = "#ff000000",//白天文字颜色
+        private var textColorNight: String = "#ff000000",//夜间文字颜色
         private var textColorEInk: String = "#000000",
         private var textAccentColor: String = "#834E00",//白天强调文字颜色
         private var textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
         private var textAccentColorEInk: String = "#000000",
-        private var pageAnim: Int = 0,//翻页动画
+        private var pageAnim: Int = 3,//翻页动画
         private var pageAnimEInk: Int = 4,
         var textFont: String = "",//字体
         var titleFont: String = "",//标题字体
@@ -907,8 +907,8 @@ object ReadBookConfig {
         private var shadowColor: String = "#3E3D3B",
         private var shadowColorN: String = "#3E3D3B",
         var letterSpacing: Float = 0.1f,//字间距
-        var lineSpacingExtra: Int = 12,//行间距
-        var paragraphSpacing: Int = 2,//段距
+        var lineSpacingExtra: Int = 11,//行间距
+        var paragraphSpacing: Int = 7,//段距
         var titleMode: Int = 0,//标题位置 0:居左 1:居中 2:隐藏
         var titleSize: Int = 0,
         var titleTopSpacing: Int = 0,
@@ -921,7 +921,7 @@ object ReadBookConfig {
         var titleSegScaling: Float = 1f,//分段缩放，第二段与第一段的字体大小比例
         var titleSegDistance: Int = 4,//分段判断，第几个字符开始分段
         var titleSegFlag: String = "",//分段判断，碰到指定值时分段
-        var paragraphIndent: String = "　　",//段落缩进
+        var paragraphIndent: String = "　",//段落缩进
         var underline: Boolean = false, //下划线
         var underlinePadding: Int = 10,
         var underlineHeight: Int = 1,

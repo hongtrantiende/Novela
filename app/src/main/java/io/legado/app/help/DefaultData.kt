@@ -36,6 +36,13 @@ object DefaultData {
                 if (LocalConfig.needUpDictRule) {
                     importDefaultDictRules()
                 }
+                if (LocalConfig.needUpReadConfig) {
+                    ReadBookConfig.configList.clear()
+                    ReadBookConfig.configList.addAll(readConfigs)
+                    ReadBookConfig.readStyleSelect = 0
+                    ReadBookConfig.comicStyleSelect = 0
+                    ReadBookConfig.save()
+                }
             }.onError {
                 it.printOnDebug()
             }

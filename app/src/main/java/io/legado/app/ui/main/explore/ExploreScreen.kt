@@ -99,6 +99,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.filled.Settings
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -109,6 +132,7 @@ fun ExploreScreen(
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showAiConfigDialog by remember { mutableStateOf(false) }
     val listItems by remember(uiState.items, uiState.expandedId, uiState.exploreKinds) {
         derivedStateOf { viewModel.buildExploreListItems(uiState) }
     }
@@ -171,6 +195,11 @@ fun ExploreScreen(
                 imageVector = androidx.compose.material.icons.Icons.Default.Translate,
                 contentDescription = "Dịch"
             )
+            io.legado.app.ui.widget.components.topbar.TopBarActionButton(
+                onClick = { showAiConfigDialog = true },
+                imageVector = androidx.compose.material.icons.Icons.Default.Settings,
+                contentDescription = "Setup Model"
+            )
         },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
@@ -201,6 +230,8 @@ fun ExploreScreen(
                     isScrollable = false,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+
 
                 Row(
                     modifier = Modifier
@@ -255,6 +286,8 @@ fun ExploreScreen(
                             isInstalled = isInstalled,
                             isInstalling = isInstalling,
                             loadingKinds = if (isExpanded) uiState.loadingKinds else false,
+                            installedSearchUrls = uiState.installedSearchUrls,
+                            installedSourceTypes = uiState.installedSourceTypes,
                             onClick = {
                                 if (item.bookSourceUrl.startsWith("ext_")) {
                                     onOpenExploreShow(item.bookSourceName, item.bookSourceUrl, null)
@@ -290,6 +323,7 @@ fun ExploreScreen(
                             },
                             onRefresh = { viewModel.refreshExploreKinds(item) },
                             onDelete = { sourceToDeleteUrl = item.bookSourceUrl },
+                            onGenerateExtension = { viewModel.startGeneration(item.bookSourceUrl) },
                             isMiuix = composeEngine
                         )
                         }
@@ -382,6 +416,21 @@ fun ExploreScreen(
         dismissText = stringResource(android.R.string.cancel),
         onDismiss = { sourceToDeleteUrl = null },
     )
+
+    if (showAiConfigDialog) {
+        AiConfigDialog(
+            viewModel = viewModel,
+            uiState = uiState,
+            onDismiss = { showAiConfigDialog = false }
+        )
+    }
+
+    if (uiState.generatingSourceUrl != null) {
+        AiExtensionWorkspaceDialog(
+            viewModel = viewModel,
+            uiState = uiState
+        )
+    }
 }
 
 
@@ -394,6 +443,8 @@ fun ExploreSourceHeader(
     isInstalled: Boolean = true,
     isInstalling: Boolean = false,
     loadingKinds: Boolean,
+    installedSearchUrls: Map<String, Boolean> = emptyMap(),
+    installedSourceTypes: Map<String, Int> = emptyMap(),
     onClick: () -> Unit,
     onInstall: () -> Unit = {},
     onTop: () -> Unit,
@@ -402,6 +453,7 @@ fun ExploreSourceHeader(
     onLogin: () -> Unit,
     onRefresh: () -> Unit,
     onDelete: () -> Unit,
+    onGenerateExtension: () -> Unit = {},
     isMiuix: Boolean,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -425,6 +477,7 @@ fun ExploreSourceHeader(
         label = "CardColor"
     )
 
+    val isLegado = !item.bookSourceUrl.startsWith("ext_") && !item.bookSourceUrl.startsWith("ext_online_")
     val isOnlineExtension = item.bookSourceUrl.startsWith("ext_online_")
     val isExtension = isExtensionNameUrl(item.bookSourceUrl)
 
@@ -507,6 +560,90 @@ fun ExploreSourceHeader(
                             style = LegadoTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (isLegado) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            if (item.bookSourceUrl.startsWith("online_yckceo_")) {
+                                val groupParts = item.bookSourceGroup?.split("|").orEmpty()
+                                val author = groupParts.getOrNull(1).orEmpty()
+                                val tags = groupParts.getOrNull(2).orEmpty()
+                                val downloadsVal = groupParts.getOrNull(3)?.toIntOrNull() ?: 0
+                                val time = groupParts.getOrNull(4).orEmpty()
+                                
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    tags.split(" ").forEach { tag ->
+                                        if (tag.isNotBlank()) {
+                                            CapabilityBadge(tag)
+                                        }
+                                    }
+                                    if (author.isNotBlank()) {
+                                        AppText(
+                                            text = "Tác giả: $author",
+                                            style = LegadoTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    AppText(
+                                        text = "Tải: ${formatDownloads(downloadsVal)}",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    AppText(
+                                        text = "Cập nhật: $time",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                val hasSearch = installedSearchUrls[item.bookSourceUrl] == true
+                                val hasExplore = item.hasExploreUrl
+                                val sourceType = installedSourceTypes[item.bookSourceUrl] ?: 0
+                                val isComic = sourceType == 2
+                                val isAudio = sourceType == 1
+                                
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    if (hasExplore) {
+                                        CapabilityBadge("发")
+                                    }
+                                    if (hasSearch) {
+                                        CapabilityBadge("搜")
+                                    }
+                                    if (isComic) {
+                                        CapabilityBadge("图")
+                                    }
+                                    if (isAudio) {
+                                        CapabilityBadge("声")
+                                    }
+                                    
+                                    val groupName = item.bookSourceGroup
+                                    if (!groupName.isNullOrBlank()) {
+                                        AppText(
+                                            text = "Nhóm: $groupName",
+                                            style = LegadoTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     } else if (!displayGroup.isNullOrBlank()) {
                         AppText(
                             text = displayGroup,
@@ -593,6 +730,13 @@ fun ExploreSourceHeader(
                             text = stringResource(R.string.refresh),
                             onClick = { onRefresh(); showMenu = false }
                         )
+                        if (isLegado && isInstalled) {
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Translate) },
+                                text = "Tạo Extension AI",
+                                onClick = { onGenerateExtension(); showMenu = false }
+                            )
+                        }
                         RoundDropdownMenuItem(
                             leadingIcon = {
                                 MenuItemIcon(
@@ -614,3 +758,624 @@ fun ExploreSourceHeader(
 private fun isExtensionNameUrl(url: String): Boolean {
     return url.startsWith("ext_") || url.startsWith("ext_online_")
 }
+
+@Composable
+private fun CapabilityBadge(tag: String) {
+    val (color, text) = when (tag.trim()) {
+        "搜" -> Color(0xFFE67E22) to "Tìm kiếm"
+        "发" -> Color(0xFF2ECC71) to "Khám phá"
+        "图" -> Color(0xFF9B59B6) to "Truyện tranh"
+        "声" -> Color(0xFF3498DB) to "Truyện nói"
+        else -> Color(0xFF7F8C8D) to tag
+    }
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = color.copy(alpha = 0.15f),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, color.copy(alpha = 0.5f))
+    ) {
+        Text(
+            text = text,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            color = color,
+            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+        )
+    }
+}
+
+private fun formatDownloads(count: Int): String {
+    return when {
+        count >= 10000 -> String.format("%.1f vạn", count / 10000.0)
+        count >= 1000 -> String.format("%.1f k", count / 1000.0)
+        else -> count.toString()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AiConfigDialog(
+    viewModel: ExploreViewModel,
+    uiState: ExploreViewModel.ExploreUiState,
+    onDismiss: () -> Unit
+) {
+    var baseUrlInput by remember(uiState.aiBaseUrl) { mutableStateOf(uiState.aiBaseUrl) }
+    var apiKeyInput by remember(uiState.aiApiKey) { mutableStateOf(uiState.aiApiKey) }
+    var modelInput by remember(uiState.aiSelectedModel) { mutableStateOf(uiState.aiSelectedModel) }
+    
+    val isScanning by viewModel.isScanningModels.collectAsStateWithLifecycle()
+    val scannedModels by viewModel.aiModelsList.collectAsStateWithLifecycle()
+    val scanError by viewModel.scanModelsError.collectAsStateWithLifecycle()
+    
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Cấu hình AI Model",
+                    style = LegadoTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                OutlinedTextField(
+                    value = baseUrlInput,
+                    onValueChange = { baseUrlInput = it },
+                    label = { Text("Base URL", fontSize = 12.sp) },
+                    placeholder = { Text("https://api.openai.com/v1") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
+                )
+                
+                OutlinedTextField(
+                    value = apiKeyInput,
+                    onValueChange = { apiKeyInput = it },
+                    label = { Text("API Key", fontSize = 12.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                    )
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = modelInput,
+                            onValueChange = { modelInput = it },
+                            label = { Text("Model AI", fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            trailingIcon = {
+                                if (scannedModels.isNotEmpty()) {
+                                    IconButton(onClick = { dropdownExpanded = true }) {
+                                        Icon(Icons.Default.ChevronRight, contentDescription = "Chọn Model")
+                                    }
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        )
+                        
+                        DropdownMenu(
+                            expanded = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false }
+                        ) {
+                            scannedModels.forEach { modelName ->
+                                DropdownMenuItem(
+                                    text = { Text(modelName) },
+                                    onClick = {
+                                        modelInput = modelName
+                                        dropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    Button(
+                        onClick = {
+                            viewModel.updateAiSettings(baseUrlInput, apiKeyInput, modelInput)
+                            viewModel.scanModels()
+                        },
+                        enabled = !isScanning,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        ),
+                        modifier = Modifier.height(54.dp)
+                    ) {
+                        if (isScanning) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Quét", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                
+                scanError?.let {
+                    Text(
+                        text = it,
+                        style = LegadoTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
+                ) {
+                    androidx.compose.material3.TextButton(onClick = onDismiss) {
+                        Text("Hủy")
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.updateAiSettings(baseUrlInput, apiKeyInput, modelInput)
+                            onDismiss()
+                        },
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text("Lưu cấu hình", fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AiExtensionWorkspaceDialog(
+    viewModel: ExploreViewModel,
+    uiState: ExploreViewModel.ExploreUiState
+) {
+    val context = LocalContext.current
+    var selectedTab by remember { mutableStateOf(0) }
+    
+    Dialog(
+        onDismissRequest = { 
+            if (!uiState.isGenerating) {
+                viewModel.cancelGeneration()
+            }
+        },
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.9f)
+                .padding(vertical = 16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppText(
+                        text = "Bảng làm việc: Sinh Extension",
+                        style = LegadoTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    IconButton(
+                        onClick = { viewModel.cancelGeneration() },
+                        enabled = !uiState.isGenerating,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Đóng",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+                
+                AppTabRow(
+                    tabTitles = listOf("Bảng điều khiển", "Trình sửa code"),
+                    selectedTabIndex = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    isScrollable = false,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                if (selectedTab == 0) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = uiState.generatedExtName.orEmpty(),
+                            onValueChange = { viewModel.updateGeneratedExtName(it) },
+                            label = { Text("Tên Extension (Tránh ghi đè)", fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        )
+                        
+                        OutlinedTextField(
+                            value = uiState.referenceUrl,
+                            onValueChange = { viewModel.updateReferenceUrl(it) },
+                            label = { Text("Link xem/tham khảo (URL mẫu) để AI phân tích", fontSize = 12.sp) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        )
+                        
+                        OutlinedTextField(
+                            value = uiState.customRequirement,
+                            onValueChange = { viewModel.updateCustomRequirement(it) },
+                            label = { Text("Yêu cầu tinh chỉnh thêm gửi cho AI", fontSize = 12.sp) },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                            )
+                        )
+                        
+                        Text(
+                            text = "Trạng thái AI Generator:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(110.dp)
+                                .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .background(Color.Black.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                                .padding(8.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = uiState.generationStatus,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    fontSize = 11.sp,
+                                    color = if (uiState.generationStatus.contains("Lỗi")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(6.dp))
+                        
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            // --- BƯỚC 1 ---
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "Bước 1: Cấu hình chung & Menu (config, home, gen)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Button(
+                                            onClick = { viewModel.generateStep1(isRetry = false) },
+                                            enabled = !uiState.isGenerating,
+                                            modifier = Modifier.weight(1f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text(if (uiState.step1Files != null) "Tạo lại" else "Tạo B1", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        
+                                        Button(
+                                            onClick = { viewModel.installStep1() },
+                                            enabled = uiState.step1Files != null && !uiState.isGenerating,
+                                            modifier = Modifier.weight(1.2f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (uiState.isStep1Installed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text(if (uiState.isStep1Installed) "Đã cài test ✓" else "Cài test thử", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        
+                                        Button(
+                                            onClick = { viewModel.generateStep1(isRetry = true) },
+                                            enabled = uiState.step1Files != null && uiState.customRequirement.isNotEmpty() && !uiState.isGenerating,
+                                            modifier = Modifier.weight(1f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.tertiary
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text("Thử lại B1", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // --- BƯỚC 2 ---
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "Bước 2: Chi tiết truyện (detail.js)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Button(
+                                            onClick = { viewModel.generateStep2(isRetry = false) },
+                                            enabled = uiState.generationStep >= 1 && !uiState.isGenerating,
+                                            modifier = Modifier.weight(1f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text(if (uiState.step2File != null) "Tạo lại" else "Tạo B2", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        
+                                        Button(
+                                            onClick = { viewModel.installStep2() },
+                                            enabled = uiState.step2File != null && !uiState.isGenerating,
+                                            modifier = Modifier.weight(1.2f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (uiState.isStep2Installed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text(if (uiState.isStep2Installed) "Đã thêm ✓" else "Thêm vào", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        
+                                        Button(
+                                            onClick = { viewModel.generateStep2(isRetry = true) },
+                                            enabled = uiState.step2File != null && uiState.customRequirement.isNotEmpty() && !uiState.isGenerating,
+                                            modifier = Modifier.weight(1f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.tertiary
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text("Thử lại B2", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+
+                            // --- BƯỚC 3 ---
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "Bước 3: Mục lục & Nội dung (toc, chap, search)",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Button(
+                                            onClick = { viewModel.generateStep3(isRetry = false) },
+                                            enabled = uiState.generationStep >= 2 && !uiState.isGenerating,
+                                            modifier = Modifier.weight(1f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text(if (uiState.step3Files != null) "Tạo lại" else "Tạo B3", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        
+                                        Button(
+                                            onClick = { viewModel.installStep3() },
+                                            enabled = uiState.step3Files != null && !uiState.isGenerating,
+                                            modifier = Modifier.weight(1.2f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (uiState.isStep3Installed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text(if (uiState.isStep3Installed) "Đã thêm ✓" else "Thêm vào", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        
+                                        Button(
+                                            onClick = { viewModel.generateStep3(isRetry = true) },
+                                            enabled = uiState.step3Files != null && uiState.customRequirement.isNotEmpty() && !uiState.isGenerating,
+                                            modifier = Modifier.weight(1f).height(38.dp),
+                                            shape = RoundedCornerShape(6.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = MaterialTheme.colorScheme.tertiary
+                                            ),
+                                            contentPadding = PaddingValues(horizontal = 4.dp)
+                                        ) {
+                                            Text("Thử lại B3", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // TAB 1: CODE EDITOR
+                    val fileList = remember(uiState.step1Files, uiState.step2File, uiState.step3Files) {
+                        buildList {
+                            uiState.step1Files?.forEach { (name, content) ->
+                                add(CodeFileItem(step = 1, name = name, content = content))
+                            }
+                            uiState.step2File?.let { content ->
+                                add(CodeFileItem(step = 2, name = "detail.js", content = content))
+                            }
+                            uiState.step3Files?.forEach { (name, content) ->
+                                add(CodeFileItem(step = 3, name = name, content = content))
+                            }
+                        }
+                    }
+                    
+                    if (fileList.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
+                            Text("Chưa có mã nguồn nào được sinh ra.\nHãy tạo Bước 1, Bước 2 hoặc Bước 3 trước.", style = LegadoTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    } else {
+                        var selectedFile by remember(fileList) { mutableStateOf(fileList.firstOrNull()) }
+                        var editedCode by remember(selectedFile) { mutableStateOf(selectedFile?.content.orEmpty()) }
+                        
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // File tabs list
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                fileList.forEach { fileItem ->
+                                    val isSelected = selectedFile?.name == fileItem.name && selectedFile?.step == fileItem.step
+                                    Button(
+                                        onClick = { selectedFile = fileItem },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        modifier = Modifier.height(32.dp)
+                                    ) {
+                                        Text(fileItem.name, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                            
+                            // Editor text area
+                            OutlinedTextField(
+                                value = editedCode,
+                                onValueChange = { editedCode = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f)
+                                    .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                                textStyle = androidx.compose.ui.text.TextStyle(
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    fontSize = 11.sp
+                                ),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    unfocusedBorderColor = Color.Transparent
+                                )
+                            )
+                            
+                            // Save button
+                            Button(
+                                onClick = {
+                                    val file = selectedFile
+                                    if (file != null) {
+                                        when (file.step) {
+                                            1 -> viewModel.updateStep1File(file.name, editedCode)
+                                            2 -> viewModel.updateStep2File(editedCode)
+                                            3 -> viewModel.updateStep3File(file.name, editedCode)
+                                        }
+                                        android.widget.Toast.makeText(context, "Đã lưu thay đổi vào bộ nhớ tạm!", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth().height(42.dp),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Lưu thay đổi code ✓", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class CodeFileItem(
+    val step: Int,
+    val name: String,
+    val content: String
+)

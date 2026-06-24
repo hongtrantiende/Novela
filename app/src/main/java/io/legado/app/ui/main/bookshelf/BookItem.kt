@@ -631,6 +631,7 @@ fun BookItem(
         when {
             book.isAudio -> stringResource(R.string.audio)
             book.isImage -> stringResource(R.string.manga)
+            book.isVideo -> stringResource(R.string.video)
             (book.type and BookType.webFile) > 0 -> stringResource(R.string.web_file)
             book.isLocal -> stringResource(R.string.local)
             else -> stringResource(R.string.noval)

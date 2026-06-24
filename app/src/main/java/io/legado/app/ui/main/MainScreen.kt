@@ -70,11 +70,16 @@ import io.legado.app.R
 import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.main.bookshelf.BookshelfScreen
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
+import io.legado.app.ui.main.bookshelf.BookUpdatesScreen
+import io.legado.app.ui.main.bookshelf.toLightBook
 import io.legado.app.ui.main.explore.ExploreScreen
 import io.legado.app.ui.main.homepage.HomepageScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssScreen
+import io.legado.app.ui.book.readRecord.ReadRecordScreen
+import io.legado.app.ui.rss.article.RssSortRouteScreen
+import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.FloatingBottomBar
 import io.legado.app.ui.widget.components.FloatingBottomBarItem
@@ -117,6 +122,7 @@ fun MainScreen(
     onNavigateToRssFavorites: () -> Unit,
     onNavigateToRuleSub: () -> Unit,
     onNavigateToReadRecord: () -> Unit,
+    onNavigateToReadRecordOverview: () -> Unit,
     onNavigateToAbout: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
@@ -124,6 +130,7 @@ fun MainScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val mainUiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val updatesRssSourceUrl by viewModel.updatesRssSourceUrl.collectAsStateWithLifecycle()
     val defaultHelpTitle = stringResource(R.string.help)
 
     LaunchedEffect(viewModel, context) {
@@ -427,6 +434,41 @@ fun MainScreen(
                                 onOpenFavorites = onNavigateToRssFavorites,
                                 onOpenRuleSub = onNavigateToRuleSub
                             )
+
+                            MainDestination.Updates -> {
+                                BookUpdatesScreen(
+                                    onBookClick = { book ->
+                                        context.startActivityForBook(book.toLightBook())
+                                    },
+                                    onBookLongClick = { book ->
+                                        onNavigateToBookInfo(
+                                            book.name,
+                                            book.author,
+                                            book.bookUrl,
+                                            book.origin,
+                                            book.getDisplayCover(),
+                                            null
+                                        )
+                                    }
+                                )
+                            }
+
+                            MainDestination.ReadRecord -> ReadRecordScreen(
+                                onBackClick = null,
+                                onBookClick = { name, author ->
+                                    coroutineScope.launch {
+                                        val book = withContext(Dispatchers.IO) {
+                                            io.legado.app.data.appDb.bookDao.getBook(name, author)
+                                        }
+                                        if (book != null) context.startActivityForBook(book)
+                                        else {
+                                            onNavigateToSearch(name)
+                                        }
+                                    }
+                                },
+                                onSummaryClick = onNavigateToReadRecordOverview
+                            )
+
                             MainDestination.My -> MyScreen(
                                 onOpenSettings = onOpenSettings,
                                 onNavigate = { event ->

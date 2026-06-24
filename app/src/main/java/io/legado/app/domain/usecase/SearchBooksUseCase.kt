@@ -71,6 +71,7 @@ class BookSearchControl {
 
 class SearchBooksUseCase(
     private val gateway: BookSearchGateway,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository,
 ) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -89,14 +90,29 @@ class SearchBooksUseCase(
         val searchableSources = coroutineScope {
             sourceParts.map { part ->
                 async(Dispatchers.IO) {
-                    val source = gateway.getBookSource(part.bookSourceUrl) ?: return@async null
-                    if (source.searchUrl.isNullOrBlank()) {
-                        return@async null
+                    val isExt = part.bookSourceUrl.startsWith("ext_")
+                    if (isExt) {
+                        val sourceExtType = when (part.bookSourceGroup?.lowercase()) {
+                            "novel" -> 0
+                            "comic" -> 2
+                            "audio" -> 1
+                            "movie", "video" -> 4
+                            else -> 0
+                        }
+                        if (request.types != null && !request.types.contains(sourceExtType)) {
+                            return@async null
+                        }
+                        SearchableSource(part, null)
+                    } else {
+                        val source = gateway.getBookSource(part.bookSourceUrl) ?: return@async null
+                        if (source.searchUrl.isNullOrBlank()) {
+                            return@async null
+                        }
+                        if (request.types != null && !request.types.contains(source.bookSourceType)) {
+                            return@async null
+                        }
+                        SearchableSource(part, source)
                     }
-                    if (request.types != null && !request.types.contains(source.bookSourceType)) {
-                        return@async null
-                    }
-                    SearchableSource(part, source)
                 }
             }.awaitAll().filterNotNull()
         }
@@ -182,22 +198,27 @@ class SearchBooksUseCase(
     ): SourceSearchResult {
         return try {
             val source = searchableSource.source
-            val supportsSearchPage = source.supportsSearchPage()
+            val isExt = searchableSource.part.bookSourceUrl.startsWith("ext_")
+            val supportsSearchPage = if (isExt) true else source?.supportsSearchPage() ?: false
             if (page > 1 && !supportsSearchPage) {
                 return SourceSearchResult.Found(emptyList())
             }
             val books = withTimeout(30000L) {
-                WebBook.searchBookAwait(
-                    source,
-                    keyword,
-                    page,
-                    filter = { name, author, kind ->
-                        matchMode == MatchMode.DEFAULT ||
-                            name.contains(keyword, ignoreCase = true) ||
-                            author.contains(keyword, ignoreCase = true) ||
-                            kind?.contains(keyword, ignoreCase = true) == true
-                    }
-                )
+                if (isExt) {
+                    extensionRepository.searchBooks(searchableSource.part.bookSourceUrl, keyword, page)
+                } else {
+                    WebBook.searchBookAwait(
+                        source!!,
+                        keyword,
+                        page,
+                        filter = { name, author, kind ->
+                            matchMode == MatchMode.DEFAULT ||
+                                name.contains(keyword, ignoreCase = true) ||
+                                author.contains(keyword, ignoreCase = true) ||
+                                kind?.contains(keyword, ignoreCase = true) == true
+                        }
+                    )
+                }
             }
             SourceSearchResult.Found(books, supportsSearchPage)
         } catch (exception: Throwable) {
@@ -211,7 +232,7 @@ class SearchBooksUseCase(
 
     private data class SearchableSource(
         val part: BookSourcePart,
-        val source: BookSource,
+        val source: BookSource?,
     )
     private sealed interface SourceSearchResult {
         data class Found(

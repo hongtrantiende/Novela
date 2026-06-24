@@ -121,6 +121,7 @@ import io.legado.app.ui.dict.rule.DictRuleViewModel
 import io.legado.app.ui.main.MainRouteSearchContent
 import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
+import io.legado.app.ui.main.bookshelf.BookUpdatesViewModel
 import io.legado.app.ui.main.explore.ExploreViewModel
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.main.my.MyViewModel
@@ -136,6 +137,7 @@ import io.legado.app.ui.rss.source.manage.RssSourceViewModel
 import io.legado.app.ui.rss.subscription.RuleSubViewModel
 import io.legado.app.vbookextension.ui.ExtensionViewModel
 import io.legado.app.vbookextension.ui.LegadoStoreViewModel
+import io.legado.app.ui.book.video.VideoReaderViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -252,6 +254,7 @@ val appModule = module {
     viewModelOf(::ExploreShowViewModel)
     viewModelOf(::MyViewModel)
     viewModelOf(::BookshelfViewModel)
+    viewModelOf(::BookUpdatesViewModel)
     viewModelOf(::MainViewModel)
     viewModelOf(::HomepageViewModel)
     viewModelOf(::AboutViewModel)
@@ -266,6 +269,7 @@ val appModule = module {
     viewModelOf(::ThemeConfigViewModel)
     viewModelOf(::BackupConfigViewModel)
     viewModelOf(::TocViewModel)
+    viewModelOf(::VideoReaderViewModel)
     viewModelOf(::ImportBookViewModel)
     viewModelOf(::RemoteBookViewModel)
     viewModelOf(::ServerConfigViewModel)

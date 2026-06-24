@@ -19,6 +19,13 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import io.legado.app.data.appDb
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.Dispatchers
+
 
 class MainViewModel(
     application: Application,
@@ -30,6 +37,15 @@ class MainViewModel(
     val uiState = _uiState.asStateFlow()
     private val _effects = MutableSharedFlow<MainEffect>(extraBufferCapacity = 8)
     val effects = _effects.asSharedFlow()
+
+    val updatesRssSourceUrl = appDb.rssSourceDao.flowEnabled().map { list ->
+        list.firstOrNull { it.sourceName.equals("Cập nhật", ignoreCase = true) }?.sourceUrl
+            ?: list.firstOrNull { it.sourceName.contains("cập nhật", ignoreCase = true) }?.sourceUrl
+    }.flowOn(Dispatchers.IO).stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        null
+    )
 
     init {
         // 通过 snapshotFlow 直接观察 ThemeConfig 的 Compose State，全链路走 DS
@@ -138,6 +154,8 @@ private fun MainViewModel.readMainUiState(): MainUiState {
             MainDestination.Explore -> ThemeConfig.showDiscovery
             MainDestination.Home -> ThemeConfig.showHome
             MainDestination.Rss -> ThemeConfig.showRss
+            MainDestination.Updates -> ThemeConfig.showUpdates
+            MainDestination.ReadRecord -> ThemeConfig.showReadRecord
             else -> true
         }
     }.toImmutableList()

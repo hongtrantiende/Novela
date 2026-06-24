@@ -45,7 +45,7 @@ class ReadRecordViewModel(
     private val bookRepository: BookRepository
 ) : ViewModel() {
 
-    private val _displayMode = MutableStateFlow(DisplayMode.AGGREGATE)
+    private val _displayMode = MutableStateFlow(DisplayMode.TIMELINE)
     val displayMode = _displayMode.asStateFlow()
     private val _searchKey = MutableStateFlow("")
     private val _selectedDate = MutableStateFlow<LocalDate?>(null)

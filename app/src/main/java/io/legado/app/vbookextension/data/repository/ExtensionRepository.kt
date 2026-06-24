@@ -10,6 +10,7 @@ import io.legado.app.vbookextension.loader.ExtensionLoader
 import io.legado.app.vbookextension.model.ScriptType
 import io.legado.app.vbookextension.runtime.VBookJsExtensionRunner
 import io.legado.app.vbookextension.model.ExtensionResult
+import io.legado.app.vbookextension.model.LoadedExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.*
@@ -128,10 +129,18 @@ class ExtensionRepository(
         val parsedType = obj["type"]?.safeString()
             ?: obj["is_comic"]?.safeString()?.let { if (it == "true" || it == "1" || it == "comic") "comic" else "novel" }
         val finalTypeStr = parsedType ?: extensionType
-        val isComic = finalTypeStr.equals("comic", ignoreCase = true)
-                || finalTypeStr.equals("manga", ignoreCase = true)
-                || finalTypeStr.equals("image", ignoreCase = true)
-        val bookType = if (isComic) io.legado.app.constant.BookType.image else io.legado.app.constant.BookType.text
+        val bookType = when {
+            finalTypeStr.equals("comic", ignoreCase = true) ||
+            finalTypeStr.equals("manga", ignoreCase = true) ||
+            finalTypeStr.equals("image", ignoreCase = true) -> io.legado.app.constant.BookType.image
+
+            finalTypeStr.equals("video", ignoreCase = true) ||
+            finalTypeStr.equals("movie", ignoreCase = true) -> io.legado.app.constant.BookType.video
+
+            finalTypeStr.equals("audio", ignoreCase = true) -> io.legado.app.constant.BookType.audio
+
+            else -> io.legado.app.constant.BookType.text
+        }
 
         return SearchBook(
             bookUrl = resolvedUrl,
@@ -447,41 +456,63 @@ class ExtensionRepository(
         return@withContext when (result) {
             is ExtensionResult.Success -> {
                 try {
-                    val element = json.parseToJsonElement(result.data)
-                    checkExtensionErrorCode(element)
-                    val content = if (element is JsonObject) {
-                        val dataElement = element["data"]
-                        val targetObj = if (dataElement is JsonObject) dataElement else element
-                        val rawContent = targetObj["content"]?.safeString()
-                            ?: targetObj["text"]?.safeString()
-                            ?: (if (dataElement is JsonPrimitive) dataElement.content else null)
-                        
-                        val imagesElement = targetObj["images"] ?: targetObj["urls"] ?: targetObj["list"] ?: dataElement
-                        if (imagesElement is JsonArray) {
-                            val imgUrls = imagesElement.mapNotNull {
-                                if (it is JsonPrimitive) it.content
-                                else if (it is JsonObject) {
-                                    it["link"]?.safeString() ?: it["url"]?.safeString() ?: it["src"]?.safeString()
-                                } else null
+                    val isVideo = extension.pluginJson.metadata.type == "video" ||
+                            extension.pluginJson.metadata.type == "movie" ||
+                            extension.pluginJson.metadata.type == "anime"
+                    if (isVideo) {
+                        val rawContent = result.data
+                        val unwrappedContent = try {
+                            if (rawContent.trim().startsWith("{")) {
+                                val obj = org.json.JSONObject(rawContent)
+                                if (obj.has("code") && obj.optJSONArray("data") != null) {
+                                    obj.getJSONArray("data").toString()
+                                } else {
+                                    rawContent
+                                }
+                            } else {
+                                rawContent
                             }
-                            if (imgUrls.isNotEmpty()) {
-                                return@withContext imgUrls.joinToString("\n") { "<img src=\"$it\">" }
-                            }
+                        } catch (e: Exception) {
+                            rawContent
                         }
-                        rawContent
-                    } else if (element is JsonPrimitive) {
-                        element.content
-                    } else null
-
-                    if (content != null) {
-                        val urlObj = try { java.net.URL(chapterUrl) } catch (e: Exception) { null }
-                        var formatted = io.legado.app.utils.HtmlFormatter.formatKeepImg(content, urlObj)
-                        if (formatted.contains('&')) {
-                            formatted = org.apache.commons.text.StringEscapeUtils.unescapeHtml4(formatted)
-                        }
-                        formatted
+                        unwrappedContent
                     } else {
-                        null
+                        val element = json.parseToJsonElement(result.data)
+                        checkExtensionErrorCode(element)
+                        val content = if (element is JsonObject) {
+                            val dataElement = element["data"]
+                            val targetObj = if (dataElement is JsonObject) dataElement else element
+                            val rawContent = targetObj["content"]?.safeString()
+                                ?: targetObj["text"]?.safeString()
+                                ?: (if (dataElement is JsonPrimitive) dataElement.content else null)
+                            
+                            val imagesElement = targetObj["images"] ?: targetObj["urls"] ?: targetObj["list"] ?: dataElement
+                            if (imagesElement is JsonArray) {
+                                val imgUrls = imagesElement.mapNotNull {
+                                    if (it is JsonPrimitive) it.content
+                                    else if (it is JsonObject) {
+                                        it["link"]?.safeString() ?: it["url"]?.safeString() ?: it["src"]?.safeString()
+                                    } else null
+                                }
+                                if (imgUrls.isNotEmpty()) {
+                                    return@withContext imgUrls.joinToString("\n") { "<img src=\"$it\">" }
+                                }
+                            }
+                            rawContent
+                        } else if (element is JsonPrimitive) {
+                            element.content
+                        } else null
+
+                        if (content != null) {
+                            val urlObj = try { java.net.URL(chapterUrl) } catch (e: Exception) { null }
+                            var formatted = io.legado.app.utils.HtmlFormatter.formatKeepImg(content, urlObj)
+                            if (formatted.contains('&')) {
+                                formatted = org.apache.commons.text.StringEscapeUtils.unescapeHtml4(formatted)
+                            }
+                            formatted
+                        } else {
+                            null
+                        }
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to parse chapter content for $extensionId: ${e.message}")
@@ -493,5 +524,19 @@ class ExtensionRepository(
                 null
             }
         }
+    }
+
+    suspend fun executeExtension(
+        extensionId: String,
+        scriptType: ScriptType,
+        vararg args: String,
+    ): ExtensionResult = withContext(Dispatchers.IO) {
+        val extension = extensionLoader.loadExtension(extensionId)
+            ?: return@withContext ExtensionResult.Error("Extension not found: $extensionId")
+        return@withContext extensionRunner.execute(extension, scriptType, *args)
+    }
+
+    suspend fun getExtension(extensionId: String): LoadedExtension? = withContext(Dispatchers.IO) {
+        extensionLoader.loadExtension(extensionId)
     }
 }

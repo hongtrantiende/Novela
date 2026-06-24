@@ -1,0 +1,1885 @@
+package io.legado.app.ui.book.video
+
+import android.app.Activity
+import android.view.View
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import kotlinx.coroutines.delay
+
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.pm.ActivityInfo
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.view.ViewGroup
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.webkit.WebView
+import android.webkit.WebViewClient
+
+import androidx.compose.animation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.paint
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.*
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.ui.draw.shadow
+
+// Media3 Player
+import androidx.media3.common.MediaItem
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
+import android.support.v4.media.MediaMetadataCompat
+import androidx.media.app.NotificationCompat.MediaStyle
+import androidx.core.app.NotificationCompat
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.koin.androidx.compose.koinViewModel
+import io.legado.app.R
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
+
+private fun isEmbedPlayerUrl(url: String): Boolean {
+    val lower = url.lowercase()
+    return lower.contains("embed")
+            || lower.contains("player")
+            || lower.contains("playzone")
+            || lower.contains("play")
+            || lower.contains("watch")
+            || lower.contains("iframe")
+            || lower.contains("streaming")
+            || lower.contains("ssplay")
+            || lower.contains("fdrive")
+            || lower.contains("opstream")
+            || lower.contains("/v/")
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun VideoReaderScreen(
+    extensionId: String,
+    novelUrl: String,
+    chapterUrl: String,
+    onBackClick: () -> Unit,
+    viewModel: VideoReaderViewModel = koinViewModel(),
+) {
+    val novel by viewModel.novel.collectAsStateWithLifecycle()
+    val chapters by viewModel.chapters.collectAsStateWithLifecycle()
+    val chapter by viewModel.chapter.collectAsStateWithLifecycle()
+    val chapterContent by viewModel.chapterContent.collectAsStateWithLifecycle()
+    val currentIndex by viewModel.currentIndex.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val error by viewModel.error.collectAsStateWithLifecycle()
+
+    val resolvedVideoUrl by viewModel.resolvedVideoUrl.collectAsStateWithLifecycle()
+    val resolvedVideoHeaders by viewModel.resolvedVideoHeaders.collectAsStateWithLifecycle()
+    val resolvedVideoType by viewModel.resolvedVideoType.collectAsStateWithLifecycle()
+    val isResolvingTrack by viewModel.isResolvingTrack.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
+    val prefs = remember { context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE) }
+
+    // 1. Phân tách danh sách Server (Tracks) của tập phim từ JSON content
+    val servers = remember(chapterContent) {
+        try {
+            val content = chapterContent ?: ""
+            val jsonArray = if (content.startsWith("[")) {
+                org.json.JSONArray(content)
+            } else if (content.startsWith("{")) {
+                val obj = org.json.JSONObject(content)
+                if (obj.has("data") && obj.optJSONArray("data") != null) {
+                    obj.getJSONArray("data")
+                } else if (obj.has("code") && obj.optJSONArray("data") != null) {
+                    obj.getJSONArray("data")
+                } else {
+                    null
+                }
+            } else {
+                null
+            }
+
+            if (jsonArray != null) {
+                val list = mutableListOf<Pair<String, String>>()
+                for (i in 0 until jsonArray.length()) {
+                    val obj = jsonArray.getJSONObject(i)
+                    val title = obj.optString("title", obj.optString("name", "Server " + (i + 1)))
+                    val data = obj.optString("data", obj.optString("url", obj.optString("link", "")))
+                    list.add(Pair(title, data))
+                }
+                list
+            } else {
+                if (content.isNotBlank()) {
+                    listOf(Pair("Mặc định", content))
+                } else {
+                    emptyList()
+                }
+            }
+        } catch (e: Exception) {
+            if (chapterContent?.isNotBlank() == true) {
+                listOf(Pair("Mặc định", chapterContent!!))
+            } else {
+                emptyList()
+            }
+        }
+    }
+
+    var selectedServerIndex by remember(chapter) { mutableStateOf(0) }
+
+    // Tự động nạp dữ liệu phim
+    LaunchedEffect(extensionId, novelUrl, chapterUrl) {
+        viewModel.loadBookAndChapters(extensionId, novelUrl, chapterUrl)
+    }
+
+    // Tự động phân giải Link Video khi chọn server hoặc đổi tập
+    LaunchedEffect(servers, selectedServerIndex) {
+        if (servers.isNotEmpty() && selectedServerIndex < servers.size) {
+            val serverUrl = servers[selectedServerIndex].second
+            viewModel.resolveVideoUrl(extensionId, serverUrl)
+        }
+    }
+
+    // Tải ảnh bìa truyện thành Bitmap bất đồng bộ để làm thumbnail MediaSession
+    var coverBitmap by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+    LaunchedEffect(novel?.coverUrl) {
+        val coverUrl = novel?.coverUrl
+        if (!coverUrl.isNullOrEmpty()) {
+            coverBitmap = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                try {
+                    val loader = coil.ImageLoader(context)
+                    val request = coil.request.ImageRequest.Builder(context)
+                        .data(coverUrl)
+                        .allowHardware(false) // software bitmap cho MediaMetadata
+                        .build()
+                    val result = loader.execute(request)
+                    if (result is coil.request.SuccessResult) {
+                        (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                    } else null
+                } catch (e: java.lang.Exception) {
+                    null
+                }
+            }
+        }
+    }
+
+    // Đặt cấu hình HttpDataSource động
+    val httpDataSourceFactory = remember {
+        DefaultHttpDataSource.Factory().apply {
+            setUserAgent("Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+        }
+    }
+
+    // Trình phát ExoPlayer
+    val exoPlayer = remember {
+        val mediaSourceFactory = DefaultMediaSourceFactory(context)
+            .setDataSourceFactory(httpDataSourceFactory)
+        ExoPlayer.Builder(context)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .build().apply {
+                playWhenReady = prefs.getBoolean("video_auto_play", true)
+            }
+    }
+
+    // Khởi tạo MediaSessionCompat cho Video để hệ thống Android hiển thị Widget phát Media
+    val mediaSession = remember(exoPlayer) {
+        MediaSessionCompat(context, "NovelReaderVideoSession").apply {
+            setCallback(object : MediaSessionCompat.Callback() {
+                override fun onPlay() {
+                    exoPlayer.play()
+                }
+                override fun onPause() {
+                    exoPlayer.pause()
+                }
+                override fun onSeekTo(pos: Long) {
+                    exoPlayer.seekTo(pos)
+                }
+            })
+            isActive = true
+        }
+    }
+
+    // Broadcast Receiver để nhận sự kiện điều khiển từ Notification Widget
+    DisposableEffect(exoPlayer) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val action = intent?.action ?: return
+                if (action.endsWith(".VIDEO_PLAY_PAUSE")) {
+                    if (exoPlayer.isPlaying) {
+                        exoPlayer.pause()
+                    } else {
+                        exoPlayer.play()
+                    }
+                } else if (action.endsWith(".VIDEO_STOP")) {
+                    exoPlayer.pause()
+                    cancelVideoNotification(context ?: return)
+                    onBackClick()
+                }
+            }
+        }
+        val playPauseAction = "${context.packageName}.VIDEO_PLAY_PAUSE"
+        val stopAction = "${context.packageName}.VIDEO_STOP"
+        val filter = IntentFilter().apply {
+            addAction(playPauseAction)
+            addAction(stopAction)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+        onDispose {
+            try {
+                context.unregisterReceiver(receiver)
+            } catch (e: Exception) {
+                // ignore
+            }
+        }
+    }
+
+    // Đồng bộ trạng thái ExoPlayer sang MediaSession và cập nhật Notification định kỳ
+    LaunchedEffect(exoPlayer, mediaSession, chapter, coverBitmap) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onEvents(player: androidx.media3.common.Player, events: androidx.media3.common.Player.Events) {
+                val metadataBuilder = MediaMetadataCompat.Builder().apply {
+                    putString(MediaMetadataCompat.METADATA_KEY_TITLE, chapter?.title ?: "Tập phim")
+                    putString(MediaMetadataCompat.METADATA_KEY_ARTIST, "Thiên Thư Các (Video)")
+                    putLong(MediaMetadataCompat.METADATA_KEY_DURATION, exoPlayer.duration.coerceAtLeast(0L))
+                    coverBitmap?.let { bitmap ->
+                        putBitmap(MediaMetadataCompat.METADATA_KEY_ART, bitmap)
+                        putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, bitmap)
+                    }
+                }
+                mediaSession.setMetadata(metadataBuilder.build())
+
+                val state = when {
+                    exoPlayer.playbackState == androidx.media3.common.Player.STATE_BUFFERING -> PlaybackStateCompat.STATE_BUFFERING
+                    exoPlayer.isPlaying -> PlaybackStateCompat.STATE_PLAYING
+                    else -> PlaybackStateCompat.STATE_PAUSED
+                }
+                val actions = PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_SEEK_TO
+                
+                val stateBuilder = PlaybackStateCompat.Builder()
+                    .setState(state, exoPlayer.currentPosition, exoPlayer.playbackParameters.speed)
+                    .setActions(actions)
+                
+                mediaSession.setPlaybackState(stateBuilder.build())
+
+                // Cập nhật thông báo
+                updateVideoNotification(
+                    context = context,
+                    chapter = chapter,
+                    isPlaying = exoPlayer.isPlaying,
+                    mediaSession = mediaSession,
+                    coverBitmap = coverBitmap
+                )
+            }
+        }
+        exoPlayer.addListener(listener)
+        
+        try {
+            while (true) {
+                val state = when {
+                    exoPlayer.playbackState == androidx.media3.common.Player.STATE_BUFFERING -> PlaybackStateCompat.STATE_BUFFERING
+                    exoPlayer.isPlaying -> PlaybackStateCompat.STATE_PLAYING
+                    else -> PlaybackStateCompat.STATE_PAUSED
+                }
+                val actions = PlaybackStateCompat.ACTION_PLAY or
+                        PlaybackStateCompat.ACTION_PAUSE or
+                        PlaybackStateCompat.ACTION_SEEK_TO
+
+                val stateBuilder = PlaybackStateCompat.Builder()
+                    .setState(state, exoPlayer.currentPosition, exoPlayer.playbackParameters.speed)
+                    .setActions(actions)
+
+                mediaSession.setPlaybackState(stateBuilder.build())
+
+                // Cập nhật thông báo định kỳ để đồng bộ seekbar
+                updateVideoNotification(
+                    context = context,
+                    chapter = chapter,
+                    isPlaying = exoPlayer.isPlaying,
+                    mediaSession = mediaSession,
+                    coverBitmap = coverBitmap
+                )
+                kotlinx.coroutines.delay(1000)
+            }
+        } catch (e: Exception) {
+            // ignore
+        } finally {
+            exoPlayer.removeListener(listener)
+        }
+    }
+
+    // Đồng bộ tốc độ phát từ Preferences
+    var playSpeed by remember { mutableStateOf(prefs.getFloat("video_play_speed", 1.0f)) }
+    LaunchedEffect(playSpeed) {
+        exoPlayer.setPlaybackSpeed(playSpeed)
+    }
+
+    // Xoay màn hình và Immersive Mode
+    var isFullscreen by remember { mutableStateOf(false) }
+
+    fun enterImmersive() {
+        activity?.window?.let { window ->
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                window.insetsController?.hide(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.navigationBars())
+                window.insetsController?.systemBarsBehavior = android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility = (
+                    android.view.View.SYSTEM_UI_FLAG_FULLSCREEN
+                    or android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                    or android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                )
+            }
+        }
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        isFullscreen = true
+    }
+
+    fun exitImmersive() {
+        activity?.window?.let { window ->
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                window.insetsController?.show(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.navigationBars())
+            } else {
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
+            }
+        }
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        isFullscreen = false
+    }
+
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.release()
+            mediaSession.isActive = false
+            mediaSession.release()
+            cancelVideoNotification(context)
+            activity?.window?.let { window ->
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    window.insetsController?.show(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.navigationBars())
+                }
+            }
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    androidx.activity.compose.BackHandler {
+        if (isFullscreen) {
+            exitImmersive()
+        } else {
+            onBackClick()
+        }
+    }
+
+    // Cài đặt giữ màn hình sáng
+    val keepScreenOn = prefs.getBoolean("video_keep_screen_on", true)
+    DisposableEffect(keepScreenOn) {
+        if (keepScreenOn) {
+            activity?.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+        onDispose {
+            activity?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        VideoContent(
+            chapter = chapter,
+            isLoading = isLoading || isResolvingTrack,
+            error = error,
+            exoPlayer = exoPlayer,
+            httpDataSourceFactory = httpDataSourceFactory,
+            novelUrl = novelUrl,
+            chromeUA = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+            isFullscreen = isFullscreen,
+            onFullscreenToggle = {
+                if (isFullscreen) exitImmersive() else enterImmersive()
+            },
+            resolvedVideoUrl = resolvedVideoUrl,
+            resolvedVideoHeaders = resolvedVideoHeaders,
+            resolvedVideoType = resolvedVideoType,
+            servers = servers,
+            selectedServerIndex = selectedServerIndex,
+            onServerChange = { selectedServerIndex = it },
+            playSpeed = playSpeed,
+            onPlaySpeedChange = { speed ->
+                playSpeed = speed
+                prefs.edit().putFloat("video_play_speed", speed).apply()
+            },
+            chapters = chapters,
+            currentIndex = currentIndex,
+            onChapterSelect = { targetUrl ->
+                val idx = chapters.indexOfFirst { it.url == targetUrl }
+                if (idx != -1) {
+                    viewModel.loadChapterAtIndex(idx)
+                    selectedServerIndex = 0
+                }
+            },
+            onBackClick = {
+                if (isFullscreen) exitImmersive() else onBackClick()
+            }
+        )
+    }
+}
+
+private val mockDevToolsDetectorJS = """
+    (function() {
+        var noop = function() {};
+        var detector = {
+            addListener: function(cb) { try { cb(false); } catch(e) {} },
+            removeListener: noop,
+            launch: noop,
+            stop: noop,
+            isLaunch: function() { return false; },
+            isOpen: false,
+            setDetectDelay: noop
+        };
+        window.devtoolsDetector = detector;
+        if (typeof module !== 'undefined' && module.exports) { module.exports = detector; }
+        if (typeof define === 'function' && define.amd) { define(function() { return detector; }); }
+    })();
+""".trimIndent()
+
+private const val VIDEO_NOTIFICATION_ID = 2002
+private const val VIDEO_CHANNEL_ID = "video_player_channel"
+
+private fun createVideoNotificationChannel(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            VIDEO_CHANNEL_ID,
+            "Trình phát Video",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Hiển thị widget điều khiển khi xem phim"
+        }
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
+    }
+}
+
+private fun updateVideoNotification(
+    context: Context,
+    chapter: BookChapter?,
+    isPlaying: Boolean,
+    mediaSession: MediaSessionCompat?,
+    coverBitmap: android.graphics.Bitmap?
+) {
+    createVideoNotificationChannel(context)
+
+    val playPauseIntent = Intent("${context.packageName}.VIDEO_PLAY_PAUSE").setPackage(context.packageName)
+    val piPlayPause = PendingIntent.getBroadcast(
+        context,
+        10,
+        playPauseIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+    )
+
+    val stopIntent = Intent("${context.packageName}.VIDEO_STOP").setPackage(context.packageName)
+    val piStop = PendingIntent.getBroadcast(
+        context,
+        11,
+        stopIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+    )
+
+    val openAppIntent = Intent(context, io.legado.app.ui.main.MainActivity::class.java)
+    val piOpenApp = PendingIntent.getActivity(
+        context,
+        0,
+        openAppIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+    )
+
+    val actionIcon = if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
+    val actionText = if (isPlaying) "Tạm dừng" else "Phát"
+
+    val builder = NotificationCompat.Builder(context, VIDEO_CHANNEL_ID)
+        .setContentTitle(chapter?.title ?: "Đang xem phim")
+        .setContentText("Thiên Thư Các (Video)")
+        .setSmallIcon(R.drawable.ic_volume_up)
+        .setContentIntent(piOpenApp)
+        .setOngoing(isPlaying)
+        .setStyle(
+            MediaStyle()
+                .setMediaSession(mediaSession?.sessionToken)
+                .setShowActionsInCompactView(0, 1)
+        )
+        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+        .addAction(actionIcon, actionText, piPlayPause)
+        .addAction(R.drawable.ic_stop_black_24dp, "Đóng", piStop)
+
+    coverBitmap?.let {
+        builder.setLargeIcon(it)
+    }
+
+    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    manager.notify(VIDEO_NOTIFICATION_ID, builder.build())
+}
+
+private fun cancelVideoNotification(context: Context) {
+    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    manager.cancel(VIDEO_NOTIFICATION_ID)
+}
+
+private val fallbackAutoPlayJS = """
+    (function() {
+        if (window.__fallback_autoplay_injected) return;
+        window.__fallback_autoplay_injected = true;
+        var interval = setInterval(function() {
+            var videos = document.getElementsByTagName('video');
+            for (var i = 0; i < videos.length; i++) {
+                if (videos[i].muted) {
+                    videos[i].muted = false;
+                }
+                if (videos[i].volume < 1.0) {
+                    videos[i].volume = 1.0;
+                }
+                videos[i].play().catch(function(e) {});
+            }
+            var audios = document.getElementsByTagName('audio');
+            for (var i = 0; i < audios.length; i++) {
+                if (audios[i].muted) {
+                    audios[i].muted = false;
+                }
+                if (audios[i].volume < 1.0) {
+                    audios[i].volume = 1.0;
+                }
+                audios[i].play().catch(function(e) {});
+            }
+            var playSelectors = ['.jw-display-icon-container', '.jw-icon-display', '.play', '.btn-play', '.vjs-big-play-button', '[class*="play-button"]', '[id*="play-button"]', 'iframe'];
+            playSelectors.forEach(function(sel) {
+                var btn = document.querySelector(sel);
+                if (btn && (btn.offsetWidth > 0 || btn.offsetHeight > 0)) {
+                    btn.click();
+                }
+            });
+        }, 1000);
+        setTimeout(function() { clearInterval(interval); }, 12000);
+    })();
+""".trimIndent()
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VideoContent(
+    chapter: BookChapter?,
+    isLoading: Boolean,
+    error: String?,
+    exoPlayer: ExoPlayer,
+    httpDataSourceFactory: DefaultHttpDataSource.Factory,
+    novelUrl: String,
+    chromeUA: String,
+    isFullscreen: Boolean,
+    onFullscreenToggle: () -> Unit,
+    resolvedVideoUrl: String?,
+    resolvedVideoHeaders: Map<String, String>?,
+    resolvedVideoType: String?,
+    servers: List<Pair<String, String>>,
+    selectedServerIndex: Int,
+    onServerChange: (Int) -> Unit,
+    playSpeed: Float,
+    onPlaySpeedChange: (Float) -> Unit,
+    chapters: List<BookChapter>,
+    currentIndex: Int,
+    onChapterSelect: (String) -> Unit,
+    onBackClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
+    val prefs = remember { context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE) }
+
+    // Trạng thái dò link video ngầm (WebView Sniffing)
+    var sniffedVideoUrl by remember(resolvedVideoUrl) { mutableStateOf<String?>(null) }
+    var sniffingTimeout by remember(resolvedVideoUrl) { mutableStateOf(false) }
+
+    // Lưu thực thể WebView để chủ động giải phóng
+    var sniffingWebViewInstance by remember { mutableStateOf<WebView?>(null) }
+    var fallbackWebViewInstance by remember { mutableStateOf<WebView?>(null) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                sniffingWebViewInstance?.let { wv ->
+                    wv.stopLoading()
+                    wv.loadUrl("about:blank")
+                    wv.destroy()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("VideoReader", "Error destroying sniffing webview", e)
+            }
+            try {
+                fallbackWebViewInstance?.let { wv ->
+                    wv.stopLoading()
+                    wv.loadUrl("about:blank")
+                    wv.destroy()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("VideoReader", "Error destroying fallback webview", e)
+            }
+        }
+    }
+
+    // Nhận diện link video stream trực tiếp
+    val videoExts = remember { listOf(".mp4", ".m3u8", ".mkv", ".webm", ".ts", ".avi", ".mov", ".flv", ".dash") }
+    val isDirectLink = remember(resolvedVideoUrl, resolvedVideoType) {
+        val lower = (resolvedVideoUrl ?: "").lowercase()
+        val hasDirectExt = videoExts.any { lower.contains(it) }
+        val isTypeNative = resolvedVideoType == "native"
+        
+        // Nhận diện link embed trá hình dưới type native
+        val isEmbedUrl = lower.contains("embed") 
+            || lower.contains("player") 
+            || lower.contains("play") 
+            || lower.contains("watch") 
+            || lower.contains("iframe")
+            || lower.contains("streaming")
+
+        resolvedVideoUrl != null 
+            && resolvedVideoUrl.startsWith("http") 
+            && !resolvedVideoUrl.contains("<")
+            && (hasDirectExt || (isTypeNative && !isEmbedUrl))
+    }
+
+    // Nhận diện StreamFree/HHKungfu cần thời gian chờ quảng cáo lâu hơn
+    val isStreamFree = remember(resolvedVideoUrl, novelUrl) {
+        val combined = ((resolvedVideoUrl ?: "") + novelUrl).lowercase()
+        combined.contains("hhkungfu") || combined.contains("streamfree")
+    }
+
+    // Tính toán trạng thái sniffing trực tiếp đồng bộ để tránh chớp nháy màn hình trống
+    val isSniffing = resolvedVideoUrl != null && !isDirectLink && sniffedVideoUrl == null && !sniffingTimeout
+
+    LaunchedEffect(resolvedVideoUrl, isDirectLink, resolvedVideoType) {
+        if (resolvedVideoUrl != null) {
+            if (isDirectLink) {
+                sniffedVideoUrl = resolvedVideoUrl
+                sniffingTimeout = false
+            } else {
+                val isSniffable = resolvedVideoType != "webview" || 
+                        resolvedVideoUrl.contains("<iframe", ignoreCase = true) || 
+                        resolvedVideoUrl.contains("<video", ignoreCase = true) ||
+                        resolvedVideoUrl.contains("ssplay", ignoreCase = true) ||
+                        resolvedVideoUrl.contains("fdrive", ignoreCase = true) ||
+                        resolvedVideoUrl.contains("opstream", ignoreCase = true) ||
+                        resolvedVideoUrl.contains("playzone", ignoreCase = true) ||
+                        resolvedVideoUrl.contains("streamfree", ignoreCase = true) ||
+                        resolvedVideoUrl.contains("/v/", ignoreCase = true) ||
+                        resolvedVideoUrl.contains("player", ignoreCase = true)
+                
+                if (isSniffable) {
+                    sniffedVideoUrl = null
+                    sniffingTimeout = false
+                    val timeout = if (isStreamFree) 25000L else 12000L
+                    kotlinx.coroutines.delay(timeout)
+                    if (sniffedVideoUrl == null) {
+                        sniffingTimeout = true
+                    }
+                } else {
+                    sniffedVideoUrl = null
+                    sniffingTimeout = true
+                }
+            }
+        }
+    }
+
+    // Nạp link video vào ExoPlayer với dynamic headers
+    LaunchedEffect(sniffedVideoUrl, resolvedVideoHeaders) {
+        if (!sniffedVideoUrl.isNullOrBlank()) {
+            val headersMap = mutableMapOf<String, String>()
+            headersMap["User-Agent"] = chromeUA
+            
+            resolvedVideoHeaders?.forEach { (key, value) ->
+                headersMap[key] = value
+            }
+
+            val realEmbedUrl = resolvedVideoUrl?.let { url ->
+                if (url.startsWith("http")) {
+                    url
+                } else {
+                    val match = """src=["'](https?://[^"']+)["']""".toRegex(RegexOption.IGNORE_CASE).find(url)
+                    match?.groupValues?.get(1)
+                }
+            }
+
+            val lowerSniffed = sniffedVideoUrl!!.lowercase()
+            val referer = when {
+                lowerSniffed.contains("streamfree") || lowerSniffed.contains("hhkungfu") -> realEmbedUrl ?: novelUrl
+                lowerSniffed.contains("ssplay.net") || lowerSniffed.contains("ssplay") -> {
+                    headersMap["Origin"] = "https://ssplay.net"
+                    realEmbedUrl ?: "https://ssplay.net/"
+                }
+                lowerSniffed.contains("bilibili") || lowerSniffed.contains("bstar") -> {
+                    headersMap["Origin"] = "https://www.bilibili.tv"
+                    "https://www.bilibili.tv/"
+                }
+                else -> headersMap["Referer"] ?: novelUrl
+            }
+            headersMap["Referer"] = referer
+
+            val cookieManager = android.webkit.CookieManager.getInstance()
+            val webViewCookie = if (!realEmbedUrl.isNullOrBlank()) {
+                cookieManager.getCookie(realEmbedUrl)
+            } else {
+                cookieManager.getCookie(sniffedVideoUrl)
+            }
+            if (!webViewCookie.isNullOrBlank()) {
+                headersMap["Cookie"] = webViewCookie
+            }
+
+            android.util.Log.d("VideoPlayerExo", "sniffedVideoUrl: $sniffedVideoUrl")
+            
+            httpDataSourceFactory.setDefaultRequestProperties(headersMap)
+            
+            val mimeType = when {
+                lowerSniffed.contains(".m3u8") || lowerSniffed.contains("m3u8") || lowerSniffed.contains("hls") -> androidx.media3.common.MimeTypes.APPLICATION_M3U8
+                lowerSniffed.contains(".mpd") || lowerSniffed.contains("dash") -> androidx.media3.common.MimeTypes.APPLICATION_MPD
+                lowerSniffed.contains(".ts") || lowerSniffed.contains("ts") -> androidx.media3.common.MimeTypes.VIDEO_MP2T
+                else -> null
+            }
+            val mediaItem = MediaItem.Builder()
+                .setUri(sniffedVideoUrl!!)
+                .apply {
+                    if (mimeType != null) {
+                        setMimeType(mimeType)
+                    }
+                }
+                .build()
+            val mediaSource = DefaultMediaSourceFactory(context)
+                .setDataSourceFactory(httpDataSourceFactory)
+                .createMediaSource(mediaItem)
+                
+            exoPlayer.setMediaSource(mediaSource)
+            exoPlayer.prepare()
+            
+            val autoContinue = prefs.getBoolean("video_auto_continue", false)
+            if (autoContinue && chapter != null) {
+                val savedPos = prefs.getLong("video_pos_" + chapter.url, 0L)
+                if (savedPos > 0) {
+                    exoPlayer.seekTo(savedPos)
+                }
+            }
+            
+            exoPlayer.play()
+        }
+    }
+
+    // Save vị trí phát lại khi dừng/thoát
+    DisposableEffect(chapter) {
+        onDispose {
+            if (chapter != null && exoPlayer.duration > 0) {
+                prefs.edit().putLong("video_pos_" + chapter.url, exoPlayer.currentPosition).apply()
+            }
+        }
+    }
+
+    // Tự động chuyển tập khi phát xong
+    var playFinishedTriggered by remember(chapter) { mutableStateOf(false) }
+    val autoNext = prefs.getBoolean("video_auto_next", true)
+    LaunchedEffect(exoPlayer) {
+        exoPlayer.addListener(object : androidx.media3.common.Player.Listener {
+            override fun onPlaybackStateChanged(playbackState: Int) {
+                if (playbackState == androidx.media3.common.Player.STATE_ENDED && autoNext && !playFinishedTriggered) {
+                    playFinishedTriggered = true
+                    val serverChapters = chapters.filter { !it.isVolume }
+                    val currentChapInServerIdx = serverChapters.indexOfFirst { it.url == chapter?.url }
+                    if (currentChapInServerIdx != -1 && currentChapInServerIdx < serverChapters.size - 1) {
+                        onChapterSelect(serverChapters[currentChapInServerIdx + 1].url)
+                    }
+                }
+            }
+        })
+    }
+
+    // Trạng thái thanh công cụ điều khiển
+    var showUI by remember { mutableStateOf(true) }
+    LaunchedEffect(showUI) {
+        if (showUI) {
+            kotlinx.coroutines.delay(5000)
+            showUI = false
+        }
+    }
+
+    var showPlaylistBottomSheet by remember { mutableStateOf(false) }
+    var showSettingsBottomSheet by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(color = Color.White)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(text = "Đang giải mã link phim...", color = Color.White, fontSize = 12.sp)
+                }
+            }
+        } else if (error != null) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(Color.Black),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Filled.Error, contentDescription = null, tint = Color.Red, modifier = Modifier.size(48.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Lỗi tải video: " + error, color = Color.White, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = onBackClick, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD4A574))) {
+                        Text("Quay lại", color = Color.Black)
+                    }
+                }
+            }
+        } else {
+            // WebView sniffing ngầm (vẽ trước để ở lớp dưới cùng)
+            if (resolvedVideoUrl != null && !sniffingTimeout && sniffedVideoUrl == null) {
+                key(resolvedVideoUrl) {
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                sniffingWebViewInstance = this
+                                visibility = android.view.View.INVISIBLE
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                settings.apply {
+                                    javaScriptEnabled = true
+                                    domStorageEnabled = true
+                                    mediaPlaybackRequiresUserGesture = false
+                                    userAgentString = chromeUA
+                                    setSupportMultipleWindows(false)
+                                    setJavaScriptCanOpenWindowsAutomatically(false)
+                                    cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+                                }
+                                clearCache(true)
+                                webChromeClient = object : WebChromeClient() {
+                                    override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                        super.onProgressChanged(view, newProgress)
+                                        if (newProgress > 40) {
+                                            view?.evaluateJavascript("""
+                                                (function() {
+                                                    if (window.__sniff_injected) return;
+                                                    window.__sniff_injected = true;
+                                                    var autoPlayInterval = setInterval(function() {
+                                                        var videos = document.getElementsByTagName('video');
+                                                        for (var i = 0; i < videos.length; i++) {
+                                                            videos[i].muted = true;
+                                                            videos[i].play().catch(function(e) {});
+                                                        }
+                                                        var playSelectors = ['.play', '.btn-play', '.vjs-big-play-button', '[class*="play-button"]', '[id*="play-button"]', 'iframe'];
+                                                        playSelectors.forEach(function(sel) {
+                                                            var btn = document.querySelector(sel);
+                                                            if (btn && (btn.offsetWidth > 0 || btn.offsetHeight > 0)) {
+                                                                btn.click();
+                                                            }
+                                                        });
+                                                    }, 1000);
+                                                    setTimeout(function() { clearInterval(autoPlayInterval); }, 15000);
+                                                })();
+                                            """.trimIndent(), null)
+                                        }
+                                    }
+
+                                    override fun onShowCustomView(view: android.view.View?, callback: CustomViewCallback?) {
+                                        callback?.onCustomViewHidden()
+                                    }
+                                }
+                                webViewClient = object : WebViewClient() {
+                                    override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                        val url = request?.url?.toString() ?: ""
+                                        return !url.startsWith("http://") && !url.startsWith("https://")
+                                    }
+
+                                    override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                        super.onPageStarted(view, url, favicon)
+                                        view?.evaluateJavascript("""
+                                            (function() {
+                                                var style = document.createElement('style');
+                                                style.innerHTML = 'html, body { background: #000000 !important; color: #000000 !important; }';
+                                                var head = document.head || document.getElementsByTagName('head')[0] || document.documentElement;
+                                                if (head) head.appendChild(style);
+                                            })();
+                                        """.trimIndent(), null)
+                                        view?.evaluateJavascript(mockDevToolsDetectorJS, null)
+                                    }
+
+                                    override fun shouldInterceptRequest(
+                                        view: WebView?,
+                                        request: WebResourceRequest?
+                                    ): WebResourceResponse? {
+                                        val reqUrl = request?.url?.toString() ?: ""
+                                        val lowerUrl = reqUrl.lowercase()
+                                        
+                                        if (lowerUrl.contains("devtools-detector") || lowerUrl.contains("devtools_detector")) {
+                                            return WebResourceResponse(
+                                                "application/javascript",
+                                                "UTF-8",
+                                                java.io.ByteArrayInputStream(mockDevToolsDetectorJS.toByteArray(Charsets.UTF_8))
+                                            )
+                                        }
+                                        
+                                        if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".m4s") || lowerUrl.contains(".ts") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
+                                            (view?.context as? Activity)?.runOnUiThread {
+                                                if (sniffedVideoUrl == null) {
+                                                    sniffedVideoUrl = reqUrl
+                                                }
+                                            }
+                                        }
+                                        
+                                        if (request != null && !request.isForMainFrame) {
+                                            val isEmbed = isEmbedPlayerUrl(reqUrl)
+                                            if (isEmbed && resolvedVideoUrl != null && reqUrl != resolvedVideoUrl) {
+                                                (view?.context as? Activity)?.runOnUiThread {
+                                                    val loadedUrl = view.tag as? String
+                                                    if (loadedUrl != reqUrl) {
+                                                        view.tag = reqUrl
+                                                        view.loadUrl(reqUrl)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        
+                                        return super.shouldInterceptRequest(view, request)
+                                    }
+                                }
+                            }
+                        },
+                        update = { webView ->
+                            val loadedUrl = webView.tag as? String
+                            if (resolvedVideoUrl != null && loadedUrl == null) {
+                                webView.tag = resolvedVideoUrl
+                                if (resolvedVideoType == "webview" || resolvedVideoUrl.contains("<")) {
+                                    webView.loadDataWithBaseURL(
+                                        novelUrl,
+                                        resolvedVideoUrl,
+                                        "text/html",
+                                        "utf-8",
+                                        null
+                                    )
+                                } else {
+                                    webView.loadUrl(resolvedVideoUrl, mapOf("Referer" to novelUrl))
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(alpha = 0f, translationX = 9999f)
+                    )
+                }
+            }
+
+            if (sniffedVideoUrl != null) {
+                Box(
+                    modifier = Modifier.fillMaxSize().pointerInput(Unit) {
+                        detectTapGestures(onTap = { showUI = !showUI })
+                    }
+                ) {
+                    AndroidView(
+                        factory = { ctx ->
+                            PlayerView(ctx).apply {
+                                player = exoPlayer
+                                useController = false
+                                layoutParams = ViewGroup.LayoutParams(
+                                    ViewGroup.LayoutParams.MATCH_PARENT,
+                                    ViewGroup.LayoutParams.MATCH_PARENT
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+
+                    AnimatedVisibility(
+                        visible = showUI,
+                        enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                        exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    ) {
+                        VideoTopBar(
+                            title = chapter?.title ?: "Xem phim",
+                            servers = servers,
+                            selectedServerIndex = selectedServerIndex,
+                            onServerChange = onServerChange,
+                            playSpeed = playSpeed,
+                            onPlaySpeedChange = onPlaySpeedChange,
+                            onSettingsClick = { showSettingsBottomSheet = true },
+                            onBackClick = onBackClick
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = showUI,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(40.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val seekStep = prefs.getInt("video_seek_step", 10)
+                            IconButton(onClick = {
+                                val target = (exoPlayer.currentPosition - (seekStep * 1000)).coerceAtLeast(0L)
+                                exoPlayer.seekTo(target)
+                            }) {
+                                Icon(Icons.Filled.Replay10, "Tua lùi ${seekStep}s", tint = Color.White, modifier = Modifier.size(36.dp))
+                            }
+
+                            var isPlaying by remember { mutableStateOf(exoPlayer.isPlaying) }
+                            LaunchedEffect(exoPlayer.isPlaying) {
+                                isPlaying = exoPlayer.isPlaying
+                            }
+                            IconButton(
+                                onClick = {
+                                    if (exoPlayer.isPlaying) {
+                                        exoPlayer.pause()
+                                    } else {
+                                        exoPlayer.play()
+                                    }
+                                },
+                                modifier = Modifier.size(56.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    contentDescription = "Play/Pause",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+
+                            IconButton(onClick = {
+                                val target = (exoPlayer.currentPosition + (seekStep * 1000)).coerceAtMost(exoPlayer.duration)
+                                exoPlayer.seekTo(target)
+                            }) {
+                                Icon(Icons.Filled.Forward10, "Tua tới ${seekStep}s", tint = Color.White, modifier = Modifier.size(36.dp))
+                            }
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = showUI,
+                        enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
+                        exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    ) {
+                        VideoBottomBar(
+                            exoPlayer = exoPlayer,
+                            chapters = chapters,
+                            selectedServerIndex = selectedServerIndex,
+                            currentChapterUrl = chapter?.url ?: "",
+                            onChapterSelect = onChapterSelect,
+                            onPlaylistClick = { showPlaylistBottomSheet = true },
+                            onFullscreenToggle = onFullscreenToggle,
+                            isFullscreen = isFullscreen
+                        )
+                    }
+                }
+            } else if (isSniffing) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = Color.White)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(text = "Đang dò link video chất lượng cao (sniffing)...", color = Color.White, fontSize = 12.sp)
+                    }
+                }
+            } else if (sniffingTimeout) {
+                var fallbackCustomView by remember { mutableStateOf<View?>(null) }
+                var fallbackCustomViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
+
+                if (fallbackCustomView != null) {
+                    androidx.activity.compose.BackHandler {
+                        val decorView = (context as? Activity)?.window?.decorView as? ViewGroup
+                        decorView?.removeView(fallbackCustomView)
+                        fallbackCustomView = null
+                        fallbackCustomViewCallback?.onCustomViewHidden()
+                        fallbackCustomViewCallback = null
+                        if (isFullscreen) onFullscreenToggle()
+                    }
+                }
+
+                val cleanPlayerJS = """
+                    (function() {
+                        var player = null;
+                        var selectors = ['#play-zone', '#player', '.player', '#media-player', '.watch-play', '#play-box', '#player-holder', '.player-container', 'iframe', 'video'];
+                        for (var i = 0; i < selectors.length; i++) {
+                            var el = document.querySelector(selectors[i]);
+                            if (el && (el.offsetWidth > 100 || el.offsetHeight > 100)) {
+                                player = el;
+                                break;
+                            }
+                        }
+                        if (player) {
+                            if (document.getElementById('__clean_player_container')) return;
+                            var container = document.createElement('div');
+                            container.id = '__clean_player_container';
+                            container.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;background:#000000;';
+                            player.parentNode.replaceChild(container, player);
+                            container.appendChild(player);
+                            player.style.cssText = 'width:100% !important;height:100% !important;position:absolute !important;top:0 !important;left:0 !important;margin:0 !important;padding:0 !important;';
+                            
+                            var style = document.createElement('style');
+                            style.id = '__fallback_style';
+                            style.type = 'text/css';
+                            style.innerHTML = 'body > :not(#__clean_player_container) { display: none !important; } html, body { overflow: hidden !important; background: #000000 !important; width: 100% !important; height: 100% !important; }';
+                            document.head.appendChild(style);
+                        } else {
+                            if (document.getElementById('__fallback_style')) return;
+                            var style = document.createElement('style');
+                            style.id = '__fallback_style';
+                            style.type = 'text/css';
+                            style.innerHTML = 'body * { visibility: hidden !important; } iframe, video, iframe *, video * { visibility: visible !important; } iframe, video { position: fixed !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 999999 !important; background: #000000 !important; } html, body { overflow: hidden !important; background: #000000 !important; }';
+                            document.head.appendChild(style);
+                        }
+                    })();
+                """.trimIndent()
+
+                Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+                    key(resolvedVideoUrl) {
+                        AndroidView(
+                            factory = { ctx ->
+                                WebView(ctx).apply {
+                                    fallbackWebViewInstance = this
+                                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                    settings.apply {
+                                        javaScriptEnabled = true
+                                        domStorageEnabled = true
+                                        mediaPlaybackRequiresUserGesture = false
+                                        useWideViewPort = true
+                                        loadWithOverviewMode = true
+                                        mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                        userAgentString = chromeUA
+                                        cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+                                    }
+                                    clearCache(true)
+                                    webChromeClient = object : WebChromeClient() {
+                                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                            super.onProgressChanged(view, newProgress)
+                                            if (newProgress > 30 && resolvedVideoType != "webview" && resolvedVideoUrl?.contains("<") != true) {
+                                                view?.evaluateJavascript(cleanPlayerJS, null)
+                                            }
+                                            if (newProgress > 40) {
+                                                view?.evaluateJavascript(fallbackAutoPlayJS, null)
+                                            }
+                                        }
+
+                                        override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+                                            if (fallbackCustomView != null) { callback?.onCustomViewHidden(); return }
+                                            fallbackCustomView = view
+                                            fallbackCustomViewCallback = callback
+                                            if (!isFullscreen) onFullscreenToggle()
+                                            val decorView = (ctx as? Activity)?.window?.decorView as? ViewGroup
+                                            decorView?.addView(view, ViewGroup.LayoutParams(
+                                                ViewGroup.LayoutParams.MATCH_PARENT,
+                                                ViewGroup.LayoutParams.MATCH_PARENT
+                                            ))
+                                        }
+
+                                        override fun onHideCustomView() {
+                                            if (fallbackCustomView == null) return
+                                            val decorView = (ctx as? Activity)?.window?.decorView as? ViewGroup
+                                            decorView?.removeView(fallbackCustomView)
+                                            fallbackCustomView = null
+                                            fallbackCustomViewCallback?.onCustomViewHidden()
+                                            fallbackCustomViewCallback = null
+                                            if (isFullscreen) onFullscreenToggle()
+                                        }
+                                    }
+                                    webViewClient = object : WebViewClient() {
+                                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                            return false
+                                        }
+
+                                        override fun shouldInterceptRequest(
+                                            view: WebView?,
+                                            request: WebResourceRequest?
+                                        ): WebResourceResponse? {
+                                            val reqUrl = request?.url?.toString() ?: ""
+                                            val lowerUrl = reqUrl.lowercase()
+                                            if (lowerUrl.contains("devtools-detector") || lowerUrl.contains("devtools_detector")) {
+                                                return WebResourceResponse(
+                                                    "application/javascript",
+                                                    "UTF-8",
+                                                    java.io.ByteArrayInputStream(mockDevToolsDetectorJS.toByteArray(Charsets.UTF_8))
+                                                )
+                                            }
+                                            
+                                            if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".m4s") || lowerUrl.contains(".ts") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
+                                                (view?.context as? Activity)?.runOnUiThread {
+                                                    if (sniffedVideoUrl == null) {
+                                                        sniffedVideoUrl = reqUrl
+                                                    }
+                                                }
+                                            }
+                                            
+                                            return super.shouldInterceptRequest(view, request)
+                                        }
+
+                                        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                            super.onPageStarted(view, url, favicon)
+                                            view?.evaluateJavascript("""
+                                                (function() {
+                                                    var style = document.createElement('style');
+                                                    style.innerHTML = 'html, body { background: #000000 !important; color: #000000 !important; }';
+                                                    var head = document.head || document.getElementsByTagName('head')[0] || document.documentElement;
+                                                    if (head) head.appendChild(style);
+                                                })();
+                                            """.trimIndent(), null)
+                                            view?.evaluateJavascript(mockDevToolsDetectorJS, null)
+                                        }
+
+                                        override fun onPageFinished(view: WebView?, url: String?) {
+                                            super.onPageFinished(view, url)
+                                            if (resolvedVideoType != "webview" && resolvedVideoUrl?.contains("<") != true) {
+                                                view?.evaluateJavascript(cleanPlayerJS, null)
+                                            }
+                                            view?.evaluateJavascript(fallbackAutoPlayJS, null)
+                                        }
+                                    }
+                                }
+                            },
+                            update = { webView ->
+                                val url = resolvedVideoUrl ?: ""
+                                if (webView.tag != url) {
+                                    webView.tag = url
+                                    if (resolvedVideoType == "webview" || url.contains("<")) {
+                                        webView.loadDataWithBaseURL(
+                                            novelUrl,
+                                            url,
+                                            "text/html",
+                                            "utf-8",
+                                            null
+                                        )
+                                    } else {
+                                        webView.loadUrl(url)
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onBackClick,
+                        modifier = Modifier.statusBarsPadding().padding(8.dp).align(Alignment.TopStart).background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                    ) {
+                        Icon(Icons.Filled.ArrowBack, "Back", tint = Color.White)
+                    }
+                }
+            }
+        }
+
+        if (showPlaylistBottomSheet) {
+            VideoPlaylistBottomSheet(
+                chapters = chapters,
+                currentChapterUrl = chapter?.url ?: "",
+                selectedServerIndex = selectedServerIndex,
+                onChapterClick = { targetUrl ->
+                    onChapterSelect(targetUrl)
+                    showPlaylistBottomSheet = false
+                },
+                onDismiss = { showPlaylistBottomSheet = false }
+            )
+        }
+
+        if (showSettingsBottomSheet) {
+            VideoSettingsBottomSheet(
+                onDismiss = { showSettingsBottomSheet = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun VideoTopBar(
+    title: String,
+    servers: List<Pair<String, String>>,
+    selectedServerIndex: Int,
+    onServerChange: (Int) -> Unit,
+    playSpeed: Float,
+    onPlaySpeedChange: (Float) -> Unit,
+    onSettingsClick: () -> Unit,
+    onBackClick: () -> Unit
+) {
+    var serverMenuExpanded by remember { mutableStateOf(false) }
+    var speedMenuExpanded by remember { mutableStateOf(false) }
+
+    Surface(color = Color.Black.copy(alpha = 0.6f)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBackClick) {
+                Icon(Icons.Filled.ArrowBack, "Back", tint = Color.White)
+            }
+            Text(
+                text = title,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+
+            if (servers.isNotEmpty()) {
+                Box {
+                    Button(
+                        onClick = { serverMenuExpanded = true },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text(
+                            text = servers.getOrNull(selectedServerIndex)?.first ?: "Mặc định",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Icon(Icons.Filled.KeyboardArrowDown, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    }
+                    DropdownMenu(
+                        expanded = serverMenuExpanded,
+                        onDismissRequest = { serverMenuExpanded = false }
+                    ) {
+                        servers.forEachIndexed { index, pair ->
+                            DropdownMenuItem(
+                                text = { Text(pair.first) },
+                                onClick = {
+                                    onServerChange(index)
+                                    serverMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Box {
+                Button(
+                    onClick = { speedMenuExpanded = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.White.copy(alpha = 0.15f)),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    modifier = Modifier.height(32.dp)
+                ) {
+                    Text(
+                        text = if (playSpeed == 1.0f) "1x" else "${playSpeed}x",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.width(2.dp))
+                    Icon(Icons.Filled.KeyboardArrowDown, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                }
+                
+                DropdownMenu(
+                    expanded = speedMenuExpanded,
+                    onDismissRequest = { speedMenuExpanded = false }
+                ) {
+                    listOf(0.25f, 0.5f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f).forEach { speed ->
+                        DropdownMenuItem(
+                            text = { Text("${speed}x") },
+                            onClick = {
+                                onPlaySpeedChange(speed)
+                                speedMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(onClick = onSettingsClick) {
+                Icon(Icons.Filled.Settings, "Cài đặt", tint = Color.White)
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoBottomBar(
+    exoPlayer: ExoPlayer,
+    chapters: List<BookChapter>,
+    selectedServerIndex: Int,
+    currentChapterUrl: String,
+    onChapterSelect: (String) -> Unit,
+    onPlaylistClick: () -> Unit,
+    onFullscreenToggle: () -> Unit,
+    isFullscreen: Boolean
+) {
+    var currentPos by remember { mutableStateOf(0L) }
+    var duration by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(exoPlayer) {
+        while (true) {
+            currentPos = exoPlayer.currentPosition
+            duration = exoPlayer.duration.coerceAtLeast(0L)
+            kotlinx.coroutines.delay(1000)
+        }
+    }
+
+    fun formatTime(ms: Long): String {
+        if (ms <= 0) return "00:00"
+        val totalSecs = ms / 1000
+        val mins = totalSecs / 60
+        val secs = totalSecs % 60
+        return String.format(java.util.Locale.US, "%02d:%02d", mins, secs)
+    }
+
+    val serverChapters = remember(chapters) {
+        chapters.filter { !it.isVolume }
+    }
+
+    val currentChapInServerIdx = serverChapters.indexOfFirst { it.url == currentChapterUrl }
+    val hasPrev = currentChapInServerIdx > 0
+    val hasNext = currentChapInServerIdx != -1 && currentChapInServerIdx < serverChapters.size - 1
+
+    Surface(color = Color.Black.copy(alpha = 0.6f)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = formatTime(currentPos),
+                    color = Color.White,
+                    fontSize = 11.sp
+                )
+                
+                val sliderValue = currentPos.toFloat().coerceIn(0f, duration.toFloat().coerceAtLeast(1f))
+                val rangeEnd = duration.toFloat().coerceAtLeast(1f)
+                
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { value ->
+                        if (duration > 0) {
+                            exoPlayer.seekTo(value.toLong())
+                        }
+                    },
+                    valueRange = 0f..rangeEnd,
+                    enabled = duration > 0,
+                    colors = SliderDefaults.colors(
+                        thumbColor = if (duration > 0) Color(0xFFD4A574) else Color.Gray,
+                        activeTrackColor = if (duration > 0) Color(0xFFD4A574) else Color.Gray,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = if (duration > 0) formatTime(duration) else "--:--",
+                    color = Color.White,
+                    fontSize = 11.sp
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    IconButton(
+                        onClick = {
+                            if (hasPrev) onChapterSelect(serverChapters[currentChapInServerIdx - 1].url)
+                        },
+                        enabled = hasPrev
+                    ) {
+                        Icon(Icons.Filled.SkipPrevious, "Tập trước", tint = if (hasPrev) Color.White else Color.White.copy(alpha = 0.3f))
+                    }
+                    IconButton(
+                        onClick = {
+                            if (hasNext) onChapterSelect(serverChapters[currentChapInServerIdx + 1].url)
+                        },
+                        enabled = hasNext
+                    ) {
+                        Icon(Icons.Filled.SkipNext, "Tập sau", tint = if (hasNext) Color.White else Color.White.copy(alpha = 0.3f))
+                    }
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    IconButton(onClick = onPlaylistClick) {
+                        Icon(Icons.Filled.QueuePlayNext, "Danh sách tập", tint = Color.White)
+                    }
+                    IconButton(onClick = onFullscreenToggle) {
+                        Icon(
+                            imageVector = if (isFullscreen) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                            contentDescription = "Toàn màn hình",
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VideoPlaylistBottomSheet(
+    chapters: List<BookChapter>,
+    currentChapterUrl: String,
+    selectedServerIndex: Int,
+    onChapterClick: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val serverTabs = remember(chapters) {
+        val list = mutableListOf<String>()
+        chapters.forEach { ch ->
+            if (ch.isVolume) {
+                list.add(ch.title)
+            }
+        }
+        if (list.isEmpty()) list.add("Mặc định")
+        list
+    }
+
+    var selectedTabIdx by remember { mutableStateOf(0) }
+    var searchQuery by remember { mutableStateOf("") }
+
+    val filteredChapters = remember(chapters, selectedTabIdx, searchQuery) {
+        val serverName = serverTabs.getOrNull(selectedTabIdx) ?: "Mặc định"
+        val list = mutableListOf<BookChapter>()
+        var currentServer = "Mặc định"
+        
+        chapters.forEach { ch ->
+            if (ch.isVolume) {
+                currentServer = ch.title
+            } else {
+                if (currentServer == serverName || serverTabs.size == 1) {
+                    if (searchQuery.isBlank() || ch.title.contains(searchQuery, ignoreCase = true)) {
+                        list.add(ch)
+                    }
+                }
+            }
+        }
+        list
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF141210),
+        tonalElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Danh sách tập", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, "Đóng", tint = Color.White)
+                }
+            }
+
+            if (serverTabs.size > 1) {
+                ScrollableTabRow(
+                    selectedTabIndex = selectedTabIdx,
+                    containerColor = Color.Transparent,
+                    contentColor = Color.White,
+                    edgePadding = 0.dp,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            color = Color(0xFFD4A574),
+                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIdx])
+                        )
+                    }
+                ) {
+                    serverTabs.forEachIndexed { index, name ->
+                        Tab(
+                            selected = selectedTabIdx == index,
+                            onClick = { selectedTabIdx = index },
+                            text = { Text(name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (selectedTabIdx == index) Color(0xFFD4A574) else Color.White.copy(alpha = 0.6f)) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Tìm kiếm tập phim...", color = Color.White.copy(alpha = 0.4f), fontSize = 13.sp) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFFD4A574),
+                    unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                    focusedTextColor = Color.White,
+                    unfocusedTextColor = Color.White
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false).defaultMinSize(minHeight = 200.dp)
+            ) {
+                items(filteredChapters) { ch ->
+                    val isCurrent = ch.url == currentChapterUrl
+                    val btnBg = if (isCurrent) Color(0xFFD4A574) else Color(0xFF26211D)
+                    val textColor = if (isCurrent) Color(0xFF141210) else Color.White
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(btnBg)
+                            .clickable { onChapterClick(ch.url) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = ch.title,
+                            color = textColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VideoSettingsBottomSheet(
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE) }
+
+    var autoPlay by remember { mutableStateOf(prefs.getBoolean("video_auto_play", true)) }
+    var autoNext by remember { mutableStateOf(prefs.getBoolean("video_auto_next", true)) }
+    var autoContinue by remember { mutableStateOf(prefs.getBoolean("video_auto_continue", false)) }
+    var seekStep by remember { mutableStateOf(prefs.getInt("video_seek_step", 10)) }
+    var keepScreenOn by remember { mutableStateOf(prefs.getBoolean("video_keep_screen_on", true)) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = Color(0xFF141210)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Cài đặt phát video", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, "Đóng", tint = Color.White)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(text = "Phát lại", color = Color(0xFFD4A574), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Tự động phát", color = Color.White, fontSize = 14.sp)
+                Switch(
+                    checked = autoPlay,
+                    onCheckedChange = {
+                        autoPlay = it
+                        prefs.edit().putBoolean("video_auto_play", it).apply()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color(0xFFD4A574),
+                        checkedTrackColor = Color(0xFFD4A574).copy(alpha = 0.5f)
+                    )
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Tự động chuyển tập", color = Color.White, fontSize = 14.sp)
+                Switch(
+                    checked = autoNext,
+                    onCheckedChange = {
+                        autoNext = it
+                        prefs.edit().putBoolean("video_auto_next", it).apply()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color(0xFFD4A574),
+                        checkedTrackColor = Color(0xFFD4A574).copy(alpha = 0.5f)
+                    )
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Tự động tiếp tục từ vị trí trước", color = Color.White, fontSize = 14.sp)
+                Switch(
+                    checked = autoContinue,
+                    onCheckedChange = {
+                        autoContinue = it
+                        prefs.edit().putBoolean("video_auto_continue", it).apply()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color(0xFFD4A574),
+                        checkedTrackColor = Color(0xFFD4A574).copy(alpha = 0.5f)
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(text = "Tua tới/Tua lùi", color = Color(0xFFD4A574), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(5, 10, 15, 30).forEach { secs ->
+                    val isSelected = seekStep == secs
+                    val bg = if (isSelected) Color(0xFFD4A574) else Color(0xFF26211D)
+                    val textCol = if (isSelected) Color(0xFF141210) else Color.White
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(bg)
+                            .clickable {
+                                seekStep = secs
+                                prefs.edit().putInt("video_seek_step", secs).apply()
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "${secs}s", color = textCol, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(text = "Hiển thị & Năng lượng", color = Color(0xFFD4A574), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Giữ màn hình luôn bật khi xem phim", color = Color.White, fontSize = 14.sp)
+                Switch(
+                    checked = keepScreenOn,
+                    onCheckedChange = {
+                        keepScreenOn = it
+                        prefs.edit().putBoolean("video_keep_screen_on", it).apply()
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color(0xFFD4A574),
+                        checkedTrackColor = Color(0xFFD4A574).copy(alpha = 0.5f)
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
