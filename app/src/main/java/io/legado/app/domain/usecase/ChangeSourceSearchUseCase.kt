@@ -3,6 +3,7 @@ package io.legado.app.domain.usecase
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.domain.gateway.BookSearchGateway
 import io.legado.app.help.book.BookHelp
@@ -45,17 +46,25 @@ sealed interface ChangeSourceSearchEvent {
 
 class ChangeSourceSearchUseCase(
     private val gateway: BookSearchGateway,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository,
 ) {
     private val threadCount = OtherConfig.threadCount
-    private val contentProcessor by lazy {
-        // ContentProcessor needs the old book - will be set before search
-        null as ContentProcessor?
-    }
 
     // Shared state for TOC cache
     private val tocMap = ConcurrentHashMap<String, List<BookChapter>>()
     private val bookMap = ConcurrentHashMap<String, Book>()
     private val tocMapChapterCount = AtomicInteger(0)
+
+    private data class ChangeSourceSearchable(
+        val part: BookSourcePart,
+        val source: BookSource?,
+    )
+
+    private data class ChangeSourceResult(
+        val part: BookSourcePart,
+        val source: BookSource?,
+        val books: List<SearchBook>,
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun search(
@@ -83,13 +92,21 @@ class ChangeSourceSearchUseCase(
         val concurrency = threadCount.coerceAtLeast(1)
 
         bookSourceParts.asFlow()
-            .mapNotNull { it.getBookSource() }
-            .flatMapMerge(concurrency) { source ->
+            .mapNotNull { part ->
+                val isExt = part.bookSourceUrl.startsWith("ext_")
+                if (isExt) {
+                    ChangeSourceSearchable(part, null)
+                } else {
+                    val source = part.getBookSource() ?: return@mapNotNull null
+                    ChangeSourceSearchable(part, source)
+                }
+            }
+            .flatMapMerge(concurrency) { searchable ->
                 flow {
                     val books = try {
                         withTimeout(60000L) {
                             searchSource(
-                                source, name, author, oldBook, fromReadBookActivity,
+                                searchable, name, author, oldBook, fromReadBookActivity,
                                 contentProcessor
                             )
                         }
@@ -97,7 +114,7 @@ class ChangeSourceSearchUseCase(
                         currentCoroutineContext().ensureActive()
                         emptyList()
                     }
-                    emit(ChangeSourceResult(source, books))
+                    emit(ChangeSourceResult(searchable.part, searchable.source, books))
                 }.flowOn(Dispatchers.IO)
             }
             .collect { result ->
@@ -112,7 +129,7 @@ class ChangeSourceSearchUseCase(
                         processedSources = processedSources,
                         totalSources = totalSources,
                         resultCount = resultCount,
-                        sourceName = result.source.bookSourceName,
+                        sourceName = result.part.bookSourceName,
                     )
                 )
             }
@@ -120,13 +137,8 @@ class ChangeSourceSearchUseCase(
         emit(ChangeSourceSearchEvent.Finished(isEmpty = resultCount == 0))
     }.flowOn(Dispatchers.IO)
 
-    private data class ChangeSourceResult(
-        val source: BookSource,
-        val books: List<SearchBook>,
-    )
-
     private suspend fun searchSource(
-        source: BookSource,
+        searchable: ChangeSourceSearchable,
         name: String,
         author: String,
         oldBook: Book,
@@ -138,12 +150,20 @@ class ChangeSourceSearchUseCase(
         val loadToc = ChangeSourceConfig.loadToc
         val loadWordCount = ChangeSourceConfig.loadWordCount
 
-        val resultBooks = WebBook.searchBookAwait(
-            source, name,
-            filter = { fName, fAuthor, _ ->
-                fName == name && (!checkAuthor || fAuthor.contains(author))
+        val isExt = searchable.part.bookSourceUrl.startsWith("ext_")
+        val resultBooks = if (isExt) {
+            extensionRepository.searchBooks(searchable.part.bookSourceUrl, name, 1).filter {
+                it.name == name && (!checkAuthor || it.author.contains(author))
             }
-        )
+        } else {
+            val source = searchable.source!!
+            WebBook.searchBookAwait(
+                source, name,
+                filter = { fName, fAuthor, _ ->
+                    fName == name && (!checkAuthor || fAuthor.contains(author))
+                }
+            )
+        }
 
         val processedBooks = mutableListOf<SearchBook>()
         for (searchBook in resultBooks) {
@@ -152,7 +172,7 @@ class ChangeSourceSearchUseCase(
                 loadInfo || loadToc || loadWordCount -> {
                     val book = searchBook.toBook()
                     val wordCountSearchBook = loadBookInfo(
-                        source,
+                        searchable,
                         book,
                         loadToc,
                         loadWordCount,
@@ -172,7 +192,7 @@ class ChangeSourceSearchUseCase(
     }
 
     private suspend fun loadBookInfo(
-        source: BookSource,
+        searchable: ChangeSourceSearchable,
         book: Book,
         loadToc: Boolean,
         loadWordCount: Boolean,
@@ -180,12 +200,22 @@ class ChangeSourceSearchUseCase(
         fromReadBookActivity: Boolean,
         contentProcessor: ContentProcessor,
     ): SearchBook? {
+        val isExt = searchable.part.bookSourceUrl.startsWith("ext_")
         if (book.tocUrl.isEmpty()) {
-            WebBook.getBookInfoAwait(source, book)
+            if (isExt) {
+                val detail = extensionRepository.getBookDetail(searchable.part.bookSourceUrl, book.bookUrl)
+                if (detail != null) {
+                    book.tocUrl = detail.tocUrl
+                    book.intro = detail.intro
+                    book.coverUrl = detail.coverUrl
+                }
+            } else {
+                WebBook.getBookInfoAwait(searchable.source!!, book)
+            }
         }
         if (loadToc || loadWordCount) {
             return loadBookToc(
-                source,
+                searchable,
                 book,
                 loadWordCount,
                 oldBook,
@@ -197,14 +227,19 @@ class ChangeSourceSearchUseCase(
     }
 
     private suspend fun loadBookToc(
-        source: BookSource,
+        searchable: ChangeSourceSearchable,
         book: Book,
         loadWordCount: Boolean,
         oldBook: Book,
         fromReadBookActivity: Boolean,
         contentProcessor: ContentProcessor,
     ): SearchBook? {
-        val chapters = WebBook.getChapterListAwait(source, book).getOrThrow()
+        val isExt = searchable.part.bookSourceUrl.startsWith("ext_")
+        val chapters = if (isExt) {
+            extensionRepository.getTableOfContents(searchable.part.bookSourceUrl, book.bookUrl)
+        } else {
+            WebBook.getChapterListAwait(searchable.source!!, book).getOrThrow()
+        }
         for (chapter in chapters) {
             chapter.internString()
         }
@@ -216,7 +251,7 @@ class ChangeSourceSearchUseCase(
         book.releaseHtmlData()
         if (loadWordCount) {
             return loadBookWordCount(
-                source,
+                searchable,
                 book,
                 chapters,
                 oldBook,
@@ -228,7 +263,7 @@ class ChangeSourceSearchUseCase(
     }
 
     private suspend fun loadBookWordCount(
-        source: BookSource,
+        searchable: ChangeSourceSearchable,
         book: Book,
         chapters: List<BookChapter>,
         oldBook: Book,
@@ -248,9 +283,15 @@ class ChangeSourceSearchUseCase(
             title = title.substring(0, 20) + "…"
         }
         val startTime = System.currentTimeMillis()
+        val isExt = searchable.part.bookSourceUrl.startsWith("ext_")
         return try {
-            val nextChapterUrl = chapters.getOrNull(chapterIndex + 1)?.url
-            var content = WebBook.getContentAwait(source, book, bookChapter, nextChapterUrl, false)
+            var content = if (isExt) {
+                extensionRepository.getChapterContent(searchable.part.bookSourceUrl, bookChapter.url)
+                    ?: throw io.legado.app.exception.NoStackTraceException("Nội dung chương trống")
+            } else {
+                val nextChapterUrl = chapters.getOrNull(chapterIndex + 1)?.url
+                WebBook.getContentAwait(searchable.source!!, book, bookChapter, nextChapterUrl, false)
+            }
             content = contentProcessor.getContent(oldBook, bookChapter, content, false).toString()
             val len = content.length
             val endTime = System.currentTimeMillis()
@@ -281,14 +322,30 @@ class ChangeSourceSearchUseCase(
     }
 
     fun disableSource(searchBook: SearchBook) {
-        io.legado.app.data.appDb.bookSourceDao.getBookSource(searchBook.origin)?.let { source ->
-            source.enabled = false
-            io.legado.app.data.appDb.bookSourceDao.update(source)
+        if (searchBook.origin.startsWith("ext_")) {
+            val extId = searchBook.origin.removePrefix("ext_")
+            kotlinx.coroutines.runBlocking {
+                io.legado.app.data.appDb.extensionDao.setEnabled(extId, false)
+            }
+        } else {
+            io.legado.app.data.appDb.bookSourceDao.getBookSource(searchBook.origin)?.let { source ->
+                source.enabled = false
+                io.legado.app.data.appDb.bookSourceDao.update(source)
+            }
         }
     }
 
     fun deleteSource(searchBook: SearchBook) {
-        SourceHelp.deleteBookSource(searchBook.origin)
+        if (searchBook.origin.startsWith("ext_")) {
+            val extId = searchBook.origin.removePrefix("ext_")
+            kotlinx.coroutines.runBlocking {
+                io.legado.app.data.appDb.extensionDao.getExtensionById(extId)?.let { ext ->
+                    io.legado.app.data.appDb.extensionDao.delete(ext)
+                }
+            }
+        } else {
+            SourceHelp.deleteBookSource(searchBook.origin)
+        }
         io.legado.app.data.appDb.searchBookDao.delete(searchBook)
     }
 }

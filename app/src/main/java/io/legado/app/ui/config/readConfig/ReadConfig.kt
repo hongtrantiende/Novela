@@ -186,7 +186,11 @@ object ReadConfig {
     var streamReadAloudAudio
         get() = ReadTtsConfig.streamReadAloudAudio
         set(value) { ReadTtsConfig.streamReadAloudAudio = value }
+    var readAloudParagraphInterval
+        get() = ReadTtsConfig.readAloudParagraphInterval
+        set(value) { ReadTtsConfig.readAloudParagraphInterval = value }
     var contentSelectSpeakMod
+
         get() = ReadTtsConfig.contentSelectSpeakMod
         set(value) { ReadTtsConfig.contentSelectSpeakMod = value }
     var audioPreDownloadNum

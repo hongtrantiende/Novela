@@ -78,6 +78,12 @@
             android:summary="@string/audio_cache_clean_time_summary"
             android:title="@string/audio_cache_clean_time"
             app:iconSpaceReserved="false" />
+
+        <io.legado.app.lib.prefs.Preference
+            android:key="readAloudParagraphInterval"
+            android:summary="@string/read_aloud_paragraph_interval_summary"
+            android:title="@string/read_aloud_paragraph_interval"
+            app:iconSpaceReserved="false" />
         </io.legado.app.lib.prefs.PreferenceCategory>
 
 </androidx.preference.PreferenceScreen>

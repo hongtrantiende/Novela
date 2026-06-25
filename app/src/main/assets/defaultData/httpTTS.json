@@ -1,30 +1,262 @@
 [
   {
-    "id": -100,
-    "name": "1.百度",
-    "url": "http://tts.baidu.com/text2audio,{\n    \"method\": \"POST\",\n    \"body\": \"tex={{java.encodeURI(java.encodeURI(speakText))}}&spd={{(speakSpeed + 5) / 10 + 4}}&per=3&cuid=baidu_speech_demo&idx=1&cod=2&lan=zh&ctp=1&pdt=160&vol=5&aue=6&pit=5&_res_tag_=audio\"\n}",
-    "contentType": "audio/wav"
+    "id": -101,
+    "name": "Google TTS - vi-VN (Mặc định)",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\n\"https://www.google.com/speech-api/v2/synthesize?client=android-tts/com.apps.google:1.1.0&lang=vi-VN&key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo&speed=\" + Math.min(1.0, Math.max(0.1, speakSpeed / 20)) + \"&text=\" + encodeURIComponent(cleanText);",
+    "contentType": "audio/mpeg"
   },
   {
-    "id": -29,
-    "name": "2.阿里云语音",
-    "url": "https://nls-gateway.cn-shanghai.aliyuncs.com/stream/v1/tts,{\"method\": \"POST\",\"body\": {\"appkey\":\"{{source.getLoginInfoMap().get('AppKey')}}\",\"text\":\"{{speakText}}\",\"format\":\"mp3\",\"volume\":100,\"speech_rate\":{{String((speakSpeed) * 20 - 400)}} }}",
-    "contentType": "audio/mpeg",
-    "loginUrl": "function login(){var loginInfo = source.getLoginInfoMap();\nvar accessKeyId = loginInfo.get('AccessKeyId');\nvar accessKeySecret = loginInfo.get('AccessKeySecret');\nvar timestamp = java.timeFormatUTC(new Date().getTime(), \"yyyy-MM-dd'T'HH:mm:ss'Z'\", 0);\nvar aly = new JavaImporter(Packages.javax.crypto.Mac, Packages.javax.crypto.spec.SecretKeySpec, Packages.javax.xml.bind.DatatypeConverter, Packages.java.net.URLEncoder, Packages.java.lang.String, Packages.android.util.Base64);\nwith (aly) {\n    function percentEncode(value) {\n        return URLEncoder.encode(value, \"UTF-8\").replace(\"+\", \"%20\")\n            .replace(\"*\", \"%2A\").replace(\"%7E\", \"~\")\n    }\n\n    function sign(stringToSign, accessKeySecret) {\n        var mac = Mac.getInstance('HmacSHA1');\n        mac.init(new SecretKeySpec(String(accessKeySecret + '&').getBytes(\"UTF-8\"), \"HmacSHA1\"));\n        var signData = mac.doFinal(String(stringToSign).getBytes(\"UTF-8\"));\n        var signBase64 = Base64.encodeToString(signData, Base64.NO_WRAP);\n        var signUrlEncode = percentEncode(signBase64);\n        return signUrlEncode;\n    }\n}\nvar query = 'AccessKeyId=' + accessKeyId + '&Action=CreateToken&Format=JSON&RegionId=cn-shanghai&SignatureMethod=HMAC-SHA1&SignatureNonce=' + java.randomUUID() + '&SignatureVersion=1.0&Timestamp=' + percentEncode(timestamp) + '&Version=2019-02-28';\nvar signStr = sign('GET&' + percentEncode('/') + '&' + percentEncode(query), accessKeySecret);\nvar queryStringWithSign = \"Signature=\" + signStr + \"&\" + query;\nvar body = java.ajax('http://nls-meta.cn-shanghai.aliyuncs.com/?' + queryStringWithSign)\nvar res = JSON.parse(body)\nif (res.Message) {\n    throw new Error(res.Message)\n}\nvar header = { \"X-NLS-Token\": res.Token.Id };\nsource.putLoginHeader(JSON.stringify(header))}",
-    "loginUi": [
-      {
-        "name": "AppKey",
-        "type": "text"
-      },
-      {
-        "name": "AccessKeyId",
-        "type": "text"
-      },
-      {
-        "name": "AccessKeySecret",
-        "type": "text"
-      }
-    ],
-    "loginCheckJs": "var response = result;\nif (response.headers().get(\"Content-Type\") != \"audio/mpeg\") {\n    var body = JSON.parse(response.body().string())\n    if (body.status == 40000001) {\n        source.login()\n        java.getHeaderMap().putAll(source.getHeaderMap(true))\n        response = java.getResponse()\n    } else {\n        throw body.message\n    }\n}\nresponse"
+    "id": -102,
+    "name": "Google TTS - vi-VN (gft)",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\n\"https://www.google.com/speech-api/v2/synthesize?client=android-tts/com.apps.google:1.1.0&lang=vi-VN&name=vi-VN-Wavenet-A&key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo&speed=\" + Math.min(1.0, Math.max(0.1, speakSpeed / 20)) + \"&text=\" + encodeURIComponent(cleanText);",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -103,
+    "name": "Google TTS - vi-VN (vic)",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\n\"https://www.google.com/speech-api/v2/synthesize?client=android-tts/com.apps.google:1.1.0&lang=vi-VN&name=vi-VN-Wavenet-B&key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo&speed=\" + Math.min(1.0, Math.max(0.1, speakSpeed / 20)) + \"&text=\" + encodeURIComponent(cleanText);",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -104,
+    "name": "Google TTS - vi-VN (vid)",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\n\"https://www.google.com/speech-api/v2/synthesize?client=android-tts/com.apps.google:1.1.0&lang=vi-VN&name=vi-VN-Wavenet-C&key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo&speed=\" + Math.min(1.0, Math.max(0.1, speakSpeed / 20)) + \"&text=\" + encodeURIComponent(cleanText);",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -105,
+    "name": "Google TTS - vi-VN (vie)",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\n\"https://www.google.com/speech-api/v2/synthesize?client=android-tts/com.apps.google:1.1.0&lang=vi-VN&name=vi-VN-Neural2-F&key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo&speed=\" + Math.min(1.0, Math.max(0.1, speakSpeed / 20)) + \"&text=\" + encodeURIComponent(cleanText);",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -106,
+    "name": "Google TTS - vi-VN (vif)",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\n\"https://www.google.com/speech-api/v2/synthesize?client=android-tts/com.apps.google:1.1.0&lang=vi-VN&name=vi-VN-Wavenet-D&key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo&speed=\" + Math.min(1.0, Math.max(0.1, speakSpeed / 20)) + \"&text=\" + encodeURIComponent(cleanText);",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -107,
+    "name": "Google TTS - Neural2-D (Giọng Nam)",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Neural2-D\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -108,
+    "name": "Google TTS - Neural2-A (Giọng Nữ)",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Neural2-A\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -109,
+    "name": "Nam V1",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Achird\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -110,
+    "name": "Nam V2",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Algenib\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -111,
+    "name": "Nam V3",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Algieba\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -112,
+    "name": "Nam V4",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Alnilam\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -113,
+    "name": "Nam V5",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Charon\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -114,
+    "name": "Nam V6",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Enceladus\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -115,
+    "name": "Nam V7",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Fenrir\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -116,
+    "name": "Nam V8",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Iapetus\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -117,
+    "name": "Nam V9",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Orus\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -118,
+    "name": "Nam V10",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Puck\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -119,
+    "name": "Nam V11",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Rasalgethi\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -120,
+    "name": "Nam V12",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Sadachbia\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -121,
+    "name": "Nam V13",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Sadaltager\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -122,
+    "name": "Nam V14",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Schedar\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -123,
+    "name": "Nam V15",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Umbriel\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -124,
+    "name": "Nam V16",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Zubenelgenubi\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -125,
+    "name": "Nữ V1",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Achernar\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -126,
+    "name": "Nữ V2",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Aoede\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -127,
+    "name": "Nữ V3",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Autonoe\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -128,
+    "name": "Nữ V4",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Callirrhoe\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -129,
+    "name": "Nữ V5",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Despina\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -130,
+    "name": "Nữ V6",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Erinome\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -131,
+    "name": "Nữ V7",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Gacrux\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -132,
+    "name": "Nữ V8",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Kore\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -133,
+    "name": "Nữ V9",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Laomedeia\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -134,
+    "name": "Nữ V10",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Leda\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -135,
+    "name": "Nữ V11",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Pulcherrima\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -136,
+    "name": "Nữ V12",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Sulafat\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -137,
+    "name": "Nữ V13",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Vindemiatrix\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -138,
+    "name": "Nữ V14",
+    "url": "@js:\nvar cleanText = speakText.split(/([\\s.,!?:;()\"\"'']+)/).map(function(t) {\n  return (t.length > 1 && t === t.toUpperCase() && /[A-Z]/.test(t)) ? t : t.toLowerCase();\n}).join('');\nvar safeText = cleanText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;').replace(/'/g, '&apos;');\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Zephyr\" },\n    audioConfig: {\n      audioEncoding: \"MP3\",\n      speakingRate: speakSpeed / 10,\n      effectsProfileId: [\"handset-class-device\"]\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
+    "loginCheckJs": "var json = JSON.parse(result.body().string());\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
   }
 ]

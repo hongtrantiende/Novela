@@ -109,19 +109,75 @@ data class SearchScope(private var scope: String) {
         val list = hashSetOf<BookSourcePart>()
         if (scope.isEmpty()) {
             list.addAll(appDb.bookSourceDao.allEnabledPart)
+            appDb.extensionDao.getEnabledExtensionsSync().forEach { ext ->
+                list.add(
+                    BookSourcePart(
+                        bookSourceUrl = "ext_${ext.id}",
+                        bookSourceName = ext.name,
+                        bookSourceGroup = ext.type,
+                        customOrder = 0,
+                        enabled = ext.isEnabled,
+                        enabledExplore = ext.isEnabled,
+                        hasLoginUrl = false,
+                        lastUpdateTime = 0,
+                        respondTime = 0,
+                        weight = 0,
+                        hasExploreUrl = true
+                    )
+                )
+            }
         } else {
             if (isSource()) {
                 sourceItems().forEach { sourceItem ->
-                    appDb.bookSourceDao.getBookSourcePart(sourceItem.url)?.let { source ->
-                        list.add(source)
+                    if (sourceItem.url.startsWith("ext_")) {
+                        val extId = sourceItem.url.removePrefix("ext_")
+                        appDb.extensionDao.getExtensionByIdSync(extId)?.let { ext ->
+                            list.add(
+                                BookSourcePart(
+                                    bookSourceUrl = "ext_${ext.id}",
+                                    bookSourceName = ext.name,
+                                    bookSourceGroup = ext.type,
+                                    customOrder = 0,
+                                    enabled = ext.isEnabled,
+                                    enabledExplore = ext.isEnabled,
+                                    hasLoginUrl = false,
+                                    lastUpdateTime = 0,
+                                    respondTime = 0,
+                                    weight = 0,
+                                    hasExploreUrl = true
+                                )
+                            )
+                        }
+                    } else {
+                        appDb.bookSourceDao.getBookSourcePart(sourceItem.url)?.let { source ->
+                            list.add(source)
+                        }
                     }
                 }
             } else {
                 val oldScope = parsedScope().groupNames
-                val newScope = oldScope.filter {
-                    val bookSources = appDb.bookSourceDao.getEnabledPartByGroup(it)
+                val newScope = oldScope.filter { groupName ->
+                    val bookSources = appDb.bookSourceDao.getEnabledPartByGroup(groupName)
                     list.addAll(bookSources)
-                    bookSources.isNotEmpty()
+                    val matchingExts = appDb.extensionDao.getEnabledExtensionsSync().filter {
+                        it.type.equals(groupName, ignoreCase = true)
+                    }.map { ext ->
+                        BookSourcePart(
+                            bookSourceUrl = "ext_${ext.id}",
+                            bookSourceName = ext.name,
+                            bookSourceGroup = ext.type,
+                            customOrder = 0,
+                            enabled = ext.isEnabled,
+                            enabledExplore = ext.isEnabled,
+                            hasLoginUrl = false,
+                            lastUpdateTime = 0,
+                            respondTime = 0,
+                            weight = 0,
+                            hasExploreUrl = true
+                        )
+                    }
+                    list.addAll(matchingExts)
+                    bookSources.isNotEmpty() || matchingExts.isNotEmpty()
                 }
                 if (oldScope.size != newScope.size) {
                     update(newScope)
@@ -135,6 +191,23 @@ data class SearchScope(private var scope: String) {
                         stateLiveData.postValue(scope)
                         list.addAll(it)
                     }
+                }
+                appDb.extensionDao.getEnabledExtensionsSync().forEach { ext ->
+                    list.add(
+                        BookSourcePart(
+                            bookSourceUrl = "ext_${ext.id}",
+                            bookSourceName = ext.name,
+                            bookSourceGroup = ext.type,
+                            customOrder = 0,
+                            enabled = ext.isEnabled,
+                            enabledExplore = ext.isEnabled,
+                            hasLoginUrl = false,
+                            lastUpdateTime = 0,
+                            respondTime = 0,
+                            weight = 0,
+                            hasExploreUrl = true
+                        )
+                    )
                 }
             }
         }

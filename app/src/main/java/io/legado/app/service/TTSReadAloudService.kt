@@ -67,10 +67,45 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         ttsInitFinish = false
     }
 
+    private fun setupLanguageAndVoice(tts: TextToSpeech, text: String) {
+        try {
+            val viLocale = java.util.Locale.forLanguageTag("vi-VN")
+            if (isVietnamese(text)) {
+                val isViAvailable = tts.isLanguageAvailable(viLocale)
+                if (isViAvailable != TextToSpeech.LANG_MISSING_DATA && isViAvailable != TextToSpeech.LANG_NOT_SUPPORTED) {
+                    tts.language = viLocale
+                    
+                    val voices = tts.voices
+                    if (!voices.isNullOrEmpty()) {
+                        val targetVoice = voices.find { it.name.equals("vi-vn-x-vif-network", ignoreCase = true) }
+                            ?: voices.find { it.name.equals("vi-vn-x-vif-local", ignoreCase = true) }
+                        if (targetVoice != null) {
+                            tts.voice = targetVoice
+                            LogUtils.d(TAG, "Successfully set TTS voice to ${targetVoice.name}")
+                        } else {
+                            LogUtils.d(TAG, "TTS voice vi-vn-x-vif-network/local not found. Available voices: ${voices.map { it.name }}")
+                        }
+                    }
+                }
+            } else {
+                tts.language = java.util.Locale.getDefault()
+            }
+        } catch (e: Exception) {
+            LogUtils.e(TAG, "Error in setupLanguageAndVoice: ${e.localizedMessage}")
+        }
+    }
+
+    private fun isVietnamese(text: String): Boolean {
+        val viChars = "đĐáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ"
+        return text.any { viChars.contains(it) }
+    }
+
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
-            textToSpeech?.let {
-                it.setOnUtteranceProgressListener(ttsUtteranceListener)
+            textToSpeech?.let { tts ->
+                val sampleText = contentList.take(5).joinToString(" ")
+                setupLanguageAndVoice(tts, sampleText)
+                tts.setOnUtteranceProgressListener(ttsUtteranceListener)
                 ttsInitFinish = true
                 play()
             }
@@ -96,6 +131,10 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
             LogUtils.d(TAG, "Đọc số trang ${textChapter?.pageSize}")
             val tts = textToSpeech ?: throw NoStackTraceException("tts is null")
             val contentList = contentList
+            
+            val sampleText = contentList.take(5).joinToString(" ")
+            setupLanguageAndVoice(tts, sampleText)
+
             var isAddedText = false
             for (i in nowSpeak until contentList.size) {
                 ensureActive()
@@ -120,6 +159,12 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                         return@execute
                     }
                 } else {
+                    val interval = ReadConfig.readAloudParagraphInterval
+                    if (interval > 0) {
+                        tts.runCatching {
+                            playSilentUtterance(interval.toLong(), TextToSpeech.QUEUE_ADD, "silent_" + i)
+                        }
+                    }
                     val result = tts.runCatching {
                         speak(text, TextToSpeech.QUEUE_ADD, null, AppConst.APP_TAG + i)
                     }.getOrElse {
@@ -191,6 +236,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         private val TAG = "TTSUtteranceListener"
 
         override fun onStart(s: String) {
+            if (s.startsWith("silent_")) return
             LogUtils.d(TAG, "onStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$s")
             textChapter?.let {
                 if (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex)) {
@@ -208,11 +254,13 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         }
 
         override fun onDone(s: String) {
+            if (s.startsWith("silent_")) return
             LogUtils.d(TAG, "onDone utteranceId:$s")
             nextParagraph()
         }
 
         override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+            if (utteranceId?.startsWith("silent_") == true) return
             super.onRangeStart(utteranceId, start, end, frame)
             val msg =
                 "onRangeStart nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId start:$start end:$end frame:$frame"
@@ -229,6 +277,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
         }
 
         override fun onError(utteranceId: String?, errorCode: Int) {
+            if (utteranceId?.startsWith("silent_") == true) return
             LogUtils.d(
                 TAG,
                 "onError nowSpeak:$nowSpeak pageIndex:$pageIndex utteranceId:$utteranceId errorCode:$errorCode"
@@ -251,6 +300,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
 
         @Deprecated("Deprecated in Java")
         override fun onError(s: String) {
+            if (s.startsWith("silent_")) return
             LogUtils.d(TAG, "onError nowSpeak:$nowSpeak pageIndex:$pageIndex s:$s")
             nextParagraph()
         }

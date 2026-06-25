@@ -2120,6 +2120,8 @@
     <string name="web_service_auto_start">Bắt đầu dịch vụ web khi ứng dụng mở ra</string>
     <string name="read_aloud_preload">Số lần tải trước đọc to</string>
     <string name="read_aloud_preload_summary">%d</string>
+    <string name="read_aloud_paragraph_interval">Khoảng nghỉ mỗi đoạn</string>
+    <string name="read_aloud_paragraph_interval_summary">%d ms</string>
     <string name="audio_cache_clean_time">Thời gian lưu giữ bộ đệm âm thanh (phút)</string>
     <string name="audio_cache_clean_time_summary">Hiện tại: %1$d. Nhập 0 để xóa ngay khi thoát.</string>
     <string name="show_swipe_animation">Bật hoạt ảnh khi vuốt</string>

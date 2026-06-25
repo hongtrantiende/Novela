@@ -733,6 +733,15 @@ class ReadBookViewModel(
                 }
             }
 
+            is ReadBookIntent.OpenParagraphIntervalPicker -> {
+                _uiState.update {
+                    it.copy(
+                        readAloudParagraphInterval = ReadConfig.readAloudParagraphInterval,
+                        activeSheet = ReadBookSheet.ParagraphIntervalConfig,
+                    )
+                }
+            }
+
             is ReadBookIntent.ApplySpeakEngine -> {
                 ReadBook.book?.setTtsEngine(null)
                 ReadConfig.ttsEngine = intent.value
@@ -761,6 +770,16 @@ class ReadBookViewModel(
                 _uiState.update {
                     it.copy(
                         audioCacheCleanTime = intent.value,
+                        activeSheet = ReadBookSheet.ReadAloudConfig,
+                    )
+                }
+            }
+
+            is ReadBookIntent.ApplyParagraphInterval -> {
+                ReadConfig.readAloudParagraphInterval = intent.value
+                _uiState.update {
+                    it.copy(
+                        readAloudParagraphInterval = intent.value,
                         activeSheet = ReadBookSheet.ReadAloudConfig,
                     )
                 }
@@ -1390,7 +1409,7 @@ class ReadBookViewModel(
     }
 
     private fun exportHttpTtsJson(): String {
-        return GSON.toJson(appDb.httpTTSDao.all)
+        return GSON.toJson(appDb.httpTTSDao.all.filter { it.id >= 0 })
     }
 
     private fun computeSpeakEngineName(): String {

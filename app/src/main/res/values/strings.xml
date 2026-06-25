@@ -1731,6 +1731,8 @@
     <string name="web_service_auto_start">Start Web Service When App Opens</string>
     <string name="read_aloud_preload">Read-Aloud Preload Count</string>
     <string name="read_aloud_preload_summary">%d</string>
+    <string name="read_aloud_paragraph_interval">Paragraph pause interval</string>
+    <string name="read_aloud_paragraph_interval_summary">%d ms</string>
     <string name="audio_cache_clean_time">Audio Cache Retention Time (minutes)</string>
     <string name="audio_cache_clean_time_summary">Current: %1$d. Enter 0 to clear immediately on exit.</string>
     <string name="show_swipe_animation">Enable Animation While Swiping</string>

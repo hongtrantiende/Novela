@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/gedoor/legado/issues"
   },
-  "homepage": "https://github.com/gedoor/legado#readme"
+  "homepage": "https://github.com/gedoor/legado#readme",
+  "dependencies": {
+    "ws": "^8.21.0"
+  }
 }

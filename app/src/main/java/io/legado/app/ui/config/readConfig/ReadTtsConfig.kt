@@ -87,4 +87,10 @@ object ReadTtsConfig {
 
     val audioCacheCleanTime: Long
         get() = audioCacheCleanTimeOrgin * 60 * 1000L
+
+    var readAloudParagraphInterval by prefDelegate(
+        "readAloudParagraphInterval",
+        1000
+    )
 }
+

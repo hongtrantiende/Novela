@@ -46,6 +46,8 @@ import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.utils.GSON
 
+import io.legado.app.ui.config.readConfig.ReadConfig
+
 @Composable
 fun ReadAloudConfigSheet(
     show: Boolean,
@@ -141,6 +143,11 @@ fun ReadAloudConfigSheet(
                 onClick = { onIntent(ReadBookIntent.OpenCacheCleanTimePicker) },
             )
             TinyClickableSettingItem(
+                title = stringResource(R.string.read_aloud_paragraph_interval),
+                description = stringResource(R.string.read_aloud_paragraph_interval_summary, ReadConfig.readAloudParagraphInterval),
+                onClick = { onIntent(ReadBookIntent.OpenParagraphIntervalPicker) },
+            )
+            TinyClickableSettingItem(
                 title = stringResource(R.string.clear_cache),
                 onClick = { onIntent(ReadBookIntent.ClearTtsCache) },
             )
@@ -226,6 +233,8 @@ fun SpeakEngineConfigSheet(
         },
         endAction = {
             var expanded by remember { mutableStateOf(false) }
+            val selectedId = selectedValue?.toLongOrNull()
+            val isPremiumSelected = selectedId != null && selectedId <= -108 && selectedId >= -138
             Box {
                 SmallTonalButton(
                     onClick = { expanded = true },
@@ -239,20 +248,22 @@ fun SpeakEngineConfigSheet(
                             showImportSheet = true
                         },
                     )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.export),
-                        onClick = {
-                            expanded = false
-                            onIntent(ReadBookIntent.ExportAllHttpTts)
-                        },
-                    )
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.copy_url),
-                        onClick = {
-                            expanded = false
-                            onIntent(ReadBookIntent.ExportAllHttpTtsAsUrl)
-                        },
-                    )
+                    if (!isPremiumSelected) {
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.export),
+                            onClick = {
+                                expanded = false
+                                onIntent(ReadBookIntent.ExportAllHttpTts)
+                            },
+                        )
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.copy_url),
+                            onClick = {
+                                expanded = false
+                                onIntent(ReadBookIntent.ExportAllHttpTtsAsUrl)
+                            },
+                        )
+                    }
                     RoundDropdownMenuItem(
                         text = stringResource(R.string.clear_cache),
                         onClick = {
@@ -284,7 +295,7 @@ fun SpeakEngineConfigSheet(
                     onLongClick = if (httpTtsId != null && !item.loginUrl.isNullOrBlank()) {
                         { onIntent(ReadBookIntent.OpenHttpTtsLogin(httpTtsId)) }
                     } else null,
-                    trailingContent = if (httpTtsId != null) {
+                    trailingContent = if (httpTtsId != null && httpTtsId >= 0) {
                         {
                             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                 SmallTonalButton(

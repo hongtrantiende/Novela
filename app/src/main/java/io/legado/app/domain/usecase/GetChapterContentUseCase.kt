@@ -11,6 +11,7 @@ import io.legado.app.model.webBook.WebBook
 class GetChapterContentUseCase(
     private val bookSourceDao: BookSourceDao,
     private val bookChapterDao: BookChapterDao,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository,
 ) {
 
     /**
@@ -20,11 +21,23 @@ class GetChapterContentUseCase(
         val source = if (book.origin.startsWith("ext_")) {
             BookSource().apply {
                 bookSourceUrl = book.origin
-                bookSourceName = book.originName ?: ""
+                bookSourceName = book.originName
             }
         } else {
             bookSourceDao.getBookSource(book.origin)
                 ?: throw NoStackTraceException("Nguồn sách không tồn tại")
+        }
+        if (book.origin.startsWith("ext_")) {
+            if (book.tocUrl.isEmpty()) {
+                val detail = extensionRepository.getBookDetail(book.origin, book.bookUrl)
+                if (detail != null) {
+                    book.tocUrl = detail.tocUrl
+                    book.intro = detail.intro
+                    book.coverUrl = detail.coverUrl
+                }
+            }
+            val toc = extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+            return Pair(toc, source)
         }
         if (book.tocUrl.isEmpty()) {
             WebBook.getBookInfoAwait(source, book)
@@ -41,15 +54,12 @@ class GetChapterContentUseCase(
         chapter: BookChapter,
         nextChapterUrl: String?,
     ): String {
-        val bookSource = if (book.origin.startsWith("ext_")) {
-            BookSource().apply {
-                bookSourceUrl = book.origin
-                bookSourceName = book.originName ?: ""
-            }
-        } else {
-            bookSourceDao.getBookSource(book.origin)
-                ?: throw NoStackTraceException("Nguồn sách không tồn tại")
+        if (book.origin.startsWith("ext_")) {
+            return extensionRepository.getChapterContent(book.origin, chapter.url)
+                ?: throw NoStackTraceException("Nội dung chương trống")
         }
+        val bookSource = bookSourceDao.getBookSource(book.origin)
+            ?: throw NoStackTraceException("Nguồn sách không tồn tại")
         return WebBook.getContentAwait(bookSource, book, chapter, nextChapterUrl, false)
     }
 

@@ -293,6 +293,21 @@ fun ReadBookScreen(
             onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
         },
     )
+    ReadAloudNumberConfigSheet(
+        show = state.activeSheet is ReadBookSheet.ParagraphIntervalConfig,
+        title = stringResource(R.string.read_aloud_paragraph_interval),
+        description = stringResource(
+            R.string.read_aloud_paragraph_interval_summary,
+            state.readAloudParagraphInterval
+        ),
+        value = state.readAloudParagraphInterval,
+        defaultValue = 1000,
+        valueRange = 0f..5000f,
+        onValueChange = { onIntent(ReadBookIntent.ApplyParagraphInterval(it)) },
+        onDismissRequest = {
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
+        },
+    )
     AppLogSheet(
         show = state.activeSheet is ReadBookSheet.AppLog,
         onDismissRequest = dismissSheet,

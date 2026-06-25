@@ -17,8 +17,14 @@ interface ExtensionDao {
     @Query("SELECT * FROM extensions WHERE isInstalled = 1 AND isEnabled = 1")
     suspend fun getEnabledExtensions(): List<ExtensionEntity>
 
+    @Query("SELECT * FROM extensions WHERE isInstalled = 1 AND isEnabled = 1")
+    fun getEnabledExtensionsSync(): List<ExtensionEntity>
+
     @Query("SELECT * FROM extensions WHERE id = :id")
     suspend fun getExtensionById(id: String): ExtensionEntity?
+
+    @Query("SELECT * FROM extensions WHERE id = :id")
+    fun getExtensionByIdSync(id: String): ExtensionEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(extension: ExtensionEntity)

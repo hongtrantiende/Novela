@@ -7,6 +7,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.utils.buildMainHandler
 import io.legado.app.utils.splitNotBlank
 import io.legado.app.utils.toastOnUi
+import io.legado.app.ui.config.readConfig.ReadConfig
 import splitties.init.appCtx
 
 class TTS {
@@ -76,9 +77,41 @@ class TTS {
         textToSpeech = null
     }
 
+    private fun setupLanguageAndVoice(tts: TextToSpeech, text: String) {
+        try {
+            val viLocale = java.util.Locale.forLanguageTag("vi-VN")
+            if (isVietnamese(text)) {
+                val isViAvailable = tts.isLanguageAvailable(viLocale)
+                if (isViAvailable != TextToSpeech.LANG_MISSING_DATA && isViAvailable != TextToSpeech.LANG_NOT_SUPPORTED) {
+                    tts.language = viLocale
+                    
+                    val voices = tts.voices
+                    if (!voices.isNullOrEmpty()) {
+                        val targetVoice = voices.find { it.name.equals("vi-vn-x-vif-network", ignoreCase = true) }
+                            ?: voices.find { it.name.equals("vi-vn-x-vif-local", ignoreCase = true) }
+                        if (targetVoice != null) {
+                            tts.voice = targetVoice
+                        }
+                    }
+                }
+            } else {
+                tts.language = java.util.Locale.getDefault()
+            }
+        } catch (e: Exception) {
+            AppLog.put("setupLanguageAndVoice error: ${e.localizedMessage}", e)
+        }
+    }
+
+    private fun isVietnamese(text: String): Boolean {
+        val viChars = "đĐáàảãạấầẩẫậắằẳẵặéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ"
+        return text.any { viChars.contains(it) }
+    }
+
     private fun addTextToSpeakList() {
         val tts = textToSpeech ?: return
         kotlin.runCatching {
+            val txt = text ?: ""
+            setupLanguageAndVoice(tts, txt)
             var result = tts.speak("", TextToSpeech.QUEUE_FLUSH, null, null)
             if (result == TextToSpeech.ERROR) {
                 clearTts()
@@ -86,6 +119,10 @@ class TTS {
                 return
             }
             text?.splitNotBlank("\n")?.forEachIndexed { i, s ->
+                val interval = ReadConfig.readAloudParagraphInterval
+                if (interval > 0 && i > 0) {
+                    tts.playSilentUtterance(interval.toLong(), TextToSpeech.QUEUE_ADD, "silent_$i")
+                }
                 result = tts.speak(s, TextToSpeech.QUEUE_ADD, null, tag + i)
                 if (result == TextToSpeech.ERROR) {
                     AppLog.put("lỗi đọc tts: $text")
@@ -104,6 +141,10 @@ class TTS {
 
         override fun onInit(status: Int) {
             if (status == TextToSpeech.SUCCESS) {
+                textToSpeech?.let { tts ->
+                    val txt = text ?: ""
+                    setupLanguageAndVoice(tts, txt)
+                }
                 textToSpeech?.setOnUtteranceProgressListener(utteranceListener)
                 addTextToSpeakList()
             } else {
@@ -120,12 +161,14 @@ class TTS {
     private inner class TTSUtteranceListener : UtteranceProgressListener() {
 
         override fun onStart(utteranceId: String?) {
+            if (utteranceId?.startsWith("silent_") == true) return
             //开始朗读取消释放资源任务
             handler.removeCallbacks(clearTtsRunnable)
             speakStateListener?.onStart()
         }
 
         override fun onDone(utteranceId: String?) {
+            if (utteranceId?.startsWith("silent_") == true) return
             //一分钟没有朗读释放资源
             handler.postDelayed(clearTtsRunnable, 60000L)
             speakStateListener?.onDone()
@@ -133,6 +176,7 @@ class TTS {
 
         @Deprecated("Deprecated in Java")
         override fun onError(utteranceId: String?) {
+            if (utteranceId?.startsWith("silent_") == true) return
             //Deprecated
         }
 

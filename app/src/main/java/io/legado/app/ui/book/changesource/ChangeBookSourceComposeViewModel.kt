@@ -251,15 +251,29 @@ class ChangeBookSourceComposeViewModel(
             try {
                 val cachedToc = tocMap[book.primaryStr()]
                 if (cachedToc != null) {
-                    val source = io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    val source = if (book.origin.startsWith("ext_")) {
+                        BookSource().apply {
+                            bookSourceUrl = book.origin
+                            bookSourceName = book.originName
+                        }
+                    } else {
+                        io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                    }
                     if (source != null) {
                         onSuccess(cachedToc, source)
                         return@launch
                     }
                 }
                 if (book.isWebFile) {
-                    val source = io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
-                        ?: throw io.legado.app.exception.NoStackTraceException("Nguồn sách không tồn tại")
+                    val source = if (book.origin.startsWith("ext_")) {
+                        BookSource().apply {
+                            bookSourceUrl = book.origin
+                            bookSourceName = book.originName
+                        }
+                    } else {
+                        io.legado.app.data.appDb.bookSourceDao.getBookSource(book.origin)
+                            ?: throw io.legado.app.exception.NoStackTraceException("Nguồn sách không tồn tại")
+                    }
                     onSuccess(emptyList(), source)
                     return@launch
                 }
