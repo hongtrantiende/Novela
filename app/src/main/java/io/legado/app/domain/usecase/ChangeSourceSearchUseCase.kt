@@ -151,18 +151,37 @@ class ChangeSourceSearchUseCase(
         val loadWordCount = ChangeSourceConfig.loadWordCount
 
         val isExt = searchable.part.bookSourceUrl.startsWith("ext_")
-        val resultBooks = if (isExt) {
-            extensionRepository.searchBooks(searchable.part.bookSourceUrl, name, 1).filter {
-                it.name == name && (!checkAuthor || it.author.contains(author))
+        val searchKeyword = io.legado.app.utils.TranslateUtils.translateMeta(name)
+        val keywords = if (searchKeyword != name) listOf(name, searchKeyword) else listOf(name)
+        val allResults = mutableListOf<SearchBook>()
+
+        if (isExt) {
+            for (kw in keywords) {
+                try {
+                    allResults.addAll(extensionRepository.searchBooks(searchable.part.bookSourceUrl, kw, 1))
+                } catch (_: Throwable) {}
             }
         } else {
             val source = searchable.source!!
-            WebBook.searchBookAwait(
-                source, name,
-                filter = { fName, fAuthor, _ ->
-                    fName == name && (!checkAuthor || fAuthor.contains(author))
-                }
-            )
+            for (kw in keywords) {
+                try {
+                    allResults.addAll(WebBook.searchBookAwait(source, kw))
+                } catch (_: Throwable) {}
+            }
+        }
+
+        val resultBooks = allResults.distinctBy { it.bookUrl }.filter {
+            val normExtBookName = io.legado.app.utils.TranslateUtils.translateMeta(it.name)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val normTargetName = io.legado.app.utils.TranslateUtils.translateMeta(name)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+            val normExtAuthor = io.legado.app.utils.TranslateUtils.translateMeta(it.author)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val normTargetAuthor = io.legado.app.utils.TranslateUtils.translateMeta(author)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+            normExtBookName == normTargetName && (!checkAuthor || normExtAuthor.contains(normTargetAuthor) || normTargetAuthor.contains(normExtAuthor))
         }
 
         val processedBooks = mutableListOf<SearchBook>()

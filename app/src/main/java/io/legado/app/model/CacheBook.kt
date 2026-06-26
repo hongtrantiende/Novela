@@ -8,6 +8,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
+import io.legado.app.help.book.BookDownloadConfig
 import io.legado.app.help.book.getBookSource
 import io.legado.app.help.book.isLocal
 import io.legado.app.model.cache.CacheDownloadRequest
@@ -88,8 +89,8 @@ object CacheBook {
                 }
             }.onStart {
                 updateSummary()
-            }.onEachParallel(OtherConfig.cacheBookThreadCount.coerceIn(1, maxDownloadConcurrency)) {
-                val delayMs = OtherConfig.downloadDelay
+            }.onEachParallel(maxDownloadConcurrency) {
+                val delayMs = BookDownloadConfig.getDelay(it.book.bookUrl)
                 if (delayMs > 0) delay(delayMs)
                 coroutineScope {
                     it.download(this, context)

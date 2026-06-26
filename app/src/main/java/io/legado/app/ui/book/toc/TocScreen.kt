@@ -659,6 +659,7 @@ fun TocScreen(
 
         if (pendingDownloadAction != null) {
             DownloadSettingsDialog(
+                bookUrl = book?.bookUrl,
                 onDismiss = { pendingDownloadAction = null },
                 onConfirm = {
                     val action = pendingDownloadAction

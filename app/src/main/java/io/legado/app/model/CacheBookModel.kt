@@ -13,6 +13,7 @@ import io.legado.app.model.cache.CacheDownloadRepository
 import io.legado.app.model.cache.CacheDownloadRequest
 import io.legado.app.model.cache.CacheDownloadSource
 import io.legado.app.model.cache.CacheDownloadStateStore
+import io.legado.app.help.book.BookDownloadConfig
 import io.legado.app.model.cache.ChapterSelection
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -458,6 +459,10 @@ class CacheBookModel(
     @Synchronized
     private fun nextDownloadCandidate(): CacheDownloadCandidate? {
         if (isPaused) return null
+        val threadLimit = BookDownloadConfig.getThreadCount(book.bookUrl)
+        if (onDownloadSet.size >= threadLimit) {
+            return null
+        }
         val candidate = queue.next(book.bookUrl, onDownloadSet)
         if (candidate == null) {
             notifyDownloadSetChanged()

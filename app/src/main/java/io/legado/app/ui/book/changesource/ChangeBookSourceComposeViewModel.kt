@@ -100,9 +100,8 @@ class ChangeBookSourceComposeViewModel(
                     searchResults.addAll(dbBooks)
                     searchResults.forEach { bookMap[it.primaryStr()] = it }
                     filterResults()
-                } else {
-                    startSearch()
                 }
+                startSearch()
             }
         }
     }

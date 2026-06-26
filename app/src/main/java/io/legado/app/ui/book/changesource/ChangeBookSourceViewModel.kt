@@ -133,7 +133,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         }
         trySend(arrayOf(searchBooks))
 
-        if (searchBooks.isEmpty() && !_isSearching.value) {
+        if (!_isSearching.value) {
             startSearch()
         }
 
@@ -239,9 +239,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         task = viewModelScope.launch(searchPool!!) {
             flow {
                 for (bs in bookSourceParts) {
-                    bs.getBookSource()?.let {
-                        emit(it)
-                    }
+                    emit(bs)
                 }
             }.onStart {
                 searchStateData.postValue(true)
@@ -273,20 +271,50 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         }
     }
 
-    private suspend fun search(source: BookSource) {
+    private suspend fun search(part: BookSourcePart) {
         val checkAuthor = ChangeSourceConfig.checkAuthor
         val loadInfo = ChangeSourceConfig.loadInfo
         val loadToc = ChangeSourceConfig.loadToc
         val loadWordCount = ChangeSourceConfig.loadWordCount
-        val resultBooks = WebBook.searchBookAwait(
-            source, name,
-            filter = { fName, fAuthor, _ ->
-                fName == name && (!checkAuthor || fAuthor.contains(author))
-            })
+
+        val isExt = part.bookSourceUrl.startsWith("ext_")
+        val searchKeyword = io.legado.app.utils.TranslateUtils.translateMeta(name)
+        val keywords = if (searchKeyword != name) listOf(name, searchKeyword) else listOf(name)
+        val allResults = mutableListOf<SearchBook>()
+
+        if (isExt) {
+            for (kw in keywords) {
+                try {
+                    allResults.addAll(extensionRepository.searchBooks(part.bookSourceUrl, kw, 1))
+                } catch (_: Throwable) {}
+            }
+        } else {
+            val source = part.getBookSource() ?: return
+            for (kw in keywords) {
+                try {
+                    allResults.addAll(WebBook.searchBookAwait(source, kw))
+                } catch (_: Throwable) {}
+            }
+        }
+
+        val resultBooks = allResults.distinctBy { it.bookUrl }.filter {
+            val normExtBookName = io.legado.app.utils.TranslateUtils.translateMeta(it.name)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val normTargetName = io.legado.app.utils.TranslateUtils.translateMeta(name)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+            val normExtAuthor = io.legado.app.utils.TranslateUtils.translateMeta(it.author)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val normTargetAuthor = io.legado.app.utils.TranslateUtils.translateMeta(author)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+            normExtBookName == normTargetName && (!checkAuthor || normExtAuthor.contains(normTargetAuthor) || normTargetAuthor.contains(normExtAuthor))
+        }
+
         resultBooks.forEach { searchBook ->
             when {
                 loadInfo || loadToc || loadWordCount -> {
-                    loadBookInfo(source, searchBook.toBook())
+                    loadBookInfo(part, searchBook.toBook())
                 }
 
                 else -> {
@@ -296,21 +324,35 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         }
     }
 
-    private suspend fun loadBookInfo(source: BookSource, book: Book) {
+    private suspend fun loadBookInfo(part: BookSourcePart, book: Book) {
+        val isExt = part.bookSourceUrl.startsWith("ext_")
         if (book.tocUrl.isEmpty()) {
-            WebBook.getBookInfoAwait(source, book)
+            if (isExt) {
+                val detail = extensionRepository.getBookDetail(part.bookSourceUrl, book.bookUrl)
+                if (detail != null) {
+                    book.tocUrl = detail.tocUrl
+                    book.intro = detail.intro
+                    book.coverUrl = detail.coverUrl
+                }
+            } else {
+                WebBook.getBookInfoAwait(part.getBookSource()!!, book)
+            }
         }
         if (ChangeSourceConfig.loadToc || ChangeSourceConfig.loadWordCount) {
-            loadBookToc(source, book)
+            loadBookToc(part, book)
         } else {
-            //从详情页里获取最新章节
             val searchBook = book.toSearchBook()
             searchCallback?.searchSuccess(searchBook)
         }
     }
 
-    private suspend fun loadBookToc(source: BookSource, book: Book) {
-        val chapters = WebBook.getChapterListAwait(source, book).getOrThrow()
+    private suspend fun loadBookToc(part: BookSourcePart, book: Book) {
+        val isExt = part.bookSourceUrl.startsWith("ext_")
+        val chapters = if (isExt) {
+            extensionRepository.getTableOfContents(part.bookSourceUrl, book.bookUrl)
+        } else {
+            WebBook.getChapterListAwait(part.getBookSource()!!, book).getOrThrow()
+        }
         for (chapter in chapters) {
             chapter.internString()
         }
@@ -321,7 +363,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         bookMap[book.primaryStr()] = book
         book.releaseHtmlData()
         if (ChangeSourceConfig.loadWordCount) {
-            loadBookWordCount(source, book, chapters)
+            loadBookWordCount(part, book, chapters)
         } else {
             val searchBook = book.toSearchBook()
             searchCallback?.searchSuccess(searchBook)
@@ -329,7 +371,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     }
 
     private suspend fun loadBookWordCount(
-        source: BookSource,
+        part: BookSourcePart,
         book: Book,
         chapters: List<BookChapter>
     ) = coroutineScope {
@@ -344,9 +386,15 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             title = title.substring(0, 20) + "…"
         }
         val startTime = System.currentTimeMillis()
+        val isExt = part.bookSourceUrl.startsWith("ext_")
         val pair = try {
-            val nextChapterUrl = chapters.getOrNull(chapterIndex + 1)?.url
-            var content = WebBook.getContentAwait(source, book, bookChapter, nextChapterUrl, false)
+            var content = if (isExt) {
+                extensionRepository.getChapterContent(part.bookSourceUrl, bookChapter.url)
+                    ?: throw NoStackTraceException("Nội dung chương trống")
+            } else {
+                val nextChapterUrl = chapters.getOrNull(chapterIndex + 1)?.url
+                WebBook.getContentAwait(part.getBookSource()!!, book, bookChapter, nextChapterUrl, false)
+            }
             content = contentProcessor.getContent(oldBook!!, bookChapter, content, false).toString()
             val len = content.length
             len to "[${chapterIndex + 1}] ${title}\nSố từ: ${len}"
@@ -401,9 +449,14 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
                 searchStateData.postValue(true)
                 _isSearching.value = true
             }.mapParallelSafe(threadCount) {
-                val source = appDb.bookSourceDao.getBookSource(it.origin)!!
+                val isExt = it.origin.startsWith("ext_")
+                val part = if (isExt) {
+                    BookSourcePart(bookSourceUrl = it.origin, bookSourceName = it.originName)
+                } else {
+                    appDb.bookSourceDao.getBookSourcePart(it.origin)!!
+                }
                 withTimeout(60000L) {
-                    loadBookInfo(source, it.toBook())
+                    loadBookInfo(part, it.toBook())
                 }
             }.onCompletion {
                 searchStateData.postValue(false)

@@ -1183,6 +1183,7 @@ private fun BookshelfManageScreen(
 
     pendingSingleDownloadBook?.let { book ->
         DownloadSettingsDialog(
+            bookUrl = book.bookUrl,
             onDismiss = { pendingSingleDownloadBook = null },
             onConfirm = {
                 viewModel.dispatch(BookshelfManageScreenIntent.ToggleBookDownload(book))

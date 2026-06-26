@@ -1193,6 +1193,7 @@ fun BookshelfScreen(
 
     showDownloadSettingsForBook?.let { book ->
         DownloadSettingsDialog(
+            bookUrl = book.bookUrl,
             onDismiss = { showDownloadSettingsForBook = null },
             onConfirm = {
                 viewModel.downloadBooks(setOf(book.bookUrl), downloadAllChapters = true)

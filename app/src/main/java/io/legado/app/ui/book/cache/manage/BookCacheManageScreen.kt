@@ -94,8 +94,7 @@ private fun BookCacheManageScreen(
     var pendingDeleteBook by remember { mutableStateOf<BookCacheBookItem?>(null) }
     var pendingDeleteChapter by remember { mutableStateOf<Pair<BookCacheBookItem, BookCacheChapterItem>?>(null) }
     var showSettingsDialog by remember { mutableStateOf(false) }
-    var pendingStartAllDownloads by remember { mutableStateOf(false) }
-    var pendingStartBookUrl by remember { mutableStateOf<String?>(null) }
+    var configuringBookUrl by remember { mutableStateOf<String?>(null) }
     val allBooks = state.shelfBooks + state.notShelfBooks
     val hasRunningDownload = allBooks.any { it.hasActiveDownload }
     val hasDownloadTarget = allBooks.any { it.cachedCount < it.totalCount }
@@ -125,17 +124,13 @@ private fun BookCacheManageScreen(
             )
         },
         floatingActionButton = {
-            if (hasRunningDownload || hasDownloadTarget) {
+            if (hasRunningDownload) {
                 AppFloatingActionButton(
                     onClick = {
-                        if (hasRunningDownload) {
-                            onIntent(BookCacheManageIntent.StopAllDownloads)
-                        } else {
-                            pendingStartAllDownloads = true
-                        }
+                        onIntent(BookCacheManageIntent.StopAllDownloads)
                     },
-                    icon = if (hasRunningDownload) Icons.Default.Stop else Icons.Default.Download,
-                    tooltipText = if (hasRunningDownload) "Dừng tải" else "Bắt đầu tải"
+                    icon = Icons.Default.Stop,
+                    tooltipText = "Dừng tải"
                 )
             }
         }
@@ -168,15 +163,10 @@ private fun BookCacheManageScreen(
                     onToggleExpanded = { bookUrl ->
                         onIntent(BookCacheManageIntent.ToggleBookExpanded(bookUrl))
                     },
-                    onIntent = { intent ->
-                        if (intent is BookCacheManageIntent.StartBookDownload) {
-                            pendingStartBookUrl = intent.bookUrl
-                        } else {
-                            onIntent(intent)
-                        }
-                    },
+                    onIntent = onIntent,
                     onDeleteBook = { pendingDeleteBook = it },
-                    onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
+                    onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter },
+                    onConfigureSettings = { bookUrl -> configuringBookUrl = bookUrl }
                 )
                 cacheSection(
                     title = "Sách ngoài tủ",
@@ -187,15 +177,10 @@ private fun BookCacheManageScreen(
                     onToggleExpanded = { bookUrl ->
                         onIntent(BookCacheManageIntent.ToggleBookExpanded(bookUrl))
                     },
-                    onIntent = { intent ->
-                        if (intent is BookCacheManageIntent.StartBookDownload) {
-                            pendingStartBookUrl = intent.bookUrl
-                        } else {
-                            onIntent(intent)
-                        }
-                    },
+                    onIntent = onIntent,
                     onDeleteBook = { pendingDeleteBook = it },
-                    onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter }
+                    onDeleteChapter = { book, chapter -> pendingDeleteChapter = book to chapter },
+                    onConfigureSettings = { bookUrl -> configuringBookUrl = bookUrl }
                 )
             }
         }
@@ -232,23 +217,11 @@ private fun BookCacheManageScreen(
         )
     }
 
-    if (pendingStartAllDownloads) {
+    configuringBookUrl?.let { bookUrl ->
         DownloadSettingsDialog(
-            onDismiss = { pendingStartAllDownloads = false },
-            onConfirm = {
-                onIntent(BookCacheManageIntent.StartAllDownloads)
-                pendingStartAllDownloads = false
-            }
-        )
-    }
-
-    pendingStartBookUrl?.let { bookUrl ->
-        DownloadSettingsDialog(
-            onDismiss = { pendingStartBookUrl = null },
-            onConfirm = {
-                onIntent(BookCacheManageIntent.StartBookDownload(bookUrl))
-                pendingStartBookUrl = null
-            }
+            bookUrl = bookUrl,
+            onDismiss = { configuringBookUrl = null },
+            onConfirm = { configuringBookUrl = null }
         )
     }
 }
@@ -263,6 +236,7 @@ private fun LazyListScope.cacheSection(
     onIntent: (BookCacheManageIntent) -> Unit,
     onDeleteBook: (BookCacheBookItem) -> Unit,
     onDeleteChapter: (BookCacheBookItem, BookCacheChapterItem) -> Unit,
+    onConfigureSettings: (String) -> Unit,
 ) {
     item(key = "$title-header") {
         AppText(
@@ -292,6 +266,7 @@ private fun LazyListScope.cacheSection(
                     onToggleExpanded = { onToggleExpanded(bookUrl) },
                     onIntent = onIntent,
                     onDeleteBook = onDeleteBook,
+                    onConfigureSettings = onConfigureSettings,
                     modifier = Modifier.animateItem()
                 )
             }
@@ -334,6 +309,7 @@ private fun BookCacheBookCard(
     onToggleExpanded: () -> Unit,
     onIntent: (BookCacheManageIntent) -> Unit,
     onDeleteBook: (BookCacheBookItem) -> Unit,
+    onConfigureSettings: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val arrowRotation by animateFloatAsState(
@@ -421,6 +397,11 @@ private fun BookCacheBookCard(
                         }
                     )
                 }
+                SmallTonalButton(
+                    onClick = { onConfigureSettings(item.bookUrl) },
+                    icon = Icons.Default.Settings,
+                    contentDescription = "Cài đặt"
+                )
                 SmallTonalButton(
                     onClick = { onDeleteBook(item) },
                     icon = Icons.Default.Delete,

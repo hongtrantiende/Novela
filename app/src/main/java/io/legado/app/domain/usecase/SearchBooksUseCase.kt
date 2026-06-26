@@ -261,6 +261,16 @@ class SearchBooksUseCase(
         val count: Int
             get() = equalBooks.size + tagsBooks.size + containsBooks.size + otherBooks.size
 
+        private suspend fun getNormalizedKey(name: String, author: String): SearchBookKey {
+            val normName = io.legado.app.utils.TranslateUtils.translateMeta(name)
+                .lowercase()
+                .replace(Regex("[\\p{Punct}\\s]"), "")
+            val normAuthor = io.legado.app.utils.TranslateUtils.translateMeta(author)
+                .lowercase()
+                .replace(Regex("[\\p{Punct}\\s]"), "")
+            return SearchBookKey(normName, normAuthor)
+        }
+
         suspend fun merge(newBooks: List<SearchBook>): SearchBookChange {
             if (newBooks.isEmpty()) return SearchBookChange()
 
@@ -270,7 +280,7 @@ class SearchBooksUseCase(
             newBooks.forEach { newBook ->
                 coroutineContext.ensureActive()
                 val bucket = classifyBucket(newBook) ?: return@forEach
-                val key = SearchBookKey(newBook.name, newBook.author)
+                val key = getNormalizedKey(newBook.name, newBook.author)
                 val currentBook = bucket[key]
                 if (currentBook == null) {
                     bucket[key] = newBook
@@ -299,15 +309,36 @@ class SearchBooksUseCase(
          * - containsBooks: 书名或作者包含搜索词（非精确匹配）
          * - otherBooks:  其他结果（仅 DEFAULT 模式保留）
          */
-        private fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
+        private suspend fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
+            val normKeyword = io.legado.app.utils.TranslateUtils.translateMeta(keyword)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val normBookName = io.legado.app.utils.TranslateUtils.translateMeta(book.name)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val normBookAuthor = io.legado.app.utils.TranslateUtils.translateMeta(book.author)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+            val rawKeyword = keyword.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val rawBookName = book.name.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val rawBookAuthor = book.author.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+            val matchesEqual = rawBookName == rawKeyword || rawBookAuthor == rawKeyword ||
+                    normBookName == normKeyword || normBookAuthor == normKeyword
+
+            val matchesContains = rawBookName.contains(rawKeyword) || rawBookAuthor.contains(rawKeyword) ||
+                    normBookName.contains(normKeyword) || normBookAuthor.contains(normKeyword)
+
+            val kindMatches = book.kind?.let { kind ->
+                val normKind = io.legado.app.utils.TranslateUtils.translateMeta(kind).lowercase()
+                val rawKind = kind.lowercase()
+                rawKind.contains(rawKeyword) || normKind.contains(normKeyword)
+            } ?: false
+
             return when {
-                book.name.equals(keyword, ignoreCase = true) ||
-                    book.author.equals(keyword, ignoreCase = true) -> equalBooks
-                book.kind?.contains(keyword, ignoreCase = true) == true -> {
+                matchesEqual -> equalBooks
+                kindMatches -> {
                     if (matchMode != MatchMode.DEFAULT) null else tagsBooks
                 }
-                book.name.contains(keyword, ignoreCase = true) ||
-                    book.author.contains(keyword, ignoreCase = true) -> {
+                matchesContains -> {
                     if (matchMode == MatchMode.EXACT) null else containsBooks
                 }
                 matchMode != MatchMode.DEFAULT -> null
