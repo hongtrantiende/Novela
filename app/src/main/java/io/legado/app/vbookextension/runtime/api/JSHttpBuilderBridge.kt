@@ -13,6 +13,7 @@ import org.jsoup.Jsoup
 import org.mozilla.javascript.*
 import org.mozilla.javascript.Context as RhinoContext
 import java.util.concurrent.TimeUnit
+import io.legado.app.help.source.SourceVerificationHelp
 
 /**
  * JSHttpBuilderBridge — implement `Http.get(url)` / `Http.post(url)` builder pattern.
@@ -379,7 +380,8 @@ object JSHttpBuilderBridge {
                 httpClient
             }
 
-            // Không thêm X-Extension-Id — VBook gốc không thêm (API reject header lạ → 422)
+            // Thêm X-Extension-Id để AppModule nhận diện và định tuyến qua OkHttp bypass Cronet
+            headersBuilder.set("X-Extension-Id", extensionId)
 
             val request = Request.Builder()
                 .url(urlBuilder.build())
@@ -390,12 +392,58 @@ object JSHttpBuilderBridge {
             Log.d(TAG, "Http.$method: ${request.url}")
 
             ExtensionRequestRateLimiter.acquire(extensionId, appContext)
-            val response = try {
+            var response = try {
                 client.newCall(request).execute()
             } finally {
                 ExtensionRequestRateLimiter.release(extensionId)
             }
             
+            var bodyBytes = response.body?.use { it.bytes() }
+
+            if (isCloudflareChallenge(response, bodyBytes)) {
+                Log.d(TAG, "Cloudflare challenge detected for $url, launching WebView verification...")
+                try {
+                    val lastTime = lastVerificationMap[extensionId] ?: 0L
+                    val timeDiff = System.currentTimeMillis() - lastTime
+                    if (timeDiff > 300000L) {
+                        try {
+                            SourceVerificationHelp.getVerificationResult(
+                                sourceKey = "ext_$extensionId",
+                                sourceTag = "Extension",
+                                sourceType = 0, // SourceType.book
+                                url = url,
+                                title = "Verification",
+                                useBrowser = true,
+                                refetchAfterSuccess = false,
+                                html = if (bodyBytes != null) String(bodyBytes) else null
+                            )
+                            lastVerificationMap[extensionId] = System.currentTimeMillis()
+                        } catch (e: Exception) {
+                            lastVerificationMap[extensionId] = System.currentTimeMillis() - 280000L
+                            throw e
+                        }
+                    } else {
+                        Log.d(TAG, "Skipping WebView verification popup for $extensionId (cooldown: ${timeDiff}ms)")
+                    }
+
+                    val webViewCookieNew = cookieManager.getCookie(url)
+                    val newCookie = mergeCookies(webViewCookieNew, customCookie, existingCookie)
+
+                    val newRequestBuilder = request.newBuilder()
+                    if (newCookie.isNotBlank()) {
+                        newRequestBuilder.header("Cookie", newCookie)
+                    }
+
+                    Log.d(TAG, "Retrying request after verification for: $url")
+                    val retryResponse = client.newCall(newRequestBuilder.build()).execute()
+
+                    response = retryResponse
+                    bodyBytes = retryResponse.body?.use { it.bytes() }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed during automatic verification: ${e.message}", e)
+                }
+            }
+
             // Sync Set-Cookie back to WebView CookieManager
             val setCookies = response.headers("Set-Cookie")
             if (setCookies.isNotEmpty()) {
@@ -413,7 +461,6 @@ object JSHttpBuilderBridge {
                 prefs.edit().putString("ext_cookies_$extensionId", mergedCookie).apply()
             }
 
-            val bodyBytes = response.body?.use { it.bytes() }
             val contentType = response.header("content-type")
             return Pair(bodyBytes, contentType)
 
@@ -468,6 +515,26 @@ object JSHttpBuilderBridge {
 
         return blob
     }
+
+    private fun isCloudflareChallenge(response: Response, bodyBytes: ByteArray?): Boolean {
+        if (response.code == 403 || response.code == 503) {
+            bodyBytes?.let {
+                val html = String(it)
+                if (html.contains("cf-challenge") || 
+                    html.contains("window._cf_chl_opt") || 
+                    html.contains("Just a moment...") ||
+                    html.contains("challenge-running") ||
+                    html.contains("cf_challenge") ||
+                    html.contains("cdn-cgi/challenge-platform")
+                ) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private val lastVerificationMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
 }
 
 /**

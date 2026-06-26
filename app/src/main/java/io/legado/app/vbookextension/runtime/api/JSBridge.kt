@@ -16,6 +16,8 @@ import org.mozilla.javascript.ScriptableObject
 import org.mozilla.javascript.Undefined
 import org.mozilla.javascript.Wrapper
 import java.util.concurrent.TimeUnit
+import android.webkit.CookieManager
+import io.legado.app.help.source.SourceVerificationHelp
 
 /**
  * JSBridge — Cầu nối trung tâm đón đầu cuộc gọi từ core.js __(data)
@@ -567,13 +569,13 @@ class JSBridge(
 
             val prefs = context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
             val customCookie = prefs.getString("ext_cookies_$extensionId", null)
-            if (!customCookie.isNullOrBlank()) {
-                val existingCookie = headersBuilder["Cookie"]
-                if (existingCookie != null) {
-                    headersBuilder.set("Cookie", "$existingCookie; $customCookie")
-                } else {
-                    headersBuilder.add("Cookie", customCookie)
-                }
+            val cookieManager = CookieManager.getInstance()
+            val webViewCookie = cookieManager.getCookie(url)
+            val existingCookie = headersBuilder["Cookie"]
+
+            val finalCookie = mergeCookies(webViewCookie, customCookie, existingCookie)
+            if (finalCookie.isNotBlank()) {
+                headersBuilder.set("Cookie", finalCookie)
             }
 
             val customUa = prefs.getString("ext_user_agent_$extensionId", null)
@@ -584,8 +586,8 @@ class JSBridge(
                 headersBuilder.add("User-Agent", defaultUa)
             }
 
-            // Không thêm X-Extension-Id — VBook gốc không thêm header này
-            // Một số API (như SiTruyenCV) reject request có header lạ → 422
+            // Thêm X-Extension-Id để AppModule nhận diện và định tuyến qua OkHttp bypass Cronet
+            headersBuilder.set("X-Extension-Id", extensionId)
 
             val request = Request.Builder()
                 .url(urlBuilder.build())
@@ -595,8 +597,70 @@ class JSBridge(
 
             Log.d("JSBridgeFetch", "Fetching: ${request.url}\nHeaders:\n${request.headers}")
 
-            val response = httpClient.newCall(request).execute()
-            val bodyBytes = response.body?.use { it.bytes() }
+            var response = httpClient.newCall(request).execute()
+            var bodyBytes = response.body?.use { it.bytes() }
+
+            if (isCloudflareChallenge(response, bodyBytes)) {
+                Log.d("JSBridgeFetch", "Cloudflare challenge detected for $url, launching WebView verification...")
+                try {
+                    val lastTime = lastVerificationMap[extensionId] ?: 0L
+                    val timeDiff = System.currentTimeMillis() - lastTime
+                    if (timeDiff > 300000L) {
+                        try {
+                            val extName = extension?.pluginJson?.metadata?.name ?: extensionId
+                            SourceVerificationHelp.getVerificationResult(
+                                sourceKey = "ext_$extensionId",
+                                sourceTag = extName,
+                                sourceType = 0, // SourceType.book
+                                url = url,
+                                title = extName,
+                                useBrowser = true,
+                                refetchAfterSuccess = false,
+                                html = if (bodyBytes != null) String(bodyBytes) else null
+                            )
+                            lastVerificationMap[extensionId] = System.currentTimeMillis()
+                        } catch (e: Exception) {
+                            lastVerificationMap[extensionId] = System.currentTimeMillis() - 280000L
+                            throw e
+                        }
+                    } else {
+                        Log.d("JSBridgeFetch", "Skipping WebView verification popup for $extensionId (cooldown: ${timeDiff}ms)")
+                    }
+
+                    val webViewCookieNew = cookieManager.getCookie(url)
+                    val newCookie = mergeCookies(webViewCookieNew, customCookie, existingCookie)
+
+                    val newRequestBuilder = request.newBuilder()
+                    if (newCookie.isNotBlank()) {
+                        newRequestBuilder.header("Cookie", newCookie)
+                    }
+
+                    Log.d("JSBridgeFetch", "Retrying request after verification for: $url")
+                    val retryResponse = httpClient.newCall(newRequestBuilder.build()).execute()
+
+                    response = retryResponse
+                    bodyBytes = retryResponse.body?.use { it.bytes() }
+                } catch (e: Exception) {
+                    Log.e("JSBridgeFetch", "Failed during automatic verification: ${e.message}", e)
+                }
+            }
+
+            // Sync Set-Cookie back to WebView CookieManager
+            val setCookies = response.headers("Set-Cookie")
+            if (setCookies.isNotEmpty()) {
+                setCookies.forEach { cookieHeader ->
+                    cookieManager.setCookie(url, cookieHeader)
+                }
+                cookieManager.flush()
+            }
+
+            // Save updated cookies to preferences for persistence
+            val updatedCookie = cookieManager.getCookie(url)
+            val oldCookie = prefs.getString("ext_cookies_$extensionId", null)
+            val mergedCookie = mergeCookies(oldCookie, updatedCookie)
+            if (mergedCookie.isNotBlank()) {
+                prefs.edit().putString("ext_cookies_$extensionId", mergedCookie).apply()
+            }
             
             val respHeadersMap = mutableMapOf<String, String>()
             val jsonRespHeaders = org.json.JSONObject()
@@ -698,6 +762,43 @@ class JSBridge(
         activeWebSockets.clear()
         activeBrowsers.forEach { it.close() }
         activeBrowsers.clear()
+    }
+
+    private fun mergeCookies(cookie1: String?, cookie2: String?, cookie3: String? = null): String {
+        val cookieMap = mutableMapOf<String, String>()
+        listOf(cookie1, cookie2, cookie3).forEach { cookieStr ->
+            if (!cookieStr.isNullOrBlank()) {
+                cookieStr.split(";").forEach { part ->
+                    val pair = part.trim().split("=", limit = 2)
+                    if (pair.size == 2) {
+                        cookieMap[pair[0].trim()] = pair[1].trim()
+                    }
+                }
+            }
+        }
+        return cookieMap.map { "${it.key}=${it.value}" }.joinToString("; ")
+    }
+
+    private fun isCloudflareChallenge(response: Response, bodyBytes: ByteArray?): Boolean {
+        if (response.code == 403 || response.code == 503) {
+            bodyBytes?.let {
+                val html = String(it)
+                if (html.contains("cf-challenge") || 
+                    html.contains("window._cf_chl_opt") || 
+                    html.contains("Just a moment...") ||
+                    html.contains("challenge-running") ||
+                    html.contains("cf_challenge") ||
+                    html.contains("cdn-cgi/challenge-platform")
+                ) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    companion object {
+        private val lastVerificationMap = java.util.concurrent.ConcurrentHashMap<String, Long>()
     }
 }
 

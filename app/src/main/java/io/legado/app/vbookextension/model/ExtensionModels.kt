@@ -111,7 +111,7 @@ data class LoadedExtension(
         }
 
         // Tự động fallback tên miền Sáng Tác Việt nếu bị chặn ở Việt Nam
-        if (id == "sang-tac-viet" || id.startsWith("stv")) {
+        /* if (id == "sang-tac-viet" || id.startsWith("stv")) {
             finalContent = finalContent
                 .replace("https://sangtacviet.vip", "https://sangtacviet.com")
                 .replace("http://sangtacviet.vip", "https://sangtacviet.com")
@@ -121,6 +121,51 @@ data class LoadedExtension(
                 .replace("http://dns1.stv-appdomain-00000001.org", "https://sangtacviet.com")
                 .replace("http://14.225.254.182", "https://sangtacviet.com")
                 .replace("https://14.225.254.182", "https://sangtacviet.com")
+        } */
+
+        finalContent = finalContent.replace("\r\n", "\n")
+
+        // Sửa lỗi tìm kiếm tác giả và phân trang cho tiện ích Sáng Tác Việt
+        if ((id.contains("sang-tac-viet") || id.contains("stv") || id.contains("sangtacviet")) && fileName == "search.js") {
+            // 1. Thêm trường author vào đối tượng sách trả về trong stvToSearchItem
+            val oldReturn = """    return {
+        name: name,
+        link: stvBuildPublicBookUrl(bookHost, bookId, book.status || 1, base),"""
+            val newReturn = """    return {
+        name: name,
+        author: author,
+        link: stvBuildPublicBookUrl(bookHost, bookId, book.status || 1, base),"""
+            finalContent = finalContent.replace(oldReturn, newReturn)
+
+            // 2. Chuyển pageIndex sang 0-indexed
+            val oldPageIndex = """    var pageIndex = parseInt(stvTrim(page || "0"), 10);
+    if (isNaN(pageIndex) || pageIndex < 0) pageIndex = 0;"""
+            val newPageIndex = """    var pageIndex = parseInt(stvTrim(page || "1"), 10) - 1;
+    if (isNaN(pageIndex) || pageIndex < 0) pageIndex = 0;"""
+            finalContent = finalContent.replace(oldPageIndex, newPageIndex)
+
+            // 3. Giới hạn chỉ lấy 20 kết quả đầu tiên của trang để tránh trùng lặp do cơ chế tích lũy
+            val oldLoop = """    var out = [];
+    for (var i = 0; i < json.list.length; i++) {
+        out.push(stvToSearchItem(found.base, json.list[i] || {}));
+    }"""
+            val newLoop = """    var out = [];
+            var limit = Math.min(json.list.length, 20);
+            for (var i = 0; i < limit; i++) {
+                out.push(stvToSearchItem(found.base, json.list[i] || {}));
+            }"""
+            finalContent = finalContent.replace(oldLoop, newLoop)
+
+            // 4. Cập nhật chỉ số trang tiếp theo trả về (next)
+            val oldNext = """    var next = null;
+    if (out.length > 0) {
+        next = String(pageIndex + 1);
+    }"""
+            val newNext = """    var next = null;
+    if (out.length > 0) {
+        next = String(pageIndex + 2);
+    }"""
+            finalContent = finalContent.replace(oldNext, newNext)
         }
 
         return finalContent

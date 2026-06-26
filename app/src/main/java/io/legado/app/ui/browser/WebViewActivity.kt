@@ -122,6 +122,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             R.id.menu_copy_url -> sendToClip(viewModel.baseUrl)
             R.id.menu_ok -> {
                 saveExtensionCookies()
+                saveStandardCookies()
                 if (viewModel.sourceVerificationEnable) {
                     viewModel.saveVerificationResult(binding.webView) {
                         finish()
@@ -236,6 +237,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
     override fun finish() {
         saveExtensionCookies()
+        saveStandardCookies()
         SourceVerificationHelp.checkResult(viewModel.sourceOrigin)
         super.finish()
     }
@@ -383,6 +385,27 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                         editor.putString("ext_user_agent_$extId", userAgentStr)
                     }
                     editor.apply()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun saveStandardCookies() {
+        if (!viewModel.sourceOrigin.startsWith("ext_") && viewModel.sourceOrigin.isNotEmpty()) {
+            try {
+                val currentUrl = binding.webView.url ?: viewModel.baseUrl
+                CookieManager.getInstance().flush()
+                val cookieStr = CookieManager.getInstance().getCookie(currentUrl)
+                if (!cookieStr.isNullOrBlank()) {
+                    CookieStore.setCookie(currentUrl, cookieStr)
+                }
+                if (viewModel.baseUrl != currentUrl) {
+                    val baseCookieStr = CookieManager.getInstance().getCookie(viewModel.baseUrl)
+                    if (!baseCookieStr.isNullOrBlank()) {
+                        CookieStore.setCookie(viewModel.baseUrl, baseCookieStr)
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
