@@ -55,8 +55,12 @@ import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
+
 @Suppress("MemberVisibilityCanBePrivate")
-open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(application) {
+open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(application), KoinComponent {
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository by inject()
     private val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     val searchStateData = MutableLiveData<Boolean>()
@@ -105,7 +109,9 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
 
             override fun searchSuccess(searchBook: SearchBook) {
                 searchBook.releaseHtmlData()
-                appDb.searchBookDao.insert(searchBook)
+                if (!searchBook.origin.startsWith("ext_")) {
+                    appDb.searchBookDao.insert(searchBook)
+                }
                 when {
                     screenKey.isEmpty() -> searchBooks.add(searchBook)
                     searchBook.name.contains(screenKey) -> searchBooks.add(searchBook)
@@ -479,7 +485,14 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         return execute {
             val toc = tocMap[book.primaryStr()]
             if (toc != null) {
-                val source = appDb.bookSourceDao.getBookSource(book.origin)
+                val source = if (book.origin.startsWith("ext_")) {
+                    BookSource().apply {
+                        bookSourceUrl = book.origin
+                        bookSourceName = book.originName
+                    }
+                } else {
+                    appDb.bookSourceDao.getBookSource(book.origin)
+                }
                 return@execute Pair(toc, source!!)
             }
             val result = getToc(book).getOrThrow()
@@ -494,12 +507,31 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
 
     suspend fun getToc(book: Book): Result<Pair<List<BookChapter>, BookSource>> {
         return kotlin.runCatching {
-            val source = appDb.bookSourceDao.getBookSource(book.origin)
-                ?: throw NoStackTraceException("Nguồn sách không tồn tại")
-            if (book.tocUrl.isEmpty()) {
-                WebBook.getBookInfoAwait(source, book)
+            val source = if (book.origin.startsWith("ext_")) {
+                BookSource().apply {
+                    bookSourceUrl = book.origin
+                    bookSourceName = book.originName
+                }
+            } else {
+                appDb.bookSourceDao.getBookSource(book.origin)
+                    ?: throw NoStackTraceException("Nguồn sách không tồn tại")
             }
-            val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
+            val toc = if (book.origin.startsWith("ext_")) {
+                if (book.tocUrl.isEmpty()) {
+                    val detail = extensionRepository.getBookDetail(book.origin, book.bookUrl)
+                    if (detail != null) {
+                        book.tocUrl = detail.tocUrl
+                        book.intro = detail.intro
+                        book.coverUrl = detail.coverUrl
+                    }
+                }
+                extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+            } else {
+                if (book.tocUrl.isEmpty()) {
+                    WebBook.getBookInfoAwait(source, book)
+                }
+                WebBook.getChapterListAwait(source, book).getOrThrow()
+            }
             Pair(toc, source)
         }
     }

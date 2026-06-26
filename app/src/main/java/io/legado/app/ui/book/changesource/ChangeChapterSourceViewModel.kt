@@ -307,7 +307,9 @@ class ChangeChapterSourceViewModel(
                     is ChangeSourceSearchEvent.Result -> {
                         searchResults.add(event.searchBook)
                         bookMap[event.searchBook.primaryStr()] = event.searchBook
-                        io.legado.app.data.appDb.searchBookDao.insert(event.searchBook)
+                        if (!event.searchBook.origin.startsWith("ext_")) {
+                            io.legado.app.data.appDb.searchBookDao.insert(event.searchBook)
+                        }
                         filterResults()
                     }
 

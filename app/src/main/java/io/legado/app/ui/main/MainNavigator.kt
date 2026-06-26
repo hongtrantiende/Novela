@@ -38,7 +38,8 @@ object MainNavigator {
             MainRouteSettingsCustomTheme,
             MainRouteSettingsThemeManage,
             MainRouteSettingsDownloadCache,
-            MainRouteSettingsTranslation -> {
+            MainRouteSettingsTranslation,
+            MainRouteSettingsQuickTranslate -> {
                 backStack.clear()
                 backStack.add(MainRouteHome)
                 backStack.add(MainRouteSettings)
@@ -253,6 +254,7 @@ object MainNavigator {
             MainRouteConst.ROUTE_SETTINGS_CUSTOM_THEME -> MainRouteSettingsCustomTheme
             MainRouteConst.ROUTE_SETTINGS_DOWNLOAD_CACHE -> MainRouteSettingsDownloadCache
             MainRouteConst.ROUTE_SETTINGS_TRANSLATION -> MainRouteSettingsTranslation
+            MainRouteConst.ROUTE_SETTINGS_QUICK_TRANSLATE -> MainRouteSettingsQuickTranslate
             MainRouteConst.ROUTE_IMPORT_LOCAL -> MainRouteImportLocal
             MainRouteConst.ROUTE_IMPORT_REMOTE -> MainRouteImportRemote
             MainRouteConst.ROUTE_CACHE -> MainRouteCache(

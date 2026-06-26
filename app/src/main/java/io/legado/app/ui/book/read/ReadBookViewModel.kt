@@ -137,6 +137,7 @@ class ReadBookViewModel(
     private val readAloudSettingsRepository: ReadAloudSettingsRepository,
     private val localPreferencesRepository: LocalPreferencesRepository,
     private val highlightRuleRepository: HighlightRuleRepository,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository,
 ) : BaseViewModel(application), ReadBook.CallBack {
 
     // --- MVI State ---
@@ -325,6 +326,10 @@ class ReadBookViewModel(
             is ReadBookIntent.RefreshContentAfter -> refreshContentAfter()
             is ReadBookIntent.ChangeReplaceRule -> changeReplaceRule(intent.enabled)
             is ReadBookIntent.ToggleTranslation -> toggleTranslation()
+            is ReadBookIntent.SelectTranslationSource -> {
+                _uiState.update { it.copy(activeDialog = null) }
+                setTranslationSourceMode(intent.mode)
+            }
             is ReadBookIntent.ChangeSourceBook -> changeTo(intent.book)
             is ReadBookIntent.ChangeSource -> changeTo(intent.book, intent.toc)
             is ReadBookIntent.AddSourceAsNewBook -> addToBookshelf(intent.book, intent.toc)
@@ -2250,12 +2255,24 @@ class ReadBookViewModel(
         changeSourceCoroutine?.cancel()
         changeSourceCoroutine = execute {
             ReadBook.upMsg(context.getString(R.string.loading))
-            val source = appDb.bookSourceDao.getBookSource(book.origin)
-                ?: throw NoStackTraceException("Nguồn sách không tồn tại")
-            if (book.tocUrl.isEmpty()) {
-                WebBook.getBookInfoAwait(source, book)
+            val toc = if (book.origin.startsWith("ext_")) {
+                if (book.tocUrl.isEmpty()) {
+                    val detail = extensionRepository.getBookDetail(book.origin, book.bookUrl)
+                    if (detail != null) {
+                        book.tocUrl = detail.tocUrl
+                        book.intro = detail.intro
+                        book.coverUrl = detail.coverUrl
+                    }
+                }
+                extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+            } else {
+                val source = appDb.bookSourceDao.getBookSource(book.origin)
+                    ?: throw NoStackTraceException("Nguồn sách không tồn tại")
+                if (book.tocUrl.isEmpty()) {
+                    WebBook.getBookInfoAwait(source, book)
+                }
+                WebBook.getChapterListAwait(source, book).getOrThrow()
             }
-            val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
             applyChangeSource(book, toc)
         }.onError {
             AppLog.put("Đổi nguồn thất bại\n$it", it, true)
@@ -3839,9 +3856,32 @@ class ReadBookViewModel(
     }
 
     private fun toggleTranslation() {
+        _uiState.update { it.copy(activeDialog = ReadBookDialog.ChooseTranslationSource) }
+    }
+
+    private fun setTranslationSourceMode(mode: Int) {
         val book = ReadBook.book ?: return
-        book.setTranslationMode(!book.getTranslationMode())
+        when (mode) {
+            1 -> { // Dictionary
+                io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled = true
+                io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled = false
+                book.setTranslationMode(false)
+            }
+            2 -> { // API
+                io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled = false
+                io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled = true
+                io.legado.app.ui.config.translation.TranslationConfig.llmProvider = "sangtacviet"
+                book.setTranslationMode(true)
+            }
+            else -> { // Off
+                io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled = false
+                io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled = false
+                book.setTranslationMode(false)
+            }
+        }
         book.save()
+        ReadBook.clearTextChapter()
+        io.legado.app.utils.TranslateUtils.clearCache()
         ReadBook.loadContent(false)
     }
 

@@ -226,7 +226,16 @@ fun MainActivity.mainEntryProvider(
     }
 
     entry<MainRouteSettingsTranslation> {
-        TranslationConfigScreen(onBackClick = { onNavigateBack() })
+        TranslationConfigScreen(
+            onBackClick = { onNavigateBack() },
+            onNavigateToQuickTranslate = { onNavigateToRoute(MainRouteSettingsQuickTranslate) }
+        )
+    }
+
+    entry<MainRouteSettingsQuickTranslate> {
+        io.legado.app.ui.config.translation.QuickTranslateSettingsScreen(
+            onBackClick = { onNavigateBack() }
+        )
     }
 
     entry<MainRouteSettingsLabConfig> {
@@ -675,6 +684,7 @@ fun MainActivity.mainEntryProvider(
                     )
                 )
             },
+            onNavigateToTranslationSettings = { onNavigateToRoute(MainRouteSettingsTranslation) },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
         )

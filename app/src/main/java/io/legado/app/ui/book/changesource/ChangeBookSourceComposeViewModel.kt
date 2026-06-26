@@ -164,8 +164,10 @@ class ChangeBookSourceComposeViewModel(
                     is ChangeSourceSearchEvent.Result -> {
                         searchResults.add(event.searchBook)
                         bookMap[event.searchBook.primaryStr()] = event.searchBook
-                        // 持久化到 DB
-                        io.legado.app.data.appDb.searchBookDao.insert(event.searchBook)
+                        // 持久化到 DB (chỉ lưu nguồn thường, không lưu nguồn extension vì dính FK constraint)
+                        if (!event.searchBook.origin.startsWith("ext_")) {
+                            io.legado.app.data.appDb.searchBookDao.insert(event.searchBook)
+                        }
                         filterResults()
                     }
 

@@ -286,6 +286,7 @@ sealed interface ReadBookIntent {
     data object RefreshContentAfter : ReadBookIntent
     data class ChangeReplaceRule(val enabled: Boolean) : ReadBookIntent
     data object ToggleTranslation : ReadBookIntent
+    data class SelectTranslationSource(val mode: Int) : ReadBookIntent
 
     // Change source
     data class ChangeSourceBook(val book: Book) : ReadBookIntent
@@ -709,6 +710,7 @@ sealed interface ReadBookDialog {
     data object ConfirmSkipToChapter : ReadBookDialog
     data class ConfirmChapterPay(val chapterTitle: String) : ReadBookDialog
     data class ConfirmAddToBookshelf(val bookName: String) : ReadBookDialog
+    data object ChooseTranslationSource : ReadBookDialog
 }
 
 /**

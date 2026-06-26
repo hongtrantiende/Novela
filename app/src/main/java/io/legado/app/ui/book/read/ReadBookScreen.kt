@@ -11,6 +11,21 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.config.translation.TranslationConfig
 import io.legado.app.R
 import io.legado.app.data.repository.ReadSettingsRepository
 import io.legado.app.help.config.ReadBookConfig
@@ -70,6 +85,7 @@ fun ReadBookScreen(
     val skipDialog = state.activeDialog as? ReadBookDialog.ConfirmSkipToChapter
     val payDialog = state.activeDialog as? ReadBookDialog.ConfirmChapterPay
     val addToBookshelfDialog = state.activeDialog as? ReadBookDialog.ConfirmAddToBookshelf
+    val chooseTranslationSourceDialog = state.activeDialog as? ReadBookDialog.ChooseTranslationSource
 
     AppAlertDialog(
         show = restoreDialog != null,
@@ -142,6 +158,78 @@ fun ReadBookScreen(
         onConfirm = { onIntent(ReadBookIntent.ConfirmAddCurrentBookToBookshelf) },
         dismissText = stringResource(R.string.cancel),
         onDismiss = { onIntent(ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf) },
+    )
+
+    AppAlertDialog(
+        show = chooseTranslationSourceDialog != null,
+        onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
+        title = "Chọn nguồn dịch",
+        dismissText = stringResource(R.string.cancel),
+        onDismiss = { onIntent(ReadBookIntent.DismissDialog) },
+        content = {
+            val book = state.book
+            val currentMode = when {
+                TranslationConfig.isGlobalTranslateEnabled -> 1
+                book?.getTranslationMode() == true && TranslationConfig.llmProvider == "sangtacviet" -> 2
+                else -> 0
+            }
+            
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onIntent(ReadBookIntent.SelectTranslationSource(0))
+                        }
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = currentMode == 0,
+                        onClick = { onIntent(ReadBookIntent.SelectTranslationSource(0)) }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Tắt dịch", color = LegadoTheme.colorScheme.onSurface)
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onIntent(ReadBookIntent.SelectTranslationSource(1))
+                        }
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = currentMode == 1,
+                        onClick = { onIntent(ReadBookIntent.SelectTranslationSource(1)) }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Dịch từ điển (VietPhrase)", color = LegadoTheme.colorScheme.onSurface)
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onIntent(ReadBookIntent.SelectTranslationSource(2))
+                        }
+                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
+                        selected = currentMode == 2,
+                        onClick = { onIntent(ReadBookIntent.SelectTranslationSource(2)) }
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Dịch bằng API (Sáng Tác Việt)", color = LegadoTheme.colorScheme.onSurface)
+                }
+            }
+        }
     )
 
     // AppModalBottomSheet-based sheets — always composed, controlled by show flag

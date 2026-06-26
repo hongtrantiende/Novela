@@ -60,6 +60,7 @@ fun SearchBookListItem(
     sharedCoverKey: String? = null,
     sourceCount: Int? = null,
 ) {
+    val extId = remember(book.origin) { if (book.origin.startsWith("ext_")) book.origin.substringAfter("ext_") else null }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -112,7 +113,7 @@ fun SearchBookListItem(
                 .weight(1f)
                 .align(Alignment.CenterVertically)
         ) {
-            val translatedName by translateAsState(book.name)
+            val translatedName by translateAsState(book.name, extId = extId)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 AppText(
                     text = translatedName,
@@ -139,15 +140,15 @@ fun SearchBookListItem(
                 val rawStatus = authorParts.getOrNull(1) ?: book.latestChapterTitle
                 val rawSource = authorParts.getOrNull(2) ?: book.originName
 
-                val translatedAuthor by translateAsState(rawAuthor)
-                val translatedStatus by translateAsState(rawStatus ?: "")
-                val translatedSource by translateAsState(rawSource)
+                val translatedAuthor by translateAsState(rawAuthor, extId = extId)
+                val translatedStatus by translateAsState(rawStatus ?: "", extId = extId)
+                val translatedSource by translateAsState(rawSource, extId = extId)
                 
                 val rawGenre = book.kind ?: ""
-                val translatedGenre by translateAsState(rawGenre)
+                val translatedGenre by translateAsState(rawGenre, extId = extId)
                 
                 val rawWordCount = book.wordCount ?: ""
-                val translatedWordCount by translateAsState(rawWordCount)
+                val translatedWordCount by translateAsState(rawWordCount, extId = extId)
 
                 val subtitleText = remember(translatedAuthor, translatedStatus, translatedSource, translatedGenre, translatedWordCount) {
                     val list = mutableListOf<String>()
@@ -175,7 +176,7 @@ fun SearchBookListItem(
                 )
             } else {
                 Row {
-                    val translatedAuthor by translateAsState(book.author)
+                    val translatedAuthor by translateAsState(book.author, extId = extId)
                     AppText(
                         text = translatedAuthor,
                         style = LegadoTheme.typography.bodySmall,
@@ -191,7 +192,7 @@ fun SearchBookListItem(
                             maxLines = 1,
                         )
 
-                        val translatedLatest by translateAsState(latestChapter)
+                        val translatedLatest by translateAsState(latestChapter, extId = extId)
                         AppText(
                             text = "Mới nhất: $translatedLatest",
                             style = LegadoTheme.typography.bodySmall,
@@ -207,7 +208,7 @@ fun SearchBookListItem(
 
             val intro = book.intro?.replace("\\s+".toRegex(), " ")?.trim() ?: ""
             if (intro.isNotEmpty()) {
-                val translatedIntro by translateAsState(intro, isMeta = false)
+                val translatedIntro by translateAsState(intro, isMeta = false, extId = extId)
                 AppText(
                     text = translatedIntro,
                     style = LegadoTheme.typography.labelSmall,
@@ -229,7 +230,7 @@ fun SearchBookListItem(
                         .fadingEdge(lazyListState, gradientWidth = 8.dp)
                 ) {
                     items(kinds) { kind ->
-                        val translatedKind by translateAsState(kind)
+                        val translatedKind by translateAsState(kind, extId = extId)
                         SearchBookTagChip(text = translatedKind)
                         Spacer(modifier = Modifier.width(6.dp))
                     }
@@ -251,6 +252,7 @@ fun SearchBookGridItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
 ) {
+    val extId = remember(book.origin) { if (book.origin.startsWith("ext_")) book.origin.substringAfter("ext_") else null }
     Column(
         modifier = modifier
             .width(IntrinsicSize.Min)
@@ -301,7 +303,7 @@ fun SearchBookGridItem(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp, vertical = 4.dp)
         ) {
-            val translatedName by translateAsState(book.name)
+            val translatedName by translateAsState(book.name, extId = extId)
             AppText(
                 text = translatedName,
                 style = LegadoTheme.typography.bodySmall,

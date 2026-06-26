@@ -396,7 +396,7 @@ class ExploreViewModel(
                         sourceUrl = source.bookSourceUrl,
                         infoMap = infoMap
                     )
-                    val translatedName = if (io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled) {
+                    val translatedName = if (io.legado.app.utils.TranslateUtils.isTranslateEnabled()) {
                         io.legado.app.utils.TranslateUtils.translateMeta(originalName)
                     } else {
                         originalName

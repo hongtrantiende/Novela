@@ -69,6 +69,9 @@ class LlmTranslateRepositoryImpl : LlmGateway {
                         Result.failure(Exception("Empty VietPhrase translation result"))
                     }
                 }
+                TranslationConstants.PROVIDER_SANGTACVIET -> {
+                    translateWithSangTacViet(text)
+                }
 
                 else -> Result.failure(IllegalArgumentException("Unknown provider: $provider"))
             }
@@ -360,6 +363,28 @@ $terms
                 append(dictionaryInstruction)
             }
             append("\n ").append(outputFormat)
+        }
+    }
+
+    private suspend fun translateWithSangTacViet(text: String): Result<String> {
+        val formBody = okhttp3.FormBody.Builder()
+            .add("sajax", "trans")
+            .add("content", text)
+            .build()
+        val response = okHttpClient.newCallStrResponse {
+            url("https://comic.sangtacvietcdn.xyz/tsm.php?cdn=/")
+            post(formBody)
+            addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+        }
+        return if (response.isSuccessful()) {
+            val bodyStr = response.body
+            if (!bodyStr.isNullOrEmpty()) {
+                Result.success(bodyStr)
+            } else {
+                Result.failure(Exception("Empty SangTacViet translation result"))
+            }
+        } else {
+            Result.failure(Exception("HTTP ${response.code()}: ${response.message()}"))
         }
     }
 }

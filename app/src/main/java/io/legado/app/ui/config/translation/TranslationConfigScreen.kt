@@ -24,11 +24,14 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 
+import io.legado.app.ui.widget.components.settingItem.ClickableSettingItem
+
 @SuppressLint("RememberReturnType")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TranslationConfigScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    onNavigateToQuickTranslate: () -> Unit
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
@@ -53,6 +56,16 @@ fun TranslationConfigScreen(
                 bottom = 120.dp
             )
         ) {
+            item {
+                SplicedColumnGroup(title = "Dịch từ điển") {
+                    ClickableSettingItem(
+                        title = "Quick Translate (Từ điển)",
+                        description = "Cấu hình ưu tiên dịch, luật nhân và quản lý từ điển",
+                        onClick = onNavigateToQuickTranslate
+                    )
+                }
+            }
+
             item {
                 SplicedColumnGroup(title = stringResource(R.string.translation_provider)) {
                     DropdownListSettingItem(

@@ -90,12 +90,26 @@ import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.ui.platform.LocalContext
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.saveable.rememberSaveable
 import io.legado.app.ui.widget.components.SearchBar
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.text.style.TextOverflow
+import android.content.Context
 
 private enum class BookFilterState(val id: Int) {
     SHOW_ALL(0),
@@ -119,11 +133,25 @@ fun ExploreShowScreen(
     title: String = "",
     onBack: () -> Unit,
     onBookClick: (SearchBook, String?) -> Unit,
+    onNavigateToTranslationSettings: () -> Unit = {},
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    val extId = remember(state.sourceUrl) {
+        val sUrl = state.sourceUrl
+        if (sUrl?.startsWith("ext_") == true) {
+            sUrl.substringAfter("ext_")
+        } else {
+            ""
+        }
+    }
+    var translationMode by remember(extId) {
+        mutableStateOf(if (extId.isNotEmpty()) context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE).getString("ext_translation_mode_$extId", "Gốc") ?: "Gốc" else "Gốc")
+    }
+    var showTranslationDialog by remember { mutableStateOf(false) }
 
     var isSearchMode by rememberSaveable { mutableStateOf(false) }
     var queryInput by rememberSaveable { mutableStateOf("") }
@@ -281,7 +309,7 @@ fun ExploreShowScreen(
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             val rawTitle = state.selectedKindTitle ?: title
-            val translatedTitle by io.legado.app.utils.translateAsState(rawTitle)
+            val translatedTitle by io.legado.app.utils.translateAsState(rawTitle, extId = extId.takeIf { it.isNotEmpty() })
             GlassMediumFlexibleTopAppBar(
                 modifier = Modifier.responsiveHazeEffect(state = hazeState),
                 title = if (isSearchMode) "Tìm kiếm" else translatedTitle,
@@ -298,6 +326,49 @@ fun ExploreShowScreen(
                 },
                 actions = {
                     if (!isSearchMode) {
+                        if (extId.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .clip(CircleShape)
+                                    .background(io.legado.app.ui.theme.LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .border(
+                                        width = 1.dp,
+                                        color = io.legado.app.ui.theme.LegadoTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                        shape = CircleShape
+                                    )
+                                    .clickable { showTranslationDialog = true }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Translate,
+                                        contentDescription = null,
+                                        tint = io.legado.app.ui.theme.LegadoTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    AppText(
+                                        text = if (translationMode == "Gốc") "Gốc" else "Dịch",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = io.legado.app.ui.theme.LegadoTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.KeyboardArrowDown,
+                                        contentDescription = null,
+                                        tint = io.legado.app.ui.theme.LegadoTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                            }
+                        }
+
                         if (state.showSearchIcon) {
                             TopBarActionButton(
                                 onClick = {
@@ -409,6 +480,7 @@ fun ExploreShowScreen(
                         ExploreCategoryChip(
                             name = kind.title,
                             selected = selected,
+                            extId = extId.takeIf { it.isNotEmpty() },
                             onClick = {
                                 viewModel.onIntent(ExploreShowIntent.SwitchKind(kind))
                             }
@@ -591,6 +663,321 @@ fun ExploreShowScreen(
             onDismiss = { showDeleteDialogFor = null }
         )
     }
+
+    if (showTranslationDialog && extId.isNotEmpty()) {
+        val prefs = remember(extId) { context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE) }
+        var tempSource by remember(extId, showTranslationDialog) {
+            mutableStateOf(prefs.getString("ext_translate_source_$extId", "Tiếng Trung") ?: "Tiếng Trung")
+        }
+        var tempTarget by remember(extId, showTranslationDialog) {
+            mutableStateOf(prefs.getString("ext_translate_target_$extId", "Việt (VP)") ?: "Việt (VP)")
+        }
+        var tempEngine by remember(extId, showTranslationDialog) {
+            mutableStateOf(prefs.getString("ext_translate_engine_$extId", "QT") ?: "QT")
+        }
+        var tempScope by remember(extId, showTranslationDialog) {
+            mutableStateOf(prefs.getString("ext_translate_scope_$extId", "Tất cả") ?: "Tất cả")
+        }
+        var tempEnabled by remember(extId, showTranslationDialog) {
+            mutableStateOf(translationMode != "Gốc")
+        }
+
+        var sourceMenuExpanded by remember { mutableStateOf(false) }
+        var targetMenuExpanded by remember { mutableStateOf(false) }
+        var engineMenuExpanded by remember { mutableStateOf(false) }
+        var scopeMenuExpanded by remember { mutableStateOf(false) }
+
+        Dialog(
+            onDismissRequest = { showTranslationDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(360.dp)
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(LegadoTheme.colorScheme.surfaceContainerHigh)
+                    .border(1.dp, LegadoTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(28.dp))
+                    .padding(20.dp)
+            ) {
+                Column {
+                    // Header Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { showTranslationDialog = false }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = LegadoTheme.colorScheme.onSurface
+                            )
+                        }
+                        AppText(
+                            text = "Dịch",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = LegadoTheme.colorScheme.onSurface
+                        )
+                        IconButton(onClick = {
+                            showTranslationDialog = false
+                            onNavigateToTranslationSettings()
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = LegadoTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Row 1: Source Language -> Switch -> Target Language
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Source Dropdown
+                        Box(modifier = Modifier.weight(1f)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .clickable { sourceMenuExpanded = true }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AppText(
+                                    text = tempSource,
+                                    color = LegadoTheme.colorScheme.onSurface,
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = sourceMenuExpanded,
+                                onDismissRequest = { sourceMenuExpanded = false }
+                            ) {
+                                listOf("Tiếng Trung", "Tự động nhận diện", "Tiếng Anh", "Tiếng Nhật", "Tiếng Hàn").forEach { lang ->
+                                    DropdownMenuItem(
+                                        text = { AppText(lang) },
+                                        onClick = {
+                                            tempSource = lang
+                                            sourceMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Toggle Switch
+                        Switch(
+                            checked = tempEnabled,
+                            onCheckedChange = { tempEnabled = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = LegadoTheme.colorScheme.primary,
+                                checkedTrackColor = LegadoTheme.colorScheme.primaryContainer,
+                                uncheckedThumbColor = LegadoTheme.colorScheme.outline,
+                                uncheckedTrackColor = LegadoTheme.colorScheme.surfaceVariant
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        // Target Dropdown
+                        Box(modifier = Modifier.weight(1f)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .clickable { targetMenuExpanded = true }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AppText(
+                                    text = tempTarget,
+                                    color = LegadoTheme.colorScheme.onSurface,
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = targetMenuExpanded,
+                                onDismissRequest = { targetMenuExpanded = false }
+                            ) {
+                                listOf("Việt (VP)", "Hán Việt", "Việt (Dịch)").forEach { lang ->
+                                    DropdownMenuItem(
+                                        text = { AppText(lang) },
+                                        onClick = {
+                                            tempTarget = lang
+                                            targetMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Row 2: Engine Selector -> Scope Selector + Save Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Engine Selector
+                        Box(modifier = Modifier.weight(1.1f)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .clickable { engineMenuExpanded = true }
+                                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .background(LegadoTheme.colorScheme.primary.copy(alpha = 0.2f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Book,
+                                        contentDescription = null,
+                                        tint = LegadoTheme.colorScheme.primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
+                                AppText(
+                                    text = tempEngine,
+                                    color = LegadoTheme.colorScheme.onSurface,
+                                    fontSize = 14.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = engineMenuExpanded,
+                                onDismissRequest = { engineMenuExpanded = false }
+                            ) {
+                                listOf("QT", "Google", "Bắc Cực Tinh", "GGChan").forEach { eng ->
+                                    DropdownMenuItem(
+                                        text = { AppText(eng) },
+                                        onClick = {
+                                            tempEngine = eng
+                                            engineMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Scope Dropdown
+                        Box(modifier = Modifier.weight(1f)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .clickable { scopeMenuExpanded = true }
+                                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                AppText(
+                                    text = tempScope,
+                                    color = LegadoTheme.colorScheme.onSurface,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = scopeMenuExpanded,
+                                onDismissRequest = { scopeMenuExpanded = false }
+                            ) {
+                                listOf("Tất cả", "Tên truyện", "Nội dung").forEach { scp ->
+                                    DropdownMenuItem(
+                                        text = { AppText(scp) },
+                                        onClick = {
+                                            tempScope = scp
+                                            scopeMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Save button
+                        Button(
+                            onClick = {
+                                val finalMode = if (tempEnabled) tempTarget else "Gốc"
+                                prefs.edit().apply {
+                                    putString("ext_translation_mode_$extId", finalMode)
+                                    putString("ext_translate_source_$extId", tempSource)
+                                    putString("ext_translate_target_$extId", tempTarget)
+                                    putString("ext_translate_engine_$extId", tempEngine)
+                                    putString("ext_translate_scope_$extId", tempScope)
+                                }.apply()
+                                translationMode = finalMode
+                                showTranslationDialog = false
+                                viewModel.onIntent(ExploreShowIntent.Refresh)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = LegadoTheme.colorScheme.primary,
+                                contentColor = LegadoTheme.colorScheme.onPrimary
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                        ) {
+                            AppText("Lưu", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -662,9 +1049,10 @@ fun ExploreCategoryChip(
     name: String,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    extId: String? = null,
 ) {
-    val translatedName by io.legado.app.utils.translateAsState(name)
+    val translatedName by io.legado.app.utils.translateAsState(name, extId = extId)
     val containerColor = if (selected) LegadoTheme.colorScheme.primaryContainer
                          else LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     val contentColor = if (selected) LegadoTheme.colorScheme.onPrimaryContainer

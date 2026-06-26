@@ -152,7 +152,9 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
         if (searchBook.name == name && searchBook.author == author
             && !searchBook.coverUrl.isNullOrEmpty()
         ) {
-            appDb.searchBookDao.insert(searchBook)
+            if (!searchBook.origin.startsWith("ext_")) {
+                appDb.searchBookDao.insert(searchBook)
+            }
             searchSuccess?.invoke(searchBook)
         }
     }

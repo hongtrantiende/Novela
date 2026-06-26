@@ -75,6 +75,7 @@ object TranslationConfig {
     // Delegate constants to domain layer
     const val PROVIDER_OPENAI = TranslationConstants.PROVIDER_OPENAI
     const val PROVIDER_GOOGLE = TranslationConstants.PROVIDER_GOOGLE
+    const val PROVIDER_SANGTACVIET = TranslationConstants.PROVIDER_SANGTACVIET
     val providerDisplayNames get() = TranslationConstants.providerDisplayNames
     val providerValues get() = TranslationConstants.providerValues
     val targetLanguages get() = TranslationConstants.targetLanguages

@@ -219,7 +219,7 @@ class ExploreShowViewModel(
     }
 
     private fun initData(incomingSourceUrl: String, incomingExploreUrl: String?) {
-        if (initialized && sourceUrl == incomingSourceUrl && exploreUrl == incomingExploreUrl) {
+        if (initialized && sourceUrl == incomingSourceUrl && (incomingExploreUrl == null || exploreUrl == incomingExploreUrl)) {
             return
         }
         initialized = true

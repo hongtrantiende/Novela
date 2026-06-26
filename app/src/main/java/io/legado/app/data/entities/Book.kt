@@ -298,6 +298,11 @@ data class Book(
     }
 
     fun getTranslationMode(): Boolean {
+        if (io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
+            io.legado.app.ui.config.translation.TranslationConfig.llmProvider == "sangtacviet"
+        ) {
+            return true
+        }
         return config.translationMode
     }
 

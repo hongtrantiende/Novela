@@ -170,7 +170,9 @@ class AddToBookshelfDialog() : BaseDialogFragment(R.layout.dialog_add_to_bookshe
         fun saveSearchBook(book: Book, success: () -> Unit) {
             execute {
                 val searchBook = book.toSearchBook()
-                appDb.searchBookDao.insert(searchBook)
+                if (!searchBook.origin.startsWith("ext_")) {
+                    appDb.searchBookDao.insert(searchBook)
+                }
                 searchBook
             }.onSuccess {
                 success.invoke()

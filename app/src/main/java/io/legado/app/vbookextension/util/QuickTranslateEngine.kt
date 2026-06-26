@@ -488,6 +488,69 @@ object QuickTranslateEngine {
         }
     }
 
+    fun downloadAndUnzipDict(
+        context: Context,
+        urlString: String,
+        onProgress: (String) -> Unit = {}
+    ): Boolean {
+        val dictDir = File(context.filesDir, "dict")
+        if (!dictDir.exists()) {
+            dictDir.mkdirs()
+        }
+        val tempZipFile = File(context.cacheDir, "temp_dict.zip")
+        return try {
+            onProgress("Đang kết nối...")
+            val request = okhttp3.Request.Builder().url(urlString).build()
+            val response = io.legado.app.help.http.okHttpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                onProgress("Lỗi kết nối: ${response.code}")
+                return false
+            }
+            
+            val body = response.body
+            onProgress("Đang tải dữ liệu...")
+            body.byteStream().use { inputStream ->
+                FileOutputStream(tempZipFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+            
+            onProgress("Đang giải nén...")
+            tempZipFile.inputStream().use { inputStream ->
+                ZipInputStream(inputStream).use { zipInput ->
+                    var entry = zipInput.nextEntry
+                    while (entry != null) {
+                        val fileName = entry.name
+                        val file = File(dictDir, fileName)
+                        
+                        if ((fileName == "Name.txt" || fileName == "Pronouns.txt") && file.exists() && file.length() > 0L) {
+                            val tempFile = File(dictDir, "$fileName.tmp")
+                            FileOutputStream(tempFile).use { output ->
+                                zipInput.copyTo(output)
+                            }
+                            mergeDictFiles(file, tempFile)
+                            tempFile.delete()
+                        } else {
+                            FileOutputStream(file).use { output ->
+                                zipInput.copyTo(output)
+                            }
+                        }
+                        
+                        zipInput.closeEntry()
+                        entry = zipInput.nextEntry
+                    }
+                }
+            }
+            tempZipFile.delete()
+            init(context, force = true)
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Lỗi tải và giải nén từ điển từ URL: ${e.message}", e)
+            tempZipFile.delete()
+            false
+        }
+    }
+
     fun copyDictFromAssetsIfNeed(context: Context) {
         val dictDir = File(context.filesDir, "dict")
         val vietPhraseFile = File(dictDir, "VietPhrase.txt")
@@ -497,3 +560,4 @@ object QuickTranslateEngine {
         }
     }
 }
+
