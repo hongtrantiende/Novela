@@ -8,6 +8,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.database.StandaloneDatabaseProvider
@@ -330,7 +331,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 if (nextChapterOffset in nextContentList.indices) {
                                     val content = nextContentList[nextChapterOffset]
                                     val titleMd5 = MD5Utils.md5Encode16(nextChapter.title)
-                                    val contentMd5 = MD5Utils.md5Encode16("${httpTts.url}-|-$speechRate-|-$content")
+                                    val contentMd5 = MD5Utils.md5Encode16("${httpTts.url}-|-10-|-$content")
                                     val fileName = "${titleMd5}_${contentMd5}"
                                     val speakText = content.replace(AppPattern.notReadAloudRegex, "")
                                     
@@ -357,35 +358,30 @@ class HttpReadAloudService : BaseReadAloudService(),
     private suspend fun preDownloadAudios(httpTts: HttpTTS) {
         val book = ReadBook.book ?: return
         val currentIdx = ReadBook.durChapterIndex
-        val limit = ReadConfig.audioPreDownloadNum
         
         try {
-            for (i in 1..limit) {
+            currentCoroutineContext().ensureActive()
+            
+            val targetIndex = currentIdx + 1
+            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: return
+            
+            val contentString = getChapterContent(book, chapter)
+            if (contentString.isNullOrEmpty()) return
+
+            val contentList = contentString.split("\n").filter { it.isNotEmpty() }.take(10)
+
+            contentList.forEach { content ->
                 currentCoroutineContext().ensureActive()
                 
-                val targetIndex = currentIdx + i
-                val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
+                val titleMd5 = MD5Utils.md5Encode16(chapter.title)
+                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-10-|-$content")
+                val fileName = "${titleMd5}_${contentMd5}"
                 
-                // 1. 获取内容
-                val contentString = getChapterContent(book, chapter)
-                if (contentString.isNullOrEmpty()) continue // 内容没下载，跳过
-
-                val contentList = contentString.split("\n").filter { it.isNotEmpty() }
-
-                contentList.forEach { content ->
-                    currentCoroutineContext().ensureActive()
-                    
-                    // 2. 生成文件名：必须用 chapter.title (数据库原始标题)
-                    val titleMd5 = MD5Utils.md5Encode16(chapter.title)
-                    val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
-                    val fileName = "${titleMd5}_${contentMd5}"
-                    
-                    val speakText = content.replace(AppPattern.notReadAloudRegex, "")
-                    if (speakText.isEmpty()) {
-                        createSilentSound(fileName)
-                    } else {
-                        downloadSpeakFile(httpTts, fileName, speakText, waitIfDownloading = false)
-                    }
+                val speakText = content.replace(AppPattern.notReadAloudRegex, "")
+                if (speakText.isEmpty()) {
+                    createSilentSound(fileName)
+                } else {
+                    downloadSpeakFile(httpTts, fileName, speakText, waitIfDownloading = false)
                 }
             }
         } catch (e: Exception) {
@@ -451,31 +447,27 @@ class HttpReadAloudService : BaseReadAloudService(),
     ) {
         val book = ReadBook.book ?: return
         val currentIdx = ReadBook.durChapterIndex
-        val limit = ReadConfig.audioPreDownloadNum
         
         try {
-            for (i in 1..limit) {
-                currentCoroutineContext().ensureActive()
-                val targetIndex = currentIdx + i
-                val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: break
-                
-                val contentString = getChapterContent(book, chapter)
-                if (contentString.isNullOrEmpty()) continue
+            currentCoroutineContext().ensureActive()
+            val targetIndex = currentIdx + 1
+            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, targetIndex) ?: return
+            
+            val contentString = getChapterContent(book, chapter)
+            if (contentString.isNullOrEmpty()) return
 
-                val contentList = contentString.split("\n").filter { it.isNotEmpty() }
+            val contentList = contentString.split("\n").filter { it.isNotEmpty() }.take(10)
+            
+            contentList.forEach { content ->
+                currentCoroutineContext().ensureActive()
+                val titleMd5 = MD5Utils.md5Encode16(chapter.title)
+                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-10-|-$content")
+                val fileName = "${titleMd5}_${contentMd5}"
                 
-                contentList.forEach { content ->
-                    currentCoroutineContext().ensureActive()
-                    // 同样使用数据库标题，保持一致
-                    val titleMd5 = MD5Utils.md5Encode16(chapter.title)
-                    val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
-                    val fileName = "${titleMd5}_${contentMd5}"
-                    
-                    val speakText = content.replace(AppPattern.notReadAloudRegex, "")
-                    val dataSourceFactory = createDataSourceFactory(httpTts, speakText)
-                    val downloader = createDownloader(dataSourceFactory, fileName)
-                    downloaderChannel.send(downloader)
-                }
+                val speakText = content.replace(AppPattern.notReadAloudRegex, "")
+                val dataSourceFactory = createDataSourceFactory(httpTts, speakText)
+                val downloader = createDownloader(dataSourceFactory, fileName)
+                downloaderChannel.send(downloader)
             }
         } catch (e: Exception) {
             AppLog.put("Ngoại lệ tải xuống trước khi phát trực tuyến sách nói: ${e.localizedMessage}", e)
@@ -536,7 +528,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 val analyzeUrl = AnalyzeUrl(
                     httpTts.url,
                     speakText = speakText,
-                    speakSpeed = speechRate,
+                    speakSpeed = 10,
                     source = httpTts,
                     readTimeout = 300 * 1000L,
                     coroutineContext = currentCoroutineContext()
@@ -609,7 +601,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     private fun md5SpeakFileName(content: String, textChapter: TextChapter? = this.textChapter): String {
         val titleToUse = textChapter?.chapter?.title ?: ""
         return MD5Utils.md5Encode16(titleToUse) + "_" +
-                MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-$speechRate-|-$content")
+                MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-10-|-$content")
     }
 
     private fun createSilentSound(fileName: String) {
@@ -727,14 +719,10 @@ class HttpReadAloudService : BaseReadAloudService(),
      * 更新朗读速度
      */
     override fun upSpeechRate(reset: Boolean) {
-        downloadTask?.cancel()
-        exoPlayer.stop()
         speechRate = ReadConfig.speechRatePlay + 5
-        if (ReadConfig.streamReadAloudAudio) {
-            downloadAndPlayAudiosStream()
-        } else {
-            downloadAndPlayAudios()
-        }
+        val speedMultiplier = speechRate.toFloat() / 10f
+        val pitchMultiplier = getPitchMultiplier()
+        exoPlayer.playbackParameters = PlaybackParameters(speedMultiplier, pitchMultiplier)
     }
 
     override fun onPlaybackStateChanged(playbackState: Int) {
@@ -832,6 +820,10 @@ class HttpReadAloudService : BaseReadAloudService(),
         val fileName = md5SpeakFileName(text)
         val speakText = text.replace(AppPattern.notReadAloudRegex, "")
         
+        val speedMultiplier = speechRate.toFloat() / 10f
+        val pitchMultiplier = getPitchMultiplier()
+        exoPlayer.playbackParameters = PlaybackParameters(speedMultiplier, pitchMultiplier)
+        
         if (ReadConfig.streamReadAloudAudio) {
             val dataSourceFactory = createDataSourceFactory(httpTts, speakText)
             val mediaSource = createMediaSource(dataSourceFactory, fileName)
@@ -871,6 +863,28 @@ class HttpReadAloudService : BaseReadAloudService(),
                 }
             }
         }
+    }
+
+    override fun nextChapter() {
+        val chapterTitle = this.textChapter?.chapter?.title ?: ""
+        super.nextChapter()
+        if (chapterTitle.isNotEmpty()) {
+            Coroutine.async {
+                val titleMd5 = MD5Utils.md5Encode16(chapterTitle)
+                FileUtils.listDirsAndFiles(ttsFolderPath)?.forEach {
+                    if (it.isFile && it.name.startsWith(titleMd5)) {
+                        FileUtils.delete(it.absolutePath)
+                        cachedFiles.remove(it.name.substringBeforeLast("."))
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getPitchMultiplier(): Float {
+        val httpTts = ReadAloud.httpTTS ?: return 1.0f
+        val isChirp3Voice = httpTts.name.contains("Chirp3-HD", ignoreCase = true) || (httpTts.id in -138..-109)
+        return if (isChirp3Voice) 0.92f else 1.0f
     }
 
 }

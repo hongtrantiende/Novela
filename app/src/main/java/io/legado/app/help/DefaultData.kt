@@ -22,30 +22,28 @@ import java.io.File
 object DefaultData {
 
     fun upVersion() {
-        if (LocalConfig.versionCode < AppConst.appInfo.versionCode) {
-            Coroutine.async {
-                if (LocalConfig.needUpHttpTTS) {
-                    importDefaultHttpTTS()
-                }
-                if (LocalConfig.needUpTxtTocRule) {
-                    importDefaultTocRules()
-                }
-                if (LocalConfig.needUpRssSources) {
-                    importDefaultRssSources()
-                }
-                if (LocalConfig.needUpDictRule) {
-                    importDefaultDictRules()
-                }
-                if (LocalConfig.needUpReadConfig) {
-                    ReadBookConfig.configList.clear()
-                    ReadBookConfig.configList.addAll(readConfigs)
-                    ReadBookConfig.readStyleSelect = 0
-                    ReadBookConfig.comicStyleSelect = 0
-                    ReadBookConfig.save()
-                }
-            }.onError {
-                it.printOnDebug()
+        Coroutine.async {
+            if (LocalConfig.needUpHttpTTS) {
+                importDefaultHttpTTS()
             }
+            if (LocalConfig.needUpTxtTocRule) {
+                importDefaultTocRules()
+            }
+            if (LocalConfig.needUpRssSources) {
+                importDefaultRssSources()
+            }
+            if (LocalConfig.needUpDictRule) {
+                importDefaultDictRules()
+            }
+            if (LocalConfig.needUpReadConfig) {
+                ReadBookConfig.configList.clear()
+                ReadBookConfig.configList.addAll(readConfigs)
+                ReadBookConfig.readStyleSelect = 0
+                ReadBookConfig.comicStyleSelect = 0
+                ReadBookConfig.save()
+            }
+        }.onError {
+            it.printOnDebug()
         }
     }
 

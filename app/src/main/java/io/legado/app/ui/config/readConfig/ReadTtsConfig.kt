@@ -90,7 +90,7 @@ object ReadTtsConfig {
 
     var readAloudParagraphInterval by prefDelegate(
         "readAloudParagraphInterval",
-        1000
+        200
     )
 }
 

@@ -145,7 +145,7 @@ data class ReadBookUiState(
     val httpTtsImportState: BaseImportUiState<HttpTTS> = BaseImportUiState.Idle,
     val preDownloadNum: Int = 10,
     val audioCacheCleanTime: Int = 10,
-    val readAloudParagraphInterval: Int = 1000,
+    val readAloudParagraphInterval: Int = 200,
     // Read aloud config
     val readAloudIgnoreAudioFocus: Boolean = false,
     val readAloudPauseOnPhoneCall: Boolean = false,
