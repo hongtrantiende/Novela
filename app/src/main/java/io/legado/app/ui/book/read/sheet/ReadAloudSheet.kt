@@ -29,6 +29,25 @@ import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.settingItem.TinySliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.padding
+import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.ui.widget.components.AppSlider
+import io.legado.app.ui.widget.components.text.AppText
+import java.util.Locale
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
+import io.legado.app.service.BaseReadAloudService
+import kotlinx.coroutines.delay
 
 @Composable
 fun ReadAloudContent(
@@ -42,6 +61,14 @@ fun ReadAloudContent(
 ) {
     val timerMinute = state.readAloudTtsTimer
     val ttsSpeechRate = state.readAloudTtsSpeechRate
+
+    var serviceState by remember { mutableStateOf(getServiceState()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            serviceState = getServiceState()
+            delay(500)
+        }
+    }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -82,7 +109,12 @@ fun ReadAloudContent(
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(8.dp))
+
+        if (serviceState.contentList.isNotEmpty()) {
+            SegmentedProgressBar(state = serviceState)
+            Spacer(Modifier.height(12.dp))
+        }
 
         TinySliderSettingItem(
             title = stringResource(R.string.set_timer),
@@ -128,16 +160,46 @@ fun ReadAloudContent(
             },
         )
 
-        TinySliderSettingItem(
-            title = stringResource(R.string.read_aloud_speed),
-            value = ttsSpeechRate.toFloat(),
-            valueRange = 0f..80f,
-            steps = 79,
-            enabled = !state.readAloudTtsFollowSys,
-            onValueChange = {
-                onIntent(ReadBookIntent.SetReadAloudTtsSpeechRate(it.toInt()))
-            },
-        )
+        var localSpeechRate by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
+        
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AppText(
+                    text = stringResource(R.string.read_aloud_speed),
+                    style = LegadoTheme.typography.titleSmallEmphasized,
+                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = if (!state.readAloudTtsFollowSys) 1f else 0.5f),
+                )
+                AppText(
+                    text = String.format(Locale.ROOT, "%.1fX", (localSpeechRate.toInt() + 5) / 10f),
+                    style = LegadoTheme.typography.titleSmallEmphasized,
+                    color = LegadoTheme.colorScheme.primary.copy(alpha = if (!state.readAloudTtsFollowSys) 1f else 0.5f),
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            AppSlider(
+                value = localSpeechRate.coerceIn(5f, 15f),
+                onValueChange = {
+                    if (!state.readAloudTtsFollowSys) {
+                        localSpeechRate = it
+                    }
+                },
+                onValueChangeFinished = {
+                    if (!state.readAloudTtsFollowSys) {
+                        onIntent(ReadBookIntent.SetReadAloudTtsSpeechRate(localSpeechRate.toInt()))
+                    }
+                },
+                valueRange = 5f..15f,
+                steps = 9,
+                enabled = !state.readAloudTtsFollowSys,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
 
@@ -183,5 +245,129 @@ private fun ActionButton(
             text = label,
             style = MaterialTheme.typography.labelSmall,
         )
+    }
+}
+
+private data class AloudProgressState(
+    val contentList: List<String> = emptyList(),
+    val nowSpeak: Int = -1,
+    val cachedIndices: Set<Int> = emptySet(),
+    val downloadingIndices: Set<Int> = emptySet(),
+)
+
+private fun getServiceState(): AloudProgressState {
+    val service = BaseReadAloudService.instance ?: return AloudProgressState()
+    val contentList = service.contentList.toList()
+    val nowSpeak = service.nowSpeak
+    val cached = mutableSetOf<Int>()
+    val downloading = mutableSetOf<Int>()
+    contentList.indices.forEach { i ->
+        if (service.isParagraphCached(i)) {
+            cached.add(i)
+        }
+        if (service.isParagraphDownloading(i)) {
+            downloading.add(i)
+        }
+    }
+    return AloudProgressState(contentList, nowSpeak, cached, downloading)
+}
+
+@Composable
+private fun SegmentedProgressBar(
+    state: AloudProgressState,
+    modifier: Modifier = Modifier
+) {
+    val paragraphs = state.contentList
+    val total = paragraphs.size
+    if (total == 0) return
+
+    val nowSpeak = state.nowSpeak
+    val cached = state.cachedIndices
+    val downloading = state.downloadingIndices
+
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "downloading_pulsing")
+    val downloadingAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(800, easing = androidx.compose.animation.core.LinearEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+
+    val primaryColor = LegadoTheme.colorScheme.primary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    val secondaryColor = LegadoTheme.colorScheme.secondary
+    val outlineColor = LegadoTheme.colorScheme.outline
+
+    Column(
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp)
+    ) {
+        androidx.compose.foundation.Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+        ) {
+            val width = size.width
+            val height = size.height
+            val gap = if (total > 100) 0.5f * density else 1.5f * density
+            val totalGaps = (total - 1) * gap
+            val segmentWidth = (width - totalGaps) / total
+
+            val cornerRadiusPx = 2f * density
+
+            for (i in 0 until total) {
+                val startX = i * (segmentWidth + gap)
+                val color = when {
+                    i == nowSpeak -> primaryColor
+                    i < nowSpeak -> primaryColor.copy(alpha = 0.4f)
+                    downloading.contains(i) -> secondaryColor.copy(alpha = downloadingAlpha)
+                    cached.contains(i) -> tertiaryColor.copy(alpha = 0.8f)
+                    else -> outlineColor.copy(alpha = 0.2f)
+                }
+                
+                drawRoundRect(
+                    color = color,
+                    topLeft = androidx.compose.ui.geometry.Offset(startX, 0f),
+                    size = androidx.compose.ui.geometry.Size(segmentWidth, height),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx, cornerRadiusPx)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val downloadedCount = cached.size
+            val downloadingCount = downloading.size
+            
+            val statusText = buildString {
+                append("Đã đọc: ${maxOf(0, nowSpeak)}/$total đoạn")
+                if (downloadedCount > 0) {
+                    append(" • Đã tải: $downloadedCount/$total")
+                }
+                if (downloadingCount > 0) {
+                    append(" • Đang tải: $downloadingCount")
+                }
+            }
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.labelSmall,
+                color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+
+            if (nowSpeak >= 0 && nowSpeak < total) {
+                Text(
+                    text = "Đang đọc đoạn ${nowSpeak + 1}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = LegadoTheme.colorScheme.primary
+                )
+            }
+        }
     }
 }

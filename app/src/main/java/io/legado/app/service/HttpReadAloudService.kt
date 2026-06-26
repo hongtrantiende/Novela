@@ -106,15 +106,53 @@ class HttpReadAloudService : BaseReadAloudService(),
     private val downloadTaskActiveLock = Mutex()
     private val downloadingFiles = java.util.Collections.synchronizedSet(HashSet<String>())
     private var preDownloadWindowJob: Job? = null
+    private var playNextJob: Job? = null
+    private val cachedFiles = java.util.Collections.synchronizedSet(HashSet<String>())
+
+    private fun initCachedFiles() {
+        Coroutine.async {
+            val files = FileUtils.listDirsAndFiles(ttsFolderPath)
+            if (files != null) {
+                for (file in files) {
+                    if (file.isFile && file.name.endsWith(".mp3")) {
+                        val nameWithoutExt = file.name.substringBeforeLast(".")
+                        cachedFiles.add(nameWithoutExt)
+                    }
+                }
+            }
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         exoPlayer.addListener(this)
+        initCachedFiles()
+    }
+
+    override fun isParagraphCached(index: Int): Boolean {
+        if (index !in contentList.indices) return false
+        var text = contentList[index]
+        if (paragraphStartPos > 0 && index == nowSpeak) {
+            text = text.substring(paragraphStartPos)
+        }
+        val fileName = md5SpeakFileName(text)
+        return cachedFiles.contains(fileName) || hasSpeakFile(fileName)
+    }
+
+    override fun isParagraphDownloading(index: Int): Boolean {
+        if (index !in contentList.indices) return false
+        var text = contentList[index]
+        if (paragraphStartPos > 0 && index == nowSpeak) {
+            text = text.substring(paragraphStartPos)
+        }
+        val fileName = md5SpeakFileName(text)
+        return downloadingFiles.contains(fileName)
     }
 
     override fun onDestroy() {
         super.onDestroy()
         downloadTask?.cancel()
+        playNextJob?.cancel()
         preDownloadWindowJob?.cancel()
         exoPlayer.release()
         cache.release()
@@ -158,25 +196,25 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun downloadAndPlayAudios() {
-        exoPlayer.clearMediaItems()
         downloadTask?.cancel()
         downloadTask = execute {
             downloadTaskActiveLock.withLock {
                 ensureActive()
                 val httpTts = ReadAloud.httpTTS ?: throw NoStackTraceException("tts is null")
                 
-                contentList.forEachIndexed { index, content ->
+                val preloadCount = maxOf(1, minOf(ReadConfig.audioPreDownloadNum, contentList.size - nowSpeak))
+                var preloadedNum = 0
+
+                for (index in nowSpeak until contentList.size) {
                     ensureActive()
-                    if (index < nowSpeak) return@forEachIndexed
+                    val content = contentList[index]
                     var text = content
                     if (paragraphStartPos > 0 && index == nowSpeak) {
                         text = text.substring(paragraphStartPos)
                     }
-                    // 计算文件名时，会自动调用修正后的 md5SpeakFileName
                     val fileName = md5SpeakFileName(text)
                     val speakText = text.replace(AppPattern.notReadAloudRegex, "")
                     if (speakText.isEmpty()) {
-                        AppLog.put("Nội dung của đoạn đọc trống và âm thanh im lặng được sử dụng thay thế.\nĐọc to văn bản: $text")
                         createSilentSound(fileName)
                     } else {
                         val success = downloadSpeakFile(httpTts, fileName, speakText, waitIfDownloading = true)
@@ -185,10 +223,12 @@ class HttpReadAloudService : BaseReadAloudService(),
                             return@execute
                         }
                     }
-                    val file = getSpeakFileAsMd5(fileName)
-                    val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
-                    launch(Main) {
-                        exoPlayer.addMediaItem(mediaItem)
+                    
+                    preloadedNum++
+                    if (preloadedNum == preloadCount) {
+                        launch(Main) {
+                            playCurrentParagraph()
+                        }
                     }
                 }
                 preDownloadAudios(httpTts)
@@ -354,7 +394,6 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun downloadAndPlayAudiosStream() {
-        exoPlayer.clearMediaItems()
         downloadTask?.cancel()
         downloadTask = execute {
             downloadTaskActiveLock.withLock {
@@ -366,9 +405,13 @@ class HttpReadAloudService : BaseReadAloudService(),
                         downloader.download(null)
                     }
                 }
-                contentList.forEachIndexed { index, content ->
+
+                val preloadCount = maxOf(1, minOf(ReadConfig.audioPreDownloadNum, contentList.size - nowSpeak))
+                var preloadedNum = 0
+
+                for (index in nowSpeak until contentList.size) {
                     ensureActive()
-                    if (index < nowSpeak) return@forEachIndexed
+                    val content = contentList[index]
                     var text = content
                     if (paragraphStartPos > 0 && index == nowSpeak) {
                         text = text.substring(paragraphStartPos)
@@ -380,10 +423,19 @@ class HttpReadAloudService : BaseReadAloudService(),
                     val fileName = md5SpeakFileName(text)
                     val dataSourceFactory = createDataSourceFactory(httpTts, speakText)
                     val downloader = createDownloader(dataSourceFactory, fileName)
-                    downloaderChannel.send(downloader)
-                    val mediaSource = createMediaSource(dataSourceFactory, fileName)
-                    launch(Main) {
-                        exoPlayer.addMediaSource(mediaSource)
+                    
+                    preloadedNum++
+                    if (preloadedNum <= preloadCount) {
+                        runCatching {
+                            downloader.download(null)
+                        }
+                        if (preloadedNum == preloadCount) {
+                            launch(Main) {
+                                playCurrentParagraph()
+                            }
+                        }
+                    } else {
+                        downloaderChannel.send(downloader)
                     }
                 }
                 preDownloadAudiosStream(httpTts, downloaderChannel)
@@ -574,10 +626,12 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun createSpeakFile(name: String): File {
+        cachedFiles.add(name)
         return FileUtils.createFileIfNotExist("${ttsFolderPath}$name.mp3")
     }
 
     private fun createSpeakFile(name: String, inputStream: InputStream) {
+        cachedFiles.add(name)
         FileUtils.createFileIfNotExist("${ttsFolderPath}$name.mp3").outputStream().use { out ->
             inputStream.use {
                 it.copyTo(out)
@@ -613,6 +667,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
             if (shouldDelete || isSilentSound) {
                 FileUtils.delete(it.absolutePath)
+                cachedFiles.remove(it.name.substringBeforeLast("."))
             }
         }
     }
@@ -622,6 +677,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         super.pauseReadAloud(abandonFocus)
         kotlin.runCatching {
             playIndexJob?.cancel()
+            playNextJob?.cancel()
             preDownloadWindowJob?.cancel()
             exoPlayer.pause()
         }
@@ -703,8 +759,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 // 结束
                 playErrorNo = 0
                 updateNextPos()
-                exoPlayer.stop()
-                exoPlayer.clearMediaItems()
+                playNextParagraph()
             }
         }
     }
@@ -722,28 +777,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) return
-        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) {
-            playErrorNo = 0
-            val interval = ReadConfig.readAloudParagraphInterval
-            if (interval > 0 && nowSpeak < contentList.lastIndex) {
-                exoPlayer.pause()
-                updateNextPos()
-                playIndexJob?.cancel()
-                lifecycleScope.launch {
-                    delay(interval.toLong())
-                    if (!pause && exoPlayer.playbackState != Player.STATE_IDLE && exoPlayer.playbackState != Player.STATE_ENDED) {
-                        exoPlayer.play()
-                        upPlayPos()
-                    }
-                }
-                upMediaMetadata(showContent = true)
-                return
-            }
-        }
-        updateNextPos()
-        upPlayPos()
-        upMediaMetadata(showContent = true)
+        // No-op for single-item playback loop
     }
 
     override fun onPlayerError(error: PlaybackException) {
@@ -756,13 +790,8 @@ class HttpReadAloudService : BaseReadAloudService(),
             AppLog.put("Đọc 5 lỗi liên tiếp, mã lỗi cuối cùng (${error.localizedMessage})", error)
             pauseReadAloud()
         } else {
-            if (exoPlayer.hasNextMediaItem()) {
-                exoPlayer.seekToNextMediaItem()
-                exoPlayer.prepare()
-            } else {
-                exoPlayer.clearMediaItems()
-                updateNextPos()
-            }
+            updateNextPos()
+            playNextParagraph()
         }
     }
 
@@ -772,7 +801,9 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
         val mediaItem = exoPlayer.currentMediaItem ?: return
         val filePath = mediaItem.localConfiguration!!.uri.path!!
-        File(filePath).delete()
+        val file = File(filePath)
+        file.delete()
+        cachedFiles.remove(file.name.substringBeforeLast("."))
     }
 
     override fun aloudServicePendingIntent(actionStr: String): PendingIntent? {
@@ -782,6 +813,63 @@ class HttpReadAloudService : BaseReadAloudService(),
     class CustomLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(0) {
         override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
             return C.TIME_UNSET
+        }
+    }
+
+    private fun playCurrentParagraph() {
+        exoPlayer.stop()
+        exoPlayer.clearMediaItems()
+        
+        val httpTts = ReadAloud.httpTTS ?: return
+        val index = nowSpeak
+        if (index !in contentList.indices) return
+        
+        val content = contentList[index]
+        var text = content
+        if (paragraphStartPos > 0 && index == nowSpeak) {
+            text = text.substring(paragraphStartPos)
+        }
+        val fileName = md5SpeakFileName(text)
+        val speakText = text.replace(AppPattern.notReadAloudRegex, "")
+        
+        if (ReadConfig.streamReadAloudAudio) {
+            val dataSourceFactory = createDataSourceFactory(httpTts, speakText)
+            val mediaSource = createMediaSource(dataSourceFactory, fileName)
+            exoPlayer.setMediaSource(mediaSource)
+            exoPlayer.prepare()
+        } else {
+            execute {
+                if (speakText.isEmpty()) {
+                    createSilentSound(fileName)
+                } else {
+                    downloadSpeakFile(httpTts, fileName, speakText, waitIfDownloading = true)
+                }
+                
+                val file = getSpeakFileAsMd5(fileName)
+                val mediaItem = MediaItem.fromUri(Uri.fromFile(file))
+                
+                launch(Main) {
+                    exoPlayer.setMediaItem(mediaItem)
+                    exoPlayer.prepare()
+                }
+            }
+        }
+    }
+
+    private fun playNextParagraph() {
+        playNextJob?.cancel()
+        playNextJob = lifecycleScope.launch {
+            val interval = ReadConfig.readAloudParagraphInterval
+            if (interval > 0) {
+                delay(interval.toLong())
+            }
+            if (!pause) {
+                if (nowSpeak in contentList.indices) {
+                    playCurrentParagraph()
+                } else {
+                    nextChapter()
+                }
+            }
         }
     }
 

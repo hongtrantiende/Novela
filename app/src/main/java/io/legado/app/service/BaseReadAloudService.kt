@@ -85,6 +85,10 @@ abstract class BaseReadAloudService : BaseService(),
         var timeMinute: Int = 0
             private set
 
+        @JvmStatic
+        var instance: BaseReadAloudService? = null
+            private set
+
         fun isPlay(): Boolean {
             return isRun && !pause
         }
@@ -145,6 +149,7 @@ abstract class BaseReadAloudService : BaseService(),
     @SuppressLint("WakelockTimeout")
     override fun onCreate() {
         super.onCreate()
+        instance = this
         isRun = true
         pause = false
         observeLiveBus()
@@ -169,12 +174,15 @@ abstract class BaseReadAloudService : BaseService(),
             }
         }
     }
-
     fun observeLiveBus() {
         observeEvent<Bundle>(EventBus.READ_ALOUD_PLAY) {
             val play = it.getBoolean("play")
             val pageIndex = it.getInt("pageIndex")
             val startPos = it.getInt("startPos")
+            if (isRun && !pause && pageIndex == this.pageIndex && startPos == 0 && textChapter == ReadBook.curTextChapter) {
+                LogUtils.d(TAG, "Ignore READ_ALOUD_PLAY event because pageIndex is same ($pageIndex)")
+                return@observeEvent
+            }
             newReadAloud(play, pageIndex, startPos)
         }
         observeSharedPreferences { _, key ->
@@ -189,6 +197,7 @@ abstract class BaseReadAloudService : BaseService(),
 
     override fun onDestroy() {
         super.onDestroy()
+        instance = null
         if (useWakeLock) {
             wakeLock.release()
             wifiLock?.release()
@@ -208,13 +217,21 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
+    open fun isParagraphCached(index: Int): Boolean = false
+    open fun isParagraphDownloading(index: Int): Boolean = false
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            IntentAction.play -> newReadAloud(
-                intent.getBooleanExtra("play", true),
-                intent.getIntExtra("pageIndex", ReadBook.durPageIndex),
-                intent.getIntExtra("startPos", 0)
-            )
+            IntentAction.play -> {
+                val play = intent.getBooleanExtra("play", true)
+                val pageIndex = intent.getIntExtra("pageIndex", ReadBook.durPageIndex)
+                val startPos = intent.getIntExtra("startPos", 0)
+                if (isRun && !pause && pageIndex == this.pageIndex && startPos == 0 && textChapter == ReadBook.curTextChapter) {
+                    LogUtils.d(TAG, "Ignore IntentAction.play because pageIndex is same ($pageIndex)")
+                } else {
+                    newReadAloud(play, pageIndex, startPos)
+                }
+            }
 
             IntentAction.pause -> pauseReadAloud()
             IntentAction.resume -> resumeReadAloud()

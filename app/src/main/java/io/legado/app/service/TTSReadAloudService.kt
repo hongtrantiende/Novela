@@ -130,58 +130,81 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
             LogUtils.d(TAG, "Đọc kích thước danh sách ${contentList.size}")
             LogUtils.d(TAG, "Đọc số trang ${textChapter?.pageSize}")
             val tts = textToSpeech ?: throw NoStackTraceException("tts is null")
-            val contentList = contentList
             
-            val sampleText = contentList.take(5).joinToString(" ")
-            setupLanguageAndVoice(tts, sampleText)
-
-            var isAddedText = false
-            for (i in nowSpeak until contentList.size) {
-                ensureActive()
-                var text = contentList[i]
-                if (paragraphStartPos > 0 && i == nowSpeak) {
-                    text = text.substring(paragraphStartPos)
-                }
-                if (text.matches(AppPattern.notReadAloudRegex)) {
-                    continue
-                }
-                if (!isAddedText) {
-                    val result = tts.runCatching {
-                        speak(text, TextToSpeech.QUEUE_FLUSH, null, AppConst.APP_TAG + i)
-                    }.getOrElse {
-                        AppLog.put("lỗi tts\n${it.localizedMessage}", it, true)
-                        TextToSpeech.ERROR
-                    }
-                    if (result == TextToSpeech.ERROR) {
-                        AppLog.put("lỗi tts hãy thử khởi tạo lại")
-                        clearTTS()
-                        initTts()
-                        return@execute
-                    }
-                } else {
-                    val interval = ReadConfig.readAloudParagraphInterval
-                    if (interval > 0) {
-                        tts.runCatching {
-                            playSilentUtterance(interval.toLong(), TextToSpeech.QUEUE_ADD, "silent_" + i)
-                        }
-                    }
-                    val result = tts.runCatching {
-                        speak(text, TextToSpeech.QUEUE_ADD, null, AppConst.APP_TAG + i)
-                    }.getOrElse {
-                        AppLog.put("lỗi tts\n${it.localizedMessage}", it, true)
-                        TextToSpeech.ERROR
-                    }
-                    if (result == TextToSpeech.ERROR) {
-                        AppLog.put("lỗi đọc tts: $text")
-                    }
-                }
-                isAddedText = true
-            }
-            LogUtils.d(TAG, "Đã thêm nội dung đọc to")
-            if (!isAddedText) {
+            if (nowSpeak >= contentList.size) {
                 playStop()
                 delay(1000)
                 nextChapter()
+                return@execute
+            }
+            
+            var text = contentList[nowSpeak]
+            if (paragraphStartPos > 0) {
+                text = text.substring(paragraphStartPos)
+            }
+            
+            // Skip non-readable text
+            while (text.matches(AppPattern.notReadAloudRegex)) {
+                readAloudNumber += contentList[nowSpeak].length + 1 - paragraphStartPos
+                paragraphStartPos = 0
+                nowSpeak++
+                if (nowSpeak >= contentList.size) {
+                    playStop()
+                    delay(1000)
+                    nextChapter()
+                    return@execute
+                }
+                text = contentList[nowSpeak]
+            }
+
+            val sampleText = contentList.take(5).joinToString(" ")
+            setupLanguageAndVoice(tts, sampleText)
+
+            val result = tts.runCatching {
+                speak(text, TextToSpeech.QUEUE_FLUSH, null, AppConst.APP_TAG + nowSpeak)
+            }.getOrElse {
+                AppLog.put("lỗi tts\n${it.localizedMessage}", it, true)
+                TextToSpeech.ERROR
+            }
+            if (result == TextToSpeech.ERROR) {
+                AppLog.put("lỗi tts hãy thử khởi tạo lại")
+                clearTTS()
+                initTts()
+            }
+        }.onError {
+            AppLog.put("lỗi đọc tts\n${it.localizedMessage}", it, true)
+        }
+    }
+
+    private fun playNextWithDelay() {
+        speakJob?.cancel()
+        speakJob = execute {
+            val interval = ReadConfig.readAloudParagraphInterval
+            if (interval > 0) {
+                delay(interval.toLong())
+            }
+            ensureActive()
+            val tts = textToSpeech ?: throw NoStackTraceException("tts is null")
+            if (nowSpeak >= contentList.size) {
+                playStop()
+                delay(1000)
+                nextChapter()
+                return@execute
+            }
+            var text = contentList[nowSpeak]
+            if (paragraphStartPos > 0) {
+                text = text.substring(paragraphStartPos)
+            }
+            val result = tts.runCatching {
+                speak(text, TextToSpeech.QUEUE_FLUSH, null, AppConst.APP_TAG + nowSpeak)
+            }.getOrElse {
+                AppLog.put("lỗi tts\n${it.localizedMessage}", it, true)
+                TextToSpeech.ERROR
+            }
+            if (result == TextToSpeech.ERROR) {
+                AppLog.put("lỗi tts hãy thử khởi tạo lại")
+                clearTTS()
+                initTts()
             }
         }.onError {
             AppLog.put("lỗi đọc tts\n${it.localizedMessage}", it, true)
@@ -296,6 +319,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                     return
                 }
             } while (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex))
+            playNextWithDelay()
         }
 
         @Deprecated("Deprecated in Java")
