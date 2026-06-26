@@ -178,6 +178,7 @@ fun MainActivity.mainEntryProvider(
             onNavigateToAbout = {
                 onNavigateToRoute(MainRouteAbout)
             },
+            onNavigateToQuickTranslate = { onNavigateToRoute(MainRouteSettingsQuickTranslate) },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
         )
@@ -378,6 +379,7 @@ fun MainActivity.mainEntryProvider(
                         )
                     )
                 },
+                onNavigateToTranslationSettings = { onNavigateToRoute(MainRouteSettingsTranslation) }
             )
 
             DisposableEffect(controller, lifecycleOwner, route.readAloud) {

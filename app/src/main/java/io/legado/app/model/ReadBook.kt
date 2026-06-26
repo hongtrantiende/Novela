@@ -48,6 +48,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelChildren
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -897,6 +898,15 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         state.mixedContent?.let { mixed ->
                             contentLoadFinish(book, chapter, mixed, upContent = true, resetPageOffset = false)
                         }
+                    }
+                    TranslationChapterStatus.Translated -> {
+                        state.translatedContent?.let { finalContent ->
+                            contentLoadFinish(book, chapter, finalContent, upContent = true, resetPageOffset = false)
+                        }
+                        this@launch.cancel()
+                    }
+                    TranslationChapterStatus.Failed -> {
+                        this@launch.cancel()
                     }
                     else -> {
                         // no-op

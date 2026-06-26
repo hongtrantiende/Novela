@@ -170,7 +170,7 @@ object JSFetchFunction {
                 .method(method, body)
                 .build()
 
-            Log.d(TAG, "Fetching: ${request.url}")
+            Log.d(TAG, "Fetching: ${request.url}\nHeaders:\n${request.headers}")
 
             val extTimeout = prefs.getInt("ext_connection_timeout_$extensionId", prefs.getInt("conn_timeout", 30))
             val activeClient = if (extTimeout > 0) {
@@ -266,6 +266,7 @@ object JSFetchFunction {
             response.headers.forEach { (name, value) ->
                 respHeadersMap[name.lowercase()] = value
                 jsonRespHeaders.put(name, value)
+                jsonRespHeaders.put(name.lowercase(), value)
             }
             val jsRespHeaders = NativeJSON.parse(ctx, scope, jsonRespHeaders.toString(), org.mozilla.javascript.Callable { _, _, _, args ->
                 args?.getOrNull(1)
@@ -277,6 +278,7 @@ object JSFetchFunction {
             request.headers.forEach { (name, value) ->
                 reqHeadersMap[name.lowercase()] = value
                 jsonReqHeaders.put(name, value)
+                jsonReqHeaders.put(name.lowercase(), value)
             }
             val jsReqHeaders = NativeJSON.parse(ctx, scope, jsonReqHeaders.toString(), org.mozilla.javascript.Callable { _, _, _, args ->
                 args?.getOrNull(1)

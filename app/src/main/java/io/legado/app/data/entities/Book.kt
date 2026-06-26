@@ -298,12 +298,12 @@ data class Book(
     }
 
     fun getTranslationMode(): Boolean {
-        if (io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
-            io.legado.app.ui.config.translation.TranslationConfig.llmProvider == "sangtacviet"
-        ) {
-            return true
+        val isStvEnabled = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
+                io.legado.app.ui.config.translation.TranslationConfig.llmProvider == "sangtacviet"
+        if (isStvEnabled) {
+            return io.legado.app.ui.config.translation.TranslationConfig.translationScope == "Tất cả"
         }
-        return config.translationMode
+        return config.translationMode && io.legado.app.ui.config.translation.TranslationConfig.translationScope == "Tất cả"
     }
 
     // dailyChapters 的 setter 和 getter

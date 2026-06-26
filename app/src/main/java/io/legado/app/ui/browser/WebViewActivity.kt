@@ -121,14 +121,15 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             R.id.menu_open_in_browser -> openUrl(viewModel.baseUrl)
             R.id.menu_copy_url -> sendToClip(viewModel.baseUrl)
             R.id.menu_ok -> {
-                saveExtensionCookies()
-                saveStandardCookies()
-                if (viewModel.sourceVerificationEnable) {
-                    viewModel.saveVerificationResult(binding.webView) {
+                saveExtensionCookiesAndLocalStorage {
+                    saveStandardCookies()
+                    if (viewModel.sourceVerificationEnable) {
+                        viewModel.saveVerificationResult(binding.webView) {
+                            finish()
+                        }
+                    } else {
                         finish()
                     }
-                } else {
-                    finish()
                 }
             }
 
@@ -304,6 +305,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                     val oldCookie = prefs.getString("ext_cookies_$extId", null)
                     val mergedCookie = mergeCookies(oldCookie, cookie ?: "")
                     prefs.edit().putString("ext_cookies_$extId", mergedCookie).apply()
+
                 }
             }
             view?.title?.let { title ->
@@ -470,6 +472,89 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             }
         }
         return cookieMap.map { "${it.key}=${it.value}" }.joinToString("; ")
+    }
+
+    private fun saveExtensionCookiesAndLocalStorage(onComplete: () -> Unit) {
+        if (viewModel.sourceOrigin.startsWith("ext_")) {
+            val extId = viewModel.sourceOrigin.substringAfter("ext_")
+            val currentUrl = binding.webView.url ?: viewModel.baseUrl
+            val extBaseUrl = extensionEntity?.source?.let { src ->
+                val secure = if (src.startsWith("http://")) src.replaceFirst("http://", "https://") else src
+                val host = try { java.net.URI(secure).host } catch (_: Exception) { null }
+                if (host != null) "https://$host" else secure
+            }
+
+            try {
+                CookieManager.getInstance().flush()
+                val cookieStr = getCookiesForExtension(
+                    CookieManager.getInstance(),
+                    currentUrl,
+                    extBaseUrl
+                )
+                val prefs = getSharedPreferences("novel_reader_prefs", MODE_PRIVATE)
+                val oldCookie = prefs.getString("ext_cookies_$extId", null)
+                val mergedCookie = mergeCookies(oldCookie, cookieStr)
+                
+                if (mergedCookie.isNotBlank()) {
+                    val userAgentStr = binding.webView.settings.userAgentString
+                    val editor = prefs.edit().putString("ext_cookies_$extId", mergedCookie)
+                    if (!userAgentStr.isNullOrBlank()) {
+                        editor.putString("ext_user_agent_$extId", userAgentStr)
+                    }
+                    editor.apply()
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            onComplete()
+        } else {
+            onComplete()
+        }
+    }
+
+    private fun unescapeJsonString(jsonStr: String): String {
+        if (jsonStr == "null" || jsonStr == "undefined") return ""
+        if (jsonStr.length < 2 || !jsonStr.startsWith("\"") || !jsonStr.endsWith("\"")) return jsonStr
+        
+        val sb = java.lang.StringBuilder(jsonStr.length - 2)
+        var i = 1
+        val len = jsonStr.length - 1
+        while (i < len) {
+            val c = jsonStr[i]
+            if (c == '\\') {
+                i++
+                if (i >= len) break
+                val next = jsonStr[i]
+                when (next) {
+                    '\"' -> sb.append('\"')
+                    '\\' -> sb.append('\\')
+                    '/' -> sb.append('/')
+                    'b' -> sb.append('\b')
+                    'f' -> sb.append('\u000C')
+                    'n' -> sb.append('\n')
+                    'r' -> sb.append('\r')
+                    't' -> sb.append('\t')
+                    'u' -> {
+                        if (i + 4 < len) {
+                            val hex = jsonStr.substring(i + 1, i + 5)
+                            try {
+                                sb.append(hex.toInt(16).toChar())
+                            } catch (e: Exception) {
+                                sb.append("\\u").append(hex)
+                            }
+                            i += 4
+                        } else {
+                            sb.append("\\u")
+                        }
+                    }
+                    else -> sb.append('\\').append(next)
+                }
+            } else {
+                sb.append(c)
+            }
+            i++
+        }
+        return sb.toString()
     }
 
 }

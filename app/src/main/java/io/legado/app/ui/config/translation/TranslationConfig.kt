@@ -72,6 +72,47 @@ object TranslationConfig {
         TranslationConstants.DEFAULT_PROMPT
     )
 
+    var translationEnabled by prefDelegate(
+        "translationEnabled",
+        false
+    )
+
+    var translationTarget by prefDelegate(
+        "translationTarget",
+        "Việt (VP)"
+    )
+
+    var translationEngine by prefDelegate(
+        "translationEngine",
+        "QT"
+    )
+
+    var translationScope by prefDelegate(
+        "translationScope",
+        "Tất cả"
+    )
+
+    fun applySettings(enabled: Boolean, target: String, engine: String, scope: String) {
+        translationEnabled = enabled
+        translationTarget = target
+        translationEngine = engine
+        translationScope = scope
+        
+        if (enabled) {
+            if (engine == "STV") {
+                isGlobalTranslateEnabled = false
+                llmTranslateEnabled = true
+                llmProvider = "sangtacviet"
+            } else {
+                isGlobalTranslateEnabled = true
+                llmTranslateEnabled = false
+            }
+        } else {
+            isGlobalTranslateEnabled = false
+            llmTranslateEnabled = false
+        }
+    }
+
     // Delegate constants to domain layer
     const val PROVIDER_OPENAI = TranslationConstants.PROVIDER_OPENAI
     const val PROVIDER_GOOGLE = TranslationConstants.PROVIDER_GOOGLE

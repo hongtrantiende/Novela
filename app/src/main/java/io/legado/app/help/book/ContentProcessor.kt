@@ -99,8 +99,16 @@ class ContentProcessor private constructor(
         reSegment: Boolean = true,
         translate: Boolean = io.legado.app.utils.TranslateUtils.isTranslateEnabled()
     ): BookContent {
-        val shouldTranslate = translate && !book.getTranslationMode()
-        var mContent = if (shouldTranslate) kotlinx.coroutines.runBlocking { io.legado.app.utils.TranslateUtils.translateContent(content) } else content
+        val shouldTranslate = translate && !book.getTranslationMode() && io.legado.app.ui.config.translation.TranslationConfig.translationScope == "Tất cả"
+        var mContent = if (shouldTranslate) {
+            kotlinx.coroutines.runBlocking {
+                if (io.legado.app.ui.config.translation.TranslationConfig.translationTarget == "Hán Việt") {
+                    io.legado.app.utils.TranslateUtils.translatePhienAm(content)
+                } else {
+                    io.legado.app.utils.TranslateUtils.translateContent(content)
+                }
+            }
+        } else content
         var sameTitleRemoved = false
         var effectiveReplaceRules: ArrayList<ReplaceRule>? = null
         if (content != "null") {

@@ -344,7 +344,7 @@ object JSHttpBuilderBridge {
             }
 
             val requestBody = if (method == "POST" || method == "PUT" || method == "PATCH") {
-                val contentType = headers["Content-Type"] ?: headers["content-type"] ?: "application/x-www-form-urlencoded"
+                val contentType = headersBuilder["Content-Type"] ?: "application/x-www-form-urlencoded"
                 val rBody = if (isBinary && body != null) {
                     val bytes = try {
                         Base64.decode(body, Base64.DEFAULT)

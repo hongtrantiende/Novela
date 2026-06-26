@@ -99,6 +99,7 @@ fun ReadBookRouteScreen(
     controller: ReadBookController,
     onEffectsReady: () -> Unit = {},
     onOpenSearch: (word: String?, bookUrl: String) -> Unit = { _, _ -> },
+    onNavigateToTranslationSettings: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
@@ -430,6 +431,7 @@ fun ReadBookRouteScreen(
                 state = state,
                 onIntent = viewModel::onIntent,
                 onBack = { controller.closeReadBook() },
+                onNavigateToTranslationSettings = onNavigateToTranslationSettings,
             )
         }
     }

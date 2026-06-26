@@ -124,6 +124,10 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material.icons.filled.Settings
 
@@ -131,21 +135,18 @@ import androidx.compose.material.icons.filled.Settings
 @Composable
 fun ExploreScreen(
     viewModel: ExploreViewModel = koinViewModel(),
-    onOpenExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit
+    onOpenExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
+    onNavigateToTranslationSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as? AppCompatActivity
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showAiConfigDialog by remember { mutableStateOf(false) }
     var showTranslateSourceDialog by remember { mutableStateOf(false) }
-    var translationMode by remember {
-        mutableStateOf(
-            when {
-                TranslationConfig.isGlobalTranslateEnabled -> 1
-                TranslationConfig.llmTranslateEnabled && TranslationConfig.llmProvider == "sangtacviet" -> 2
-                else -> 0
-            }
-        )
+    val translationMode = when {
+        TranslationConfig.isGlobalTranslateEnabled -> 1
+        TranslationConfig.llmTranslateEnabled && TranslationConfig.llmProvider == "sangtacviet" -> 2
+        else -> 0
     }
     val listItems by remember(uiState.items, uiState.expandedId, uiState.exploreKinds) {
         derivedStateOf { viewModel.buildExploreListItems(uiState) }
@@ -434,118 +435,13 @@ fun ExploreScreen(
     }
 
     if (showTranslateSourceDialog) {
-        AppAlertDialog(
-            show = true,
+        val expandedId = uiState.expandedId
+        io.legado.app.ui.widget.dialog.TranslationSettingsDialog(
             onDismissRequest = { showTranslateSourceDialog = false },
-            title = "Chọn nguồn dịch",
-            dismissText = stringResource(R.string.cancel),
-            onDismiss = { showTranslateSourceDialog = false },
-            content = {
-                val expandedId = uiState.expandedId
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                TranslationConfig.isGlobalTranslateEnabled = false
-                                TranslationConfig.llmTranslateEnabled = false
-                                translationMode = 0
-                                showTranslateSourceDialog = false
-                                if (expandedId != null) {
-                                    viewModel.refreshExploreKinds(expandedId)
-                                }
-                                android.widget.Toast.makeText(context, "Đã tắt dịch", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            .padding(vertical = 12.dp, horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = translationMode == 0,
-                            onClick = {
-                                TranslationConfig.isGlobalTranslateEnabled = false
-                                TranslationConfig.llmTranslateEnabled = false
-                                translationMode = 0
-                                showTranslateSourceDialog = false
-                                if (expandedId != null) {
-                                    viewModel.refreshExploreKinds(expandedId)
-                                }
-                                android.widget.Toast.makeText(context, "Đã tắt dịch", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Tắt dịch", color = MaterialTheme.colorScheme.onSurface)
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                TranslationConfig.isGlobalTranslateEnabled = true
-                                TranslationConfig.llmTranslateEnabled = false
-                                translationMode = 1
-                                showTranslateSourceDialog = false
-                                if (expandedId != null) {
-                                    viewModel.refreshExploreKinds(expandedId)
-                                }
-                                android.widget.Toast.makeText(context, "Đã bật dịch từ điển (VietPhrase)", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            .padding(vertical = 12.dp, horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = translationMode == 1,
-                            onClick = {
-                                TranslationConfig.isGlobalTranslateEnabled = true
-                                TranslationConfig.llmTranslateEnabled = false
-                                translationMode = 1
-                                showTranslateSourceDialog = false
-                                if (expandedId != null) {
-                                    viewModel.refreshExploreKinds(expandedId)
-                                }
-                                android.widget.Toast.makeText(context, "Đã bật dịch từ điển (VietPhrase)", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Dịch từ điển (VietPhrase)", color = MaterialTheme.colorScheme.onSurface)
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                TranslationConfig.isGlobalTranslateEnabled = false
-                                TranslationConfig.llmTranslateEnabled = true
-                                TranslationConfig.llmProvider = "sangtacviet"
-                                translationMode = 2
-                                showTranslateSourceDialog = false
-                                if (expandedId != null) {
-                                    viewModel.refreshExploreKinds(expandedId)
-                                }
-                                android.widget.Toast.makeText(context, "Đã bật dịch bằng API (Sáng Tác Việt)", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                            .padding(vertical = 12.dp, horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = translationMode == 2,
-                            onClick = {
-                                TranslationConfig.isGlobalTranslateEnabled = false
-                                TranslationConfig.llmTranslateEnabled = true
-                                TranslationConfig.llmProvider = "sangtacviet"
-                                translationMode = 2
-                                showTranslateSourceDialog = false
-                                if (expandedId != null) {
-                                    viewModel.refreshExploreKinds(expandedId)
-                                }
-                                android.widget.Toast.makeText(context, "Đã bật dịch bằng API (Sáng Tác Việt)", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Dịch bằng API (Sáng Tác Việt)", color = MaterialTheme.colorScheme.onSurface)
-                    }
+            onSettingsClick = onNavigateToTranslationSettings,
+            onSave = { _, _, _, _ ->
+                if (expandedId != null) {
+                    viewModel.refreshExploreKinds(expandedId)
                 }
             }
         )
@@ -1528,3 +1424,5 @@ private data class CodeFileItem(
     val name: String,
     val content: String
 )
+
+// Option card removed, using shared TranslationSettingsDialog instead.

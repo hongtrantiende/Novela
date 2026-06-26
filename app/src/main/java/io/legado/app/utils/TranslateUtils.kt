@@ -622,21 +622,25 @@ object TranslateUtils {
     /**
      * Translate text dynamically based on the selected engine and mode
      */
-    suspend fun translateWithEngine(text: String?, engine: String, mode: String): String {
-        if (text.isNullOrBlank()) return ""
-        return when (engine) {
-            "Google" -> {
+    suspend fun translateWithEngine(text: String?, engine: String, mode: String): String = withContext(Dispatchers.IO) {
+        if (text.isNullOrBlank()) return@withContext ""
+        return@withContext when (engine) {
+            "STV", "Sáng Tác Việt" -> {
                 try {
-                    val encodedText = java.net.URLEncoder.encode(text, "UTF-8")
-                    val url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=vi&dj=1&dt=t&ie=UTF-8&q=$encodedText"
-                    val request = okhttp3.Request.Builder().url(url).build()
+                    val formBody = okhttp3.FormBody.Builder()
+                        .add("sajax", "trans")
+                        .add("content", text)
+                        .build()
+                    val request = okhttp3.Request.Builder()
+                        .url("https://comic.sangtacvietcdn.xyz/tsm.php?cdn=/")
+                        .post(formBody)
+                        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                        .build()
                     io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
                         if (response.isSuccessful) {
-                            val body = response.body?.string()
-                            val responseObj = io.legado.app.utils.GSON.fromJson(body, io.legado.app.data.repository.GoogleTranslateResponse::class.java)
-                            val translatedText = responseObj?.sentences?.mapNotNull { it.trans }?.joinToString("") ?: ""
-                            if (translatedText.isNotEmpty()) {
-                                translatedText
+                            val bodyStr = response.body?.string()
+                            if (!bodyStr.isNullOrEmpty()) {
+                                bodyStr
                             } else {
                                 text
                             }
@@ -649,10 +653,6 @@ object TranslateUtils {
                     text
                 }
             }
-            "Bắc Cực Tinh", "GGChan" -> {
-                val targetMode = if (mode.contains("Hán Việt")) "hanviet" else "vi"
-                if (targetMode == "hanviet") translatePhienAm(text) else translateContent(text)
-            }
             else -> { // QT
                 val targetMode = if (mode.contains("Hán Việt")) "hanviet" else "vi"
                 if (targetMode == "hanviet") translatePhienAm(text) else translateContent(text)
@@ -663,70 +663,37 @@ object TranslateUtils {
 
 @Composable
 fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = null): State<String> {
-    val context = LocalContext.current
-    val isEnabled = if (extId.isNullOrBlank()) {
-        TranslateUtils.isTranslateEnabled()
-    } else {
-        val prefs = remember(extId) { context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE) }
-        val mode = prefs.getString("ext_translation_mode_$extId", "Gốc") ?: "Gốc"
-        mode != "Gốc"
+    val isEnabled = TranslateUtils.isTranslateEnabled()
+    val mode = when {
+        TranslationConfig.isGlobalTranslateEnabled -> "Việt (VP)"
+        TranslationConfig.llmTranslateEnabled && TranslationConfig.llmProvider == "sangtacviet" -> "Dịch bằng API"
+        else -> "Gốc"
+    }
+    val engine = when {
+        TranslationConfig.llmTranslateEnabled && TranslationConfig.llmProvider == "sangtacviet" -> "STV"
+        else -> "QT"
     }
 
-    val prefs = if (!extId.isNullOrBlank()) {
-        remember(extId) { context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE) }
-    } else {
-        null
-    }
+    val state = remember(text, isEnabled, mode, engine) { mutableStateOf(text ?: "") }
 
-    val mode = remember(prefs, extId) {
-        if (prefs != null) prefs.getString("ext_translation_mode_$extId", "Gốc") ?: "Gốc" else "Gốc"
-    }
-    val engine = remember(prefs, extId) {
-        if (prefs != null) prefs.getString("ext_translate_engine_$extId", "QT") ?: "QT" else "QT"
-    }
-    val scope = remember(prefs, extId) {
-        if (prefs != null) prefs.getString("ext_translate_scope_$extId", "Tất cả") ?: "Tất cả" else "Tất cả"
-    }
-
-    val state = remember(text, isEnabled, mode, engine, scope) { mutableStateOf(text ?: "") }
-
-    LaunchedEffect(text, isEnabled, mode, engine, scope) {
+    LaunchedEffect(text, isEnabled, mode, engine) {
         if (text.isNullOrBlank()) {
             state.value = ""
             return@LaunchedEffect
         }
-        if (extId.isNullOrBlank()) {
-            if (isEnabled) {
-                state.value = if (isMeta) TranslateUtils.translateMeta(text)
-                              else TranslateUtils.translateContent(text)
+        if (isEnabled) {
+            if (engine == "QT") {
+                if (TranslationConfig.translationTarget == "Hán Việt") {
+                    state.value = TranslateUtils.translatePhienAm(text)
+                } else {
+                    state.value = if (isMeta) TranslateUtils.translateMeta(text)
+                                  else TranslateUtils.translateContent(text)
+                }
             } else {
-                state.value = text
+                state.value = TranslateUtils.translateWithEngine(text, engine, mode)
             }
         } else {
-            if (isEnabled) {
-                val shouldTranslate = if (isMeta) {
-                    true
-                } else {
-                    scope == "Tất cả" || scope == "Nội dung"
-                }
-                if (shouldTranslate) {
-                    if (engine == "QT") {
-                        val targetMode = if (mode.contains("Hán Việt")) "hanviet" else "vi"
-                        state.value = if (targetMode == "hanviet") {
-                            TranslateUtils.translatePhienAm(text)
-                        } else {
-                            if (isMeta) TranslateUtils.translateMeta(text)
-                            else TranslateUtils.translateContent(text)
-                        }
-                    } else {
-                        state.value = TranslateUtils.translateWithEngine(text, engine, mode)
-                    }
-                } else {
-                    state.value = text
-                }
-            } else {
-                state.value = text
-            }
+            state.value = text
         }
     }
     return state

@@ -36,14 +36,16 @@ class LlmTranslateRepositoryImpl : LlmGateway {
         onUpdate: ((List<DictPair>) -> Unit)?,
         retryReason: RetryReason?
     ): Result<String> = withContext(Dispatchers.IO) {
-        // 如果目标语言是英语，且文本已经是英文（英文字符及标点占比超过80%），跳过翻译直接返回原文
-        if (targetLanguage == "en" && isMostlyEnglish(text)) {
-            return@withContext Result.success(text)
-        }
+        if (provider != TranslationConstants.PROVIDER_SANGTACVIET && provider != TranslationConstants.PROVIDER_VIETPHRASE) {
+            // 如果目标语言是英语，且文本已经是英文（英文字符及标点占比超过80%），跳过翻译直接返回原文
+            if (targetLanguage == "en" && isMostlyEnglish(text)) {
+                return@withContext Result.success(text)
+            }
 
-        // 如果目标语言是其他语言（如中文），且文本已经是该语言，跳过翻译直接返回原文
-        if (targetLanguage == "zh" && isMostlyChinese(text)) {
-            return@withContext Result.success(text)
+            // 如果目标语言是其他语言（如中文），且文本已经是该语言，跳过翻译直接返回原文
+            if (targetLanguage == "zh" && isMostlyChinese(text)) {
+                return@withContext Result.success(text)
+            }
         }
 
         try {

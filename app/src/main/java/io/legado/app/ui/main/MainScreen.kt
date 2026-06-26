@@ -124,6 +124,7 @@ fun MainScreen(
     onNavigateToReadRecord: () -> Unit,
     onNavigateToReadRecordOverview: () -> Unit,
     onNavigateToAbout: () -> Unit,
+    onNavigateToQuickTranslate: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -422,7 +423,8 @@ fun MainScreen(
                             )
 
                             MainDestination.Explore -> ExploreScreen(
-                                onOpenExploreShow = onNavigateToExploreShow
+                                onOpenExploreShow = onNavigateToExploreShow,
+                                onNavigateToTranslationSettings = onNavigateToQuickTranslate
                             )
                             MainDestination.Rss -> RssScreen(
                                 onOpenSort = { sourceUrl, sortUrl, key ->
