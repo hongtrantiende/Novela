@@ -26,6 +26,9 @@ class ExploreBooksUseCase(
         key: String? = null,
     ): ExploreResult = withContext(Dispatchers.IO) {
         if (sourceUrl.startsWith("ext_")) {
+            if (!io.legado.app.help.MemberManager.isVip) {
+                return@withContext ExploreResult(moduleUrl ?: "", emptyList())
+            }
             val books = if (key != null) {
                 extensionRepository.searchBooks(sourceUrl, key, page)
             } else {
@@ -44,6 +47,9 @@ class ExploreBooksUseCase(
         args: String?
     ): List<SearchBook> = withContext(Dispatchers.IO) {
         if (sourceUrl.startsWith("ext_")) {
+            if (!io.legado.app.help.MemberManager.isVip) {
+                return@withContext emptyList()
+            }
             return@withContext extensionRepository.exploreBooks(sourceUrl, moduleUrl ?: "", 1).take(MAX_RANKING_BOOKS)
         }
         val request = resolveRequest(sourceUrl, moduleUrl, args)

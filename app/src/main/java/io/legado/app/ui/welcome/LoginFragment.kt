@@ -66,6 +66,13 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
                 updateUiMode(AuthMode.RECOVER)
             }
         }
+
+        binding.llDiscordCommunity.setOnClickListener {
+            runCatching {
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://discord.gg/2E4p4sAgVj"))
+                startActivity(intent)
+            }
+        }
     }
 
     private fun updateUiMode(mode: AuthMode) {
@@ -76,9 +83,9 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
             TransitionManager.beginDelayedTransition(it)
         }
 
-        // Adjust tilPassword margin bottom dynamically to maintain consistent spacing to the button
+        // Adjust tilPassword margin bottom dynamically
         val density = resources.displayMetrics.density
-        val marginDp = if (mode == AuthMode.REGISTER) 16 else 24
+        val marginDp = if (mode == AuthMode.REGISTER) 16 else 16
         (binding.tilPassword.layoutParams as? ViewGroup.MarginLayoutParams)?.apply {
             bottomMargin = (marginDp * density).toInt()
             binding.tilPassword.layoutParams = this
@@ -87,8 +94,7 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
         when (mode) {
             AuthMode.LOGIN -> {
                 binding.tvModeTitle.text = "Chào mừng trở lại"
-                binding.tvModeSummary.text = "Đăng nhập tài khoản của bạn để tiếp tục sử dụng ứng dụng"
-                binding.tvModeSummary.visibility = View.VISIBLE
+                binding.tvModeSummary.visibility = View.GONE
                 binding.tilPassword.visibility = View.VISIBLE
                 binding.tvLabelConfirmPassword.visibility = View.GONE
                 binding.tilConfirmPassword.visibility = View.GONE
@@ -98,11 +104,10 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
                 binding.tvForgotPassword.text = "Quên mật khẩu?"
             }
             AuthMode.REGISTER -> {
-                binding.tvModeTitle.text = "Tạo tài khoản"
-                binding.tvModeSummary.text = "Đăng ký tài khoản mới để trải nghiệm đầy đủ tính năng"
-                binding.tvModeSummary.visibility = View.VISIBLE
+                binding.tvModeTitle.text = "Tạo tài khoản mới"
+                binding.tvModeSummary.visibility = View.GONE
                 binding.tilPassword.visibility = View.VISIBLE
-                binding.tvLabelConfirmPassword.visibility = View.VISIBLE
+                binding.tvLabelConfirmPassword.visibility = View.GONE
                 binding.tilConfirmPassword.visibility = View.VISIBLE
                 binding.btnAction.text = "Đăng ký"
                 binding.tvToggleSignup.text = "Đã có tài khoản? Đăng nhập"
@@ -110,7 +115,7 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
             }
             AuthMode.RECOVER -> {
                 binding.tvModeTitle.text = "Khôi phục mật khẩu"
-                binding.tvModeSummary.text = "Nhập email của bạn để nhận liên kết đặt lại mật khẩu"
+                binding.tvModeSummary.text = "Nhập email để nhận liên kết đặt lại mật khẩu"
                 binding.tvModeSummary.visibility = View.VISIBLE
                 binding.tilPassword.visibility = View.GONE
                 binding.tvLabelConfirmPassword.visibility = View.GONE
@@ -195,6 +200,7 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
     }
 
     private fun performLogin(email: String, password: String): Result<String> {
+        LocalConfig.vipExpireFromServer = 0L
         val json = GSON.toJson(mapOf("email" to email, "password" to password))
         val body = json.toRequestBody("application/json; charset=utf-8".toMediaType())
         val request = Request.Builder()
@@ -215,13 +221,12 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
                 val accessToken = jsonObject.getString("access_token")
                 val user = jsonObject.getJSONObject("user")
                 val userEmail = user.getString("email").lowercase().trim()
-                
+
                 LocalConfig.accessToken = accessToken
                 LocalConfig.userEmail = userEmail
-                
-                val userMetadata = user.optJSONObject("user_metadata")
-                val vipExpire = userMetadata?.optLong("vip_expire", 0L) ?: 0L
-                LocalConfig.vipExpireFromServer = vipExpire
+
+                // Sync VIP status from both user_metadata and profiles.vip_until table
+                io.legado.app.help.MemberManager.checkVipStatus(accessToken)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

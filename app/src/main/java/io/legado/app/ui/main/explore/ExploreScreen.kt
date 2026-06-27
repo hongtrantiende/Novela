@@ -151,22 +151,31 @@ fun ExploreScreen(
     val listItems by remember(uiState.items, uiState.expandedId, uiState.exploreKinds) {
         derivedStateOf { viewModel.buildExploreListItems(uiState) }
     }
-    val filteredListItems by remember(listItems) {
+    val isVip = io.legado.app.help.MemberManager.isVip
+    val currentExploreTab = if (isVip) uiState.exploreTab else 0
+
+    LaunchedEffect(isVip) {
+        if (!isVip && uiState.exploreTab != 0) {
+            viewModel.setExploreTab(0)
+        }
+    }
+
+    val filteredListItems by remember(listItems, isVip) {
         derivedStateOf {
-            if (io.legado.app.help.MemberManager.isVip) {
+            if (isVip) {
                 listItems
             } else {
                 listItems.filter { listItem ->
                     when (listItem) {
                         is ExploreListItem.Header -> {
                             val item = listItem.source
-                            val isInstalled = !item.bookSourceUrl.startsWith("ext_online_") && !item.bookSourceUrl.startsWith("online_yckceo_")
-                            isInstalled
+                            val isAllowed = !item.bookSourceUrl.startsWith("ext_") && !item.bookSourceUrl.startsWith("online_yckceo_")
+                            isAllowed
                         }
                         is ExploreListItem.KindRow -> {
                             val sourceUrl = listItem.sourceUrl
-                            val isInstalled = !sourceUrl.startsWith("ext_online_") && !sourceUrl.startsWith("online_yckceo_")
-                            isInstalled
+                            val isAllowed = !sourceUrl.startsWith("ext_") && !sourceUrl.startsWith("online_yckceo_")
+                            isAllowed
                         }
                     }
                 }
@@ -254,13 +263,15 @@ fun ExploreScreen(
                 .padding(top = paddingValues.calculateTopPadding())
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                AppTabRow(
-                    tabTitles = listOf("Nguồn sách", "Nguồn Extension"),
-                    selectedTabIndex = uiState.exploreTab,
-                    onTabSelected = { viewModel.setExploreTab(it) },
-                    isScrollable = false,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                if (isVip) {
+                    AppTabRow(
+                        tabTitles = listOf("Nguồn sách", "Nguồn Extension"),
+                        selectedTabIndex = currentExploreTab,
+                        onTabSelected = { viewModel.setExploreTab(it) },
+                        isScrollable = false,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
 
 

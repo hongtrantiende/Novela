@@ -275,7 +275,7 @@ private fun AboutContent(
                     .background(Color.White),
             ) {
                 Image(
-                    painter = painterResource(R.drawable.ic_launcher_foreground),
+                    painter = painterResource(R.drawable.ic_launcher3),
                     contentDescription = null,
                     modifier = Modifier.scale(1.1f)
                 )
@@ -386,10 +386,22 @@ private fun AboutContent(
                             Color.Transparent,
                         ),
                     ) {
-                        ArrowPreference(
-                            title = stringResource(R.string.check_update),
-                            onClick = { onIntent(AboutIntent.CheckUpdate) },
-                        )
+                        Column {
+                            ArrowPreference(
+                                title = stringResource(R.string.check_update),
+                                onClick = { onIntent(AboutIntent.CheckUpdate) },
+                            )
+                            val context = androidx.compose.ui.platform.LocalContext.current
+                            ArrowPreference(
+                                title = "Cộng đồng Novela Discord",
+                                onClick = {
+                                    runCatching {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://discord.gg/2E4p4sAgVj"))
+                                        context.startActivity(intent)
+                                    }
+                                },
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
                 }

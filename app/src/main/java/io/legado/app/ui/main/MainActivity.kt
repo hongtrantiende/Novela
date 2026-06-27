@@ -39,6 +39,8 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
+import io.legado.app.utils.getBoolean
+import io.legado.app.utils.putBoolean
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Backup
 import io.legado.app.help.update.AppUpdate
@@ -164,9 +166,27 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         restoredReadBookRoute = savedInstanceState?.restoreReadBookRoute()
         super.onCreate(savedInstanceState)
 
+        // Set default main screens tab visibility requested by user (run once on update/first startup)
+        val tabSetupKey = "first_run_setup_tabs_v3"
+        if (LocalConfig.getBoolean(tabSetupKey, true)) {
+            ThemeConfig.showHome = false
+            ThemeConfig.showRss = false
+            ThemeConfig.showReadRecord = true
+            ThemeConfig.showDiscovery = true
+            ThemeConfig.showUpdates = true
+            LocalConfig.putBoolean(tabSetupKey, false)
+        }
+
         if (checkStartupRoute()) return
 
-        // 智能自启：如果上次是手动开启状态（web_service_auto 为 true），则自启
+        val token = LocalConfig.accessToken
+        if (!token.isNullOrBlank()) {
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                io.legado.app.help.MemberManager.checkVipStatus(token)
+            }
+        }
+
+        // 智能自启：如果上次 là manual start status (web_service_auto là true) thì tự khởi chạy
         if (AppConfig.webServiceAutoStart) {
             WebService.startForeground(this)
         }

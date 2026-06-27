@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
@@ -48,6 +49,18 @@ import kotlinx.coroutines.withContext
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.book.bookmark.AllBookmarkActivity
@@ -77,7 +90,21 @@ fun MyScreen(
 ) {
 
     val context = androidx.compose.ui.platform.LocalContext.current
-    var showMemberDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var showSupabaseMembersDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var serviceRoleKey by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(io.legado.app.help.config.LocalConfig.supabaseServiceRoleKey ?: "")
+    }
+    var userList by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<List<io.legado.app.help.SupabaseUser>>(emptyList())
+    }
+    var searchEmailQuery by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf("")
+    }
+    var isFetchingUsers by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    var editingProfile by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<io.legado.app.help.SupabaseUser?>(null) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
@@ -220,7 +247,7 @@ fun MyScreen(
                         },
                         imageVector = Icons.Default.Bookmark,
                         onClick = {
-                            showMemberDialog = true
+                            showSupabaseMembersDialog = true
                         }
                     )
                 }
@@ -239,6 +266,7 @@ fun MyScreen(
                             io.legado.app.help.config.LocalConfig.isLoggedIn = false
                             io.legado.app.help.config.LocalConfig.userEmail = null
                             io.legado.app.help.config.LocalConfig.accessToken = null
+                            io.legado.app.help.config.LocalConfig.vipExpireFromServer = 0L
                             // Restart activity to welcome screen
                             val intent = android.content.Intent(context, io.legado.app.ui.welcome.WelcomeActivity::class.java)
                             intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -257,358 +285,62 @@ fun MyScreen(
         }
     }
 
-    if (showMemberDialog) {
-        var activationKeyInput by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-        val showAdminPanel = activationKeyInput.trim() == "novela@admin" || io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com"
-        var targetDeviceId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-        var targetVipDays by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("30") }
-        var generatedKey by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-
-        var serviceRoleKey by androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf(io.legado.app.help.config.LocalConfig.supabaseServiceRoleKey ?: "")
-        }
-        var userList by androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf<List<io.legado.app.help.SupabaseUser>>(emptyList())
-        }
-        var searchEmailQuery by androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf("")
-        }
-        var isFetchingUsers by androidx.compose.runtime.remember {
-            androidx.compose.runtime.mutableStateOf(false)
-        }
-        val scope = androidx.compose.runtime.rememberCoroutineScope()
-
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showMemberDialog = false },
-            title = { androidx.compose.material3.Text(text = "Kích hoạt Thành viên nội bộ", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
-            text = {
-                androidx.compose.foundation.lazy.LazyColumn(
-                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
-                ) {
-                    item {
-                        androidx.compose.material3.Text(
-                            text = "Trạng thái: " + if (io.legado.app.help.MemberManager.isVip) {
-                                "Đang hoạt động (Hạn dùng: ${io.legado.app.help.MemberManager.expireDateString})"
-                            } else {
-                                "Tài khoản thường (Bản dùng thử)"
+    SupabaseMembersDialog(
+        show = showSupabaseMembersDialog,
+        onDismissRequest = { showSupabaseMembersDialog = false },
+        serviceRoleKey = serviceRoleKey,
+        onServiceRoleKeyChange = {
+            serviceRoleKey = it
+            io.legado.app.help.config.LocalConfig.supabaseServiceRoleKey = it
+        },
+        isFetchingUsers = isFetchingUsers,
+        onFetchUsers = {
+            if (serviceRoleKey.isBlank()) {
+                android.widget.Toast.makeText(context, "Vui lòng nhập Service Role Key!", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                isFetchingUsers = true
+                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val result = io.legado.app.help.MemberManager.fetchSupabaseUsers(serviceRoleKey.trim())
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        isFetchingUsers = false
+                        result.fold(
+                            onSuccess = {
+                                userList = it
+                                android.widget.Toast.makeText(context, "Tải thành công ${it.size} tài khoản!", android.widget.Toast.LENGTH_SHORT).show()
                             },
-                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                            onFailure = {
+                                android.widget.Toast.makeText(context, "Lỗi: ${it.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                            }
                         )
                     }
-                    item {
-                        val deviceId = io.legado.app.constant.AppConst.androidId
-                        androidx.compose.material3.OutlinedTextField(
-                            value = deviceId,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { androidx.compose.material3.Text("Mã Thiết Bị (Device ID)") },
-                            trailingIcon = {
-                                androidx.compose.material3.IconButton(onClick = {
-                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                    val clip = android.content.ClipData.newPlainText("Device ID", deviceId)
-                                    clipboard.setPrimaryClip(clip)
-                                    android.widget.Toast.makeText(context, "Đã sao chép Mã Thiết Bị!", android.widget.Toast.LENGTH_SHORT).show()
-                                }) {
-                                    androidx.compose.material3.Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
-                                        contentDescription = "Sao chép"
-                                    )
-                                }
-                            },
-                            modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                        )
-                    }
-                    item {
-                        androidx.compose.material3.OutlinedTextField(
-                            value = activationKeyInput,
-                            onValueChange = { activationKeyInput = it },
-                            label = { androidx.compose.material3.Text("Mã Kích Hoạt / Mật khẩu Admin") },
-                            placeholder = { androidx.compose.material3.Text("Dán mã kích hoạt tại đây...") },
-                            modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    if (showAdminPanel) {
-                        item {
-                            androidx.compose.material3.HorizontalDivider(modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp))
-                            androidx.compose.material3.Text(
-                                text = "🛠️ BẢNG ĐIỀU KHIỂN ADMIN",
-                                style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                            )
-                        }
-                        item {
-                            androidx.compose.material3.OutlinedTextField(
-                                value = targetDeviceId,
-                                onValueChange = { targetDeviceId = it },
-                                label = { androidx.compose.material3.Text("Device ID Khách Hàng") },
-                                placeholder = { androidx.compose.material3.Text("Nhập Android ID của máy khách...") },
-                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                            )
-                        }
-                        item {
-                            androidx.compose.material3.OutlinedTextField(
-                                value = targetVipDays,
-                                onValueChange = { targetVipDays = it },
-                                label = { androidx.compose.material3.Text("Số ngày cấp VIP") },
-                                placeholder = { androidx.compose.material3.Text("Ví dụ: 30, 90, 365...") },
-                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                            )
-                        }
-                        item {
-                            androidx.compose.material3.Button(
-                                onClick = {
-                                    val days = targetVipDays.toIntOrNull() ?: 30
-                                    if (targetDeviceId.isBlank()) {
-                                        android.widget.Toast.makeText(context, "Vui lòng nhập Device ID khách hàng!", android.widget.Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        generatedKey = io.legado.app.help.MemberManager.generateKey(targetDeviceId.trim(), days)
-                                        android.widget.Toast.makeText(context, "Đã tạo mã kích hoạt thành công!", android.widget.Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                            ) {
-                                androidx.compose.material3.Text("Tạo Mã Kích Hoạt")
-                            }
-                        }
-                        if (generatedKey.isNotEmpty()) {
-                            item {
-                                androidx.compose.material3.OutlinedTextField(
-                                    value = generatedKey,
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { androidx.compose.material3.Text("Mã Kích Hoạt Đã Tạo") },
-                                    trailingIcon = {
-                                        androidx.compose.material3.IconButton(onClick = {
-                                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                            val clip = android.content.ClipData.newPlainText("Activation Key", generatedKey)
-                                            clipboard.setPrimaryClip(clip)
-                                            android.widget.Toast.makeText(context, "Đã sao chép mã kích hoạt!", android.widget.Toast.LENGTH_SHORT).show()
-                                        }) {
-                                            androidx.compose.material3.Icon(
-                                                imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
-                                                contentDescription = "Sao chép"
-                                            )
-                                        }
-                                    },
-                                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                                )
-                            }
-                        }
-
-                        item {
-                            androidx.compose.material3.HorizontalDivider(modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp))
-                            androidx.compose.material3.Text(
-                                text = "👥 QUẢN LÝ TÀI KHOẢN NGƯỜI DÙNG",
-                                style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
-                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
-                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                            )
-                        }
-
-                        item {
-                            androidx.compose.material3.OutlinedTextField(
-                                value = serviceRoleKey,
-                                onValueChange = {
-                                    serviceRoleKey = it
-                                    io.legado.app.help.config.LocalConfig.supabaseServiceRoleKey = it
-                                },
-                                label = { androidx.compose.material3.Text("Supabase Service Role Key") },
-                                placeholder = { androidx.compose.material3.Text("Nhập key service_role bí mật...") },
-                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                            )
-                        }
-
-                        item {
-                            androidx.compose.material3.Button(
-                                onClick = {
-                                    if (serviceRoleKey.isBlank()) {
-                                        android.widget.Toast.makeText(context, "Vui lòng nhập Service Role Key!", android.widget.Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        isFetchingUsers = true
-                                        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                            val result = io.legado.app.help.MemberManager.fetchSupabaseUsers(serviceRoleKey.trim())
-                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                                isFetchingUsers = false
-                                                result.fold(
-                                                    onSuccess = {
-                                                        userList = it
-                                                        android.widget.Toast.makeText(context, "Tải thành công ${it.size} tài khoản!", android.widget.Toast.LENGTH_SHORT).show()
-                                                    },
-                                                    onFailure = {
-                                                        android.widget.Toast.makeText(context, "Lỗi: ${it.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                },
-                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                            ) {
-                                if (isFetchingUsers) {
-                                    androidx.compose.material3.CircularProgressIndicator(
-                                        modifier = androidx.compose.ui.Modifier.size(18.dp),
-                                        color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
-                                        strokeWidth = 2.dp
-                                    )
-                                    androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.width(8.dp))
-                                    androidx.compose.material3.Text("Đang tải...")
-                                } else {
-                                    androidx.compose.material3.Text("Tải danh sách tài khoản Supabase")
-                                }
-                            }
-                        }
-
-                        if (userList.isNotEmpty()) {
-                            item {
-                                androidx.compose.material3.OutlinedTextField(
-                                    value = searchEmailQuery,
-                                    onValueChange = { searchEmailQuery = it },
-                                    label = { androidx.compose.material3.Text("Tìm kiếm Gmail tài khoản") },
-                                    placeholder = { androidx.compose.material3.Text("Nhập email cần tìm...") },
-                                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            val filteredUsers = userList.filter {
-                                searchEmailQuery.isBlank() || it.email.contains(searchEmailQuery.trim(), ignoreCase = true)
-                            }
-
-                            filteredUsers.forEach { user ->
-                                item(key = user.id) {
-                                    io.legado.app.ui.widget.components.card.GlassCard(
-                                        modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
-                                        cornerRadius = 8.dp
-                                    ) {
-                                        androidx.compose.foundation.layout.Column(
-                                            modifier = androidx.compose.ui.Modifier.padding(12.dp)
-                                        ) {
-                                            androidx.compose.material3.Text(
-                                                text = user.email,
-                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
-                                            )
-
-                                            val expireText = if (user.vipExpire > System.currentTimeMillis()) {
-                                                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-                                                "VIP hết hạn: " + sdf.format(java.util.Date(user.vipExpire))
-                                            } else {
-                                                "Tài khoản thường"
-                                            }
-
-                                            androidx.compose.material3.Text(
-                                                text = expireText,
-                                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                                                color = if (user.vipExpire > System.currentTimeMillis()) androidx.compose.material3.MaterialTheme.colorScheme.primary else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-
-                                            androidx.compose.foundation.layout.Spacer(modifier = androidx.compose.ui.Modifier.height(8.dp))
-
-                                            androidx.compose.foundation.layout.Row(
-                                                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
-                                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
-                                            ) {
-                                                listOf(30, 90, 365).forEach { days ->
-                                                    androidx.compose.material3.Button(
-                                                        onClick = {
-                                                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                                                val newExpire = System.currentTimeMillis() + days.toLong() * 24 * 60 * 60 * 1000
-                                                                val result = io.legado.app.help.MemberManager.updateUserVipExpire(serviceRoleKey.trim(), user.id, newExpire)
-                                                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                                                    result.fold(
-                                                                        onSuccess = {
-                                                                            android.widget.Toast.makeText(context, "Cấp VIP ${days} ngày thành công!", android.widget.Toast.LENGTH_SHORT).show()
-                                                                            // Reload
-                                                                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                                                                val refresh = io.legado.app.help.MemberManager.fetchSupabaseUsers(serviceRoleKey.trim())
-                                                                                if (refresh.isSuccess) {
-                                                                                    userList = refresh.getOrThrow()
-                                                                                }
-                                                                            }
-                                                                        },
-                                                                        onFailure = {
-                                                                            android.widget.Toast.makeText(context, "Lỗi: ${it.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
-                                                                        }
-                                                                    )
-                                                                }
-                                                            }
-                                                        },
-                                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                                        modifier = androidx.compose.ui.Modifier.weight(1f)
-                                                    ) {
-                                                        androidx.compose.material3.Text("+${days}d", fontSize = 10.sp)
-                                                    }
-                                                }
-
-                                                androidx.compose.material3.Button(
-                                                    onClick = {
-                                                        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                                            val result = io.legado.app.help.MemberManager.updateUserVipExpire(serviceRoleKey.trim(), user.id, 0L)
-                                                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                                                                result.fold(
-                                                                    onSuccess = {
-                                                                        android.widget.Toast.makeText(context, "Khóa VIP thành công!", android.widget.Toast.LENGTH_SHORT).show()
-                                                                        // Reload
-                                                                        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
-                                                                            val refresh = io.legado.app.help.MemberManager.fetchSupabaseUsers(serviceRoleKey.trim())
-                                                                            if (refresh.isSuccess) {
-                                                                                userList = refresh.getOrThrow()
-                                                                            }
-                                                                        }
-                                                                    },
-                                                                    onFailure = {
-                                                                        android.widget.Toast.makeText(context, "Lỗi: ${it.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
-                                                                    }
-                                                                )
-                                                            }
-                                                        }
-                                                    },
-                                                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                                                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.errorContainer,
-                                                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onErrorContainer
-                                                    ),
-                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                                    modifier = androidx.compose.ui.Modifier.weight(1f)
-                                                ) {
-                                                    androidx.compose.material3.Text("Khóa", fontSize = 10.sp)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (!showAdminPanel) {
-                    androidx.compose.material3.Button(onClick = {
-                        if (activationKeyInput.isBlank()) {
-                            android.widget.Toast.makeText(context, "Vui lòng nhập mã kích hoạt!", android.widget.Toast.LENGTH_SHORT).show()
-                        } else {
-                            val success = io.legado.app.help.MemberManager.activate(activationKeyInput.trim())
-                            if (success) {
-                                android.widget.Toast.makeText(context, "Kích hoạt Thành viên nội bộ thành công!", android.widget.Toast.LENGTH_LONG).show()
-                                showMemberDialog = false
-                            } else {
-                                android.widget.Toast.makeText(context, "Mã kích hoạt không hợp lệ hoặc đã hết hạn!", android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }) {
-                        androidx.compose.material3.Text("Kích hoạt")
-                    }
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showMemberDialog = false }) {
-                    androidx.compose.material3.Text("Hủy")
                 }
             }
-        )
-    }
+        },
+        userList = userList,
+        searchEmailQuery = searchEmailQuery,
+        onSearchEmailQueryChange = { searchEmailQuery = it },
+        onUserClick = { editingProfile = it }
+    )
+
+    EditProfileDialog(
+        user = editingProfile,
+        onDismissRequest = { editingProfile = null },
+        serviceRoleKey = serviceRoleKey,
+        onUserUpdated = {
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val refresh = io.legado.app.help.MemberManager.fetchSupabaseUsers(serviceRoleKey.trim())
+                if (refresh.isSuccess) {
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        userList = refresh.getOrThrow()
+                        val updated = userList.find { it.id == editingProfile?.id }
+                        if (updated != null) {
+                            editingProfile = updated
+                        }
+                    }
+                }
+            }
+        }
+    )
 }
 
 
@@ -663,4 +395,489 @@ fun WebServiceSettingBlock(
         }
     }
 }
+
+
+@Composable
+fun SupabaseMembersDialog(
+    show: Boolean,
+    onDismissRequest: () -> Unit,
+    serviceRoleKey: String,
+    onServiceRoleKeyChange: (String) -> Unit,
+    isFetchingUsers: Boolean,
+    onFetchUsers: () -> Unit,
+    userList: List<io.legado.app.help.SupabaseUser>,
+    searchEmailQuery: String,
+    onSearchEmailQueryChange: (String) -> Unit,
+    onUserClick: (io.legado.app.help.SupabaseUser) -> Unit
+) {
+    if (!show) return
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { androidx.compose.material3.Text(text = "Quản lý thành viên Supabase", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+        text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 500.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+            ) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = serviceRoleKey,
+                    onValueChange = onServiceRoleKeyChange,
+                    label = { androidx.compose.material3.Text("Supabase Service Role Key") },
+                    placeholder = { androidx.compose.material3.Text("Nhập key service_role bí mật...") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                val context = androidx.compose.ui.platform.LocalContext.current
+                androidx.compose.material3.Button(
+                    onClick = onFetchUsers,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isFetchingUsers) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        androidx.compose.material3.Text("Đang tải...")
+                    } else {
+                        androidx.compose.material3.Text("Tải danh sách tài khoản Supabase")
+                    }
+                }
+
+                if (userList.isNotEmpty()) {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = searchEmailQuery,
+                        onValueChange = onSearchEmailQueryChange,
+                        placeholder = { androidx.compose.material3.Text("Tìm theo Gmail hoặc tên...") },
+                        leadingIcon = { androidx.compose.material3.Icon(Icons.Default.Search, contentDescription = null) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    androidx.compose.foundation.lazy.LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+                    ) {
+                        val filteredUsers = userList.filter {
+                            searchEmailQuery.isBlank() ||
+                                    it.email.contains(searchEmailQuery.trim(), ignoreCase = true) ||
+                                    it.displayName.contains(searchEmailQuery.trim(), ignoreCase = true)
+                        }
+
+                        if (filteredUsers.isEmpty()) {
+                            item {
+                                androidx.compose.foundation.layout.Box(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    contentAlignment = androidx.compose.ui.Alignment.Center
+                                ) {
+                                    androidx.compose.material3.Text("Không tìm thấy kết quả phù hợp", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        } else {
+                            items(filteredUsers, key = { it.id }) { user ->
+                                val isVip = user.vipExpire > System.currentTimeMillis()
+                                val vipStatusText = if (isVip) {
+                                    val diff = user.vipExpire - System.currentTimeMillis()
+                                    val days = (diff / (1000 * 60 * 60 * 24)).coerceAtLeast(0) + 1
+                                    "VIP còn $days ngày"
+                                } else {
+                                    "Thành viên thường"
+                                }
+
+                                io.legado.app.ui.widget.components.card.GlassCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { onUserClick(user) },
+                                    cornerRadius = 12.dp
+                                ) {
+                                    androidx.compose.foundation.layout.Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                                    ) {
+                                        // Avatar circle
+                                        androidx.compose.foundation.layout.Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(CircleShape)
+                                                .background(androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                                .border(
+                                                    width = 1.dp,
+                                                    color = if (isVip) androidx.compose.ui.graphics.Color(0xFFFFD700) else androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                    shape = CircleShape
+                                                ),
+                                            contentAlignment = androidx.compose.ui.Alignment.Center
+                                        ) {
+                                            val initials = if (user.displayName.isNotBlank()) {
+                                                user.displayName.take(2).uppercase()
+                                            } else if (user.email.isNotBlank()) {
+                                                user.email.take(2).uppercase()
+                                            } else "U"
+                                            androidx.compose.material3.Text(
+                                                text = initials,
+                                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        androidx.compose.foundation.layout.Column(
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                                                androidx.compose.material3.Text(
+                                                    text = if (user.displayName.isNotBlank()) user.displayName else "Chưa đặt tên",
+                                                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                                    fontSize = 14.sp
+                                                )
+                                                if (isVip) {
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    androidx.compose.material3.Icon(
+                                                        imageVector = Icons.Default.Star,
+                                                        contentDescription = "VIP",
+                                                        tint = androidx.compose.ui.graphics.Color(0xFFFFD700),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                            androidx.compose.material3.Text(
+                                                text = user.email,
+                                                fontSize = 11.sp,
+                                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        androidx.compose.foundation.layout.Column(
+                                            horizontalAlignment = androidx.compose.ui.Alignment.End
+                                        ) {
+                                            androidx.compose.material3.Text(
+                                                text = vipStatusText,
+                                                fontSize = 11.sp,
+                                                color = if (isVip) androidx.compose.ui.graphics.Color(0xFFE5A900) else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = if (isVip) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            androidx.compose.material3.Icon(
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "Sửa",
+                                                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onDismissRequest) {
+                androidx.compose.material3.Text("Đóng")
+            }
+        }
+    )
+}
+
+@Composable
+fun EditProfileDialog(
+    user: io.legado.app.help.SupabaseUser?,
+    onDismissRequest: () -> Unit,
+    serviceRoleKey: String,
+    onUserUpdated: () -> Unit
+) {
+    if (user == null) return
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var tempName by androidx.compose.runtime.remember(user) { androidx.compose.runtime.mutableStateOf(user.displayName) }
+    var isVipActive by androidx.compose.runtime.remember(user) {
+        androidx.compose.runtime.mutableStateOf(user.vipExpire > System.currentTimeMillis())
+    }
+    var vipUntilDate by androidx.compose.runtime.remember(user) {
+        androidx.compose.runtime.mutableStateOf(
+            if (user.vipExpire > System.currentTimeMillis()) {
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                sdf.format(java.util.Date(user.vipExpire))
+            } else ""
+        )
+    }
+    var isSaving by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+
+    val handleGrantDays = { days: Int ->
+        val calendar = java.util.Calendar.getInstance()
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, days)
+        val newExpire = calendar.timeInMillis
+        isSaving = true
+        scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val result = io.legado.app.help.MemberManager.updateUserProfile(serviceRoleKey.trim(), user.id, tempName.trim(), newExpire)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                isSaving = false
+                result.fold(
+                    onSuccess = {
+                        android.widget.Toast.makeText(context, "Cấp VIP $days ngày thành công!", android.widget.Toast.LENGTH_SHORT).show()
+                        onUserUpdated()
+                        isVipActive = true
+                        val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                        vipUntilDate = sdf.format(java.util.Date(newExpire))
+                    },
+                    onFailure = {
+                        android.widget.Toast.makeText(context, "Lỗi: ${it.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }
+    }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = { if (!isSaving) onDismissRequest() },
+        title = {
+            androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.material3.Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                androidx.compose.material3.Text(
+                    text = "Cấu hình thành viên",
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            }
+        },
+        text = {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)
+            ) {
+                androidx.compose.material3.Text(
+                    text = "Cấu hình cho tài khoản: ${user.email}",
+                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // Nickname field with save button
+                androidx.compose.foundation.layout.Row(
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = tempName,
+                        onValueChange = { tempName = it },
+                        label = { androidx.compose.material3.Text("Tên nhân vật (Nickname)") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        enabled = !isSaving
+                    )
+                    if (tempName.trim() != user.displayName) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        androidx.compose.material3.IconButton(
+                            onClick = {
+                                isSaving = true
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    val currentExpire = if (isVipActive) {
+                                        if (vipUntilDate.isNotBlank()) {
+                                            try {
+                                                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                                sdf.parse(vipUntilDate)?.time ?: (System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000)
+                                            } catch (_: Exception) {
+                                                System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000
+                                            }
+                                        } else {
+                                            System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000
+                                        }
+                                    } else null
+                                    val result = io.legado.app.help.MemberManager.updateUserProfile(serviceRoleKey.trim(), user.id, tempName.trim(), currentExpire)
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                        isSaving = false
+                                        if (result.isSuccess) {
+                                            android.widget.Toast.makeText(context, "Cập nhật tên thành công!", android.widget.Toast.LENGTH_SHORT).show()
+                                            onUserUpdated()
+                                        } else {
+                                            android.widget.Toast.makeText(context, "Lỗi: ${result.exceptionOrNull()?.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isSaving,
+                            colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(contentColor = androidx.compose.material3.MaterialTheme.colorScheme.primary)
+                        ) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Lưu tên"
+                            )
+                        }
+                    }
+                }
+
+                androidx.compose.material3.HorizontalDivider()
+
+                // Switch VIP
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                ) {
+                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        androidx.compose.material3.Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = androidx.compose.ui.graphics.Color(0xFFFFD700),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        androidx.compose.material3.Text(
+                            text = "Kích hoạt VIP",
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
+                    }
+                    androidx.compose.material3.Switch(
+                        checked = isVipActive,
+                        onCheckedChange = { active ->
+                            isSaving = true
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                val newExpire = if (active) {
+                                    val calendar = java.util.Calendar.getInstance()
+                                    calendar.add(java.util.Calendar.DAY_OF_YEAR, 30)
+                                    calendar.timeInMillis
+                                } else null
+                                val result = io.legado.app.help.MemberManager.updateUserProfile(serviceRoleKey.trim(), user.id, tempName.trim(), newExpire)
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                    isSaving = false
+                                    if (result.isSuccess) {
+                                        android.widget.Toast.makeText(context, if (active) "Đã kích hoạt VIP 30 ngày!" else "Đã hủy VIP!", android.widget.Toast.LENGTH_SHORT).show()
+                                        onUserUpdated()
+                                        isVipActive = active
+                                        if (active) {
+                                            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                            vipUntilDate = sdf.format(java.util.Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000))
+                                        } else {
+                                            vipUntilDate = ""
+                                        }
+                                    } else {
+                                        android.widget.Toast.makeText(context, "Lỗi: ${result.exceptionOrNull()?.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isSaving
+                    )
+                }
+
+                if (isVipActive) {
+                    androidx.compose.foundation.layout.Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                            .padding(12.dp),
+                        verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
+                    ) {
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween
+                        ) {
+                            androidx.compose.material3.Text("Ngày hết hạn VIP:", fontSize = 13.sp)
+
+                            val dateText = if (vipUntilDate.isNotBlank()) vipUntilDate else "Chọn ngày"
+                            androidx.compose.material3.Text(
+                                text = dateText,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                                fontSize = 14.sp,
+                                modifier = Modifier
+                                    .clickable(enabled = !isSaving) {
+                                        val calendar = java.util.Calendar.getInstance()
+                                        if (vipUntilDate.isNotBlank()) {
+                                            try {
+                                                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                                val date = sdf.parse(vipUntilDate)
+                                                if (date != null) calendar.time = date
+                                            } catch (_: Exception) {}
+                                        }
+                                        android.app.DatePickerDialog(
+                                            context,
+                                            { _, year, month, dayOfMonth ->
+                                                val formattedMonth = String.format("%02d", month + 1)
+                                                val formattedDay = String.format("%02d", dayOfMonth)
+                                                val newDateStr = "$year-$formattedMonth-$formattedDay"
+                                                try {
+                                                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
+                                                    val newExpire = sdf.parse(newDateStr)?.time ?: System.currentTimeMillis()
+                                                    isSaving = true
+                                                    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                                        val result = io.legado.app.help.MemberManager.updateUserProfile(serviceRoleKey.trim(), user.id, tempName.trim(), newExpire)
+                                                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                                            isSaving = false
+                                                            if (result.isSuccess) {
+                                                                android.widget.Toast.makeText(context, "Đổi ngày hết hạn thành công!", android.widget.Toast.LENGTH_SHORT).show()
+                                                                onUserUpdated()
+                                                                vipUntilDate = newDateStr
+                                                            } else {
+                                                                android.widget.Toast.makeText(context, "Lỗi: ${result.exceptionOrNull()?.localizedMessage}", android.widget.Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        }
+                                                    }
+                                                } catch (_: Exception) {}
+                                            },
+                                            calendar.get(java.util.Calendar.YEAR),
+                                            calendar.get(java.util.Calendar.MONTH),
+                                            calendar.get(java.util.Calendar.DAY_OF_MONTH)
+                                        ).show()
+                                    }
+                                    .padding(vertical = 4.dp, horizontal = 8.dp)
+                            )
+                        }
+
+                        // Quick days grant
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("30 ngày" to 30, "90 ngày" to 90, "365 ngày" to 365).forEach { (label, days) ->
+                                androidx.compose.foundation.layout.Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .background(androidx.compose.material3.MaterialTheme.colorScheme.surface, RoundedCornerShape(6.dp))
+                                        .border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                        .clickable(enabled = !isSaving) { handleGrantDays(days) }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = androidx.compose.ui.Alignment.Center
+                                ) {
+                                    androidx.compose.material3.Text(
+                                        text = label,
+                                        color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                        fontSize = 11.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = onDismissRequest,
+                enabled = !isSaving
+            ) {
+                androidx.compose.material3.Text("Đóng")
+            }
+        }
+    )
+}
+
 

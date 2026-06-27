@@ -105,7 +105,7 @@ object MemberManager {
     fun fetchSupabaseUsers(serviceRoleKey: String): Result<List<SupabaseUser>> {
         return try {
             val request = okhttp3.Request.Builder()
-                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/admin/users")
+                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/admin/users?per_page=10000")
                 .header("apikey", serviceRoleKey)
                 .header("Authorization", "Bearer $serviceRoleKey")
                 .get()
@@ -127,7 +127,8 @@ object MemberManager {
                     val email = userObj.optString("email", "")
                     val userMetadata = userObj.optJSONObject("user_metadata")
                     val vipExpire = userMetadata?.optLong("vip_expire", 0L) ?: 0L
-                    list.add(SupabaseUser(id, email, vipExpire))
+                    val displayName = userMetadata?.optString("display_name", userMetadata.optString("name", "")) ?: ""
+                    list.add(SupabaseUser(id, email, vipExpire, displayName))
                 }
                 Result.success(list)
             }
@@ -136,11 +137,21 @@ object MemberManager {
         }
     }
 
-    fun updateUserVipExpire(serviceRoleKey: String, userId: String, expireTimestamp: Long): Result<Boolean> {
+    fun updateUserProfile(
+        serviceRoleKey: String,
+        userId: String,
+        displayName: String,
+        vipExpire: Long?
+    ): Result<Boolean> {
         return try {
             val json = org.json.JSONObject()
             val meta = org.json.JSONObject()
-            meta.put("vip_expire", expireTimestamp)
+            meta.put("display_name", displayName)
+            if (vipExpire != null) {
+                meta.put("vip_expire", vipExpire)
+            } else {
+                meta.put("vip_expire", org.json.JSONObject.NULL)
+            }
             json.put("user_metadata", meta)
             
             val mediaType = "application/json; charset=utf-8".toMediaType()
@@ -166,10 +177,76 @@ object MemberManager {
             Result.failure(e)
         }
     }
+
+    fun checkVipStatus(accessToken: String): Result<Long> {
+        return try {
+            val request = okhttp3.Request.Builder()
+                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
+                .header("apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8")
+                .header("Authorization", "Bearer $accessToken")
+                .get()
+                .build()
+
+            var vipExpire = 0L
+            var userId = ""
+            io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
+                if (response.isSuccessful && !responseBody.isNullOrBlank()) {
+                    val jsonObject = org.json.JSONObject(responseBody)
+                    userId = jsonObject.optString("id", "")
+                    val userMetadata = jsonObject.optJSONObject("user_metadata")
+                    vipExpire = userMetadata?.optLong("vip_expire", 0L) ?: 0L
+                }
+            }
+
+            if (userId.isNotBlank()) {
+                val profileRequest = okhttp3.Request.Builder()
+                    .url("https://arsnnqwcqzaqhndxemgz.supabase.co/rest/v1/profiles?id=eq.$userId&select=vip_until")
+                    .header("apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8")
+                    .header("Authorization", "Bearer $accessToken")
+                    .get()
+                    .build()
+
+                try {
+                    io.legado.app.help.http.okHttpClient.newCall(profileRequest).execute().use { resp ->
+                        val body = resp.body?.string()
+                        if (resp.isSuccessful && !body.isNullOrBlank()) {
+                            val arr = org.json.JSONArray(body)
+                            if (arr.length() > 0) {
+                                val item = arr.getJSONObject(0)
+                                if (!item.isNull("vip_until")) {
+                                    val vipUntilStr = item.optString("vip_until", "")
+                                    if (vipUntilStr.isNotBlank()) {
+                                        val dateStr = vipUntilStr.substringBefore("T")
+                                        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                                        val date = formatter.parse(dateStr)
+                                        if (date != null) {
+                                            val profileVip = date.time + 24 * 60 * 60 * 1000L - 1000L
+                                            if (profileVip > vipExpire) {
+                                                vipExpire = profileVip
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            io.legado.app.help.config.LocalConfig.vipExpireFromServer = vipExpire
+            Result.success(vipExpire)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 
 data class SupabaseUser(
     val id: String,
     val email: String,
-    val vipExpire: Long
+    val vipExpire: Long,
+    val displayName: String
 )

@@ -47,6 +47,10 @@ import io.legado.app.utils.openOutputStream
 import io.legado.app.utils.postEvent
 import io.legado.app.utils.servicePendingIntent
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.getPrefString
+import io.legado.app.utils.getPrefInt
+import io.legado.app.utils.putPrefString
+import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.writeFile
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
@@ -118,11 +122,6 @@ class ExportBookService : BaseService(), KoinComponent {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             IntentAction.start -> kotlin.runCatching {
-                if (!io.legado.app.help.MemberManager.isVip) {
-                    toastOnUi("Tính năng xuất sách yêu cầu kích hoạt Thành viên nội bộ!")
-                    stopSelf()
-                    return@runCatching
-                }
                 val bookUrl = intent.getStringExtra("bookUrl")!!
                 if (!exportProgress.contains(bookUrl)) {
                     val exportConfig = ExportConfig(
@@ -222,8 +221,8 @@ class ExportBookService : BaseService(), KoinComponent {
                         "epub" -> {
                             if (exportConfig.epubScope.isNullOrBlank()) {
                                 exportEpub(exportConfig.path, book)
-                                // Also export translation if cache exists
-                                if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
+                                // Also export translation if cache exists (VIP only)
+                                if (io.legado.app.help.MemberManager.isVip && hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
                                     exportEpub(exportConfig.path, book, ContentSource.Translation)
                                 }
                             } else {
@@ -244,8 +243,8 @@ class ExportBookService : BaseService(), KoinComponent {
                         }
                         else -> {
                             exportTxt(exportConfig.path, book, exportConfig.epubScope)
-                            // Also export translation if cache exists
-                            if (hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
+                            // Also export translation if cache exists (VIP only)
+                            if (io.legado.app.help.MemberManager.isVip && hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
                                 val fileDoc = FileDoc.fromDir(exportConfig.path)
                                 exportTxt(fileDoc, book, ContentSource.Translation, exportConfig.epubScope)
                             }
@@ -579,7 +578,8 @@ class ExportBookService : BaseService(), KoinComponent {
                 includeTitle = !AppConfig.exportNoChapterName,
                 useReplace = useReplace,
                 chineseConvert = false,
-                reSegment = false
+                reSegment = false,
+                translate = if (!io.legado.app.help.MemberManager.isVip) false else io.legado.app.utils.TranslateUtils.isTranslateEnabled()
             ).toTxtString()
         if (AppConfig.exportPictureFile && source == ContentSource.Original) {
             //txt导出图片文件 - only for original source

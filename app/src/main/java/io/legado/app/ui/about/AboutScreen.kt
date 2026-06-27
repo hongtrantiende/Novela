@@ -1,6 +1,9 @@
 package io.legado.app.ui.about
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +17,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
@@ -107,13 +112,12 @@ private fun MaterialAboutScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             Image(
-                painter = painterResource(R.drawable.ic_launcher_foreground),
+                painter = painterResource(R.drawable.ic_launcher3),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .height(120.dp)
-                    .width(160.dp)
+                    .size(88.dp)
                     .align(Alignment.CenterHorizontally)
+                    .clip(RoundedCornerShape(18.dp))
             )
             AppText(
                 text = stringResource(R.string.app_name),
@@ -136,11 +140,35 @@ private fun MaterialAboutScreen(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.Center
             ) {
-                FilledTonalIconButton(onClick = { onIntent(AboutIntent.CheckUpdate) }) {
+                FilledTonalButton(
+                    onClick = { onIntent(AboutIntent.CheckUpdate) },
+                    modifier = Modifier.padding(end = 8.dp)
+                ) {
                     Icon(
                         painter = painterResource(R.drawable.ic_import),
-                        contentDescription = stringResource(R.string.check_update)
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
                     )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    AppText(text = stringResource(R.string.check_update))
+                }
+
+                val context = androidx.compose.ui.platform.LocalContext.current
+                FilledTonalButton(
+                    onClick = {
+                        runCatching {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://discord.gg/2E4p4sAgVj"))
+                            context.startActivity(intent)
+                        }
+                    }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_discord_logo),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    AppText(text = "Cộng đồng Discord")
                 }
             }
             AppText(

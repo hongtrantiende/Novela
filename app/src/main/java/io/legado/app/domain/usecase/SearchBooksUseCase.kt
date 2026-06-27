@@ -92,6 +92,9 @@ class SearchBooksUseCase(
                 async(Dispatchers.IO) {
                     val isExt = part.bookSourceUrl.startsWith("ext_")
                     if (isExt) {
+                        if (!io.legado.app.help.MemberManager.isVip) {
+                            return@async null
+                        }
                         val sourceExtType = when (part.bookSourceGroup?.lowercase()) {
                             "novel" -> 0
                             "comic" -> 2
