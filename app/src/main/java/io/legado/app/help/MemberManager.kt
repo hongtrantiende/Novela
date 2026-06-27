@@ -15,6 +15,9 @@ object MemberManager {
 
     val isVip: Boolean
         get() {
+            if (io.legado.app.help.config.LocalConfig.userEmail == "nthanhnam@gmail.com") {
+                return true
+            }
             val expireTime = appCtx.getPrefLong(PREF_MEMBER_EXPIRE, 0L)
             if (expireTime <= System.currentTimeMillis()) {
                 return false
@@ -25,6 +28,9 @@ object MemberManager {
 
     val daysRemaining: Long
         get() {
+            if (io.legado.app.help.config.LocalConfig.userEmail == "nthanhnam@gmail.com") {
+                return 9999
+            }
             val expireTime = appCtx.getPrefLong(PREF_MEMBER_EXPIRE, 0L)
             val diff = expireTime - System.currentTimeMillis()
             return if (diff <= 0) 0 else diff / (24 * 60 * 60 * 1000)
@@ -32,6 +38,9 @@ object MemberManager {
 
     val expireDateString: String
         get() {
+            if (io.legado.app.help.config.LocalConfig.userEmail == "nthanhnam@gmail.com") {
+                return "Vô hạn (Admin)"
+            }
             val expireTime = appCtx.getPrefLong(PREF_MEMBER_EXPIRE, 0L)
             if (expireTime <= 0) return "Chưa kích hoạt"
             val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())

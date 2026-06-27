@@ -170,6 +170,7 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
                     Toast.makeText(requireContext(), successMessage, Toast.LENGTH_LONG).show()
                     if (currentMode == AuthMode.LOGIN || currentMode == AuthMode.REGISTER) {
                         LocalConfig.isLoggedIn = true
+                        LocalConfig.userEmail = email
                         (activity as? WelcomeActivity)?.nextPage()
                     } else {
                         updateUiMode(AuthMode.LOGIN)

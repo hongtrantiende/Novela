@@ -160,4 +160,9 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
             putBoolean("isLoggedIn", value)
         }
 
+    var userEmail: String?
+        get() = getString("userEmail", null)
+        set(value) {
+            edit { putString("userEmail", value) }
+        }
 }

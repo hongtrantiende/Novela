@@ -151,6 +151,28 @@ fun ExploreScreen(
     val listItems by remember(uiState.items, uiState.expandedId, uiState.exploreKinds) {
         derivedStateOf { viewModel.buildExploreListItems(uiState) }
     }
+    val filteredListItems by remember(listItems) {
+        derivedStateOf {
+            if (io.legado.app.help.MemberManager.isVip) {
+                listItems
+            } else {
+                listItems.filter { listItem ->
+                    when (listItem) {
+                        is ExploreListItem.Header -> {
+                            val item = listItem.source
+                            val isInstalled = !item.bookSourceUrl.startsWith("ext_online_") && !item.bookSourceUrl.startsWith("online_yckceo_")
+                            isInstalled
+                        }
+                        is ExploreListItem.KindRow -> {
+                            val sourceUrl = listItem.sourceUrl
+                            val isInstalled = !sourceUrl.startsWith("ext_online_") && !sourceUrl.startsWith("online_yckceo_")
+                            isInstalled
+                        }
+                    }
+                }
+            }
+        }
+    }
     var sourceToDeleteUrl by rememberSaveable { mutableStateOf<String?>(null) }
     val sourceToDelete = remember(sourceToDeleteUrl, uiState.items) {
         uiState.items.firstOrNull { it.bookSourceUrl == sourceToDeleteUrl }
@@ -242,23 +264,25 @@ fun ExploreScreen(
 
 
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.hideUninstalled = !uiState.hideUninstalled }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AppText(
-                        text = "Ẩn chưa cài",
-                        style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Switch(
-                        checked = uiState.hideUninstalled,
-                        onCheckedChange = { viewModel.hideUninstalled = it }
-                    )
+                if (io.legado.app.help.MemberManager.isVip) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.hideUninstalled = !uiState.hideUninstalled }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AppText(
+                            text = "Ẩn chưa cài",
+                            style = LegadoTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = uiState.hideUninstalled,
+                            onCheckedChange = { viewModel.hideUninstalled = it }
+                        )
+                    }
                 }
 
                 Box(modifier = Modifier.weight(1f)) {
@@ -279,7 +303,7 @@ fun ExploreScreen(
                             )
                         ) {
                 items(
-                    items = listItems,
+                    items = filteredListItems,
                     key = { it.key }
                 ) { listItem ->
                     when (listItem) {

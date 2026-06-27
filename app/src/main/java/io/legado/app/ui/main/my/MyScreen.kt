@@ -236,7 +236,7 @@ fun MyScreen(
 
     if (showMemberDialog) {
         var activationKeyInput by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-        val showAdminPanel = activationKeyInput.trim() == "novela@admin"
+        val showAdminPanel = activationKeyInput.trim() == "novela@admin" || io.legado.app.help.config.LocalConfig.userEmail == "nthanhnam@gmail.com"
         var targetDeviceId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
         var targetVipDays by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("30") }
         var generatedKey by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
