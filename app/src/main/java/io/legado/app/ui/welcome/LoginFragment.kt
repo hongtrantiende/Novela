@@ -210,6 +210,21 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
                 val errorMsg = parseErrorMessage(responseBody)
                 return Result.failure(Exception(errorMsg))
             }
+            try {
+                val jsonObject = org.json.JSONObject(responseBody!!)
+                val accessToken = jsonObject.getString("access_token")
+                val user = jsonObject.getJSONObject("user")
+                val userEmail = user.getString("email").lowercase().trim()
+                
+                LocalConfig.accessToken = accessToken
+                LocalConfig.userEmail = userEmail
+                
+                val userMetadata = user.optJSONObject("user_metadata")
+                val vipExpire = userMetadata?.optLong("vip_expire", 0L) ?: 0L
+                LocalConfig.vipExpireFromServer = vipExpire
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
             return Result.success("Đăng nhập thành công!")
         }
     }

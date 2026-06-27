@@ -165,4 +165,16 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         set(value) {
             edit { putString("userEmail", value) }
         }
+
+    var accessToken: String?
+        get() = getString("accessToken", null)
+        set(value) {
+            edit { putString("accessToken", value) }
+        }
+
+    var vipExpireFromServer: Long
+        get() = getLong("vipExpireFromServer", 0L)
+        set(value) {
+            edit { putLong("vipExpireFromServer", value) }
+        }
 }

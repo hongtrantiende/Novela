@@ -204,18 +204,20 @@ fun MyScreen(
                         onNavigate(PrefClickEvent.StartActivity(FileManageActivity::class.java))
                     }
                 )
-                ClickableSettingItem(
-                    title = "Thành viên nội bộ",
-                    description = if (io.legado.app.help.MemberManager.isVip) {
-                        "Đang hoạt động (Còn ${io.legado.app.help.MemberManager.daysRemaining} ngày)"
-                    } else {
-                        "Tài khoản thường (Bản dùng thử)"
-                    },
-                    imageVector = Icons.Default.Bookmark,
-                    onClick = {
-                        showMemberDialog = true
-                    }
-                )
+                if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
+                    ClickableSettingItem(
+                        title = "Thành viên nội bộ",
+                        description = if (io.legado.app.help.MemberManager.isVip) {
+                            "Đang hoạt động (Còn ${io.legado.app.help.MemberManager.daysRemaining} ngày)"
+                        } else {
+                            "Tài khoản thường (Bản dùng thử)"
+                        },
+                        imageVector = Icons.Default.Bookmark,
+                        onClick = {
+                            showMemberDialog = true
+                        }
+                    )
+                }
                 ClickableSettingItem(
                     title = stringResource(R.string.about),
                     imageVector = Icons.Default.Info,
@@ -223,6 +225,21 @@ fun MyScreen(
                         onNavigate(PrefClickEvent.OpenAbout)
                     }
                 )
+                if (io.legado.app.help.config.LocalConfig.isLoggedIn) {
+                    ClickableSettingItem(
+                        title = "Đăng xuất",
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        onClick = {
+                            io.legado.app.help.config.LocalConfig.isLoggedIn = false
+                            io.legado.app.help.config.LocalConfig.userEmail = null
+                            io.legado.app.help.config.LocalConfig.accessToken = null
+                            // Restart activity to welcome screen
+                            val intent = android.content.Intent(context, io.legado.app.ui.welcome.WelcomeActivity::class.java)
+                            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
+                            context.startActivity(intent)
+                        }
+                    )
+                }
                 ClickableSettingItem(
                     title = stringResource(R.string.exit),
                     imageVector = Icons.AutoMirrored.Filled.ExitToApp,
@@ -236,7 +253,7 @@ fun MyScreen(
 
     if (showMemberDialog) {
         var activationKeyInput by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
-        val showAdminPanel = activationKeyInput.trim() == "novela@admin" || io.legado.app.help.config.LocalConfig.userEmail == "nthanhnam@gmail.com"
+        val showAdminPanel = activationKeyInput.trim() == "novela@admin" || io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com"
         var targetDeviceId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
         var targetVipDays by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("30") }
         var generatedKey by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }

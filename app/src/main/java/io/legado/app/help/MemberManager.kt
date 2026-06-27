@@ -15,7 +15,10 @@ object MemberManager {
 
     val isVip: Boolean
         get() {
-            if (io.legado.app.help.config.LocalConfig.userEmail == "nthanhnam@gmail.com") {
+            if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
+                return true
+            }
+            if (io.legado.app.help.config.LocalConfig.vipExpireFromServer > System.currentTimeMillis()) {
                 return true
             }
             val expireTime = appCtx.getPrefLong(PREF_MEMBER_EXPIRE, 0L)
@@ -28,8 +31,12 @@ object MemberManager {
 
     val daysRemaining: Long
         get() {
-            if (io.legado.app.help.config.LocalConfig.userEmail == "nthanhnam@gmail.com") {
+            if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
                 return 9999
+            }
+            if (io.legado.app.help.config.LocalConfig.vipExpireFromServer > System.currentTimeMillis()) {
+                val diff = io.legado.app.help.config.LocalConfig.vipExpireFromServer - System.currentTimeMillis()
+                return diff / (24 * 60 * 60 * 1000)
             }
             val expireTime = appCtx.getPrefLong(PREF_MEMBER_EXPIRE, 0L)
             val diff = expireTime - System.currentTimeMillis()
@@ -38,8 +45,12 @@ object MemberManager {
 
     val expireDateString: String
         get() {
-            if (io.legado.app.help.config.LocalConfig.userEmail == "nthanhnam@gmail.com") {
+            if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
                 return "Vô hạn (Admin)"
+            }
+            if (io.legado.app.help.config.LocalConfig.vipExpireFromServer > System.currentTimeMillis()) {
+                val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+                return sdf.format(java.util.Date(io.legado.app.help.config.LocalConfig.vipExpireFromServer))
             }
             val expireTime = appCtx.getPrefLong(PREF_MEMBER_EXPIRE, 0L)
             if (expireTime <= 0) return "Chưa kích hoạt"
