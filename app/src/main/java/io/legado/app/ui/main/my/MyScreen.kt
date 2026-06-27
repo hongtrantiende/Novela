@@ -116,20 +116,6 @@ fun MyScreen(
         topBar = {
             GlassMediumFlexibleTopAppBar(
                 title = stringResource(R.string.my),
-                actions = {
-                    TopBarActionButton(
-                        onClick = {
-                            onNavigate(
-                                PrefClickEvent.ShowMd(
-                                    title = "",
-                                    path = "appHelp"
-                                )
-                            )
-                        },
-                        imageVector = Icons.AutoMirrored.Filled.HelpOutline,
-                        contentDescription = null
-                    )
-                },
                 scrollBehavior = scrollBehavior
             )
         }

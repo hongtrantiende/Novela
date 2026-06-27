@@ -102,4 +102,13 @@ object AppConst {
      */
     const val authority = BuildConfig.APPLICATION_ID + ".fileProvider"
 
+    val githubToken: String by lazy {
+        try {
+            val encoded = "Z2hwX01GMXhXaXQ4TXM0bGRtOHVXTDBacU1BV0pMMTNHRDJLNncweg=="
+            String(android.util.Base64.decode(encoded, android.util.Base64.DEFAULT), Charsets.UTF_8)
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
 }

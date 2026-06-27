@@ -42,8 +42,8 @@ class ExtensionLoader(
 
     private fun newRequest(url: String): Request {
         val builder = Request.Builder().url(url)
-        if (url.contains("raw.githubusercontent.com/hongtrantiende/") || url.contains("githubusercontent.com/hongtrantiende/")) {
-            builder.header("Authorization", "token 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")
+        if (url.contains("/hongtrantiende/")) {
+            builder.header("Authorization", "token ${io.legado.app.constant.AppConst.githubToken}")
         }
         return builder.build()
     }

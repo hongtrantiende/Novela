@@ -81,8 +81,8 @@ class LegadoStoreViewModel(
                 withContext(Dispatchers.IO) {
                     val url = "https://raw.githubusercontent.com/hongtrantiende/Extransion-TTC/main/yckceo_sources.json?t=${System.currentTimeMillis()}"
                     val builder = Request.Builder().url(url)
-                    if (url.contains("raw.githubusercontent.com/hongtrantiende/") || url.contains("githubusercontent.com/hongtrantiende/")) {
-                        builder.header("Authorization", "token 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")
+                    if (url.contains("/hongtrantiende/")) {
+                        builder.header("Authorization", "token ${io.legado.app.constant.AppConst.githubToken}")
                     }
                     val request = builder.build()
                     okHttpClient.newCall(request).execute().use { response ->

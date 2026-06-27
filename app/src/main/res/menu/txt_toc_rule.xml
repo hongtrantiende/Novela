@@ -35,7 +35,7 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/menu_help"
+        android:visible="false" android:id="@+id/menu_help"
         android:icon="@drawable/ic_help"
         android:title="@string/help"
         app:showAsAction="never" />
