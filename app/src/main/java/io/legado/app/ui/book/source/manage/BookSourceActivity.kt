@@ -164,15 +164,20 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         // Setup TabLayout
         val tabLayout = binding.tabLayout
         val tabSources = tabLayout.newTab().setText("Nguồn sách")
-        val tabExtensions = tabLayout.newTab().setText("Nguồn Extension")
-        val tabLegado = tabLayout.newTab().setText("Kho nguồn Legado")
         tabLayout.addTab(tabSources)
-        tabLayout.addTab(tabExtensions)
-        tabLayout.addTab(tabLegado)
+
+        if (io.legado.app.help.MemberManager.isVip) {
+            val tabExtensions = tabLayout.newTab().setText("Nguồn Extension")
+            val tabLegado = tabLayout.newTab().setText("Kho nguồn Legado")
+            tabLayout.addTab(tabExtensions)
+            tabLayout.addTab(tabLegado)
+        }
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
-                when (tab?.position) {
+                val position = tab?.position ?: 0
+                if (!io.legado.app.help.MemberManager.isVip && position > 0) return
+                when (position) {
                     0 -> {
                         currentTab = 0
                         binding.recyclerView.visibility = View.VISIBLE
@@ -865,6 +870,9 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
 @Composable
 fun BookSourceComposeWrapper(tabIndex: Int) {
+    if (!io.legado.app.help.MemberManager.isVip) {
+        return
+    }
     when (tabIndex) {
         0 -> ExtensionScreens()
         1 -> LegadoStoreScreen()

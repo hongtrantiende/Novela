@@ -118,6 +118,11 @@ class ExportBookService : BaseService(), KoinComponent {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             IntentAction.start -> kotlin.runCatching {
+                if (!io.legado.app.help.MemberManager.isVip) {
+                    toastOnUi("Tính năng xuất sách yêu cầu kích hoạt Thành viên nội bộ!")
+                    stopSelf()
+                    return@runCatching
+                }
                 val bookUrl = intent.getStringExtra("bookUrl")!!
                 if (!exportProgress.contains(bookUrl)) {
                     val exportConfig = ExportConfig(

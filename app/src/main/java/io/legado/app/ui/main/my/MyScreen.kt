@@ -37,6 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
@@ -68,6 +69,9 @@ fun MyScreen(
     onOpenSettings: () -> Unit,
     onNavigate: (PrefClickEvent) -> Unit
 ) {
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var showMemberDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
@@ -201,6 +205,18 @@ fun MyScreen(
                     }
                 )
                 ClickableSettingItem(
+                    title = "Thành viên nội bộ",
+                    description = if (io.legado.app.help.MemberManager.isVip) {
+                        "Đang hoạt động (Còn ${io.legado.app.help.MemberManager.daysRemaining} ngày)"
+                    } else {
+                        "Tài khoản thường (Bản dùng thử)"
+                    },
+                    imageVector = Icons.Default.Bookmark,
+                    onClick = {
+                        showMemberDialog = true
+                    }
+                )
+                ClickableSettingItem(
                     title = stringResource(R.string.about),
                     imageVector = Icons.Default.Info,
                     onClick = {
@@ -216,6 +232,162 @@ fun MyScreen(
                 )
             }
         }
+    }
+
+    if (showMemberDialog) {
+        var activationKeyInput by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+        val showAdminPanel = activationKeyInput.trim() == "novela@admin"
+        var targetDeviceId by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+        var targetVipDays by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("30") }
+        var generatedKey by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showMemberDialog = false },
+            title = { androidx.compose.material3.Text(text = "Kích hoạt Thành viên nội bộ", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+            text = {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        androidx.compose.material3.Text(
+                            text = "Trạng thái: " + if (io.legado.app.help.MemberManager.isVip) {
+                                "Đang hoạt động (Hạn dùng: ${io.legado.app.help.MemberManager.expireDateString})"
+                            } else {
+                                "Tài khoản thường (Bản dùng thử)"
+                            },
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    item {
+                        val deviceId = io.legado.app.constant.AppConst.androidId
+                        androidx.compose.material3.OutlinedTextField(
+                            value = deviceId,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { androidx.compose.material3.Text("Mã Thiết Bị (Device ID)") },
+                            trailingIcon = {
+                                androidx.compose.material3.IconButton(onClick = {
+                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("Device ID", deviceId)
+                                    clipboard.setPrimaryClip(clip)
+                                    android.widget.Toast.makeText(context, "Đã sao chép Mã Thiết Bị!", android.widget.Toast.LENGTH_SHORT).show()
+                                }) {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
+                                        contentDescription = "Sao chép"
+                                    )
+                                }
+                            },
+                            modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                        )
+                    }
+                    item {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = activationKeyInput,
+                            onValueChange = { activationKeyInput = it },
+                            label = { androidx.compose.material3.Text("Mã Kích Hoạt / Mật khẩu Admin") },
+                            placeholder = { androidx.compose.material3.Text("Dán mã kích hoạt tại đây...") },
+                            modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    if (showAdminPanel) {
+                        item {
+                            androidx.compose.material3.HorizontalDivider(modifier = androidx.compose.ui.Modifier.padding(vertical = 8.dp))
+                            androidx.compose.material3.Text(
+                                text = "🛠️ BẢNG ĐIỀU KHIỂN ADMIN",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleSmall,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        }
+                        item {
+                            androidx.compose.material3.OutlinedTextField(
+                                value = targetDeviceId,
+                                onValueChange = { targetDeviceId = it },
+                                label = { androidx.compose.material3.Text("Device ID Khách Hàng") },
+                                placeholder = { androidx.compose.material3.Text("Nhập Android ID của máy khách...") },
+                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                            )
+                        }
+                        item {
+                            androidx.compose.material3.OutlinedTextField(
+                                value = targetVipDays,
+                                onValueChange = { targetVipDays = it },
+                                label = { androidx.compose.material3.Text("Số ngày cấp VIP") },
+                                placeholder = { androidx.compose.material3.Text("Ví dụ: 30, 90, 365...") },
+                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                            )
+                        }
+                        item {
+                            androidx.compose.material3.Button(
+                                onClick = {
+                                    val days = targetVipDays.toIntOrNull() ?: 30
+                                    if (targetDeviceId.isBlank()) {
+                                        android.widget.Toast.makeText(context, "Vui lòng nhập Device ID khách hàng!", android.widget.Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        generatedKey = io.legado.app.help.MemberManager.generateKey(targetDeviceId.trim(), days)
+                                        android.widget.Toast.makeText(context, "Đã tạo mã kích hoạt thành công!", android.widget.Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                            ) {
+                                androidx.compose.material3.Text("Tạo Mã Kích Hoạt")
+                            }
+                        }
+                        if (generatedKey.isNotEmpty()) {
+                            item {
+                                androidx.compose.material3.OutlinedTextField(
+                                    value = generatedKey,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { androidx.compose.material3.Text("Mã Kích Hoạt Đã Tạo") },
+                                    trailingIcon = {
+                                        androidx.compose.material3.IconButton(onClick = {
+                                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                            val clip = android.content.ClipData.newPlainText("Activation Key", generatedKey)
+                                            clipboard.setPrimaryClip(clip)
+                                            android.widget.Toast.makeText(context, "Đã sao chép mã kích hoạt!", android.widget.Toast.LENGTH_SHORT).show()
+                                        }) {
+                                            androidx.compose.material3.Icon(
+                                                imageVector = androidx.compose.material.icons.Icons.Default.ContentCopy,
+                                                contentDescription = "Sao chép"
+                                            )
+                                        }
+                                    },
+                                    modifier = androidx.compose.ui.Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (!showAdminPanel) {
+                    androidx.compose.material3.Button(onClick = {
+                        if (activationKeyInput.isBlank()) {
+                            android.widget.Toast.makeText(context, "Vui lòng nhập mã kích hoạt!", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            val success = io.legado.app.help.MemberManager.activate(activationKeyInput.trim())
+                            if (success) {
+                                android.widget.Toast.makeText(context, "Kích hoạt Thành viên nội bộ thành công!", android.widget.Toast.LENGTH_LONG).show()
+                                showMemberDialog = false
+                            } else {
+                                android.widget.Toast.makeText(context, "Mã kích hoạt không hợp lệ hoặc đã hết hạn!", android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }) {
+                        androidx.compose.material3.Text("Kích hoạt")
+                    }
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showMemberDialog = false }) {
+                    androidx.compose.material3.Text("Hủy")
+                }
+            }
+        )
     }
 }
 
