@@ -177,4 +177,10 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         set(value) {
             edit { putLong("vipExpireFromServer", value) }
         }
+
+    var supabaseServiceRoleKey: String?
+        get() = getString("supabaseServiceRoleKey", null)
+        set(value) {
+            edit { putString("supabaseServiceRoleKey", value) }
+        }
 }

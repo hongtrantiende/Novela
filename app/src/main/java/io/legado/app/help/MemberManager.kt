@@ -7,6 +7,8 @@ import io.legado.app.utils.getPrefString
 import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
 import splitties.init.appCtx
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 
 object MemberManager {
     private const val SECRET_KEY = "NovelaSecretKey!" // 16 bytes
@@ -99,4 +101,75 @@ object MemberManager {
         val aes = AES(SECRET_KEY.encodeToByteArray(0, 16))
         return aes.encryptHex(plainText)
     }
+
+    fun fetchSupabaseUsers(serviceRoleKey: String): Result<List<SupabaseUser>> {
+        return try {
+            val request = okhttp3.Request.Builder()
+                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/admin/users")
+                .header("apikey", serviceRoleKey)
+                .header("Authorization", "Bearer $serviceRoleKey")
+                .get()
+                .build()
+
+            io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
+                if (!response.isSuccessful) {
+                    val json = org.json.JSONObject(responseBody ?: "{}")
+                    val msg = json.optString("msg", json.optString("error_description", "Lỗi API"))
+                    return Result.failure(Exception(msg))
+                }
+                val jsonObject = org.json.JSONObject(responseBody!!)
+                val usersArray = jsonObject.getJSONArray("users")
+                val list = mutableListOf<SupabaseUser>()
+                for (i in 0 until usersArray.length()) {
+                    val userObj = usersArray.getJSONObject(i)
+                    val id = userObj.getString("id")
+                    val email = userObj.optString("email", "")
+                    val userMetadata = userObj.optJSONObject("user_metadata")
+                    val vipExpire = userMetadata?.optLong("vip_expire", 0L) ?: 0L
+                    list.add(SupabaseUser(id, email, vipExpire))
+                }
+                Result.success(list)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun updateUserVipExpire(serviceRoleKey: String, userId: String, expireTimestamp: Long): Result<Boolean> {
+        return try {
+            val json = org.json.JSONObject()
+            val meta = org.json.JSONObject()
+            meta.put("vip_expire", expireTimestamp)
+            json.put("user_metadata", meta)
+            
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val body = json.toString().toRequestBody(mediaType)
+            
+            val request = okhttp3.Request.Builder()
+                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/admin/users/$userId")
+                .header("apikey", serviceRoleKey)
+                .header("Authorization", "Bearer $serviceRoleKey")
+                .put(body)
+                .build()
+
+            io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
+                if (!response.isSuccessful) {
+                    val errJson = org.json.JSONObject(responseBody ?: "{}")
+                    val msg = errJson.optString("msg", errJson.optString("error_description", "Lỗi cập nhật"))
+                    return Result.failure(Exception(msg))
+                }
+                Result.success(true)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
+
+data class SupabaseUser(
+    val id: String,
+    val email: String,
+    val vipExpire: Long
+)
