@@ -142,16 +142,24 @@ fun QuickTranslateSettingsScreen(
                         Button(
                             onClick = {
                                 isDownloading = true
-                                downloadProgressText = "Đang giải nén từ điển..."
+                                downloadProgressText = "Đang kết nối..."
                                 scope.launch(Dispatchers.IO) {
-                                    val success = QuickTranslateEngine.unzipDictFromAssets(context)
+                                    var success = QuickTranslateEngine.downloadAndUnzipDict(context, downloadUrl) { progress ->
+                                        downloadProgressText = progress
+                                    }
+                                    if (!success) {
+                                        withContext(Dispatchers.Main) {
+                                            downloadProgressText = "Đang giải nén từ điển mặc định..."
+                                        }
+                                        success = QuickTranslateEngine.unzipDictFromAssets(context)
+                                    }
                                     withContext(Dispatchers.Main) {
                                         isDownloading = false
                                         refreshTrigger++
                                         if (success) {
                                             Toast.makeText(context, "Tải từ điển hoàn thành!", Toast.LENGTH_SHORT).show()
                                         } else {
-                                            Toast.makeText(context, "Lỗi giải nén từ điển!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(context, "Lỗi tải từ điển!", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 }
@@ -242,63 +250,7 @@ fun QuickTranslateSettingsScreen(
                 }
             }
 
-            // Section 1.5: Tải từ xa
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-                SplicedColumnGroup(title = "Tải từ điển từ xa") {
-                    InputSettingItem(
-                        title = "URL tải từ điển (.zip)",
-                        value = downloadUrl,
-                        defaultValue = "https://raw.githubusercontent.com/hongtrantiende/Extransion-TTC/main/dict.zip",
-                        onConfirm = { value ->
-                            prefs.edit().putString("qt_dict_download_url", value.trim()).apply()
-                            downloadUrl = value.trim()
-                            refreshTrigger++
-                        }
-                    )
-                    
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Button(
-                            onClick = {
-                                if (downloadUrl.isBlank()) {
-                                    Toast.makeText(context, "Vui lòng nhập URL!", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-                                isDownloading = true
-                                downloadProgressText = "Đang kết nối..."
-                                scope.launch(Dispatchers.IO) {
-                                    val success = QuickTranslateEngine.downloadAndUnzipDict(context, downloadUrl) { progress ->
-                                        downloadProgressText = progress
-                                    }
-                                    withContext(Dispatchers.Main) {
-                                        isDownloading = false
-                                        refreshTrigger++
-                                        if (success) {
-                                            Toast.makeText(context, "Tải từ điển hoàn thành!", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(context, "Lỗi tải từ điển!", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.CloudDownload,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            AppText("Tải từ URL", fontSize = 12.sp)
-                        }
-                    }
-                }
-            }
+
 
             // Section 2: Cài đặt dịch
             item {

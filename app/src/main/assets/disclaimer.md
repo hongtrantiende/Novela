@@ -1,68 +1,63 @@
----
+# Thỏa thuận Người dùng và Tuyên bố Miễn trừ Trách nhiệm
 
-# 用户协议与免责声明
+## 【LƯU Ý ĐẶC BIỆT】
 
-## 【特别提示】
-
-在下载、安装或使用本软件前，请您务必仔细阅读并充分理解本协议及免责声明的全部内容。您一旦下载、安装或使用本软件，即视为已阅读、理解并同意接受本声明的全部内容。
+Trước khi tải xuống, cài đặt hoặc sử dụng phần mềm này, vui lòng đảm bảo đã đọc kỹ và hiểu rõ toàn bộ nội dung của Thỏa thuận này và Tuyên bố miễn trừ trách nhiệm. Khi bạn tải xuống, cài đặt hoặc sử dụng phần mềm này, bạn được coi là đã đọc, hiểu và đồng ý chấp nhận tất cả các nội dung của tuyên bố này.
 
 ---
 
-# 一、软件性质说明
+# I. Tính chất Phần mềm
 
-1. 本软件是一款用户可配置的本地化网页内容浏览工具，提供网页访问、内容解析、文本提取、阅读排版与数据管理等技术功能。
+1. Phần mềm này là một công cụ duyệt nội dung trang web cục bộ có thể định cấu hình bởi người dùng, cung cấp các chức năng kỹ thuật như truy cập trang web, phân tích nội dung, trích xuất văn bản, dàn trang đọc sách và quản lý dữ liệu.
 
-2. 本软件默认状态下不预置、不内置、不提供任何第三方网站内容、数据资源或解析规则。
+2. Ở trạng thái mặc định, phần mềm này không thiết lập sẵn, không tích hợp sẵn và không cung cấp bất kỳ nội dung trang web, tài nguyên dữ liệu hoặc quy tắc phân tích cú pháp nào của bên thứ ba.
 
-3. 本软件开发者不提供任何内容运营、内容存储、内容发布或内容传播服务。
+3. Nhà phát triển phần mềm này không cung cấp bất kỳ dịch vụ vận hành nội dung, lưu trữ nội dung, xuất bản nội dung hoặc truyền bá nội dung nào.
 
-4. 用户可基于自身需求，自行配置或导入第三方规则，以实现对公开网页内容的个性化浏览与处理。
-
----
-
-# 二、用户行为与规则说明
-
-1. 用户可自行创建、编辑、导入或使用第三方分享的解析规则（以下简称“规则”）。
-
-2. 相关规则仅用于定义网页内容的获取、提取与显示方式，其来源、合法性、准确性与适用性均由用户自行判断并承担责任。
-
-3. 用户使用规则访问第三方网站时，相关网络请求由用户设备直接向目标网站发起并接收数据。本软件仅提供本地解析与展示能力，不对第三方网站内容进行修改、编辑或再分发。
-
-4. 用户应遵守所在地法律法规、网络安全要求以及相关网站的服务协议与版权规范，不得利用本软件从事侵犯知识产权、非法传播、未授权数据获取、破坏网络服务或其他违法违规行为。
+4. Người dùng có thể tự định cấu hình hoặc nhập các quy tắc của bên thứ ba dựa trên nhu cầu của riêng họ để thực hiện việc duyệt và xử lý cá nhân hóa nội dung trang web công khai.
 
 ---
 
-# 三、第三方内容与社区说明
+# II. Hành vi Người dùng và Quy tắc
 
-1. 任何由第三方建立或维护的规则分享平台、论坛、交流群组、网站或其他社区，均属于独立运营的第三方平台，与本软件开发者无隶属关系。
+1. Người dùng có thể tự tạo, chỉnh sửa, nhập hoặc sử dụng các quy tắc phân tích cú pháp do bên thứ ba chia sẻ (sau đây gọi tắt là “quy tắc”).
 
-2. 开发者不参与第三方规则、内容或社区的制作、发布、运营、维护与传播行为，亦不对相关内容承担主动审查义务。
+2. Các quy tắc liên quan chỉ được sử dụng để xác định cách thức lấy, trích xuất và hiển thị nội dung trang web. Người dùng tự đánh giá và chịu trách nhiệm về nguồn gốc, tính hợp pháp, tính chính xác và tính phù hợp của chúng.
 
-3. 用户因使用第三方规则或访问第三方网站而产生的风险，包括但不限于版权纠纷、数据安全风险、网络访问风险或其他法律风险，应由相关行为主体依法承担相应责任。
+3. Khi người dùng sử dụng quy tắc để truy cập các trang web của bên thứ ba, các yêu cầu mạng liên quan sẽ do thiết bị của người dùng gửi và nhận trực tiếp đến trang web mục tiêu. Phần mềm này chỉ cung cấp khả năng phân tích và hiển thị cục bộ, không sửa đổi, chỉnh sửa hoặc phân phối lại nội dung trang web của bên thứ ba.
 
----
-
-# 四、隐私与数据说明
-
-1. 本软件主要功能运行于用户本地设备，不设立用于提供网页内容服务的自有内容服务器。
-
-2. 本软件不会主动收集、上传或存储用户的阅读内容、规则列表、浏览记录或其他个人隐私数据。
-
-3. 为提升软件稳定性与兼容性，本软件可能集成第三方统计或崩溃分析服务（如 Firebase Crashlytics
-   等），用于收集匿名化的崩溃日志、性能信息及基础设备信息。
-
-4. 部分网络、存储或同步权限，仅用于实现用户主动启用的本地备份、WebDAV 同步或跨设备数据同步等功能。
+4. Người dùng phải tuân thủ luật pháp và quy định hiện hành, các yêu cầu an toàn thông tin mạng cũng như thỏa thuận dịch vụ và tiêu chuẩn bản quyền của các trang web liên quan. Không được sử dụng phần mềm này để thực hiện các hành vi xâm phạm quyền sở hữu trí tuệ, truyền bá bất hợp pháp, thu thập dữ liệu trái phép, phá hoại dịch vụ mạng hoặc các hành vi vi phạm pháp luật khác.
 
 ---
 
-# 五、知识产权保护
+# III. Nội dung bên thứ ba và Cộng đồng
 
-1. 开发者尊重并保护知识产权权利人的合法权益，并反对任何侵犯著作权、商标权或其他合法权益的行为。
+1. Bất kỳ nền tảng chia sẻ quy tắc, diễn đàn, nhóm trao đổi, trang web hoặc cộng đồng nào khác do bên thứ ba thiết lập hoặc duy trì đều thuộc về các nền tảng của bên thứ ba hoạt động độc lập và không có mối quan hệ trực thuộc nào với nhà phát triển phần mềm này.
 
-2. 用户应确保其使用本软件获取、处理或访问相关内容的行为符合适用法律法规及权利要求。
+2. Nhà phát triển không tham gia vào việc sản xuất, phát hành, vận hành, bảo trì và truyền bá các quy tắc, nội dung hoặc cộng đồng của bên thứ ba, cũng như không có nghĩa vụ chủ động kiểm duyệt các nội dung liên quan.
 
-3. 若权利人认为某些第三方规则存在涉嫌侵权情形，可依法向相关内容实际托管方主张权利。
-
-4. 权利人亦可向开发者提交包含身份证明、权属证明、具体规则信息及相关说明的有效通知。开发者将在合理技术能力范围内，对涉嫌违规规则采取必要处理措施。
+3. Các rủi ro phát sinh khi người dùng sử dụng quy tắc của bên thứ ba hoặc truy cập các trang web của bên thứ ba, bao gồm nhưng không giới hạn ở tranh chấp bản quyền, rủi ro bảo mật dữ liệu, rủi ro truy cập mạng hoặc rủi ro pháp lý khác, sẽ do các chủ thể hành vi liên quan tự chịu trách nhiệm pháp lý.
 
 ---
+
+# IV. Quyền riêng tư và Dữ liệu
+
+1. Các tính năng chính của phần mềm này chạy trên thiết bị cục bộ của người dùng và không thiết lập máy chủ nội dung riêng để cung cấp dịch vụ nội dung trang web.
+
+2. Phần mềm này sẽ không chủ động thu thập, tải lên hoặc lưu trữ nội dung đọc, danh sách quy tắc, lịch sử duyệt web hoặc dữ liệu riêng tư cá nhân khác của người dùng.
+
+3. Để cải thiện tính ổn định và khả năng tương thích của phần mềm, phần mềm này có thể tích hợp dịch vụ phân tích sự cố hoặc thống kê của bên thứ ba (chẳng hạn như Firebase Crashlytics, v.v.) để thu thập nhật ký sự cố ẩn danh, thông tin hiệu suất và thông tin thiết bị cơ bản.
+
+4. Một số quyền về mạng, bộ nhớ hoặc đồng bộ hóa chỉ được sử dụng để thực hiện các tính năng sao lưu cục bộ, đồng bộ hóa WebDAV hoặc đồng bộ hóa dữ liệu trên nhiều thiết bị do người dùng chủ động kích hoạt.
+
+---
+
+# V. Bảo vệ Quyền sở hữu trí tuệ
+
+1. Nhà phát triển tôn trọng và bảo vệ quyền lợi hợp pháp của chủ sở hữu quyền sở hữu trí tuệ và phản đối bất kỳ hành vi nào xâm phạm bản quyền, nhãn hiệu hoặc các quyền lợi hợp pháp khác.
+
+2. Người dùng phải đảm bảo rằng việc sử dụng phần mềm này để lấy, xử lý hoặc truy cập nội dung liên quan tuân thủ luật pháp và quy định hiện hành cũng như các yêu cầu về quyền lợi.
+
+3. Nếu chủ sở hữu quyền tin rằng một số quy tắc của bên thứ ba có dấu hiệu xâm phạm quyền lợi, họ có thể yêu cầu quyền lợi của mình một cách hợp pháp trực tiếp với bên lưu trữ thực tế của nội dung liên quan.
+
+4. Chủ sở hữu quyền cũng có thể gửi thông báo hợp lệ bao gồm bằng chứng nhận dạng, bằng chứng quyền sở hữu, thông tin quy tắc cụ thể và các giải thích liên quan cho nhà phát triển. Nhà phát triển sẽ thực hiện các biện pháp xử lý cần thiết đối với các quy tắc bị nghi ngờ vi phạm trong phạm vi khả năng kỹ thuật hợp lý.

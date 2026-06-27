@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--App-->
-    <string name="app_name">Legado</string>
-    <string name="app_name_a">Legado·A</string>
-    <string name="receiving_shared_label">Legado·search</string>
-    <string name="tip_perm_request_storage">Legado needs storage access to find and read books. Please go "App Settings" to allow "Storage Permission".</string>
+    <string name="app_name">Novela</string>
+    <string name="app_name_a">Novela·A</string>
+    <string name="receiving_shared_label">Novela·search</string>
+    <string name="tip_perm_request_storage">Novela needs storage access to find and read books. Please go "App Settings" to allow "Storage Permission".</string>
 
     <!--Other-->
     <string name="menu_backup">Home</string>
     <string name="menu_restore">Restore</string>
-    <string name="menu_import_old">Import Legado data</string>
+    <string name="menu_import_old">Import Novela data</string>
     <string name="webdav_cache_backup">Offline cache book backup</string>
-    <string name="webdav_cache_backup_s">Export to local and back up to the exports directory under the legado folder</string>
+    <string name="webdav_cache_backup_s">Export to local and back up to the exports directory under the novela folder</string>
     <string name="backup_path">Backup Dir</string>
     <string name="select_backup_path">Please select a backup path.</string>
     <string name="menu_import_old_version">Import Legacy Data</string>
@@ -152,10 +152,10 @@
     <string name="offline_cache_s">Cache the selected chapter(s) to Storage</string>
     <string name="change_origin">Change Origin</string>
     <string name="about_description">
-        \u3000\u3000 This is an open source reading software newly developed by Kotlin, welcome to join us.
+        Novela is a reader application built on top of the open-source Legado reading engine. The application acts strictly as a tool for rendering and organizing plain text from content sources (URLs, parser rules) manually imported and configured by the user.\n\nNovela does not provide, host, or curate any copyrighted content or story sources. Any copyright issues or intellectual property disputes arising from third-party book sources are the sole responsibility of the respective source creators and the users. We do not assume any liability for content accessed through user-defined sources.
     </string>
     <string name="app_share_description">
-        Legado (YueDu 3.0) download link：\n https://github.com/gedoor/legado/releases
+        Download Novela reader app at:\n https://github.com/hongtrantiende/Novela-Releases
     </string>
     <string name="version_name">Version %s</string>
     <string name="pt_background_verification">Background-verification</string>
@@ -837,7 +837,7 @@
     <string name="btn_default_s">Default</string>
     <string name="main_menu">Main menu</string>
     <string name="request_permission">Tap to grant permission</string>
-    <string name="tip_local_perm_request_storage">Legado needs Storage Permission, please tap the "Grant Permission" button below, or go to "Settings"-"Application Permissions"-to open the required permission. If the permission is still not work, please tap "Select Folder" in the upper right corner to use the system folder picker.</string>
+    <string name="tip_local_perm_request_storage">Novela needs Storage Permission, please tap the "Grant Permission" button below, or go to "Settings"-"Application Permissions"-to open the required permission. If the permission is still not work, please tap "Select Folder" in the upper right corner to use the system folder picker.</string>
     <string name="alouding_disable">The selected text cannot be spoken in full text speech</string>
     <string name="read_body_to_lh">Extend to Cutout</string>
     <string name="toc_updateing">Updating Chapters</string>

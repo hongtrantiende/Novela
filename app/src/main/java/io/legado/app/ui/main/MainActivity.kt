@@ -41,6 +41,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.storage.Backup
+import io.legado.app.help.update.AppUpdate
 import io.legado.app.help.update.AppUpdateGitHub
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.service.WebService
@@ -183,6 +184,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 viewModel.upAllBookToc()
             }
             viewModel.postLoad()
+            checkAppUpdateOnStartup()
         }
     }
 
@@ -367,6 +369,17 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
             }
         } else {
             block.resume(null)
+        }
+    }
+
+    private fun checkAppUpdateOnStartup() {
+        if (BuildConfig.DEBUG) return
+        AppUpdate.gitHubUpdate?.run {
+            check(lifecycleScope)
+                .onSuccess { updateInfo ->
+                    val dialog = UpdateDialog(updateInfo, UpdateDialog.Mode.UPDATE)
+                    showDialogFragment(dialog)
+                }
         }
     }
 

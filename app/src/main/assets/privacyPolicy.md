@@ -1,5 +1,5 @@
-* 本应用没有服务端,不收集任何用户信息,只采用了Google Firebase收集崩溃报告和性能报告.
-* 本应用网络同步和备份采用webDav协议,由用户自己提供同步服务.
-* 存储权限用来打开本地文件和本地备份恢复.
-* 其它一些权限是Google Firebase需要.
-* 本应用为开源软件,内置js引擎,因书源调用js发生的任何问题由用户自行承担.
+* Ứng dụng này không có máy chủ, không thu thập bất kỳ thông tin nào của người dùng, chỉ sử dụng Google Firebase để thu thập báo cáo lỗi (crash reports) và báo cáo hiệu suất.
+* Tính năng đồng bộ mạng và sao lưu của ứng dụng sử dụng giao thức WebDAV, do người dùng tự thiết lập và cung cấp dịch vụ đồng bộ.
+* Quyền truy cập bộ nhớ được sử dụng để mở các tệp cục bộ và sao lưu, khôi phục dữ liệu cục bộ.
+* Một số quyền khác là do Google Firebase yêu cầu để báo cáo hiệu suất hoạt động.
+* Ứng dụng này là phần mềm mã nguồn mở có tích hợp sẵn công cụ chạy JavaScript (JS engine). Mọi vấn đề phát sinh do nguồn sách gọi mã JS sẽ do người dùng tự chịu trách nhiệm.

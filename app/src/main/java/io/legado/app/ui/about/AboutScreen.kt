@@ -132,6 +132,17 @@ private fun MaterialAboutScreen(
                     .wrapContentWidth(Alignment.CenterHorizontally)
                     .padding(vertical = 4.dp)
             )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                FilledTonalIconButton(onClick = { onIntent(AboutIntent.CheckUpdate) }) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_import),
+                        contentDescription = stringResource(R.string.check_update)
+                    )
+                }
+            }
             AppText(
                 text = stringResource(R.string.about_description),
                 style = LegadoTheme.typography.bodyLarge,
@@ -139,86 +150,8 @@ private fun MaterialAboutScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .wrapContentWidth(Alignment.CenterHorizontally)
-                    .padding(bottom = 4.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                FilledTonalIconButton(onClick = { onIntent(AboutIntent.OpenUrl("https://github.com/HapeLee/legado-with-MD3")) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_web_outline),
-                        contentDescription = stringResource(R.string.back)
-                    )
-                }
-                FilledTonalIconButton(onClick = { onIntent(AboutIntent.OpenUrl("https://github.com/HapeLee/legado-with-MD3")) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_github),
-                        contentDescription = stringResource(R.string.back)
-                    )
-                }
-                FilledTonalIconButton(onClick = { onIntent(AboutIntent.CheckUpdate) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_import),
-                        contentDescription = stringResource(R.string.back)
-                    )
-                }
-            }
-
-            SplicedColumnGroup(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                title = ""
-            ) {
-                SettingItemWithDivider {
-                    SettingItem(
-                        title = stringResource(R.string.contributors),
-                        onClick = { onIntent(AboutIntent.OpenUrl("https://github.com/HapeLee/legado-with-MD3")) }
-                    )
-                }
-                SettingItemWithDivider {
-                    SettingItem(
-                        title = stringResource(R.string.privacy_policy),
-                        onClick = {
-                            onIntent(
-                                AboutIntent.ShowMdFile(
-                                    privacyPolicyTitle,
-                                    "privacyPolicy.md"
-                                )
-                            )
-                        }
-                    )
-                }
-                SettingItemWithDivider {
-                    SettingItem(
-                        title = stringResource(R.string.license),
-                        onClick = { onIntent(AboutIntent.ShowMdFile(licenseTitle, "LICENSE.md")) }
-                    )
-                }
-                SettingItemWithDivider {
-                    SettingItem(
-                        title = stringResource(R.string.disclaimer),
-                        onClick = { onIntent(AboutIntent.ShowMdFile(disclaimerTitle, "disclaimer.md")) }
-                    )
-                }
-                SettingItemWithDivider {
-                    SettingItem(
-                        title = stringResource(R.string.crash_log),
-                        onClick = { onIntent(AboutIntent.ShowCrashLogs) }
-                    )
-                }
-                SettingItemWithDivider {
-                    SettingItem(
-                        title = stringResource(R.string.save_log),
-                        onClick = { onIntent(AboutIntent.SaveLog) }
-                    )
-                }
-                SettingItemWithDivider {
-                    SettingItem(
-                        title = stringResource(R.string.create_heap_dump),
-                        onClick = { onIntent(AboutIntent.CreateHeapDump) }
-                    )
-                }
-            }
         }
     }
 }

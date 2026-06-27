@@ -24,9 +24,9 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
 
     private suspend fun getLatestRelease(): List<AppReleaseInfo> {
         val url = if (checkVariant == AppVariant.OFFICIAL)
-            "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/latest"
+            "https://api.github.com/repos/hongtrantiende/Novela-Releases/releases/latest"
         else
-            "https://api.github.com/repos/HapeLee/legado-with-MD3/releases"
+            "https://api.github.com/repos/hongtrantiende/Novela-Releases/releases"
 
         val res = okHttpClient.newCallResponse { url(url) }
         if (!res.isSuccessful) throw NoStackTraceException("Lỗi tải phiên bản mới (${res.code})")
@@ -65,7 +65,7 @@ object AppUpdateGitHub : AppUpdate.AppUpdateInterface {
     }
 
     suspend fun getReleaseByTag(tag: String): AppUpdate.UpdateInfo? {
-        val url = "https://api.github.com/repos/HapeLee/legado-with-MD3/releases/tags/$tag"
+        val url = "https://api.github.com/repos/hongtrantiende/Novela-Releases/releases/tags/$tag"
         val res = okHttpClient.newCallResponse { url(url) }
         if (!res.isSuccessful) return null
 

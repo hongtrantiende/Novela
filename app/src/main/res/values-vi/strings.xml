@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--App-->
-    <string name="app_name">Legado</string>
-    <string name="app_name_a">Legado·A</string>
-    <string name="app_name_s" translatable="false">LegadoPlus</string>
-    <string name="receiving_shared_label">Legado·Tìm kiếm</string>
-    <string name="tip_perm_request_storage">Legado cần quyền truy cập bộ nhớ để tìm và đọc sách. Vui lòng vào "Cài đặt ứng dụng" để cấp "Quyền truy cập bộ nhớ".</string>
+    <string name="app_name">Novela</string>
+    <string name="app_name_a">Novela·A</string>
+    <string name="app_name_s" translatable="false">NovelaPlus</string>
+    <string name="receiving_shared_label">Novela·Tìm kiếm</string>
+    <string name="tip_perm_request_storage">Novela cần quyền truy cập bộ nhớ để tìm và đọc sách. Vui lòng vào "Cài đặt ứng dụng" để cấp "Quyền truy cập bộ nhớ".</string>
 
     <!--Other-->
     <string name="menu_backup">Sao lưu</string>
     <string name="menu_restore">Khôi phục</string>
-    <string name="menu_import_old">Nhập dữ liệu Legado cũ</string>
+    <string name="menu_import_old">Nhập dữ liệu Novela cũ</string>
     <string name="webdav_cache_backup">Sao lưu sách đệm ngoại tuyến</string>
-    <string name="webdav_cache_backup_s">Xuất ra bộ nhớ cục bộ và sao lưu vào thư mục exports trong thư mục Legado</string>
+    <string name="webdav_cache_backup_s">Xuất ra bộ nhớ cục bộ và sao lưu vào thư mục exports trong thư mục Novela</string>
     <string name="backup_path">Đường dẫn sao lưu</string>
     <string name="select_backup_path">Vui lòng chọn đường dẫn sao lưu.</string>
     <string name="menu_import_old_version">Nhập dữ liệu phiên bản cũ</string>
@@ -100,10 +100,10 @@
     <string name="offline_cache_s">Lưu trữ các chương đã chọn vào bộ nhớ đệm</string>
     <string name="change_origin">Đổi nguồn</string>
     <string name="about_description">
-        \u3000\u3000 This is an open source reading software newly developed by Kotlin, welcome to join us.
+        Novela là ứng dụng trình đọc sách và nội dung số được xây dựng dựa trên công cụ đọc mã nguồn mở Legado. Ứng dụng này chỉ hoạt động như một công cụ hỗ trợ đọc và tổ chức hiển thị văn bản thuần túy từ các nguồn nội dung (địa chỉ trang web, tệp quy tắc phân tích cú pháp) do người dùng tự nhập và cấu hình thủ công.\n\nNovela hoàn toàn không tích hợp sẵn, không vận hành và không cung cấp bất kỳ tài nguyên truyện hay nội dung bản quyền nào. Mọi vấn đề liên quan đến bản quyền nội dung hoặc tranh chấp sở hữu trí tuệ phát sinh từ các nguồn sách bên thứ ba hoàn toàn thuộc về trách nhiệm pháp lý của cá nhân tạo ra/cung cấp nguồn sách đó và người sử dụng. Chúng tôi không chịu trách nhiệm pháp lý đối với bất kỳ nội dung nào được truy cập thông qua các nguồn do người dùng tự thêm.
     </string>
     <string name="app_share_description">
-        Legado (YueDu 3.0) download link：\n https://github.com/gedoor/legado/releases
+        Tải ứng dụng đọc sách Novela tại:\n https://github.com/hongtrantiende/Novela-Releases
     </string>
     <string name="version_name">Phiên bản %s</string>
     <string name="pt_background_verification">Xác minh trong nền</string>
@@ -119,7 +119,6 @@
     <string name="restore">Khôi phục</string>
     <string name="backup_permission">Sao lưu cần quyền truy cập bộ nhớ</string>
     <string name="restore_permission">Khôi phục cần quyền truy cập bộ nhớ</string>
-    <string name="ok">OK</string>
     <string name="cancel">Hủy</string>
     <string name="backup_confirmation">Xác nhận sao lưu</string>
     <string name="backup_message">Tệp sao lưu mới sẽ thay thế tệp cũ.\n Thư mục sao lưu: YueDu</string>
@@ -654,7 +653,7 @@
     <string name="app_folder_picker">Bộ chọn thư mục ứng dụng</string>
     <string name="app_file_picker">Bộ chọn tệp ứng dụng</string>
     <string name="a10_permission_toast">Android 10+ không thể đọc và ghi tệp do hạn chế quyền</string>
-    <string name="add_to_text_context_menu_s">Nhấn giữ để hiển thị Legado·Tìm kiếm trong menu thao tác</string>
+    <string name="add_to_text_context_menu_s">Nhấn giữ để hiển thị Novela·Tìm kiếm trong menu thao tác</string>
     <string name="add_to_text_context_menu_t">Thao tác văn bản hiển thị Tìm kiếm</string>
     <string name="record_log">Ghi nhật ký</string>
     <string name="log">Nhật ký</string>
@@ -697,7 +696,7 @@
     <string name="btn_default_s">Mặc định</string>
     <string name="main_menu">Menu chính</string>
     <string name="request_permission">Chạm để cấp quyền</string>
-    <string name="tip_local_perm_request_storage">Legado cần quyền truy cập bộ nhớ, vui lòng chạm vào nút "Cấp quyền" bên dưới, hoặc vào "Cài đặt"-"Quyền ứng dụng"-để mở quyền yêu cầu. Nếu quyền vẫn không hoạt động, vui lòng chạm vào "Chọn thư mục" ở góc trên bên phải để sử dụng bộ chọn thư mục hệ thống.</string>
+    <string name="tip_local_perm_request_storage">Novela cần quyền truy cập bộ nhớ, vui lòng chạm vào nút "Cấp quyền" bên dưới, hoặc vào "Cài đặt"-"Quyền ứng dụng"-để mở quyền yêu cầu. Nếu quyền vẫn không hoạt động, vui lòng chạm vào "Chọn thư mục" ở góc trên bên phải để sử dụng bộ chọn thư mục hệ thống.</string>
     <string name="alouding_disable">Không thể đọc văn bản đã chọn ở chế độ đọc toàn văn</string>
     <string name="read_body_to_lh">Mở rộng đến phần cắt</string>
     <string name="toc_updateing">Đang cập nhật chương</string>
@@ -1470,10 +1469,10 @@
     <string name="video_setting_summary">Tự động phát lại, phát lại toàn màn hình và các cấu hình khác</string>
     <string name="history">Lịch sử</string>
     <string name="app_name_sigma">Đọc Sigma</string>
-    <string name="about_description_sigma">\u3000\u3000 Reading Sigma kế thừa từ legado và nhằm mục đích cải tiến, bổ sung thêm các chức năng dựa trên phiên bản gốc. Bạn được chào đón để tham gia.</string>
+    <string name="about_description_sigma">\u3000\u3000 Reading Sigma kế thừa từ novela và nhằm mục đích cải tiến, bổ sung thêm các chức năng dựa trên phiên bản gốc. Bạn được chào đón để tham gia.</string>
     <string name="contributors_summary_sigma">gedoor, LuoyaThành, Horis và Xwite, v.v., vui lòng kiểm tra GitHub để biết chi tiết</string>
     <string name="app_share_description_sigma">
-        阅读 Sigma 下载地址：\nhttps://github.com/Luoyacheng/legado/releases
+        阅读 Sigma 下载地址：\nhttps://github.com/Luoyacheng/novela/releases
     </string>
     <string name="sure_cache_book">Xác nhận bắt đầu tải vào bộ nhớ đệm?</string>
     <string name="non_printable_set">Cài đặt ký tự vô hình</string>

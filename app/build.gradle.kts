@@ -153,6 +153,17 @@ android {
         checkDependencies = true
         disable += "ExtraTranslation"
     }
+
+    applicationVariants.all {
+        val variant = this
+        variant.outputs.all {
+            val output = this as? com.android.build.gradle.api.ApkVariantOutput
+            if (output != null) {
+                val abi = output.filters.find { it.filterType == "ABI" }?.identifier ?: "universal"
+                output.outputFileName = "Novela-${abi}-${variant.buildType.name}.apk"
+            }
+        }
+    }
 }
 
 kotlin {
