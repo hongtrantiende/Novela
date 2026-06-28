@@ -152,3 +152,20 @@ cn.hutool.core.util.**{*;}
 -dontwarn java.lang.management.**
 -dontwarn io.ktor.util.debug.IntellijIdeaDebugDetector
 -keep,allowobfuscation class io.ktor.util.debug.** { *; }
+
+# ==============================================================================
+# Google Sign-In & Google Drive API ProGuard Keep Rules
+# ==============================================================================
+-keep class com.google.api.client.** { *; }
+-dontwarn com.google.api.client.**
+
+-keep class com.google.api.services.drive.** { *; }
+-dontwarn com.google.api.services.drive.**
+
+-keep class com.google.android.gms.auth.** { *; }
+-keep class com.google.android.gms.common.** { *; }
+-dontwarn com.google.android.gms.**
+
+-keepclassmembers class * {
+    @com.google.api.client.util.Key <fields>;
+}
