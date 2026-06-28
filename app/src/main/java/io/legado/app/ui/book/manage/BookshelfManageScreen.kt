@@ -108,6 +108,7 @@ import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import io.legado.app.utils.ACache
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.checkWrite
+import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.move
 import io.legado.app.utils.startService
@@ -278,6 +279,7 @@ private fun BookshelfManageScreen(
         var isReadyPath = false
         var dirPath = ""
         uri?.let {
+            it.takePersistablePermissionSafely(context)
             if (uri.isContentScheme()) {
                 ACache.get().put(exportBookPathKey, uri.toString())
                 dirPath = uri.toString()
@@ -366,11 +368,14 @@ private fun BookshelfManageScreen(
 
     fun exportAll() {
         val path = ACache.get().getAsString(exportBookPathKey)
-        if (path.isNullOrEmpty()) {
+        val isWritable = kotlin.runCatching {
+            !path.isNullOrEmpty() && FileDoc.fromDir(path).checkWrite()
+        }.getOrDefault(false)
+        if (!isWritable) {
             selectExportFolder(forAll = true)
         } else {
             state.books.forEach { book ->
-                startExport(context, path, book, state.exportConfig.exportType)
+                startExport(context, path!!, book, state.exportConfig.exportType)
             }
         }
     }
@@ -378,12 +383,15 @@ private fun BookshelfManageScreen(
     fun exportSelected() {
         if (selectedBookUrls.isEmpty()) return
         val path = ACache.get().getAsString(exportBookPathKey)
-        if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
+        val isWritable = kotlin.runCatching {
+            !path.isNullOrEmpty() && FileDoc.fromDir(path).checkWrite()
+        }.getOrDefault(false)
+        if (!isWritable) {
             selectExportFolder(selection = selectedBookUrls)
         } else {
             selectedBookUrls.forEach { bookUrl ->
                 booksByUrl[bookUrl]?.let { book ->
-                    startExport(context, path, book, state.exportConfig.exportType)
+                    startExport(context, path!!, book, state.exportConfig.exportType)
                 }
             }
         }
@@ -514,23 +522,6 @@ private fun BookshelfManageScreen(
             }
         },
         dropDownMenuContent = { dismiss ->
-            var showCharsetMenu by remember { mutableStateOf(false) }
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.download_all),
-                onClick = {
-                    dismiss()
-                    if (state.isDownloadRunning) {
-                        viewModel.dispatch(BookshelfManageScreenIntent.StopDownload)
-                    } else {
-                        showDownloadAllConfirmDialog = true
-                    }
-                }
-            )
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.export_all),
-                onClick = { dismiss(); exportAll() }
-            )
-            PillDivider()
             RoundDropdownMenuItem(
                 text = stringResource(R.string.export_folder),
                 onClick = { dismiss(); selectExportFolder() }
@@ -543,44 +534,6 @@ private fun BookshelfManageScreen(
                     showExportFileNameDialog = true
                 }
             )
-            RoundDropdownMenuItem(
-                text = "${stringResource(R.string.export_type)} (${exportTypes.getOrElse(state.exportConfig.exportType) { exportTypes[0] }})",
-                onClick = {
-                    dismiss()
-                    showExportTypeDialog = true
-                }
-            )
-            Box {
-                RoundDropdownMenuItem(
-                    text = "${stringResource(R.string.export_charset)} (${state.exportConfig.exportCharset})",
-                    onClick = { showCharsetMenu = true }
-                )
-                RoundDropdownMenu(
-                    expanded = showCharsetMenu,
-                    onDismissRequest = { showCharsetMenu = false }
-                ) { subDismiss ->
-                    commonCharsets.forEach { charset ->
-                        RoundDropdownMenuItem(
-                            text = charset,
-                            isSelected = state.exportConfig.exportCharset == charset,
-                            onClick = {
-                                viewModel.dispatch(BookshelfManageScreenIntent.SetExportCharset(charset))
-                                subDismiss()
-                                dismiss()
-                            }
-                        )
-                    }
-                    PillDivider()
-                    RoundDropdownMenuItem(
-                        text = "Tùy chỉnh...",
-                        onClick = {
-                            subDismiss()
-                            exportCharsetInput = state.exportConfig.exportCharset
-                            showCharsetDialog = true
-                        }
-                    )
-                }
-            }
             PillDivider()
             RoundDropdownMenuItem(
                 text = "Thay thế thanh lọc",
@@ -609,16 +562,6 @@ private fun BookshelfManageScreen(
                     dismiss()
                     viewModel.dispatch(
                         BookshelfManageScreenIntent.SetExportNoChapterName(!state.exportConfig.exportNoChapterName)
-                    )
-                }
-            )
-            RoundDropdownMenuItem(
-                text = "Xuất sang WebDav",
-                isSelected = state.exportConfig.exportToWebDav,
-                onClick = {
-                    dismiss()
-                    viewModel.dispatch(
-                        BookshelfManageScreenIntent.SetExportToWebDav(!state.exportConfig.exportToWebDav)
                     )
                 }
             )
@@ -1200,23 +1143,39 @@ private fun BookshelfManageScreen(
             cacheCount = viewModel.getCacheCount(book.bookUrl) ?: 0,
             onDismiss = { showBookExportDialogBook = null },
             onConfirm = { scope, type, uploadToGd ->
-                val path = ACache.get().getAsString(exportBookPathKey)
-                if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
-                    pendingExportBook = book
-                    pendingExportScope = scope
-                    pendingExportType = type
-                    pendingExportToGoogleDrive = uploadToGd
-                    selectExportFolder(book.bookUrl)
-                } else {
+                if (uploadToGd) {
                     context.startService<io.legado.app.service.ExportBookService> {
                         action = IntentAction.start
                         putExtra("bookUrl", book.bookUrl)
                         putExtra("exportType", type)
-                        putExtra("exportPath", path)
+                        putExtra("exportPath", context.cacheDir.absolutePath)
                         if (scope != null) {
                             putExtra("epubScope", scope)
                         }
-                        putExtra("uploadToGoogleDrive", uploadToGd)
+                        putExtra("uploadToGoogleDrive", true)
+                    }
+                } else {
+                    val path = ACache.get().getAsString(exportBookPathKey)
+                    val isWritable = kotlin.runCatching {
+                        !path.isNullOrEmpty() && FileDoc.fromDir(path).checkWrite()
+                    }.getOrDefault(false)
+                    if (!isWritable) {
+                        pendingExportBook = book
+                        pendingExportScope = scope
+                        pendingExportType = type
+                        pendingExportToGoogleDrive = false
+                        selectExportFolder(book.bookUrl)
+                    } else {
+                        context.startService<io.legado.app.service.ExportBookService> {
+                            action = IntentAction.start
+                            putExtra("bookUrl", book.bookUrl)
+                            putExtra("exportType", type)
+                            putExtra("exportPath", path)
+                            if (scope != null) {
+                                putExtra("epubScope", scope)
+                            }
+                            putExtra("uploadToGoogleDrive", false)
+                        }
                     }
                 }
             }

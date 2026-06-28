@@ -593,4 +593,10 @@ class CacheBookService : BaseService() {
         startForeground(NotificationId.CacheBookService, notification)
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        // Do not call super.onTaskRemoved(rootIntent) to avoid calling stopSelf()
+        // so that the background download process keeps running when the app is closed from Recents.
+        LogUtils.d("CacheBookService") { "onTaskRemoved: Keep downloading in background." }
+    }
+
 }

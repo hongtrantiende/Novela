@@ -256,11 +256,17 @@ class ExportBookService : BaseService(), KoinComponent {
                             }
                         }
                     }
+                    if (exportConfig.uploadToGoogleDrive) {
+                        toastOnUi("Đã xuất lên Google Drive thành công: ${book.name}")
+                    } else {
+                        toastOnUi("Xuất vào bộ nhớ máy thành công: ${book.name}")
+                    }
                     exportMsg[book.bookUrl] = getString(R.string.export_success)
                 } catch (e: Throwable) {
                     ensureActive()
                     exportMsg[bookUrl] = e.localizedMessage ?: "ERROR"
                     AppLog.put("Lỗi xuất sách <${book?.name ?: bookUrl}>", e)
+                    toastOnUi("Lỗi xuất sách ${book?.name ?: bookUrl}: ${e.localizedMessage}")
                 } finally {
                     exportProgress.remove(bookUrl)
                     notifyExportBookChanged(bookUrl)
@@ -333,6 +339,9 @@ class ExportBookService : BaseService(), KoinComponent {
         }
         if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
             AppGoogleDrive.uploadFile(bookDoc.uri, filename)
+            if (bookDoc.uri.path?.startsWith(appCtx.cacheDir.absolutePath) == true) {
+                kotlin.runCatching { bookDoc.delete() }
+            }
         }
     }
 
@@ -396,6 +405,9 @@ class ExportBookService : BaseService(), KoinComponent {
         }
         if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
             AppGoogleDrive.uploadFile(bookDoc.uri, filename)
+            if (bookDoc.uri.path?.startsWith(appCtx.cacheDir.absolutePath) == true) {
+                kotlin.runCatching { bookDoc.delete() }
+            }
         }
     }
 
@@ -498,6 +510,9 @@ class ExportBookService : BaseService(), KoinComponent {
         }
         if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
             AppGoogleDrive.uploadFile(bookDoc.uri, filename)
+            if (bookDoc.uri.path?.startsWith(appCtx.cacheDir.absolutePath) == true) {
+                kotlin.runCatching { bookDoc.delete() }
+            }
         }
     }
 
@@ -662,6 +677,9 @@ class ExportBookService : BaseService(), KoinComponent {
         }
         if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
             AppGoogleDrive.uploadFile(bookDoc.uri, filename)
+            if (bookDoc.uri.path?.startsWith(appCtx.cacheDir.absolutePath) == true) {
+                kotlin.runCatching { bookDoc.delete() }
+            }
         }
     }
 
@@ -1128,6 +1146,9 @@ class ExportBookService : BaseService(), KoinComponent {
             }
             if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
                 AppGoogleDrive.uploadFile(bookDoc.uri, filename)
+                if (bookDoc.uri.path?.startsWith(appCtx.cacheDir.absolutePath) == true) {
+                    kotlin.runCatching { bookDoc.delete() }
+                }
             }
         }
 

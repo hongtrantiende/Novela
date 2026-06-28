@@ -18,6 +18,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.Uri
 import android.os.Build
 import android.view.ViewGroup
 import android.view.GestureDetector
@@ -41,6 +42,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -663,6 +665,74 @@ private fun VideoContent(
     var sniffingWebViewInstance by remember { mutableStateOf<WebView?>(null) }
     var fallbackWebViewInstance by remember { mutableStateOf<WebView?>(null) }
 
+    val domVideoSnifferJS = """
+        (function() {
+            if (window.__dom_sniffer_injected) return;
+            window.__dom_sniffer_injected = true;
+            
+            function checkVideo(src) {
+                if (!src) return;
+                var lower = src.toLowerCase();
+                var isVideoUrl = (lower.indexOf('.m3u8') !== -1 || lower.indexOf('m3u8') !== -1 ||
+                                  lower.indexOf('.mp4') !== -1 || lower.indexOf('mp4') !== -1 ||
+                                  lower.indexOf('.mpd') !== -1 || lower.indexOf('mpd') !== -1 ||
+                                  lower.indexOf('.webm') !== -1 || lower.indexOf('.mkv') !== -1 ||
+                                  lower.indexOf('.flv') !== -1 ||
+                                  lower.indexOf('googlevideo.com') !== -1 ||
+                                  lower.indexOf('/hls/') !== -1 || lower.indexOf('/dash/') !== -1) &&
+                                  lower.indexOf('.ts') === -1 && lower.indexOf('segment') === -1 &&
+                                  lower.indexOf('chunk') === -1 && lower.indexOf('.m4s') === -1;
+                if (isVideoUrl && src.indexOf('http') === 0) {
+                    if (window.AndroidSniffer) {
+                        window.AndroidSniffer.onVideoFound(src);
+                    }
+                }
+            }
+            
+            try {
+                var originalSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLVideoElement.prototype, 'src');
+                if (originalSrcDescriptor) {
+                    Object.defineProperty(HTMLVideoElement.prototype, 'src', {
+                        set: function(val) {
+                            checkVideo(val);
+                            originalSrcDescriptor.set.call(this, val);
+                        },
+                        get: function() {
+                            return originalSrcDescriptor.get.call(this);
+                        }
+                    });
+                }
+                
+                var originalSourceSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLSourceElement.prototype, 'src');
+                if (originalSourceSrcDescriptor) {
+                    Object.defineProperty(HTMLSourceElement.prototype, 'src', {
+                        set: function(val) {
+                            checkVideo(val);
+                            originalSourceSrcDescriptor.set.call(this, val);
+                        },
+                        get: function() {
+                            return originalSourceSrcDescriptor.get.call(this);
+                        }
+                    });
+                }
+            } catch(e) {}
+
+            setInterval(function() {
+                try {
+                    var videos = document.getElementsByTagName('video');
+                    for (var i = 0; i < videos.length; i++) {
+                        checkVideo(videos[i].src);
+                        checkVideo(videos[i].currentSrc);
+                        var sources = videos[i].getElementsByTagName('source');
+                        for (var j = 0; j < sources.length; j++) {
+                            checkVideo(sources[j].src);
+                        }
+                    }
+                } catch(e) {}
+            }, 1000);
+        })();
+    """.trimIndent()
+
     DisposableEffect(Unit) {
         onDispose {
             try {
@@ -769,6 +839,15 @@ private fun VideoContent(
             }
 
             val lowerSniffed = sniffedVideoUrl!!.lowercase()
+            
+            // Set Origin dynamically
+            val originUrl = realEmbedUrl ?: novelUrl
+            val originMatch = "^(https?://[^/]+)".toRegex().find(originUrl)
+            val origin = originMatch?.groupValues?.get(1)
+            if (!origin.isNullOrBlank()) {
+                headersMap["Origin"] = origin
+            }
+
             val referer = when {
                 lowerSniffed.contains("streamfree") || lowerSniffed.contains("hhkungfu") -> realEmbedUrl ?: novelUrl
                 lowerSniffed.contains("ssplay.net") || lowerSniffed.contains("ssplay") -> {
@@ -779,18 +858,26 @@ private fun VideoContent(
                     headersMap["Origin"] = "https://www.bilibili.tv"
                     "https://www.bilibili.tv/"
                 }
-                else -> headersMap["Referer"] ?: novelUrl
+                else -> headersMap["Referer"] ?: realEmbedUrl ?: novelUrl
             }
             headersMap["Referer"] = referer
 
+            headersMap["Sec-Fetch-Dest"] = "video"
+            headersMap["Sec-Fetch-Mode"] = "cors"
+            headersMap["Sec-Fetch-Site"] = "cross-site"
+
             val cookieManager = android.webkit.CookieManager.getInstance()
-            val webViewCookie = if (!realEmbedUrl.isNullOrBlank()) {
-                cookieManager.getCookie(realEmbedUrl)
-            } else {
-                cookieManager.getCookie(sniffedVideoUrl)
+            val cookies = mutableListOf<String>()
+            
+            cookieManager.getCookie(novelUrl)?.let { cookies.add(it) }
+            if (!realEmbedUrl.isNullOrBlank() && realEmbedUrl != novelUrl) {
+                cookieManager.getCookie(realEmbedUrl)?.let { cookies.add(it) }
             }
-            if (!webViewCookie.isNullOrBlank()) {
-                headersMap["Cookie"] = webViewCookie
+            cookieManager.getCookie(sniffedVideoUrl)?.let { cookies.add(it) }
+            
+            val mergedCookie = cookies.flatMap { it.split("; ") }.filter { it.isNotBlank() }.distinct().joinToString("; ")
+            if (mergedCookie.isNotBlank()) {
+                headersMap["Cookie"] = mergedCookie
             }
 
             android.util.Log.d("VideoPlayerExo", "sniffedVideoUrl: $sniffedVideoUrl")
@@ -904,22 +991,32 @@ private fun VideoContent(
                         factory = { ctx ->
                             WebView(ctx).apply {
                                 sniffingWebViewInstance = this
-                                visibility = android.view.View.INVISIBLE
-                                layoutParams = ViewGroup.LayoutParams(
-                                    ViewGroup.LayoutParams.MATCH_PARENT,
-                                    ViewGroup.LayoutParams.MATCH_PARENT
-                                )
+                                visibility = android.view.View.VISIBLE
+                                layoutParams = ViewGroup.LayoutParams(1, 1)
                                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                                 settings.apply {
                                     javaScriptEnabled = true
                                     domStorageEnabled = true
+                                    databaseEnabled = true
                                     mediaPlaybackRequiresUserGesture = false
                                     userAgentString = chromeUA
                                     setSupportMultipleWindows(false)
                                     setJavaScriptCanOpenWindowsAutomatically(false)
                                     cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
                                 }
+                                val cookieManager = android.webkit.CookieManager.getInstance()
+                                cookieManager.setAcceptCookie(true)
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                    cookieManager.setAcceptThirdPartyCookies(this, true)
+                                }
                                 clearCache(true)
+                                addJavascriptInterface(VideoSnifferInterface { url ->
+                                    (ctx as? Activity)?.runOnUiThread {
+                                        if (sniffedVideoUrl == null) {
+                                            sniffedVideoUrl = url
+                                        }
+                                    }
+                                }, "AndroidSniffer")
                                 webChromeClient = object : WebChromeClient() {
                                     override fun onProgressChanged(view: WebView?, newProgress: Int) {
                                         super.onProgressChanged(view, newProgress)
@@ -945,6 +1042,7 @@ private fun VideoContent(
                                                     setTimeout(function() { clearInterval(autoPlayInterval); }, 15000);
                                                 })();
                                             """.trimIndent(), null)
+                                            view?.evaluateJavascript(domVideoSnifferJS, null)
                                         }
                                     }
 
@@ -968,7 +1066,7 @@ private fun VideoContent(
                                                 if (head) head.appendChild(style);
                                             })();
                                         """.trimIndent(), null)
-                                        view?.evaluateJavascript(mockDevToolsDetectorJS, null)
+                                        view?.evaluateJavascript(domVideoSnifferJS, null)
                                     }
 
                                     override fun shouldInterceptRequest(
@@ -986,7 +1084,23 @@ private fun VideoContent(
                                             )
                                         }
                                         
-                                        if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".m4s") || lowerUrl.contains(".ts") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
+                                        val isVideo = (lowerUrl.contains(".m3u8") || lowerUrl.contains("m3u8") ||
+                                                 lowerUrl.contains(".mp4") || lowerUrl.contains("mp4") ||
+                                                 lowerUrl.contains(".mpd") || lowerUrl.contains("mpd") ||
+                                                 lowerUrl.contains(".webm") || lowerUrl.contains(".mkv") ||
+                                                 lowerUrl.contains(".flv") ||
+                                                 lowerUrl.contains("googlevideo.com") ||
+                                                 lowerUrl.contains("/hls/") || lowerUrl.contains("/dash/")) &&
+                                                 !lowerUrl.contains(".ts") && !lowerUrl.contains("segment") &&
+                                                 !lowerUrl.contains("chunk") && !lowerUrl.contains(".m4s") &&
+                                                 !lowerUrl.contains(".js") && !lowerUrl.contains(".css") && 
+                                                 !lowerUrl.contains(".png") && !lowerUrl.contains(".jpg") && 
+                                                 !lowerUrl.contains(".jpeg") && !lowerUrl.contains(".gif") && 
+                                                 !lowerUrl.contains(".svg") && !lowerUrl.contains(".ico") && 
+                                                 !lowerUrl.contains(".woff") && !lowerUrl.contains(".ttf") && 
+                                                 !lowerUrl.contains(".html") && !lowerUrl.contains(".htm")
+
+                                        if (isVideo) {
                                             (view?.context as? Activity)?.runOnUiThread {
                                                 if (sniffedVideoUrl == null) {
                                                     sniffedVideoUrl = reqUrl
@@ -1029,9 +1143,7 @@ private fun VideoContent(
                                 }
                             }
                         },
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer(alpha = 0f, translationX = 9999f)
+                        modifier = Modifier.size(1.dp).alpha(0.01f)
                     )
                 }
             }
@@ -1070,7 +1182,9 @@ private fun VideoContent(
                             playSpeed = playSpeed,
                             onPlaySpeedChange = onPlaySpeedChange,
                             onSettingsClick = { showSettingsBottomSheet = true },
-                            onBackClick = onBackClick
+                            onBackClick = onBackClick,
+                            sniffedVideoUrl = sniffedVideoUrl,
+                            webUrl = servers.getOrNull(selectedServerIndex)?.second ?: novelUrl
                         )
                     }
 
@@ -1152,9 +1266,52 @@ private fun VideoContent(
                         Text(text = "Đang dò link video chất lượng cao (sniffing)...", color = Color.White, fontSize = 12.sp)
                     }
                 }
+            } else if (resolvedVideoUrl.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Filled.Warning, contentDescription = null, tint = Color.Yellow, modifier = Modifier.size(48.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Không tìm thấy link phát phim từ Server này.", color = Color.White, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text("Vui lòng đổi Server hoặc chuyển tập khác ở thanh điều khiển.", color = Color.Gray, fontSize = 12.sp)
+                    }
+                    
+                    VideoTopBar(
+                        title = chapter?.title ?: "Xem phim",
+                        servers = servers,
+                        selectedServerIndex = selectedServerIndex,
+                        onServerChange = onServerChange,
+                        playSpeed = playSpeed,
+                        onPlaySpeedChange = onPlaySpeedChange,
+                        onSettingsClick = { showSettingsBottomSheet = true },
+                        onBackClick = onBackClick,
+                        webUrl = servers.getOrNull(selectedServerIndex)?.second ?: novelUrl
+                    )
+                    
+                    Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                        VideoBottomBar(
+                            exoPlayer = exoPlayer,
+                            chapters = chapters,
+                            selectedServerIndex = selectedServerIndex,
+                            currentChapterUrl = chapter?.url ?: "",
+                            onChapterSelect = onChapterSelect,
+                            onPlaylistClick = { showPlaylistBottomSheet = true },
+                            onFullscreenToggle = onFullscreenToggle,
+                            isFullscreen = isFullscreen
+                        )
+                    }
+                }
             } else if (sniffingTimeout) {
                 var fallbackCustomView by remember { mutableStateOf<View?>(null) }
                 var fallbackCustomViewCallback by remember { mutableStateOf<WebChromeClient.CustomViewCallback?>(null) }
+                var isCleanView by remember { mutableStateOf(true) }
+
+                LaunchedEffect(isCleanView) {
+                    fallbackWebViewInstance?.reload()
+                }
 
                 if (fallbackCustomView != null) {
                     androidx.activity.compose.BackHandler {
@@ -1213,6 +1370,7 @@ private fun VideoContent(
                                     settings.apply {
                                         javaScriptEnabled = true
                                         domStorageEnabled = true
+                                        databaseEnabled = true
                                         mediaPlaybackRequiresUserGesture = false
                                         useWideViewPort = true
                                         loadWithOverviewMode = true
@@ -1220,15 +1378,30 @@ private fun VideoContent(
                                         userAgentString = chromeUA
                                         cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
                                     }
+                                    val cookieManager = android.webkit.CookieManager.getInstance()
+                                    cookieManager.setAcceptCookie(true)
+                                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                        cookieManager.setAcceptThirdPartyCookies(this, true)
+                                    }
                                     clearCache(true)
+                                    addJavascriptInterface(VideoSnifferInterface { url ->
+                                        (ctx as? Activity)?.runOnUiThread {
+                                            if (sniffedVideoUrl == null) {
+                                                sniffedVideoUrl = url
+                                            }
+                                        }
+                                    }, "AndroidSniffer")
                                     webChromeClient = object : WebChromeClient() {
                                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                                             super.onProgressChanged(view, newProgress)
-                                            if (newProgress > 30 && resolvedVideoType != "webview" && resolvedVideoUrl?.contains("<") != true) {
-                                                view?.evaluateJavascript(cleanPlayerJS, null)
+                                            if (isCleanView) {
+                                                if (newProgress > 30 && resolvedVideoType != "webview" && resolvedVideoUrl?.contains("<") != true) {
+                                                    view?.evaluateJavascript(cleanPlayerJS, null)
+                                                }
                                             }
                                             if (newProgress > 40) {
                                                 view?.evaluateJavascript(fallbackAutoPlayJS, null)
+                                                view?.evaluateJavascript(domVideoSnifferJS, null)
                                             }
                                         }
 
@@ -1273,7 +1446,23 @@ private fun VideoContent(
                                                 )
                                             }
                                             
-                                            if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".m4s") || lowerUrl.contains(".ts") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
+                                            val isVideo = (lowerUrl.contains(".m3u8") || lowerUrl.contains("m3u8") ||
+                                                 lowerUrl.contains(".mp4") || lowerUrl.contains("mp4") ||
+                                                 lowerUrl.contains(".mpd") || lowerUrl.contains("mpd") ||
+                                                 lowerUrl.contains(".webm") || lowerUrl.contains(".mkv") ||
+                                                 lowerUrl.contains(".flv") ||
+                                                 lowerUrl.contains("googlevideo.com") ||
+                                                 lowerUrl.contains("/hls/") || lowerUrl.contains("/dash/")) &&
+                                                 !lowerUrl.contains(".ts") && !lowerUrl.contains("segment") &&
+                                                 !lowerUrl.contains("chunk") && !lowerUrl.contains(".m4s") &&
+                                                 !lowerUrl.contains(".js") && !lowerUrl.contains(".css") && 
+                                                 !lowerUrl.contains(".png") && !lowerUrl.contains(".jpg") && 
+                                                 !lowerUrl.contains(".jpeg") && !lowerUrl.contains(".gif") && 
+                                                 !lowerUrl.contains(".svg") && !lowerUrl.contains(".ico") && 
+                                                 !lowerUrl.contains(".woff") && !lowerUrl.contains(".ttf") && 
+                                                 !lowerUrl.contains(".html") && !lowerUrl.contains(".htm")
+
+                                            if (isVideo) {
                                                 (view?.context as? Activity)?.runOnUiThread {
                                                     if (sniffedVideoUrl == null) {
                                                         sniffedVideoUrl = reqUrl
@@ -1295,14 +1484,18 @@ private fun VideoContent(
                                                 })();
                                             """.trimIndent(), null)
                                             view?.evaluateJavascript(mockDevToolsDetectorJS, null)
+                                            view?.evaluateJavascript(domVideoSnifferJS, null)
                                         }
 
                                         override fun onPageFinished(view: WebView?, url: String?) {
                                             super.onPageFinished(view, url)
-                                            if (resolvedVideoType != "webview" && resolvedVideoUrl?.contains("<") != true) {
-                                                view?.evaluateJavascript(cleanPlayerJS, null)
+                                            if (isCleanView) {
+                                                if (resolvedVideoType != "webview" && resolvedVideoUrl?.contains("<") != true) {
+                                                    view?.evaluateJavascript(cleanPlayerJS, null)
+                                                }
                                             }
                                             view?.evaluateJavascript(fallbackAutoPlayJS, null)
+                                            view?.evaluateJavascript(domVideoSnifferJS, null)
                                         }
                                     }
                                 }
@@ -1329,10 +1522,75 @@ private fun VideoContent(
                     }
 
                     IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier.statusBarsPadding().padding(8.dp).align(Alignment.TopStart).background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        onClick = { showUI = !showUI },
+                        modifier = Modifier
+                            .statusBarsPadding()
+                            .padding(8.dp)
+                            .align(Alignment.TopEnd)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                     ) {
-                        Icon(Icons.Filled.ArrowBack, "Back", tint = Color.White)
+                        Icon(
+                            imageVector = if (showUI) Icons.Filled.MenuOpen else Icons.Filled.Menu,
+                            contentDescription = "Toggle Menu",
+                            tint = Color.White
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = !showUI,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        IconButton(
+                            onClick = onBackClick,
+                            modifier = Modifier
+                                .statusBarsPadding()
+                                .padding(8.dp)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(Icons.Filled.ArrowBack, "Back", tint = Color.White)
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = showUI,
+                        enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                        exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    ) {
+                        VideoTopBar(
+                            title = chapter?.title ?: "Xem phim",
+                            servers = servers,
+                            selectedServerIndex = selectedServerIndex,
+                            onServerChange = onServerChange,
+                            playSpeed = playSpeed,
+                            onPlaySpeedChange = onPlaySpeedChange,
+                            onSettingsClick = { showSettingsBottomSheet = true },
+                            onBackClick = onBackClick,
+                            webUrl = servers.getOrNull(selectedServerIndex)?.second ?: novelUrl,
+                            isFallbackMode = true,
+                            isCleanView = isCleanView,
+                            onCleanViewToggle = { isCleanView = !isCleanView }
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = showUI,
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    ) {
+                        VideoBottomBar(
+                            exoPlayer = exoPlayer,
+                            chapters = chapters,
+                            selectedServerIndex = selectedServerIndex,
+                            currentChapterUrl = chapter?.url ?: "",
+                            onChapterSelect = onChapterSelect,
+                            onPlaylistClick = { showPlaylistBottomSheet = true },
+                            onFullscreenToggle = onFullscreenToggle,
+                            isFullscreen = isFullscreen
+                        )
                     }
                 }
             }
@@ -1368,10 +1626,17 @@ private fun VideoTopBar(
     playSpeed: Float,
     onPlaySpeedChange: (Float) -> Unit,
     onSettingsClick: () -> Unit,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    sniffedVideoUrl: String? = null,
+    webUrl: String = "",
+    isFallbackMode: Boolean = false,
+    isCleanView: Boolean = true,
+    onCleanViewToggle: () -> Unit = {}
 ) {
     var serverMenuExpanded by remember { mutableStateOf(false) }
     var speedMenuExpanded by remember { mutableStateOf(false) }
+    var moreMenuExpanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     Surface(color = Color.Black.copy(alpha = 0.6f)) {
         Row(
@@ -1466,6 +1731,56 @@ private fun VideoTopBar(
 
             IconButton(onClick = onSettingsClick) {
                 Icon(Icons.Filled.Settings, "Cài đặt", tint = Color.White)
+            }
+
+            Spacer(modifier = Modifier.width(4.dp))
+
+            Box {
+                IconButton(onClick = { moreMenuExpanded = true }) {
+                    Icon(Icons.Filled.MoreVert, "Tùy chọn khác", tint = Color.White)
+                }
+                DropdownMenu(
+                    expanded = moreMenuExpanded,
+                    onDismissRequest = { moreMenuExpanded = false }
+                ) {
+                    if (webUrl.isNotBlank()) {
+                        DropdownMenuItem(
+                            text = { Text("Mở bằng trình duyệt") },
+                            onClick = {
+                                moreMenuExpanded = false
+                                kotlin.runCatching {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(webUrl))
+                                    context.startActivity(intent)
+                                }
+                            }
+                        )
+                    }
+                    
+                    if (!sniffedVideoUrl.isNullOrBlank()) {
+                        DropdownMenuItem(
+                            text = { Text("Phát bằng trình phát ngoài") },
+                            onClick = {
+                                moreMenuExpanded = false
+                                kotlin.runCatching {
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(Uri.parse(sniffedVideoUrl), "video/*")
+                                    }
+                                    context.startActivity(intent)
+                                }
+                            }
+                        )
+                    }
+                    
+                    if (isFallbackMode) {
+                        DropdownMenuItem(
+                            text = { Text(if (isCleanView) "Chế độ Web gốc" else "Chế độ Rạp phim") },
+                            onClick = {
+                                moreMenuExpanded = false
+                                onCleanViewToggle()
+                            }
+                        )
+                    }
+                }
             }
         }
     }
@@ -1881,5 +2196,12 @@ private fun VideoSettingsBottomSheet(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+    }
+}
+
+class VideoSnifferInterface(private val onVideoFound: (String) -> Unit) {
+    @android.webkit.JavascriptInterface
+    fun onVideoFound(url: String) {
+        onVideoFound(url)
     }
 }

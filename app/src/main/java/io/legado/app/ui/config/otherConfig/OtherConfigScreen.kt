@@ -159,7 +159,14 @@ fun OtherConfigScreen(
                     title = stringResource(R.string.background_permission),
                     description = stringResource(R.string.ignore_battery_permission_rationale),
                     onClick = {
-
+                        (context as? android.app.Activity)?.let { activity ->
+                            val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as? android.os.PowerManager
+                            if (pm?.isIgnoringBatteryOptimizations(context.packageName) == true) {
+                                Toast.makeText(context, "Quyền chạy nền đã được cho phép!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                io.legado.app.utils.SystemUtils.ignoreBatteryOptimization(activity)
+                            }
+                        }
                     }
                 )
 

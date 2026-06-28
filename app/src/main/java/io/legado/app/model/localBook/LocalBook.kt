@@ -36,6 +36,7 @@ import io.legado.app.help.book.isUmd
 import io.legado.app.help.book.removeLocalUriCache
 import io.legado.app.help.book.simulatedTotalChapterNum
 import io.legado.app.help.book.upKind
+import io.legado.app.help.book.isCbzOrZip
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.webdav.WebDav
 import io.legado.app.lib.webdav.WebDavException
@@ -140,6 +141,10 @@ object LocalBook {
                 MobiFile.getChapterList(book)
             }
 
+            book.isCbzOrZip -> {
+                CbzFile.getChapterList(book)
+            }
+
             else -> {
                 TextFile.getChapterList(book)
             }
@@ -182,6 +187,10 @@ object LocalBook {
 
                 book.isMobi -> {
                     MobiFile.getContent(book, chapter)
+                }
+
+                book.isCbzOrZip -> {
+                    CbzFile.getContent(book, chapter)
                 }
 
                 else -> {
@@ -274,6 +283,7 @@ object LocalBook {
             book.isUmd -> UmdFile.upBookInfo(book)
             book.isPdf -> PdfFile.upBookInfo(book)
             book.isMobi -> MobiFile.upBookInfo(book)
+            book.isCbzOrZip -> CbzFile.upBookInfo(book)
         }
     }
 
@@ -301,11 +311,23 @@ object LocalBook {
         }
     }
 
+    private fun isComicArchive(uri: Uri): Boolean {
+        val fileDoc = FileDoc.fromUri(uri, false)
+        if (fileDoc.name.endsWith(".cbz", true)) return true
+        if (!fileDoc.name.endsWith(".zip", true)) return false
+        return kotlin.runCatching {
+            val fileNames = ArchiveUtils.getArchiveFilesName(uri) {
+                it.matches(AppPattern.bookFileRegex)
+            }
+            fileNames.isEmpty()
+        }.getOrDefault(false)
+    }
+
     /* 批量导入 支持自动导入压缩包的支持书籍 */
     fun importFiles(uri: Uri): List<Book> {
         val books = mutableListOf<Book>()
         val fileDoc = FileDoc.fromUri(uri, false)
-        if (ArchiveUtils.isArchive(fileDoc.name)) {
+        if (ArchiveUtils.isArchive(fileDoc.name) && !isComicArchive(uri)) {
             books.addAll(
                 importArchiveFile(uri) {
                     it.matches(AppPattern.bookFileRegex)
@@ -322,7 +344,7 @@ object LocalBook {
         uris.forEach { uri ->
             val fileDoc = FileDoc.fromUri(uri, false)
             kotlin.runCatching {
-                if (ArchiveUtils.isArchive(fileDoc.name)) {
+                if (ArchiveUtils.isArchive(fileDoc.name) && !isComicArchive(uri)) {
                     importArchiveFile(uri) {
                         it.matches(AppPattern.bookFileRegex)
                     }

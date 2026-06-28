@@ -61,6 +61,7 @@ import org.koin.core.component.inject
 @Suppress("MemberVisibilityCanBePrivate")
 open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(application), KoinComponent {
     private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository by inject()
+    private val extensionDao: io.legado.app.vbookextension.data.dao.ExtensionDao by inject()
     private val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     val searchStateData = MutableLiveData<Boolean>()
@@ -216,6 +217,26 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             tocMapChapterCount = 0
             _changeSourceProgress.value = 0 to ""
             bookSourceParts.addAll(io.legado.app.ui.book.search.SearchScope(ChangeSourceConfig.searchScope).getBookSourceParts())
+            
+            // Add enabled VBook Extensions to search
+            val enabledExts = extensionDao.getEnabledExtensions()
+            val extParts = enabledExts.map { ext ->
+                BookSourcePart(
+                    bookSourceUrl = "ext_${ext.id}",
+                    bookSourceName = ext.name,
+                    bookSourceGroup = "${ext.iconPath.orEmpty()}|${ext.type}|${ext.locale}",
+                    customOrder = 0,
+                    enabled = ext.isEnabled,
+                    enabledExplore = ext.isEnabled,
+                    hasLoginUrl = false,
+                    lastUpdateTime = 0,
+                    respondTime = 0,
+                    weight = 0,
+                    hasExploreUrl = true
+                )
+            }
+            bookSourceParts.addAll(extParts)
+
             initSearchPool()
             search()
         }
@@ -228,7 +249,31 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             tocMap.clear()
             bookMap.clear()
             tocMapChapterCount = 0
-            bookSourceParts.add(appDb.bookSourceDao.getBookSourcePart(origin)!!)
+            if (origin.startsWith("ext_")) {
+                val extId = origin.removePrefix("ext_")
+                val ext = extensionDao.getExtensionById(extId)
+                if (ext != null) {
+                    bookSourceParts.add(
+                        BookSourcePart(
+                            bookSourceUrl = "ext_${ext.id}",
+                            bookSourceName = ext.name,
+                            bookSourceGroup = "${ext.iconPath.orEmpty()}|${ext.type}|${ext.locale}",
+                            customOrder = 0,
+                            enabled = ext.isEnabled,
+                            enabledExplore = ext.isEnabled,
+                            hasLoginUrl = false,
+                            lastUpdateTime = 0,
+                            respondTime = 0,
+                            weight = 0,
+                            hasExploreUrl = true
+                        )
+                    )
+                }
+            } else {
+                appDb.bookSourceDao.getBookSourcePart(origin)?.let {
+                    bookSourceParts.add(it)
+                }
+            }
             searchBooks.removeIf { it.origin == origin }
             initSearchPool()
             search()

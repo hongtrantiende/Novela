@@ -253,6 +253,11 @@ class ExploreViewModel(
         observeExplore()
     }
 
+    fun setExtSubTab(tabIndex: Int) {
+        _uiState.update { it.copy(extSubTab = tabIndex, expandedId = null) }
+        observeExplore()
+    }
+
     private fun observeExplore() {
         exploreJob?.cancel()
         exploreJob = viewModelScope.launch {
@@ -314,8 +319,22 @@ class ExploreViewModel(
                         items.addAll(uninstalledOnline)
                     }
                     
-                    items.filter {
-                        query.isBlank() || it.bookSourceName.contains(query, ignoreCase = true)
+                    items.filter { item ->
+                        val queryMatched = query.isBlank() || item.bookSourceName.contains(query, ignoreCase = true)
+                        if (!queryMatched) return@filter false
+                        if (state.extSubTab == 0) return@filter true
+                        val group = item.bookSourceGroup.orEmpty()
+                        if (!group.contains("|")) return@filter false
+                        val parts = group.split("|")
+                        val type = parts.getOrNull(1).orEmpty().lowercase()
+                        val locale = parts.getOrNull(2).orEmpty().lowercase()
+                        when (state.extSubTab) {
+                            1 -> type == "novel" && locale.contains("vi")
+                            2 -> type == "novel" && (locale.contains("zh") || locale.contains("cn"))
+                            3 -> type == "comic"
+                            4 -> type == "movie" || type == "video"
+                            else -> true
+                        }
                     }
                 }.flowOn(IO)
                 .collectLatest { mappedItems ->
@@ -489,6 +508,7 @@ class ExploreViewModel(
         val kindValues: ImmutableMap<String, String> = persistentMapOf(),
         val loadingKinds: Boolean = false,
         val exploreTab: Int = 0,
+        val extSubTab: Int = 0,
         val hideUninstalled: Boolean = false,
         val installedBookSourceUrls: ImmutableSet<String> = persistentSetOf(),
         val installedExtensionIds: ImmutableSet<String> = persistentSetOf(),

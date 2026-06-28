@@ -6,6 +6,9 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.utils.ACache
 import io.legado.app.utils.share
 import io.legado.app.utils.startService
+import io.legado.app.utils.FileDoc
+import io.legado.app.utils.checkWrite
+import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.constant.IntentAction
 import androidx.compose.ui.platform.LocalContext
 import android.content.ClipData
@@ -252,6 +255,7 @@ fun BookshelfScreen(
         var isReadyPath = false
         var dirPath = ""
         uri?.let {
+            it.takePersistablePermissionSafely(context)
             if (uri.toString().startsWith("content://") || uri.toString().startsWith("file://")) {
                 ACache.get().put("exportBookPath", uri.toString())
                 dirPath = uri.toString()
@@ -1172,23 +1176,39 @@ fun BookshelfScreen(
             cacheCount = cacheCountForExport,
             onDismiss = { showExportDialogForBook = null },
             onConfirm = { scopeVal, type, uploadToGd ->
-                val path = ACache.get().getAsString("exportBookPath")
-                if (path.isNullOrEmpty()) {
-                    pendingExportBook = book
-                    pendingExportType = type
-                    pendingExportScope = scopeVal
-                    pendingExportToGoogleDrive = uploadToGd
-                    exportDir.launch(null)
-                } else {
+                if (uploadToGd) {
                     context.startService<io.legado.app.service.ExportBookService> {
                         action = IntentAction.start
                         putExtra("bookUrl", book.bookUrl)
                         putExtra("exportType", type)
-                        putExtra("exportPath", path)
+                        putExtra("exportPath", context.cacheDir.absolutePath)
                         if (scopeVal != null) {
                             putExtra("epubScope", scopeVal)
                         }
-                        putExtra("uploadToGoogleDrive", uploadToGd)
+                        putExtra("uploadToGoogleDrive", true)
+                    }
+                } else {
+                    val path = ACache.get().getAsString("exportBookPath")
+                    val isWritable = kotlin.runCatching {
+                        !path.isNullOrEmpty() && FileDoc.fromDir(path).checkWrite()
+                    }.getOrDefault(false)
+                    if (!isWritable) {
+                        pendingExportBook = book
+                        pendingExportType = type
+                        pendingExportScope = scopeVal
+                        pendingExportToGoogleDrive = false
+                        exportDir.launch(null)
+                    } else {
+                        context.startService<io.legado.app.service.ExportBookService> {
+                            action = IntentAction.start
+                            putExtra("bookUrl", book.bookUrl)
+                            putExtra("exportType", type)
+                            putExtra("exportPath", path)
+                            if (scopeVal != null) {
+                                putExtra("epubScope", scopeVal)
+                            }
+                            putExtra("uploadToGoogleDrive", false)
+                        }
                     }
                 }
             }

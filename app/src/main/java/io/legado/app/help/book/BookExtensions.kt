@@ -72,6 +72,9 @@ val Book.isMobi: Boolean
             originName.endsWith(".azw3", true) ||
             originName.endsWith(".azw", true))
 
+val Book.isCbzOrZip: Boolean
+    get() = isLocal && (originName.endsWith(".cbz", true) || originName.endsWith(".zip", true))
+
 val Book.isOnLineTxt: Boolean
     get() = !isLocal && isType(BookType.text)
 

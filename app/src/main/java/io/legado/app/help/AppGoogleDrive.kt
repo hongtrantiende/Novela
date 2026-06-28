@@ -105,15 +105,19 @@ object AppGoogleDrive {
      * Đẩy file lên Google Drive
      */
     suspend fun uploadFile(uri: Uri, fileName: String, mimeType: String = "application/octet-stream") = withContext(Dispatchers.IO) {
-        if (!NetworkUtils.isAvailable()) return@withContext
+        if (!NetworkUtils.isAvailable()) {
+            throw Exception("Không có kết nối mạng")
+        }
         val account = getSignedInAccount(appCtx)
         if (account == null) {
-            AppLog.put("Google Drive chưa đăng nhập hoặc thiếu quyền", null)
-            return@withContext
+            val errMsg = "Google Drive chưa đăng nhập hoặc thiếu quyền"
+            AppLog.put(errMsg, null)
+            throw Exception(errMsg)
         }
         
         try {
-            val driveService = getDriveService(appCtx) ?: return@withContext
+            val driveService = getDriveService(appCtx) 
+                ?: throw Exception("Không thể khởi tạo dịch vụ Google Drive")
             val folderId = getOrCreateFolder(driveService)
             
             // Xóa file trùng tên cũ trong thư mục Thiên Thư Các
@@ -144,8 +148,16 @@ object AppGoogleDrive {
                 }
             }
 
-            val inputStream: InputStream = appCtx.contentResolver.openInputStream(uri) 
-                ?: throw Exception("Không thể mở tệp từ Uri: $uri")
+            val inputStream: InputStream = if (uri.scheme == "file") {
+                val file = java.io.File(uri.path!!)
+                if (!file.exists()) {
+                    throw Exception("Tập tin tạm không tồn tại: ${file.absolutePath}")
+                }
+                java.io.FileInputStream(file)
+            } else {
+                appCtx.contentResolver.openInputStream(uri) 
+                    ?: throw Exception("Không thể mở tệp từ Uri: $uri")
+            }
 
             val mediaContent = InputStreamContent(mimeType, inputStream)
             val file = driveService.files().create(fileMetadata, mediaContent)
@@ -155,6 +167,7 @@ object AppGoogleDrive {
             AppLog.put("Tải lên Google Drive thành công: $fileName (ID: ${file.id})", null)
         } catch (e: Exception) {
             AppLog.put("Lỗi khi tải file lên Google Drive: ${e.localizedMessage}", e)
+            throw e
         }
     }
 }

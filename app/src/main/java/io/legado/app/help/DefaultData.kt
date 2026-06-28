@@ -28,6 +28,19 @@ object DefaultData {
             }
             if (LocalConfig.needUpTxtTocRule) {
                 importDefaultTocRules()
+            } else {
+                if (appDb.txtTocRuleDao.get(1782658994660L) == null) {
+                    appDb.txtTocRuleDao.insert(
+                        TxtTocRule(
+                            id = 1782658994660L,
+                            name = "Tiếng Việt: Chương/Phần",
+                            rule = "^[ 　\\t]{0,4}(?:(?:[Cc]hương|[Cc]huong|[Pp]hần|[Pp]han|[Qq]uyển|[Qq]uyen|[Hh]ồi|[Hh]oi)\\s{0,4}(?:\\d{1,5}|[IVXLCDMivxlcdm]{1,10})|(?:Lời\\s{1,3}(?:mở\\s{1,3}đầu|nói\\s{1,3}đầu)|Mở\\s{1,3}đầu|Kết\\s{1,3}thúc|Ngoại\\s{1,3}truyện|Phụ\\s{1,3}lục)).{0,150}$",
+                            example = "Chương 12: Khởi đầu",
+                            enable = true,
+                            serialNumber = -1
+                        )
+                    )
+                }
             }
             if (LocalConfig.needUpRssSources) {
                 importDefaultRssSources()

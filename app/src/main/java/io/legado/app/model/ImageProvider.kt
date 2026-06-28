@@ -13,10 +13,12 @@ import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isEpub
 import io.legado.app.help.book.isMobi
 import io.legado.app.help.book.isPdf
+import io.legado.app.help.book.isCbzOrZip
 import io.legado.app.help.config.AppConfig
 import io.legado.app.model.localBook.EpubFile
 import io.legado.app.model.localBook.MobiFile
 import io.legado.app.model.localBook.PdfFile
+import io.legado.app.model.localBook.CbzFile
 import io.legado.app.utils.BitmapUtils
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.SvgUtils
@@ -135,6 +137,7 @@ object ImageProvider {
                     book.isEpub -> EpubFile.getImage(book, src)
                     book.isPdf -> PdfFile.getImage(book, src)
                     book.isMobi -> MobiFile.getImage(book, src)
+                    book.isCbzOrZip -> CbzFile.getImage(book, src)
                     else -> {
                         BookHelp.saveImage(bookSource, book, src)
                         null

@@ -227,8 +227,8 @@ fun BackupConfigScreen(
             item {
                 SplicedColumnGroup(title = stringResource(R.string.backup_restore)) {
                     ClickableSettingItem(
-                        title = stringResource(R.string.backup),
-                        description = stringResource(R.string.backup_summary),
+                        title = "Sao lưu cấu hình",
+                        description = "Sao lưu dữ liệu cấu hình vào bộ nhớ máy",
                         onClick = {
                             executeBackup("local", context, viewModel, scope, snackbarHostState, {
                                 showLoadingDialog = false
@@ -237,8 +237,8 @@ fun BackupConfigScreen(
                     )
 
                     ClickableSettingItem(
-                        title = stringResource(R.string.restore),
-                        description = stringResource(R.string.restore_summary),
+                        title = "Khôi phục cấu hình",
+                        description = "Khôi phục cấu hình từ tập tin sao lưu cục bộ (.zip)",
                         onClick = {
                             restoreFileLauncher.launch(arrayOf("application/zip"))
                         }
@@ -248,7 +248,6 @@ fun BackupConfigScreen(
 
             item {
                 var googleDriveEmail by remember { mutableStateOf(BackupConfig.googleDriveEmail) }
-                var exportToGoogleDrive by remember { mutableStateOf(BackupConfig.exportToGoogleDrive) }
 
                 val googleSignInLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
@@ -289,18 +288,6 @@ fun BackupConfigScreen(
                             }
                         }
                     )
-
-                    if (googleDriveEmail.isNotEmpty()) {
-                        SwitchSettingItem(
-                            title = "Tự động tải lên Google Drive",
-                            description = "Đẩy file truyện và sao lưu lên Google Drive sau khi xuất thành công",
-                            checked = exportToGoogleDrive,
-                            onCheckedChange = {
-                                BackupConfig.exportToGoogleDrive = it
-                                exportToGoogleDrive = it
-                            }
-                        )
-                    }
                 }
             }
         }
