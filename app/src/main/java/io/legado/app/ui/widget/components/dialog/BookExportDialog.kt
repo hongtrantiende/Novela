@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Checkbox
+import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.data.entities.Book
 import io.legado.app.help.book.isImage
 import io.legado.app.ui.theme.LegadoTheme
@@ -28,12 +30,13 @@ fun BookExportDialog(
     book: Book,
     cacheCount: Int,
     onDismiss: () -> Unit,
-    onConfirm: (scope: String?, type: String) -> Unit
+    onConfirm: (scope: String?, type: String, uploadToGd: Boolean) -> Unit
 ) {
     var exportAll by remember { mutableStateOf(true) }
     var scopeInput by remember { mutableStateOf("1-${book.totalChapterNum}") }
     val isImage = book.isImage
     var exportType by remember { mutableStateOf(if (isImage) "cbz" else "txt") }
+    var uploadToGd by remember { mutableStateOf(BackupConfig.exportToGoogleDrive) }
 
     AppAlertDialog(
         show = true,
@@ -120,12 +123,28 @@ fun BookExportDialog(
                         }
                     }
                 }
+
+                // Google Drive upload option
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = uploadToGd,
+                        onCheckedChange = { uploadToGd = it }
+                    )
+                    AppText(
+                        text = "Tải file lên Google Drive sau khi xuất",
+                        modifier = Modifier.padding(start = 8.dp),
+                        style = LegadoTheme.typography.bodyMedium
+                    )
+                }
             }
         },
         confirmText = "Bắt đầu xuất",
         onConfirm = {
             val finalScope = if (exportAll) null else scopeInput.trim()
-            onConfirm(finalScope, exportType)
+            onConfirm(finalScope, exportType, uploadToGd)
             onDismiss()
         },
         dismissText = stringResource(android.R.string.cancel),

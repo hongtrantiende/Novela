@@ -244,6 +244,7 @@ fun BookshelfScreen(
     var pendingExportBook by remember { mutableStateOf<BookShelfItem?>(null) }
     var pendingExportType by remember { mutableStateOf("") }
     var pendingExportScope by remember { mutableStateOf<String?>(null) }
+    var pendingExportToGoogleDrive by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
@@ -274,6 +275,7 @@ fun BookshelfScreen(
                 pendingExportScope?.let {
                     putExtra("epubScope", it)
                 }
+                putExtra("uploadToGoogleDrive", pendingExportToGoogleDrive)
             }
             pendingExportBook = null
             pendingExportScope = null
@@ -1169,12 +1171,13 @@ fun BookshelfScreen(
             book = book.toLightBook(),
             cacheCount = cacheCountForExport,
             onDismiss = { showExportDialogForBook = null },
-            onConfirm = { scopeVal, type ->
+            onConfirm = { scopeVal, type, uploadToGd ->
                 val path = ACache.get().getAsString("exportBookPath")
                 if (path.isNullOrEmpty()) {
                     pendingExportBook = book
                     pendingExportType = type
                     pendingExportScope = scopeVal
+                    pendingExportToGoogleDrive = uploadToGd
                     exportDir.launch(null)
                 } else {
                     context.startService<io.legado.app.service.ExportBookService> {
@@ -1185,6 +1188,7 @@ fun BookshelfScreen(
                         if (scopeVal != null) {
                             putExtra("epubScope", scopeVal)
                         }
+                        putExtra("uploadToGoogleDrive", uploadToGd)
                     }
                 }
             }

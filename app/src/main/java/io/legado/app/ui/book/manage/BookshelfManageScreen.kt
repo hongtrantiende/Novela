@@ -186,6 +186,7 @@ private fun BookshelfManageScreen(
     var pendingExportBook by remember { mutableStateOf<Book?>(null) }
     var pendingExportScope by remember { mutableStateOf<String?>(null) }
     var pendingExportType by remember { mutableStateOf("txt") }
+    var pendingExportToGoogleDrive by remember { mutableStateOf(false) }
     var showBookExportDialogBook by remember { mutableStateOf<Book?>(null) }
     var customEpubScopeInput by remember { mutableStateOf("") }
     var customEpubScopeError by remember { mutableStateOf<String?>(null) }
@@ -300,6 +301,7 @@ private fun BookshelfManageScreen(
                 pendingExportScope?.let {
                     putExtra("epubScope", it)
                 }
+                putExtra("uploadToGoogleDrive", pendingExportToGoogleDrive)
             }
             pendingExportBook = null
             pendingExportScope = null
@@ -1197,12 +1199,13 @@ private fun BookshelfManageScreen(
             book = book,
             cacheCount = viewModel.getCacheCount(book.bookUrl) ?: 0,
             onDismiss = { showBookExportDialogBook = null },
-            onConfirm = { scope, type ->
+            onConfirm = { scope, type, uploadToGd ->
                 val path = ACache.get().getAsString(exportBookPathKey)
                 if (path.isNullOrEmpty() || !FileDoc.fromDir(path).checkWrite()) {
                     pendingExportBook = book
                     pendingExportScope = scope
                     pendingExportType = type
+                    pendingExportToGoogleDrive = uploadToGd
                     selectExportFolder(book.bookUrl)
                 } else {
                     context.startService<io.legado.app.service.ExportBookService> {
@@ -1213,6 +1216,7 @@ private fun BookshelfManageScreen(
                         if (scope != null) {
                             putExtra("epubScope", scope)
                         }
+                        putExtra("uploadToGoogleDrive", uploadToGd)
                     }
                 }
             }

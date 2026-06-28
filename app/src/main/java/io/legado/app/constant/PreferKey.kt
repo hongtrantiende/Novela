@@ -386,6 +386,10 @@ object PreferKey {
     const val eyeProtectionSchedule = "eyeProtectionSchedule"
     const val eyeProtectionStartTime = "eyeProtectionStartTime"
     const val eyeProtectionEndTime = "eyeProtectionEndTime"
+    
+    // Google Drive
+    const val googleDriveEmail = "googleDriveEmail"
+    const val exportToGoogleDrive = "exportToGoogleDrive"
 }
 
 object ReadMenuBlurMode {

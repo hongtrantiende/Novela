@@ -21,6 +21,8 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
+import io.legado.app.help.AppGoogleDrive
+import io.legado.app.ui.config.backupConfig.BackupConfig
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.getExportFileName
@@ -100,7 +102,8 @@ class ExportBookService : BaseService(), KoinComponent {
         val path: String,
         val type: String,
         val epubSize: Int = 1,
-        val epubScope: String? = null
+        val epubScope: String? = null,
+        val uploadToGoogleDrive: Boolean = false
     )
 
     /**
@@ -115,6 +118,7 @@ class ExportBookService : BaseService(), KoinComponent {
 
     private val groupKey = "${appCtx.packageName}.exportBook"
     private val waitExportBooks = linkedMapOf<String, ExportConfig>()
+    private var currentExportConfig: ExportConfig? = null
     private var exportJob: Job? = null
     private var notificationContentText = appCtx.getString(R.string.service_starting)
 
@@ -128,7 +132,8 @@ class ExportBookService : BaseService(), KoinComponent {
                         path = intent.getStringExtra("exportPath")!!,
                         type = intent.getStringExtra("exportType")!!,
                         epubSize = intent.getIntExtra("epubSize", 1),
-                        epubScope = intent.getStringExtra("epubScope")
+                        epubScope = intent.getStringExtra("epubScope"),
+                        uploadToGoogleDrive = intent.getBooleanExtra("uploadToGoogleDrive", BackupConfig.exportToGoogleDrive)
                     )
                     waitExportBooks[bookUrl] = exportConfig
                     exportMsg[bookUrl] = getString(R.string.export_wait)
@@ -205,6 +210,7 @@ class ExportBookService : BaseService(), KoinComponent {
                     stopSelf()
                     return@launch
                 }
+                currentExportConfig = exportConfig
                 exportProgress[bookUrl] = 0
                 waitExportBooks.remove(bookUrl)
                 val book = appDb.bookDao.getBook(bookUrl)
@@ -325,6 +331,9 @@ class ExportBookService : BaseService(), KoinComponent {
             // 导出到webdav
             AppWebDav.exportWebDav(bookDoc.uri, filename)
         }
+        if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
+            AppGoogleDrive.uploadFile(bookDoc.uri, filename)
+        }
     }
 
     private suspend fun exportZip(path: String, book: Book, scopeStr: String? = null) {
@@ -384,6 +393,9 @@ class ExportBookService : BaseService(), KoinComponent {
 
         if (AppConfig.exportToWebDav) {
             AppWebDav.exportWebDav(bookDoc.uri, filename)
+        }
+        if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
+            AppGoogleDrive.uploadFile(bookDoc.uri, filename)
         }
     }
 
@@ -483,6 +495,9 @@ class ExportBookService : BaseService(), KoinComponent {
 
         if (AppConfig.exportToWebDav) {
             AppWebDav.exportWebDav(bookDoc.uri, filename)
+        }
+        if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
+            AppGoogleDrive.uploadFile(bookDoc.uri, filename)
         }
     }
 
@@ -644,6 +659,9 @@ class ExportBookService : BaseService(), KoinComponent {
         if (AppConfig.exportToWebDav) {
             // 导出到webdav
             AppWebDav.exportWebDav(bookDoc.uri, filename)
+        }
+        if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
+            AppGoogleDrive.uploadFile(bookDoc.uri, filename)
         }
     }
 
@@ -1107,6 +1125,9 @@ class ExportBookService : BaseService(), KoinComponent {
             if (AppConfig.exportToWebDav) {
                 // 导出到webdav
                 AppWebDav.exportWebDav(bookDoc.uri, filename)
+            }
+            if (currentExportConfig?.uploadToGoogleDrive ?: BackupConfig.exportToGoogleDrive) {
+                AppGoogleDrive.uploadFile(bookDoc.uri, filename)
             }
         }
 

@@ -93,7 +93,20 @@ uiautomator = "2.3.0"
 benchmarkMacroJunit4 = "1.4.1"
 baselineprofile = "1.4.1"
 profileinstaller = "1.4.1"
+
+# Google Sign-in and Google Drive API
+playServicesAuth = "21.2.0"
+googleApiClientAndroid = "2.9.0"
+googleApiServicesDrive = "v3-rev20260428-2.0.0"
+googleHttpClientGson = "2.1.0"
+
 [libraries]
+
+# Google Sign-in and Google Drive API
+play-services-auth = { module = "com.google.android.gms:play-services-auth", version.ref = "playServicesAuth" }
+google-api-client-android = { module = "com.google.api-client:google-api-client-android", version.ref = "googleApiClientAndroid" }
+google-api-services-drive = { module = "com.google.apis:google-api-services-drive", version.ref = "googleApiServicesDrive" }
+google-http-client-gson = { module = "com.google.http-client:google-http-client-gson", version.ref = "googleHttpClientGson" }
 
 accompanist-webview = { module = "com.google.accompanist:accompanist-webview", version.ref = "accompanistWebview" }
 activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }

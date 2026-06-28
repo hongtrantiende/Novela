@@ -43,6 +43,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
+import io.legado.app.help.AppGoogleDrive
+import com.google.android.gms.auth.api.signin.GoogleSignIn
 import io.legado.app.help.storage.ImportOldData
 import io.legado.app.help.storage.Restore
 import io.legado.app.lib.permission.Permissions
@@ -241,6 +243,64 @@ fun BackupConfigScreen(
                             restoreFileLauncher.launch(arrayOf("application/zip"))
                         }
                     )
+                }
+            }
+
+            item {
+                var googleDriveEmail by remember { mutableStateOf(BackupConfig.googleDriveEmail) }
+                var exportToGoogleDrive by remember { mutableStateOf(BackupConfig.exportToGoogleDrive) }
+
+                val googleSignInLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartActivityForResult()
+                ) { result ->
+                    val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+                    try {
+                        val account = task.getResult(com.google.android.gms.common.api.ApiException::class.java)
+                        if (account != null) {
+                            val email = account.email ?: "Đã kết nối"
+                            BackupConfig.googleDriveEmail = email
+                            googleDriveEmail = email
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Đăng nhập Google Drive thành công")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Đăng nhập thất bại: ${e.localizedMessage}")
+                        }
+                    }
+                }
+
+                SplicedColumnGroup(title = "Google Drive") {
+                    ClickableSettingItem(
+                        title = if (googleDriveEmail.isEmpty()) "Đăng nhập Google Drive" else "Đăng xuất Google Drive",
+                        description = if (googleDriveEmail.isEmpty()) "Chưa kết nối tài khoản" else "Đang kết nối: $googleDriveEmail",
+                        onClick = {
+                            if (googleDriveEmail.isEmpty()) {
+                                googleSignInLauncher.launch(AppGoogleDrive.getSignInClient(context).signInIntent)
+                            } else {
+                                AppGoogleDrive.getSignInClient(context).signOut().addOnCompleteListener {
+                                    BackupConfig.googleDriveEmail = ""
+                                    googleDriveEmail = ""
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Đã đăng xuất Google Drive")
+                                    }
+                                }
+                            }
+                        }
+                    )
+
+                    if (googleDriveEmail.isNotEmpty()) {
+                        SwitchSettingItem(
+                            title = "Tự động tải lên Google Drive",
+                            description = "Đẩy file truyện và sao lưu lên Google Drive sau khi xuất thành công",
+                            checked = exportToGoogleDrive,
+                            onCheckedChange = {
+                                BackupConfig.exportToGoogleDrive = it
+                                exportToGoogleDrive = it
+                            }
+                        )
+                    }
                 }
             }
         }

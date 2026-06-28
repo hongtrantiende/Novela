@@ -10,6 +10,8 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.AppWebDav
+import io.legado.app.help.AppGoogleDrive
+import io.legado.app.ui.config.backupConfig.BackupConfig as UiBackupConfig
 import io.legado.app.help.DirectLinkUpload
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.LocalConfig
@@ -237,6 +239,13 @@ object Backup {
                     AppWebDav.backUpWebDav(zipFileName)
                 } catch (e: Exception) {
                     AppLog.put("Không thể tải bản sao lưu lên webdav\n$e", e)
+                }
+            }
+            if (UiBackupConfig.exportToGoogleDrive) {
+                try {
+                    AppGoogleDrive.uploadFile(File(zipFilePath).toUri(), zipFileName, "application/zip")
+                } catch (e: Exception) {
+                    AppLog.put("Không thể tải bản sao lưu lên Google Drive\n$e", e)
                 }
             }
         }

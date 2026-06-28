@@ -60,4 +60,14 @@ object BackupConfig {
         null
     )
 
+    var googleDriveEmail by prefDelegate(
+        PreferKey.googleDriveEmail,
+        ""
+    )
+
+    var exportToGoogleDrive by prefDelegate(
+        PreferKey.exportToGoogleDrive,
+        false
+    )
+
 }
