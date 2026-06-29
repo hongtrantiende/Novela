@@ -190,7 +190,7 @@ class VideoReaderViewModel(
             _isResolvingTrack.value = true
             _error.value = null
             try {
-                val videoExts = listOf(".mp4", ".m3u8", ".mpd", ".m4s", ".webm", ".mkv", ".ts", ".avi", ".mov", ".flv", ".dash", ".wmv", ".mpg", ".mpeg", ".3gp", ".m4v", ".f4v", ".rmvb", ".vob", ".asf", "/hls/", "/dash/", "googlevideo.com", "videoplayback", "playurl", "/stream", "/video")
+                val videoExts = listOf(".mp4", ".m3u8", ".mpd", ".m4s", ".webm", ".mkv", ".ts", ".avi", ".mov", ".flv", ".dash", ".wmv", ".mpg", ".mpeg", ".3gp", ".m4v", ".f4v", ".rmvb", ".vob", ".asf", "/hls/", "/dash/", "googlevideo.com", "videoplayback", "playurl")
                 
                 val realUrl = if (serverUrl.trim().startsWith("{")) {
                     try {
@@ -212,10 +212,11 @@ class VideoReaderViewModel(
                     _resolvedVideoAudio.value = null
                     _resolvedVideoHeaders.value = null
                     _resolvedVideoType.value = "native"
-                } else {
-                    val extension = extensionRepository.getExtension(extensionId)
+                 } else {
+                    val cleanExtId = ExtensionRepository.getSlugFromId(extensionId)
+                    val extension = extensionRepository.getExtension(cleanExtId)
                     if (extension?.pluginJson?.script?.containsKey("track") == true) {
-                        val trackResult = extensionRepository.executeExtension(extensionId, ScriptType.TRACK, serverUrl)
+                        val trackResult = extensionRepository.executeExtension(cleanExtId, ScriptType.TRACK, serverUrl)
                         if (trackResult is ExtensionResult.Success) {
                             val parsed = parseTrackResult(trackResult.data)
                             if (parsed != null && !parsed.url.isNullOrBlank()) {

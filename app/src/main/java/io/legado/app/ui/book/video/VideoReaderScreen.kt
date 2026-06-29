@@ -105,19 +105,32 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 
-private fun isEmbedPlayerUrl(url: String): Boolean {
+private fun isEmbedPlayerUrl(url: String?): Boolean {
+    if (url == null) return false
     val lower = url.lowercase()
-    return lower.contains("embed")
-            || lower.contains("player")
-            || lower.contains("playzone")
-            || lower.contains("play")
-            || lower.contains("watch")
-            || lower.contains("iframe")
-            || lower.contains("streaming")
-            || lower.contains("ssplay")
-            || lower.contains("fdrive")
-            || lower.contains("opstream")
-            || lower.contains("/v/")
+    
+    val path = try { android.net.Uri.parse(url).path?.lowercase() ?: "" } catch (e: Exception) { "" }
+    if (path.endsWith(".js") || path.endsWith(".css") || path.endsWith(".png") || 
+        path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".gif") || 
+        path.endsWith(".svg") || path.endsWith(".woff") || path.endsWith(".woff2") || 
+        path.endsWith(".json") || path.endsWith(".webp")) {
+        return false
+    }
+
+    return lower.contains("embed") 
+        || lower.contains("player") 
+        || lower.contains("hayip") 
+        || lower.contains("streamc.xyz") 
+        || lower.contains("streamfree") 
+        || lower.contains("playzone")
+        || lower.contains("/play")
+        || lower.contains("ssplay")
+        || lower.contains("fdrive")
+        || lower.contains("opstream")
+        || lower.contains("watch")
+        || lower.contains("iframe")
+        || lower.contains("streaming")
+        || lower.contains("/v/")
 }
 
 private suspend fun probeIsVideoUrl(url: String): Boolean {
@@ -487,7 +500,8 @@ fun VideoReaderScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         VideoContent(
             chapter = chapter,
-            isLoading = isLoading || isResolvingTrack,
+            isLoading = isLoading,
+            isResolvingTrack = isResolvingTrack,
             error = error,
             exoPlayer = exoPlayer,
             httpDataSourceFactory = httpDataSourceFactory,
@@ -499,6 +513,7 @@ fun VideoReaderScreen(
             resolvedVideoUrl = resolvedVideoUrl,
             resolvedVideoAudio = resolvedVideoAudio,
             resolvedVideoHeaders = resolvedVideoHeaders,
+            resolvedVideoType = resolvedVideoType,
             servers = servers,
             selectedServerIndex = selectedServerIndex,
             onServerChange = { selectedServerIndex = it },
@@ -606,11 +621,31 @@ private fun cancelVideoNotification(context: Context) {
     manager.cancel(VIDEO_NOTIFICATION_ID)
 }
 
+private val mockDevToolsDetectorJS = """
+    (function() {
+        var noop = function() {};
+        var detector = {
+            addListener: function(cb) { try { cb(false); } catch(e) {} },
+            removeListener: noop,
+            launch: noop,
+            stop: noop,
+            isLaunch: function() { return false; },
+            isOpen: false,
+            setDetectDelay: noop
+        };
+        window.devtoolsDetector = detector;
+        if (typeof module !== 'undefined' && module.exports) { module.exports = detector; }
+        if (typeof define === 'function' && define.amd) { define(function() { return detector; }); }
+    })();
+""".trimIndent()
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VideoContent(
     chapter: BookChapter?,
     isLoading: Boolean,
+    isResolvingTrack: Boolean,
     error: String?,
     exoPlayer: ExoPlayer,
     httpDataSourceFactory: DefaultHttpDataSource.Factory,
@@ -620,6 +655,7 @@ private fun VideoContent(
     resolvedVideoUrl: String?,
     resolvedVideoAudio: String?,
     resolvedVideoHeaders: Map<String, String>?,
+    resolvedVideoType: String?,
     servers: List<Pair<String, String>>,
     selectedServerIndex: Int,
     onServerChange: (Int) -> Unit,
@@ -639,6 +675,59 @@ private fun VideoContent(
         playbackError = null
     }
 
+    val chromeUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+    // Trạng thái dò link video ngầm (WebView Sniffing)
+    var sniffedVideoUrl by remember(resolvedVideoUrl) { mutableStateOf<String?>(null) }
+    var sniffingTimeout by remember(resolvedVideoUrl) { mutableStateOf(false) }
+
+    // Lưu thực thể WebView để chủ động giải phóng
+    var sniffingWebViewInstance by remember { mutableStateOf<WebView?>(null) }
+
+    // Nhận diện link video stream trực tiếp hay trang nhúng
+    val videoExts = remember { listOf(".mp4", ".m3u8", ".mkv", ".webm", ".ts", ".avi", ".mov", ".flv", ".dash") }
+    val isDirectLink = remember(resolvedVideoUrl) {
+        val lower = (resolvedVideoUrl ?: "").lowercase()
+        val hasDirectExt = videoExts.any { lower.contains(it) }
+        resolvedVideoUrl != null 
+            && resolvedVideoUrl.startsWith("http") 
+            && !resolvedVideoUrl.contains("<")
+            && (hasDirectExt || !isEmbedPlayerUrl(resolvedVideoUrl))
+    }
+
+    LaunchedEffect(resolvedVideoUrl, isDirectLink) {
+        if (resolvedVideoUrl != null) {
+            if (isDirectLink) {
+                sniffedVideoUrl = resolvedVideoUrl
+                sniffingTimeout = false
+            } else {
+                sniffedVideoUrl = null
+                sniffingTimeout = false
+                val isStreamFree = resolvedVideoUrl.lowercase().contains("streamfree") || novelUrl.lowercase().contains("streamfree")
+                val timeout = if (isStreamFree) 25000L else 12000L
+                kotlinx.coroutines.delay(timeout)
+                if (sniffedVideoUrl == null) {
+                    sniffingTimeout = true
+                }
+            }
+        }
+    }
+
+    // Clean up sniffing webview khi thoát
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                sniffingWebViewInstance?.let { wv ->
+                    wv.stopLoading()
+                    wv.loadUrl("about:blank")
+                    wv.destroy()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("VideoReaderScreen", "Error destroying webview", e)
+            }
+        }
+    }
+
     // Trạng thái khóa màn hình (Netflix Lock Screen)
     var isLocked by remember { mutableStateOf(false) }
     var showLockControl by remember { mutableStateOf(true) }
@@ -654,8 +743,9 @@ private fun VideoContent(
     var resizeMode by remember { mutableStateOf(androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_FIT) }
 
     // Nạp link video vào ExoPlayer với dynamic headers và hỗ trợ MergingMediaSource cho Bilibili
-    LaunchedEffect(resolvedVideoUrl, resolvedVideoAudio, resolvedVideoHeaders) {
-        if (!resolvedVideoUrl.isNullOrBlank()) {
+    val currentSniffedUrl = sniffedVideoUrl
+    LaunchedEffect(currentSniffedUrl, resolvedVideoAudio, resolvedVideoHeaders) {
+        if (!currentSniffedUrl.isNullOrBlank()) {
             val headersMap = mutableMapOf<String, String>()
             headersMap["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
             
@@ -667,10 +757,10 @@ private fun VideoContent(
                 headersMap[key] = value
             }
 
-            val lowerUrl = resolvedVideoUrl.lowercase()
+            val lowerUrl = currentSniffedUrl.lowercase()
             
             // Set Origin dynamically
-            val originMatch = "^(https?://[^/]+)".toRegex().find(resolvedVideoUrl)
+            val originMatch = "^(https?://[^/]+)".toRegex().find(currentSniffedUrl)
             val origin = originMatch?.groupValues?.get(1)
             if (!origin.isNullOrBlank()) {
                 headersMap["Origin"] = origin
@@ -686,7 +776,7 @@ private fun VideoContent(
                     headersMap["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                     "https://www.bilibili.tv/"
                 }
-                else -> headersMap["Referer"] ?: resolvedVideoUrl
+                else -> headersMap["Referer"] ?: currentSniffedUrl
             }
             headersMap["Referer"] = referer
 
@@ -697,14 +787,14 @@ private fun VideoContent(
             val cookieManager = android.webkit.CookieManager.getInstance()
             val cookies = mutableListOf<String>()
             cookieManager.getCookie(novelUrl)?.let { cookies.add(it) }
-            cookieManager.getCookie(resolvedVideoUrl)?.let { cookies.add(it) }
+            cookieManager.getCookie(currentSniffedUrl)?.let { cookies.add(it) }
             
             val mergedCookie = cookies.flatMap { it.split("; ") }.filter { it.isNotBlank() }.distinct().joinToString("; ")
             if (mergedCookie.isNotBlank()) {
                 headersMap["Cookie"] = mergedCookie
             }
 
-            android.util.Log.d("VideoPlayerExo", "Playing resolvedVideoUrl: $resolvedVideoUrl")
+            android.util.Log.d("VideoPlayerExo", "Playing sniffedVideoUrl: $currentSniffedUrl")
             httpDataSourceFactory.setDefaultRequestProperties(headersMap)
             
             val mimeType = when {
@@ -715,7 +805,7 @@ private fun VideoContent(
             }
             
             val videoMediaItem = MediaItem.Builder()
-                .setUri(resolvedVideoUrl)
+                .setUri(currentSniffedUrl)
                 .apply {
                     if (mimeType != null) {
                         setMimeType(mimeType)
@@ -864,51 +954,72 @@ private fun VideoContent(
                 }
             }
         } else if (resolvedVideoUrl.isNullOrBlank()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(theme.background),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = theme.surfaceContainer),
-                    shape = RoundedCornerShape(24.dp),
+            if (isResolvingTrack) {
+                Box(
                     modifier = Modifier
-                        .padding(32.dp)
-                        .widthIn(max = 340.dp)
-                        .shadow(16.dp, RoundedCornerShape(24.dp))
+                        .fillMaxSize()
+                        .background(Color.Black),
+                    contentAlignment = Alignment.Center
                 ) {
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(28.dp)
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.WarningAmber,
-                            contentDescription = null,
-                            tint = theme.primary,
-                            modifier = Modifier.size(54.dp)
-                        )
-                        Spacer(modifier = Modifier.height(20.dp))
+                        AppContainedLoadingIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Nguồn phát trống",
-                            color = theme.onSurface,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center
+                            text = "Đang phân giải đường dẫn video...",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 14.sp
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Không tìm thấy đường dẫn video cho tập này.",
-                            color = theme.onSurfaceVariant.copy(alpha = 0.8f),
-                            fontSize = 13.sp,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = onBackClick,
-                            colors = ButtonDefaults.buttonColors(containerColor = theme.primary)
+                    }
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(theme.background),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = theme.surfaceContainer),
+                        shape = RoundedCornerShape(24.dp),
+                        modifier = Modifier
+                            .padding(32.dp)
+                            .widthIn(max = 340.dp)
+                            .shadow(16.dp, RoundedCornerShape(24.dp))
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(28.dp)
                         ) {
-                            Text("Quay lại", color = theme.onPrimary)
+                            Icon(
+                                imageVector = Icons.Filled.WarningAmber,
+                                contentDescription = null,
+                                tint = theme.primary,
+                                modifier = Modifier.size(54.dp)
+                            )
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text(
+                                text = "Nguồn phát trống",
+                                color = theme.onSurface,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Không tìm thấy đường dẫn video cho tập này.",
+                                color = theme.onSurfaceVariant.copy(alpha = 0.8f),
+                                fontSize = 13.sp,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(24.dp))
+                            Button(
+                                onClick = onBackClick,
+                                colors = ButtonDefaults.buttonColors(containerColor = theme.primary)
+                            ) {
+                                Text("Quay lại", color = theme.onPrimary)
+                            }
                         }
                     }
                 }
@@ -962,6 +1073,150 @@ private fun VideoContent(
 
                 val isPlayerReady = duration > 0
 
+                val isSniffing = resolvedVideoUrl != null && !isDirectLink && sniffedVideoUrl == null && !sniffingTimeout
+                if (isSniffing) {
+                    key(resolvedVideoUrl) {
+                        AndroidView(
+                            factory = { ctx ->
+                                WebView(ctx).apply {
+                                    sniffingWebViewInstance = this
+                                    visibility = android.view.View.INVISIBLE
+                                    layoutParams = ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                    )
+                                    setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                                    settings.apply {
+                                        javaScriptEnabled = true
+                                        domStorageEnabled = true
+                                        mediaPlaybackRequiresUserGesture = false
+                                        userAgentString = chromeUA
+                                        setSupportMultipleWindows(false)
+                                        setJavaScriptCanOpenWindowsAutomatically(false)
+                                        cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+                                    }
+                                    clearCache(true)
+                                    webChromeClient = object : WebChromeClient() {
+                                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                            super.onProgressChanged(view, newProgress)
+                                            if (newProgress > 40) {
+                                                view?.evaluateJavascript("""
+                                                    (function() {
+                                                        if (window.__sniff_injected) return;
+                                                        window.__sniff_injected = true;
+                                                        var autoPlayInterval = setInterval(function() {
+                                                            var videos = document.getElementsByTagName('video');
+                                                            for (var i = 0; i < videos.length; i++) {
+                                                                videos[i].muted = true;
+                                                                videos[i].play().catch(function(e) {});
+                                                            }
+                                                            var playSelectors = ['.play', '.btn-play', '.vjs-big-play-button', '[class*="play-button"]', '[id*="play-button"]', 'iframe'];
+                                                            playSelectors.forEach(function(sel) {
+                                                                var btn = document.querySelector(sel);
+                                                                if (btn && (btn.offsetWidth > 0 || btn.offsetHeight > 0)) {
+                                                                    btn.click();
+                                                                }
+                                                            });
+                                                        }, 1000);
+                                                        setTimeout(function() { clearInterval(autoPlayInterval); }, 15000);
+                                                    })();
+                                                """.trimIndent(), null)
+                                            }
+                                        }
+                                        override fun onShowCustomView(view: android.view.View?, callback: CustomViewCallback?) {
+                                            callback?.onCustomViewHidden()
+                                        }
+                                    }
+                                    webViewClient = object : WebViewClient() {
+                                        override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                                            val url = request?.url?.toString() ?: ""
+                                            return if (url.startsWith("http://") || url.startsWith("https://")) {
+                                                false
+                                            } else {
+                                                true
+                                            }
+                                        }
+                                        override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                                            super.onPageStarted(view, url, favicon)
+                                            view?.evaluateJavascript("""
+                                                (function() {
+                                                    var style = document.createElement('style');
+                                                    style.innerHTML = 'html, body { background: #000000 !important; color: #000000 !important; }';
+                                                    var head = document.head || document.getElementsByTagName('head')[0] || document.documentElement;
+                                                    if (head) head.appendChild(style);
+                                                })();
+                                            """.trimIndent(), null)
+                                            view?.evaluateJavascript(mockDevToolsDetectorJS, null)
+                                        }
+                                        override fun shouldInterceptRequest(
+                                            view: WebView?,
+                                            request: WebResourceRequest?
+                                        ): WebResourceResponse? {
+                                            val reqUrl = request?.url?.toString() ?: ""
+                                            val lowerUrl = reqUrl.lowercase()
+                                            
+                                            if (lowerUrl.contains("devtools-detector") || lowerUrl.contains("devtools_detector")) {
+                                                return WebResourceResponse(
+                                                    "application/javascript",
+                                                    "UTF-8",
+                                                    java.io.ByteArrayInputStream(mockDevToolsDetectorJS.toByteArray(Charsets.UTF_8))
+                                                )
+                                            }
+                                            
+                                            if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".m4s") || lowerUrl.contains(".ts") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
+                                                (view?.context as? Activity)?.runOnUiThread {
+                                                    if (sniffedVideoUrl == null) {
+                                                        android.util.Log.d("ReaderSniffing", "--> Bắt được link stream thật: $reqUrl")
+                                                        sniffedVideoUrl = reqUrl
+                                                    }
+                                                }
+                                            }
+                                            
+                                            if (request != null && !request.isForMainFrame) {
+                                                val isEmbed = isEmbedPlayerUrl(reqUrl)
+                                                if (isEmbed && resolvedVideoUrl != null && reqUrl != resolvedVideoUrl) {
+                                                    (view?.context as? Activity)?.runOnUiThread {
+                                                        val loadedUrl = view.tag as? String
+                                                        if (loadedUrl != reqUrl) {
+                                                            android.util.Log.d("ReaderSniffing", "--> Phát hiện iframe embed: $reqUrl, chuyển hướng WebView ngầm sang...")
+                                                            view.tag = reqUrl
+                                                            view.loadUrl(reqUrl)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            
+                                            return super.shouldInterceptRequest(view, request)
+                                        }
+                                    }
+                                }
+                            },
+                            update = { webView ->
+                                val loadedUrl = webView.tag as? String
+                                if (resolvedVideoUrl != null && loadedUrl == null) {
+                                    webView.tag = resolvedVideoUrl
+                                    if (resolvedVideoType == "webview" || resolvedVideoUrl.contains("<")) {
+                                        android.util.Log.d("ReaderSniffing", "--> Bắt đầu load HTML thô vào WebView ngầm")
+                                        webView.loadDataWithBaseURL(
+                                            novelUrl,
+                                            resolvedVideoUrl,
+                                            "text/html",
+                                            "utf-8",
+                                            null
+                                        )
+                                    } else {
+                                        android.util.Log.d("ReaderSniffing", "--> Bắt đầu load URL phim gốc: $resolvedVideoUrl")
+                                        webView.loadUrl(resolvedVideoUrl, mapOf("Referer" to novelUrl))
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer(alpha = 0f, translationX = 9999f)
+                        )
+                    }
+                }
+
                 AndroidView(
                     factory = { ctx ->
                         PlayerView(ctx).apply {
@@ -979,19 +1234,20 @@ private fun VideoContent(
                     modifier = Modifier.fillMaxSize()
                 )
 
-                // Indication overlay for buffering
-                if (isBuffering) {
+                // Indication overlay for buffering or loading
+                val isSniffingLoading = resolvedVideoUrl != null && !isDirectLink && sniffedVideoUrl == null && !sniffingTimeout
+                if (isBuffering || !isPlayerReady || isSniffingLoading) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.35f)),
+                            .background(Color.Black.copy(alpha = 0.5f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             AppContainedLoadingIndicator()
                             Spacer(modifier = Modifier.height(16.dp))
                             Text(
-                                text = "Đang tải luồng video...",
+                                text = if (isSniffingLoading) "Đang giải mã nguồn phim..." else "Đang tải luồng video...",
                                 color = Color.White.copy(alpha = 0.85f),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium
@@ -1002,7 +1258,7 @@ private fun VideoContent(
 
                 // 1. Controls Top Bar
                 AnimatedVisibility(
-                    visible = showUI && !isLocked && !isBuffering,
+                    visible = showUI && !isLocked && !isBuffering && isPlayerReady,
                     enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
                     exit = fadeOut() + slideOutVertically(targetOffsetY = { -it }),
                     modifier = Modifier.align(Alignment.TopCenter)
@@ -1016,14 +1272,14 @@ private fun VideoContent(
                         onPlaySpeedChange = onPlaySpeedChange,
                         onSettingsClick = { showSettingsBottomSheet = true },
                         onBackClick = onBackClick,
-                        sniffedVideoUrl = resolvedVideoUrl,
+                        sniffedVideoUrl = sniffedVideoUrl,
                         isPlayerReady = isPlayerReady
                     )
                 }
 
                 // 2. Center controls (Play/Pause & Seek)
                 AnimatedVisibility(
-                    visible = showUI && !isLocked && !isBuffering,
+                    visible = showUI && !isLocked && !isBuffering && isPlayerReady,
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.Center)
@@ -1115,7 +1371,7 @@ private fun VideoContent(
 
                 // 3. Netflix-style Screen Lock button
                 AnimatedVisibility(
-                    visible = ((showUI && !isLocked) || (isLocked && showLockControl)) && !isBuffering,
+                    visible = ((showUI && !isLocked) || (isLocked && showLockControl)) && !isBuffering && isPlayerReady,
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier
@@ -1149,7 +1405,7 @@ private fun VideoContent(
 
                 // 4. Controls Bottom Bar
                 AnimatedVisibility(
-                    visible = showUI && !isLocked && !isBuffering,
+                    visible = showUI && !isLocked && !isBuffering && isPlayerReady,
                     enter = fadeIn() + slideInVertically(initialOffsetY = { it }),
                     exit = fadeOut() + slideOutVertically(targetOffsetY = { it }),
                     modifier = Modifier.align(Alignment.BottomCenter)

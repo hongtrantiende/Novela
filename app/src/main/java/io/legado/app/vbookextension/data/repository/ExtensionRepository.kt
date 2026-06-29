@@ -463,6 +463,9 @@ class ExtensionRepository(
                         val rawContent = result.data
                         val unwrappedContent = try {
                             if (rawContent.trim().startsWith("{")) {
+                                val element = json.parseToJsonElement(rawContent)
+                                checkExtensionErrorCode(element)
+
                                 val obj = org.json.JSONObject(rawContent)
                                 if (obj.has("code") && obj.optJSONArray("data") != null) {
                                     obj.getJSONArray("data").toString()
@@ -473,6 +476,9 @@ class ExtensionRepository(
                                 rawContent
                             }
                         } catch (e: Exception) {
+                            if (e.message?.startsWith("Lỗi từ extension:") == true) {
+                                throw e
+                            }
                             rawContent
                         }
                         unwrappedContent
