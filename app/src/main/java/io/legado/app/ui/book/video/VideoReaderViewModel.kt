@@ -130,10 +130,26 @@ class VideoReaderViewModel(
         val chapterList = _chapters.value
         if (index !in chapterList.indices) return
 
+        var targetIndex = index
+        if (chapterList[targetIndex].isVolume) {
+            val firstRealIdx = chapterList.subList(targetIndex, chapterList.size)
+                .indexOfFirst { !it.isVolume }
+            if (firstRealIdx != -1) {
+                targetIndex += firstRealIdx
+            } else {
+                val lastRealIdx = chapterList.subList(0, targetIndex)
+                    .indexOfLast { !it.isVolume }
+                if (lastRealIdx != -1) {
+                    targetIndex = lastRealIdx
+                }
+            }
+        }
+        if (targetIndex !in chapterList.indices) return
+
         _isLoading.value = true
         _error.value = null
-        _currentIndex.value = index
-        val currentChap = chapterList[index]
+        _currentIndex.value = targetIndex
+        val currentChap = chapterList[targetIndex]
         _chapter.value = currentChap
 
         try {
@@ -163,7 +179,7 @@ class VideoReaderViewModel(
             }
 
             // Update Progress in Database
-            book.durChapterIndex = index
+            book.durChapterIndex = targetIndex
             book.durChapterTitle = currentChap.title
             book.durChapterTime = System.currentTimeMillis()
             withContext(Dispatchers.IO) {

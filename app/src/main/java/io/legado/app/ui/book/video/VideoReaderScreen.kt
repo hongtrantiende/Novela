@@ -107,30 +107,42 @@ import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingI
 
 private fun isEmbedPlayerUrl(url: String?): Boolean {
     if (url == null) return false
-    val lower = url.lowercase()
     
     val path = try { android.net.Uri.parse(url).path?.lowercase() ?: "" } catch (e: Exception) { "" }
     if (path.endsWith(".js") || path.endsWith(".css") || path.endsWith(".png") || 
         path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".gif") || 
         path.endsWith(".svg") || path.endsWith(".woff") || path.endsWith(".woff2") || 
-        path.endsWith(".json") || path.endsWith(".webp")) {
+        path.endsWith(".json") || path.endsWith(".webp") || path.endsWith(".ico")) {
         return false
     }
 
-    return lower.contains("embed") 
-        || lower.contains("player") 
-        || lower.contains("hayip") 
-        || lower.contains("streamc.xyz") 
-        || lower.contains("streamfree") 
-        || lower.contains("playzone")
-        || lower.contains("/play")
-        || lower.contains("ssplay")
-        || lower.contains("fdrive")
-        || lower.contains("opstream")
-        || lower.contains("watch")
-        || lower.contains("iframe")
-        || lower.contains("streaming")
-        || lower.contains("/v/")
+    val host = try { android.net.Uri.parse(url).host?.lowercase() ?: "" } catch (e: Exception) { "" }
+    if (host.isBlank()) return false
+    
+    if (host.contains("amung.us") || host.contains("dtscout") || host.contains("google-analytics") || 
+        host.contains("doubleclick") || host.contains("facebook") || host.contains("adnxs") || 
+        host.contains("pubmatic") || host.contains("criteo") || host.contains("cloudflare")) {
+        return false
+    }
+
+    val lowerHost = host
+    val lowerUrl = url.lowercase()
+
+    return lowerHost.contains("embed") 
+        || lowerHost.contains("player") 
+        || lowerHost.contains("hayip") 
+        || lowerHost.contains("streamc") 
+        || lowerHost.contains("streamfree") 
+        || lowerHost.contains("playzone")
+        || lowerHost.contains("ssplay")
+        || lowerHost.contains("fdrive")
+        || lowerHost.contains("opstream")
+        || lowerHost.contains("iframe")
+        || lowerHost.contains("streaming")
+        || path.contains("/play")
+        || path.contains("/embed/")
+        || path.contains("watch")
+        || path.contains("/v/")
 }
 
 private suspend fun probeIsVideoUrl(url: String): Boolean {
@@ -776,7 +788,7 @@ private fun VideoContent(
                     headersMap["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                     "https://www.bilibili.tv/"
                 }
-                else -> headersMap["Referer"] ?: currentSniffedUrl
+                else -> headersMap["Referer"] ?: novelUrl
             }
             headersMap["Referer"] = referer
 
@@ -1164,10 +1176,13 @@ private fun VideoContent(
                                             }
                                             
                                             if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".m4s") || lowerUrl.contains(".ts") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
-                                                (view?.context as? Activity)?.runOnUiThread {
-                                                    if (sniffedVideoUrl == null) {
-                                                        android.util.Log.d("ReaderSniffing", "--> Bắt được link stream thật: $reqUrl")
-                                                        sniffedVideoUrl = reqUrl
+                                                val realVideoUrl = extractRealVideoUrl(reqUrl)
+                                                if (isValidVideoUrl(realVideoUrl)) {
+                                                    (view?.context as? Activity)?.runOnUiThread {
+                                                        if (sniffedVideoUrl == null) {
+                                                            android.util.Log.d("ReaderSniffing", "--> Bắt được link stream thật: $realVideoUrl")
+                                                            sniffedVideoUrl = realVideoUrl
+                                                        }
                                                     }
                                                 }
                                             }
@@ -2167,5 +2182,36 @@ private fun Modifier.bounceClick(
                 onTap = { onClick() }
             )
         }
+}
+
+private fun extractRealVideoUrl(url: String): String {
+    try {
+        val uri = android.net.Uri.parse(url)
+        for (paramName in uri.queryParameterNames) {
+            val paramValue = uri.getQueryParameter(paramName) ?: continue
+            if (paramValue.startsWith("http") && 
+                (paramValue.contains(".m3u8", ignoreCase = true) || 
+                 paramValue.contains(".mp4", ignoreCase = true) ||
+                 paramValue.contains(".mpd", ignoreCase = true))) {
+                return paramValue
+            }
+        }
+    } catch (e: Exception) {
+        // Ignore
+    }
+    return url
+}
+
+private fun isValidVideoUrl(url: String): Boolean {
+    val lower = url.lowercase()
+    if (lower.contains("ping.gif") || lower.contains("/ping") || lower.contains("analytics") || lower.contains("telemetry")) {
+        return false
+    }
+    val path = try { android.net.Uri.parse(url).path?.lowercase() ?: "" } catch(e: Exception) { "" }
+    val invalidExts = listOf(".gif", ".png", ".jpg", ".jpeg", ".webp", ".js", ".css", ".ico", ".woff", ".ttf")
+    if (invalidExts.any { path.endsWith(it) }) {
+        return false
+    }
+    return true
 }
 
