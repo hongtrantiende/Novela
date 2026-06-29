@@ -262,9 +262,9 @@ class ExtensionViewModel(
                         val decodedBytes = android.util.Base64.decode(base64Content, android.util.Base64.DEFAULT)
                         val decodedString = String(decodedBytes, Charsets.UTF_8)
                         
-                        // 2. Parse as dynamic JSON array inside the plugins object to safely filter
+                        // 2. Parse as dynamic JSON array inside the data object to safely filter
                         val rootObj = org.json.JSONObject(decodedString)
-                        val jsonArray = rootObj.getJSONArray("plugins")
+                        val jsonArray = rootObj.getJSONArray("data")
                         val newList = org.json.JSONArray()
                         var found = false
                         for (i in 0 until jsonArray.length()) {
@@ -281,7 +281,7 @@ class ExtensionViewModel(
                             throw Exception("Không tìm thấy tiện ích này trong danh sách GitHub")
                         }
                         
-                        rootObj.put("plugins", newList)
+                        rootObj.put("data", newList)
                         
                         // 3. Serialize and encode base64
                         val updatedJson = rootObj.toString(2)
