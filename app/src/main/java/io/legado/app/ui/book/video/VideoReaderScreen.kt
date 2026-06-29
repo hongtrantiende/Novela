@@ -681,8 +681,9 @@ private fun VideoContent(
                     headersMap["Origin"] = "https://ssplay.net"
                     "https://ssplay.net/"
                 }
-                lowerUrl.contains("bilibili") || lowerUrl.contains("bilivideo") -> {
+                lowerUrl.contains("bilibili") || lowerUrl.contains("bilivideo") || lowerUrl.contains("bstar") || lowerUrl.contains("akamaized.net") || lowerUrl.contains("upos-") || lowerUrl.contains("bilibilivideo") -> {
                     headersMap["Origin"] = "https://www.bilibili.tv"
+                    headersMap["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                     "https://www.bilibili.tv/"
                 }
                 else -> headersMap["Referer"] ?: resolvedVideoUrl
