@@ -21,7 +21,8 @@ import kotlinx.coroutines.Dispatchers
 data class TrackInfo(
     val url: String?,
     val type: String?,
-    val headers: Map<String, String>?
+    val headers: Map<String, String>?,
+    val audio: String? = null
 )
 
 class VideoReaderViewModel(
@@ -54,6 +55,9 @@ class VideoReaderViewModel(
     // Resolving states
     private val _resolvedVideoUrl = MutableStateFlow<String?>(null)
     val resolvedVideoUrl = _resolvedVideoUrl.asStateFlow()
+
+    private val _resolvedVideoAudio = MutableStateFlow<String?>(null)
+    val resolvedVideoAudio = _resolvedVideoAudio.asStateFlow()
 
     private val _resolvedVideoHeaders = MutableStateFlow<Map<String, String>?>(null)
     val resolvedVideoHeaders = _resolvedVideoHeaders.asStateFlow()
@@ -110,7 +114,7 @@ class VideoReaderViewModel(
                 _currentIndex.value = targetIdx
 
                 // 4. Load chapter content
-                loadChapterAtIndex(targetIdx)
+                suspendLoadChapterAtIndex(targetIdx)
 
             } catch (e: Exception) {
                 Log.e("VideoReaderVM", "loadBookAndChapters failed: ${e.message}", e)
@@ -121,62 +125,72 @@ class VideoReaderViewModel(
         }
     }
 
-    fun loadChapterAtIndex(index: Int) {
+    private suspend fun suspendLoadChapterAtIndex(index: Int) {
         val book = _novel.value ?: return
         val chapterList = _chapters.value
         if (index !in chapterList.indices) return
 
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-            _currentIndex.value = index
-            val currentChap = chapterList[index]
-            _chapter.value = currentChap
+        _isLoading.value = true
+        _error.value = null
+        _currentIndex.value = index
+        val currentChap = chapterList[index]
+        _chapter.value = currentChap
 
-            try {
-                // Clear resolved values for new chapter
-                _resolvedVideoUrl.value = null
-                _resolvedVideoHeaders.value = null
-                _resolvedVideoType.value = null
+        try {
+            // Clear resolved values and set isResolvingTrack to true early to prevent UI frame flashes
+            _resolvedVideoUrl.value = null
+            _resolvedVideoHeaders.value = null
+            _resolvedVideoType.value = null
+            _isResolvingTrack.value = true
 
-                // Try reading from cache
-                var content = withContext(Dispatchers.IO) {
-                    BookHelp.getContent(book, currentChap)
-                }
+            // Try reading from cache
+            var content = withContext(Dispatchers.IO) {
+                BookHelp.getContent(book, currentChap)
+            }
 
-                if (content.isNullOrBlank()) {
-                    content = extensionRepository.getChapterContent(book.origin, currentChap.url)
-                    if (!content.isNullOrBlank()) {
-                        withContext(Dispatchers.IO) {
-                            BookHelp.saveText(book, currentChap, content)
-                        }
+            if (content.isNullOrBlank()) {
+                content = extensionRepository.getChapterContent(book.origin, currentChap.url)
+                if (!content.isNullOrBlank()) {
+                    withContext(Dispatchers.IO) {
+                        BookHelp.saveText(book, currentChap, content)
                     }
                 }
-
-                _chapterContent.value = content
-
-                // Update Progress in Database
-                book.durChapterIndex = index
-                book.durChapterTitle = currentChap.title
-                book.durChapterTime = System.currentTimeMillis()
-                withContext(Dispatchers.IO) {
-                    bookRepository.update(book)
-                }
-
-            } catch (e: Exception) {
-                Log.e("VideoReaderVM", "loadChapterAtIndex failed: ${e.message}", e)
-                _error.value = e.message ?: "Lỗi tải tập phim."
-            } finally {
-                _isLoading.value = false
             }
+
+            _chapterContent.value = content
+            if (content.isNullOrBlank()) {
+                _isResolvingTrack.value = false
+            }
+
+            // Update Progress in Database
+            book.durChapterIndex = index
+            book.durChapterTitle = currentChap.title
+            book.durChapterTime = System.currentTimeMillis()
+            withContext(Dispatchers.IO) {
+                bookRepository.update(book)
+            }
+
+        } catch (e: Exception) {
+            Log.e("VideoReaderVM", "loadChapterAtIndex failed: ${e.message}", e)
+            _error.value = e.message ?: "Lỗi tải tập phim."
+            _isResolvingTrack.value = false
+        } finally {
+            _isLoading.value = false
+        }
+    }
+
+    fun loadChapterAtIndex(index: Int) {
+        viewModelScope.launch {
+            suspendLoadChapterAtIndex(index)
         }
     }
 
     fun resolveVideoUrl(extensionId: String, serverUrl: String) {
         viewModelScope.launch {
             _isResolvingTrack.value = true
+            _error.value = null
             try {
-                val videoExts = listOf(".mp4", ".m3u8", ".mkv", ".webm", ".ts", ".avi", ".mov", ".flv", ".dash")
+                val videoExts = listOf(".mp4", ".m3u8", ".mpd", ".m4s", ".webm", ".mkv", ".ts", ".avi", ".mov", ".flv", ".dash", ".wmv", ".mpg", ".mpeg", ".3gp", ".m4v", ".f4v", ".rmvb", ".vob", ".asf", "/hls/", "/dash/", "googlevideo.com", "videoplayback", "playurl", "/stream", "/video")
                 
                 val realUrl = if (serverUrl.trim().startsWith("{")) {
                     try {
@@ -193,8 +207,9 @@ class VideoReaderViewModel(
                     && !realUrl.contains("<")
                     && videoExts.any { lowerUrl.contains(it) }
 
-                if (isDirect) {
+                 if (isDirect) {
                     _resolvedVideoUrl.value = realUrl
+                    _resolvedVideoAudio.value = null
                     _resolvedVideoHeaders.value = null
                     _resolvedVideoType.value = "native"
                 } else {
@@ -205,27 +220,28 @@ class VideoReaderViewModel(
                             val parsed = parseTrackResult(trackResult.data)
                             if (parsed != null && !parsed.url.isNullOrBlank()) {
                                 _resolvedVideoUrl.value = parsed.url
+                                _resolvedVideoAudio.value = parsed.audio
                                 _resolvedVideoHeaders.value = parsed.headers
                                 _resolvedVideoType.value = parsed.type
                             } else {
-                                _resolvedVideoUrl.value = realUrl
-                                _resolvedVideoHeaders.value = null
-                                _resolvedVideoType.value = null
+                                throw Exception("Không thể phân giải luồng video. Vui lòng kiểm tra lại cấu hình hoặc kết nối mạng.")
                             }
                         } else {
-                            _resolvedVideoUrl.value = realUrl
-                            _resolvedVideoHeaders.value = null
-                            _resolvedVideoType.value = null
+                            val msg = (trackResult as? ExtensionResult.Error)?.message ?: "Lỗi chạy script phân giải nguồn"
+                            throw Exception(msg)
                         }
                     } else {
                         _resolvedVideoUrl.value = realUrl
+                        _resolvedVideoAudio.value = null
                         _resolvedVideoHeaders.value = null
                         _resolvedVideoType.value = null
                     }
                 }
             } catch (e: Exception) {
                 Log.e("VideoReaderVM", "resolveVideoUrl failed: ${e.message}", e)
-                _resolvedVideoUrl.value = serverUrl
+                _error.value = e.message ?: "Lỗi phân giải nguồn video"
+                _resolvedVideoUrl.value = null
+                _resolvedVideoAudio.value = null
                 _resolvedVideoHeaders.value = null
                 _resolvedVideoType.value = null
             } finally {
@@ -237,6 +253,13 @@ class VideoReaderViewModel(
     private fun parseTrackResult(jsonStr: String): TrackInfo? {
         return try {
             val root = org.json.JSONObject(jsonStr)
+            
+            // Check for error code returned from JS script execution
+            if (root.has("code") && root.optInt("code", 0) != 0) {
+                val errorMsg = root.optString("data", root.optString("msg", "Lỗi phân giải từ tiện ích"))
+                throw Exception(errorMsg)
+            }
+
             val dataObj = if (root.has("data")) {
                 val d = root.get("data")
                 if (d is org.json.JSONObject) d else root
@@ -255,6 +278,11 @@ class VideoReaderViewModel(
             var type = dataObj.optString("type", "")
             if (type.isEmpty()) {
                 type = root.optString("type", "")
+            }
+
+            var audio = dataObj.optString("audio", "")
+            if (audio.isEmpty()) {
+                audio = root.optString("audio", "")
             }
             
             val headersMap = mutableMapOf<String, String>()
@@ -280,7 +308,8 @@ class VideoReaderViewModel(
             TrackInfo(
                 url = if (url.isNotEmpty()) url else null,
                 type = if (type.isNotEmpty()) type else null,
-                headers = if (headersMap.isNotEmpty()) headersMap else null
+                headers = if (headersMap.isNotEmpty()) headersMap else null,
+                audio = if (audio.isNotEmpty()) audio else null
             )
         } catch (e: Exception) {
             Log.e("VideoReaderVM", "parseTrackResult failed: ${e.message}")

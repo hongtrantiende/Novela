@@ -29,17 +29,21 @@ object DefaultData {
             if (LocalConfig.needUpTxtTocRule) {
                 importDefaultTocRules()
             } else {
-                if (appDb.txtTocRuleDao.get(1782658994660L) == null) {
+                val newRulePattern = "^[ 　\\t]{0,4}(?:[^a-zA-ZÀ-ỹ\\s\\d]{0,10})[ 　\\t]{0,4}(?:(?:[Cc]hương|[Cc]huong|[Qq]uyển|[Qq]uyen|[Hh]ồi|[Hh]oi)\\s{0,4}(?:\\d{1,5}|[IVXLCDM]{1,10})\\b|(?:[Tt]hứ|[Tt]hu)\\s{0,4}\\d{1,5}\\b\\s{0,4}(?:[Cc]hương|[Cc]huong|[Qq]uyển|[Qq]uyen|[Hh]ồi|[Hh]oi)|(?:Lời\\s{1,3}(?:mở\\s{1,3}đầu|nói\\s{1,3}đầu)|Mở\\s{1,3}đầu|Kết\\s{1,3}thúc|Ngoại\\s{1,3}truyện|Phụ\\s{1,3}lục)).{0,150}$"
+                val existingRule = appDb.txtTocRuleDao.get(1782658994660L)
+                if (existingRule == null) {
                     appDb.txtTocRuleDao.insert(
                         TxtTocRule(
                             id = 1782658994660L,
                             name = "Tiếng Việt: Chương/Phần",
-                            rule = "^[ 　\\t]{0,4}(?:(?:[Cc]hương|[Cc]huong|[Pp]hần|[Pp]han|[Qq]uyển|[Qq]uyen|[Hh]ồi|[Hh]oi)\\s{0,4}(?:\\d{1,5}|[IVXLCDMivxlcdm]{1,10})|(?:Lời\\s{1,3}(?:mở\\s{1,3}đầu|nói\\s{1,3}đầu)|Mở\\s{1,3}đầu|Kết\\s{1,3}thúc|Ngoại\\s{1,3}truyện|Phụ\\s{1,3}lục)).{0,150}$",
-                            example = "Chương 12: Khởi đầu",
+                            rule = newRulePattern,
                             enable = true,
                             serialNumber = -1
                         )
                     )
+                } else if (existingRule.rule != newRulePattern) {
+                    existingRule.rule = newRulePattern
+                    appDb.txtTocRuleDao.update(existingRule)
                 }
             }
             if (LocalConfig.needUpRssSources) {

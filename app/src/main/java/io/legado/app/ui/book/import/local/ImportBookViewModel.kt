@@ -14,12 +14,18 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.archiveFileRegex
 import io.legado.app.constant.AppPattern.bookFileRegex
+import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
+import io.legado.app.help.book.addType
+import io.legado.app.help.book.upKind
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.ui.config.importBookConfig.ImportBookConfig
 import io.legado.app.ui.widget.components.list.InteractionState
 import io.legado.app.ui.widget.components.list.ListUiState
+import io.legado.app.data.entities.TxtTocRule
+import io.legado.app.model.localBook.TextFile
+import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.AlphanumComparator
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.FileDoc
@@ -69,6 +75,18 @@ data class ImportBookUiState(
     override val isSearch: Boolean get() = interaction.isSearchMode
     override val isLoading: Boolean get() = interaction.isLoading
 }
+
+data class ImportBookDialogState(
+    val fileUri: Uri,
+    val fileName: String,
+    val bookName: String,
+    val bookAuthor: String,
+    val rules: List<TxtTocRule>,
+    val selectedRuleId: Long?,
+    val isParsing: Boolean = false,
+    val parsedChapters: List<String> = emptyList(),
+    val error: String? = null
+)
 
 enum class ImportFolderPickTarget {
     DEFAULT_BOOK,
@@ -130,6 +148,8 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
     )
     private val _effects = MutableSharedFlow<ImportBookEffect>(extraBufferCapacity = 1)
     val effects = _effects.asSharedFlow()
+
+    val importBookDialogState = MutableStateFlow<ImportBookDialogState?>(null)
 
     private var scanDocJob: Job? = null
     private var autoSyncJob: Job? = null
@@ -548,8 +568,173 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         }
     }
 
-    private fun addSingleToBookshelf(item: ImportBook) {
-        if (item.isDir || item.isOnBookShelf) return
+    fun showImportDialog(item: ImportBook) {
+        val nameAuthor = LocalBook.analyzeNameAuthor(item.file.name)
+        execute {
+            val rules = appDb.txtTocRuleDao.enabled
+            // Auto detect rule
+            var matchedRuleId: Long? = null
+            kotlin.runCatching {
+                context.contentResolver.openInputStream(item.file.uri)?.use { bis ->
+                    val buffer = ByteArray(512000)
+                    val length = bis.read(buffer)
+                    if (length != -1) {
+                        val charsetName = EncodingDetect.getEncode(buffer.copyOf(length))
+                        val blockContent = String(buffer, 0, length, java.nio.charset.Charset.forName(charsetName))
+                        
+                        var maxNum = 1
+                        var matchedRule: TxtTocRule? = null
+                        for (tocRule in rules.reversed()) {
+                            val pattern = try {
+                                java.util.regex.Pattern.compile(tocRule.rule, java.util.regex.Pattern.MULTILINE)
+                            } catch (e: Exception) {
+                                continue
+                            }
+                            val matcher = pattern.matcher(blockContent)
+                            var start = 0
+                            var num = 0
+                            while (matcher.find()) {
+                                if (start == 0 || matcher.start() - start > 1000) {
+                                    num++
+                                    start = matcher.end()
+                                }
+                            }
+                            if (num >= maxNum) {
+                                maxNum = num
+                                matchedRule = tocRule
+                            }
+                        }
+                        matchedRuleId = matchedRule?.id
+                    }
+                }
+            }
+            if (matchedRuleId == null && rules.isNotEmpty()) {
+                matchedRuleId = rules.first().id
+            }
+            ImportBookDialogState(
+                fileUri = item.file.uri,
+                fileName = item.file.name,
+                bookName = nameAuthor.first,
+                bookAuthor = nameAuthor.second,
+                rules = rules,
+                selectedRuleId = matchedRuleId
+            )
+        }.onSuccess { dialogState ->
+            importBookDialogState.value = dialogState
+        }
+    }
+
+    fun dismissImportDialog() {
+        importBookDialogState.value = null
+    }
+
+    fun updateDialogBookName(name: String) {
+        importBookDialogState.update { it?.copy(bookName = name) }
+    }
+
+    fun updateDialogBookAuthor(author: String) {
+        importBookDialogState.update { it?.copy(bookAuthor = author) }
+    }
+
+    fun updateDialogSelectedRule(ruleId: Long) {
+        importBookDialogState.update { it?.copy(selectedRuleId = ruleId, parsedChapters = emptyList(), error = null) }
+    }
+
+    fun previewSplitChapters() {
+        val currentState = importBookDialogState.value ?: return
+        importBookDialogState.update { it?.copy(isParsing = true, error = null) }
+        execute {
+            val rule = currentState.rules.firstOrNull { it.id == currentState.selectedRuleId }
+                ?: throw Exception("Vui lòng chọn quy tắc tách chương")
+            
+            val book = Book(
+                type = BookType.text or BookType.local,
+                bookUrl = currentState.fileUri.toString(),
+                name = currentState.bookName,
+                author = currentState.bookAuthor,
+                originName = currentState.fileName
+            )
+            book.tocUrl = rule.rule
+            
+            val chapters = TextFile.getChapterList(book)
+            if (chapters.isEmpty()) {
+                throw Exception("Không tìm thấy chương nào khớp với quy tắc")
+            }
+            chapters.map { it.title }
+        }.onSuccess { chapters ->
+            importBookDialogState.update { it?.copy(isParsing = false, parsedChapters = chapters) }
+        }.onError { e ->
+            importBookDialogState.update { it?.copy(isParsing = false, error = e.localizedMessage ?: e.message) }
+        }
+    }
+
+    fun confirmImport() {
+        val currentState = importBookDialogState.value ?: return
+        importBookDialogState.update { it?.copy(isParsing = true) }
+        execute {
+            withContext(IO) {
+                val fileUri = currentState.fileUri
+                val bookUrl = fileUri.toString()
+                val rule = currentState.rules.firstOrNull { it.id == currentState.selectedRuleId }
+                
+                // Delete existing book with same bookUrl if any
+                appDb.bookDao.getBook(bookUrl)?.let {
+                    LocalBook.deleteBook(it, false)
+                }
+                
+                val book = Book(
+                    type = BookType.text or BookType.local,
+                    bookUrl = bookUrl,
+                    name = currentState.bookName,
+                    author = currentState.bookAuthor,
+                    originName = currentState.fileName,
+                    latestChapterTime = System.currentTimeMillis()
+                )
+                if (rule != null) {
+                    book.tocUrl = rule.rule
+                }
+                
+                // Run default book analyzer/category rules (such as setting type to BookType.image for CBZ/ZIP files)
+                LocalBook.upBookInfo(book)
+                book.upKind()
+                
+                // Restore user-defined name/author from the dialog if they were edited
+                if (currentState.bookName.isNotBlank()) {
+                    book.name = currentState.bookName
+                }
+                if (currentState.bookAuthor.isNotBlank()) {
+                    book.author = currentState.bookAuthor
+                }
+                
+                // Insert book to shelf
+                appDb.bookDao.insert(book)
+                
+                // Parse and insert chapters
+                val chapters = LocalBook.getChapterList(book)
+                appDb.bookChapterDao.delByBook(bookUrl)
+                appDb.bookChapterDao.insert(*chapters.toTypedArray())
+                
+                // Update total chapters
+                book.totalChapterNum = chapters.size
+                if (chapters.isNotEmpty()) {
+                    book.durChapterTitle = chapters.first().title
+                    book.latestChapterTitle = chapters.last().title
+                }
+                appDb.bookDao.update(book)
+                
+                book
+            }
+        }.onSuccess {
+            context.toastOnUi("Đã nhập sách '${it.name}' thành công")
+            importBookDialogState.value = null
+            clearSelection()
+            refreshCurrentSource()
+        }.onError { e ->
+            context.toastOnUi("Lỗi nhập sách: ${e.localizedMessage ?: e.message}")
+        }
+    }
+
+    private fun importDirectly(item: ImportBook) {
         execute {
             LocalBook.importFiles(listOf(item.file.uri))
         }.onError {
@@ -557,10 +742,18 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
             AppLog.put("Không thể thêm giá sách\n${it.localizedMessage}", it)
         }.onSuccess {
             context.toastOnUi("Đã thêm giá sách thành công")
-        }.onFinally {
-            _state.update { state ->
-                state.copy(selectedIds = state.selectedIds - item.selectionId)
-            }
+            clearSelection()
+            refreshCurrentSource()
+        }
+    }
+
+    private fun addSingleToBookshelf(item: ImportBook) {
+        if (item.isDir || item.isOnBookShelf) return
+        val name = item.file.name.lowercase()
+        if (name.endsWith(".txt") || name.endsWith(".cbz") || name.endsWith(".zip")) {
+            showImportDialog(item)
+        } else {
+            importDirectly(item)
         }
     }
 
@@ -568,7 +761,14 @@ class ImportBookViewModel(application: Application) : BaseViewModel(application)
         when {
             item.isDir -> navigateNext(item.file)
             item.isOnBookShelf -> onImportedFileClick(item.file)
-            else -> toggleSelection(item.selectionId)
+            else -> {
+                val name = item.file.name.lowercase()
+                if (name.endsWith(".txt") || name.endsWith(".cbz") || name.endsWith(".zip")) {
+                    showImportDialog(item)
+                } else {
+                    importDirectly(item)
+                }
+            }
         }
     }
 

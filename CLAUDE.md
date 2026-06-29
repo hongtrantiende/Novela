@@ -387,3 +387,54 @@ pnpm build     # production build
 ```
 
 Set `VITE_API` in `.env.development` to the app's web service IP.
+
+## AI Coding & Problem-Solving Workflow
+
+> **Triết lý cốt lõi**: Đọc kỹ → Hiểu đúng → Plan rõ → Làm chắc → Kiểm tra sạch.
+
+### PHASE 0 — Tiếp nhận vấn đề
+- Đọc kỹ yêu cầu ít nhất **2 lần**, chú ý context xung quanh.
+- Xác định rõ: Input / Output mong muốn / Constraints / Unknowns.
+- Hỏi ngay nếu thiếu thông tin quan trọng; nêu assumption rõ ràng nếu chỉ thiếu chi tiết nhỏ.
+
+### PHASE 1 — Lập Kế Hoạch (Plan)
+- Phân rã bài toán thành các task nhỏ độc lập, ưu tiên blocking dependencies trước.
+- Checkpoint với user nếu là task lớn hoặc có nhiều unknowns.
+
+### PHASE 2 — Thực thi (Execute)
+- Làm từng bước một, đánh dấu progress, không nhảy cóc.
+- Viết code: `Readable > Clever`, đặt tên tự giải thích, xử lý edge cases đầy đủ.
+- Comment giải thích WHY, không giải thích WHAT.
+
+### PHASE 3 — Debug hệ thống
+- Framework 5 câu hỏi: **WHAT** → **WHERE** → **WHEN** → **WHY** → **FIX** (sửa gốc rễ).
+- Đọc toàn bộ stack trace từ trên xuống, tìm file của mình, trace ngược data flow.
+- Không dùng try-catch rỗng để bịt/giấu lỗi. Sửa đổi và chạy kiểm thử sau mỗi lượt.
+
+### PHASE 4 — Kiểm tra & Báo cáo
+- Verify output, test edge cases (null, empty, bounds) trước khi bàn giao.
+- Báo cáo: Đã làm gì, Thay đổi files nào, Cách test, Lưu ý.
+
+## Coding Standards
+
+1. **Readable > Clever**: Ưu tiên dễ hiểu hơn ngắn gọn mà phức tạp.
+2. **Tên có ý nghĩa**: Boolean → `is/has/can/should`, Function → verb, Array → plural, Constant → UPPER_SNAKE_CASE.
+3. **SRP**: Mỗi function làm đúng 1 việc.
+4. **Error handling**: Luôn kiểm tra tham số đầu vào và xử lý ngoại lệ đầy đủ.
+5. **Guard clauses (Early return)**: Đưa kiểm tra lỗi lên đầu hàm, tránh nested `if`.
+6. **Constants**: Dùng hằng số thay magic numbers/strings.
+
+## Communication Guide
+
+- **Khi đã rõ yêu cầu**: Nêu lại hiểu biết ngắn gọn (1-2 câu) rồi làm.
+- **Khi chưa rõ**: Gom câu hỏi hỏi 1 lần rõ ràng, giải thích lý do cần biết.
+- **Báo cáo kết quả**: Nêu rõ Đã làm gì, Thay đổi files nào, Cách test, Lưu ý.
+- **Gặp blocker**: Dừng sớm, đề xuất phương án thay thế kèm trade-off.
+- **Scope creep**: Đặt lại kỳ vọng rõ ràng khi yêu cầu mới ngoài scope.
+
+## Frontend Design Principles
+
+- **Ground it in the Subject**: Bám sát chủ thể thực tế thay vì template chung chung.
+- **Aesthetic Direction**: Bảng màu phối hợp mượt mà (Gradient), bo tròn góc mềm, glassmorphic. Tránh khối màu đơn sắc.
+- **Deliberate Motion**: Hoạt ảnh mượt mà, tập trung (`fadeIn`/`fadeOut`, `slideInVertically`).
+- **KISS & DRY**: Giữ giải pháp đơn giản nhất hoạt động tốt.

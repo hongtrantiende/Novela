@@ -22,6 +22,27 @@ import kotlin.math.min
 
 class TextFile(private var book: Book) {
 
+    private fun cleanTitle(title: String): String {
+        return title.lowercase().replace(Regex("[\\s\\p{Punct}　_—\\-]"), "")
+    }
+
+    private fun extractChapterNumber(title: String): Int? {
+        val matcher = java.util.regex.Pattern.compile("\\d+").matcher(title)
+        if (matcher.find()) {
+            return matcher.group().toIntOrNull()
+        }
+        return null
+    }
+
+    private fun isDuplicateChapter(lastTitle: String, curTitle: String): Boolean {
+        val lastNum = extractChapterNumber(lastTitle)
+        val curNum = extractChapterNumber(curTitle)
+        if (lastNum != null && curNum != null) {
+            return lastNum == curNum
+        }
+        return cleanTitle(lastTitle) == cleanTitle(curTitle)
+    }
+
     @Suppress("ConstPropertyName")
     companion object {
         private val padRegex = "^[\\n\\s]+".toRegex()
@@ -190,6 +211,19 @@ class TextFile(private var book: Book) {
                 val matcher: Matcher = pattern.matcher(blockContent)
                 //如果存在相应章节
                 while (matcher.find()) { //获取匹配到的字符在字符串中的起始位置
+                    val title = matcher.group()
+                    val curNum = extractChapterNumber(title)
+                    var lastNum: Int? = null
+                    for (i in toc.indices.reversed()) {
+                        val num = extractChapterNumber(toc[i].title)
+                        if (num != null) {
+                            lastNum = num
+                            break
+                        }
+                    }
+                    if (lastNum != null && curNum != null && curNum < lastNum) {
+                        continue
+                    }
                     val chapterStart = matcher.start()
                     //获取章节内容
                     val chapterContent = blockContent.substring(seekPos, chapterStart)
@@ -214,11 +248,17 @@ class TextFile(private var book: Book) {
                         toc.addAll(chapters)
                         bookWordCount += wordCount
                         //创建当前章节
-                        val curChapter = BookChapter()
-                        curChapter.title = matcher.group()
-                        curChapter.start = curOffset + chapterLength
-                        curChapter.end = curChapter.start
-                        toc.add(curChapter)
+                        val title = matcher.group()
+                        val isDuplicate = toc.lastOrNull()?.let { last ->
+                            isDuplicateChapter(last.title, title)
+                        } ?: false
+                        if (!isDuplicate) {
+                            val curChapter = BookChapter()
+                            curChapter.title = title
+                            curChapter.start = curOffset + chapterLength
+                            curChapter.end = curChapter.start
+                            toc.add(curChapter)
+                        }
                         lastChapterWordCount = 0
                     } else if (seekPos == 0 && chapterStart != 0) {
                         /**
@@ -228,13 +268,6 @@ class TextFile(private var book: Book) {
                         if (toc.isEmpty()) { //如果当前没有章节，那么就是序章
                             //加入简介
                             if (chapterContent.isNotBlank()) {
-                                val qyChapter = BookChapter()
-                                qyChapter.title = "Lời nói đầu"
-                                qyChapter.start = curOffset
-                                qyChapter.end = curOffset + chapterLength
-                                qyChapter.wordCount =
-                                    StringUtils.wordCountFormat(chapterContent.length)
-                                toc.add(qyChapter)
                                 book.intro = if (chapterContent.length <= 500) {
                                     chapterContent
                                 } else {
@@ -250,19 +283,28 @@ class TextFile(private var book: Book) {
                         } else { //否则就block分割之后，上一个章节的剩余内容
                             //获取上一章节
                             val lastChapter = toc.last()
-                            lastChapter.isVolume =
-                                chapterContent.substringAfter(lastChapter.title).isBlank()
-                            //将当前段落添加上一章去
-                            lastChapter.end = lastChapter.end!! + chapterLength
-                            lastChapterWordCount += chapterContent.length
-                            lastChapter.wordCount =
-                                StringUtils.wordCountFormat(lastChapterWordCount)
-                            //创建当前章节
-                            val curChapter = BookChapter()
-                            curChapter.title = matcher.group()
-                            curChapter.start = lastChapter.end
-                            curChapter.end = curChapter.start
-                            toc.add(curChapter)
+                            val title = matcher.group()
+                            val isDuplicate = isDuplicateChapter(lastChapter.title, title)
+                            
+                            if (isDuplicate) {
+                                lastChapter.end = lastChapter.end!! + chapterLength
+                                lastChapterWordCount += chapterContent.length
+                                lastChapter.wordCount = StringUtils.wordCountFormat(lastChapterWordCount)
+                            } else {
+                                lastChapter.isVolume =
+                                    chapterContent.substringAfter(lastChapter.title).isBlank()
+                                //将当前段落添加上一章去
+                                lastChapter.end = lastChapter.end!! + chapterLength
+                                lastChapterWordCount += chapterContent.length
+                                lastChapter.wordCount =
+                                    StringUtils.wordCountFormat(lastChapterWordCount)
+                                //创建当前章节
+                                val curChapter = BookChapter()
+                                curChapter.title = title
+                                curChapter.start = lastChapter.end
+                                curChapter.end = curChapter.start
+                                toc.add(curChapter)
+                            }
                         }
                         bookWordCount += chapterContent.length
                         lastChapterWordCount = 0
@@ -270,18 +312,26 @@ class TextFile(private var book: Book) {
                         if (toc.isNotEmpty()) { //获取章节内容
                             //获取上一章节
                             val lastChapter = toc.last()
-                            lastChapter.isVolume =
-                                chapterContent.substringAfter(lastChapter.title).isBlank()
-                            lastChapter.end =
-                                lastChapter.start!! + chapterLength
-                            lastChapter.wordCount =
-                                StringUtils.wordCountFormat(chapterContent.length)
-                            //创建当前章节
-                            val curChapter = BookChapter()
-                            curChapter.title = matcher.group()
-                            curChapter.start = lastChapter.end
-                            curChapter.end = curChapter.start
-                            toc.add(curChapter)
+                            val title = matcher.group()
+                            val isDuplicate = isDuplicateChapter(lastChapter.title, title)
+                            
+                            if (isDuplicate) {
+                                lastChapter.end = lastChapter.start!! + chapterLength
+                                lastChapter.wordCount = StringUtils.wordCountFormat(chapterContent.length)
+                            } else {
+                                lastChapter.isVolume =
+                                    chapterContent.substringAfter(lastChapter.title).isBlank()
+                                lastChapter.end =
+                                    lastChapter.start!! + chapterLength
+                                lastChapter.wordCount =
+                                    StringUtils.wordCountFormat(chapterContent.length)
+                                //创建当前章节
+                                val curChapter = BookChapter()
+                                curChapter.title = title
+                                curChapter.start = lastChapter.end
+                                curChapter.end = curChapter.start
+                                toc.add(curChapter)
+                            }
                         } else { //如果章节不存在则创建章节
                             val curChapter = BookChapter()
                             curChapter.title = matcher.group()

@@ -136,9 +136,7 @@ fun BookInfoRouteScreen(
                 is BookInfoEffect.OpenReader -> {
                     val cls = when {
                         effect.book.isAudio -> AudioPlayActivity::class.java
-                        !effect.book.isLocal && effect.book.isImage && ReadMangaConfig.showMangaUi -> {
-                            ReadMangaActivity::class.java
-                        }
+                        effect.book.isImage -> ReadMangaActivity::class.java
 
                         else -> null
                     }

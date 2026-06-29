@@ -695,12 +695,18 @@ object ReadManga : CoroutineScope by MainScope() , KoinComponent{
     }
 
     private suspend fun getManageChapter(chapter: BookChapter, content: String): MangaChapter {
+        val book = book!!
         val list = BookHelp.flowImages(chapter, content)
             .distinctUntilChanged().mapIndexed { index, src ->
+                val mImageUrl = if (book.isLocal) {
+                    ImageProvider.cacheImage(book, src, null).absolutePath
+                } else {
+                    src
+                }
                 MangaPage(
                     chapterIndex = chapter.index,
                     chapterSize = chapterSize,
-                    mImageUrl = src,
+                    mImageUrl = mImageUrl,
                     index = index,
                     mChapterName = chapter.title
                 )

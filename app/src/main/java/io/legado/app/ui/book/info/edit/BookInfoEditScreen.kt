@@ -346,9 +346,9 @@ fun KindEditor(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            items(kindList.size, key = { kindList[it] }) { index ->
+            items(kindList.size, key = { "$it-${kindList[it]}" }) { index ->
                 val kind = kindList[index]
-                ReorderableItem(reorderableState, key = kind) { isDragging ->
+                ReorderableItem(reorderableState, key = "$index-$kind") { isDragging ->
                     KindChip(
                         text = kind,
                         isDragging = isDragging,

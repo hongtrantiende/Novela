@@ -4,8 +4,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -31,6 +35,8 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -72,7 +78,10 @@ import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenuItem
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
+import io.legado.app.help.book.isNotShelf
+import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.utils.ConvertUtils
+import io.legado.app.utils.startActivity
 import io.legado.app.utils.startActivityForBook
 import io.legado.app.utils.toastOnUi
 import org.koin.androidx.compose.koinViewModel
@@ -238,9 +247,9 @@ fun ImportBookScreen(
 ) {
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val importDialogState by viewModel.importBookDialogState.collectAsStateWithLifecycle()
     var showFolderPicker by remember { mutableStateOf(false) }
     var showImportFileNameDialog by remember { mutableStateOf(false) }
-    var pendingSingleAddBook by remember { mutableStateOf<ImportBook?>(null) }
     var fileNameJs by remember { mutableStateOf(ImportBookConfig.bookImportFileName.orEmpty()) }
     var pickerTarget by remember { mutableStateOf(ImportFolderPickTarget.IMPORT_FOLDER) }
     val selectDocTree = rememberLauncherForActivityResult(
@@ -256,7 +265,7 @@ fun ImportBookScreen(
         }
     }
 
-    BackHandler(enabled = !showFolderPicker && !showImportFileNameDialog) {
+    BackHandler(enabled = !showFolderPicker && !showImportFileNameDialog && importDialogState == null) {
         handleBack()
     }
 
@@ -270,7 +279,17 @@ fun ImportBookScreen(
                 }
 
                 is ImportBookEffect.OpenBook -> {
-                    context.startActivityForBook(effect.book)
+                    if (effect.book.isNotShelf) {
+                        context.startActivity<BookInfoActivity> {
+                            putExtra("bookUrl", effect.book.bookUrl)
+                            putExtra("name", effect.book.name)
+                            putExtra("author", effect.book.author)
+                            putExtra("origin", effect.book.origin)
+                            putExtra("coverPath", effect.book.coverUrl)
+                        }
+                    } else {
+                        context.startActivityForBook(effect.book)
+                    }
                 }
 
                 is ImportBookEffect.ShowArchiveEntries -> {
@@ -333,19 +352,15 @@ fun ImportBookScreen(
         onDismiss = { showImportFileNameDialog = false }
     )
 
-    pendingSingleAddBook?.let { book ->
-        AppAlertDialog(
-            show = true,
-            onDismissRequest = { pendingSingleAddBook = null },
-            title = stringResource(R.string.add_to_bookshelf),
-            text = stringResource(R.string.check_add_bookshelf, book.name),
-            confirmText = stringResource(android.R.string.ok),
-            onConfirm = {
-                viewModel.dispatch(ImportBookIntent.AddSingleToBookshelf(book))
-                pendingSingleAddBook = null
-            },
-            dismissText = stringResource(android.R.string.cancel),
-            onDismiss = { pendingSingleAddBook = null }
+    importDialogState?.let { dialogState ->
+        ImportLocalBookDialog(
+            state = dialogState,
+            onDismissRequest = { viewModel.dismissImportDialog() },
+            onBookNameChange = { viewModel.updateDialogBookName(it) },
+            onBookAuthorChange = { viewModel.updateDialogBookAuthor(it) },
+            onRuleSelected = { viewModel.updateDialogSelectedRule(it) },
+            onPreviewClick = { viewModel.previewSplitChapters() },
+            onConfirmImport = { viewModel.confirmImport() }
         )
     }
 
@@ -367,7 +382,7 @@ fun ImportBookScreen(
         onClearSelection = { viewModel.clearSelection() },
         onSelectInvert = { viewModel.dispatch(ImportBookIntent.SelectInvert) },
         onAddToBookshelf = { viewModel.dispatch(ImportBookIntent.AddToBookshelf) },
-        onItemAddToBookshelf = { pendingSingleAddBook = it },
+        onItemAddToBookshelf = { viewModel.dispatch(ImportBookIntent.AddSingleToBookshelf(it)) },
         onDeleteSelection = { viewModel.dispatch(ImportBookIntent.DeleteSelection) },
         onItemClick = { viewModel.dispatch(ImportBookIntent.ItemClick(it)) }
     )
@@ -518,4 +533,132 @@ private fun ImportBookItem(
             }
         }
     }
+}
+
+@Composable
+fun ImportLocalBookDialog(
+    state: ImportBookDialogState,
+    onDismissRequest: () -> Unit,
+    onBookNameChange: (String) -> Unit,
+    onBookAuthorChange: (String) -> Unit,
+    onRuleSelected: (Long) -> Unit,
+    onPreviewClick: () -> Unit,
+    onConfirmImport: () -> Unit
+) {
+    var dropdownExpanded by remember { mutableStateOf(false) }
+    val selectedRule = state.rules.firstOrNull { it.id == state.selectedRuleId }
+    val isCbz = state.fileName.endsWith(".cbz", ignoreCase = true) || state.fileName.endsWith(".zip", ignoreCase = true)
+
+    AppAlertDialog(
+        show = true,
+        onDismissRequest = onDismissRequest,
+        title = if (isCbz) "Nhập truyện tranh (CBZ)" else "Nhập truyện & Tách chương",
+        confirmText = "Nhập vào",
+        onConfirm = onConfirmImport,
+        dismissText = "Hủy",
+        onDismiss = onDismissRequest,
+        content = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .animateContentSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = state.bookName,
+                    onValueChange = onBookNameChange,
+                    label = { AppText("Tên truyện") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                OutlinedTextField(
+                    value = state.bookAuthor,
+                    onValueChange = onBookAuthorChange,
+                    label = { AppText("Tác giả") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                if (!isCbz) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        AppText(
+                            text = "Quy tắc tách chương",
+                            style = LegadoTheme.typography.labelMedium,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
+                                .background(LegadoTheme.colorScheme.surfaceContainerHighest)
+                                .clickable { dropdownExpanded = true }
+                                .padding(12.dp)
+                        ) {
+                            AppText(
+                                text = selectedRule?.name ?: "Chưa chọn quy tắc",
+                                style = LegadoTheme.typography.bodyMedium
+                            )
+                        }
+                        
+                        DropdownMenu(
+                            expanded = dropdownExpanded,
+                            onDismissRequest = { dropdownExpanded = false },
+                            modifier = Modifier.fillMaxWidth(0.9f)
+                        ) {
+                            state.rules.forEach { rule ->
+                                DropdownMenuItem(
+                                    text = { AppText(rule.name) },
+                                    onClick = {
+                                        onRuleSelected(rule.id)
+                                        dropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    
+                    SmallTonalButton(
+                        onClick = onPreviewClick,
+                        text = if (state.isParsing) "Đang tách chương..." else "Tách chương",
+                        enabled = !state.isParsing,
+                        modifier = Modifier.align(Alignment.End)
+                    )
+                }
+                
+                if (!state.error.isNullOrBlank()) {
+                    AppText(
+                        text = state.error,
+                        color = LegadoTheme.colorScheme.error,
+                        style = LegadoTheme.typography.bodySmall
+                    )
+                }
+                
+                if (state.parsedChapters.isNotEmpty()) {
+                    AppText(
+                        text = if (isCbz) "Danh sách chương trong file (${state.parsedChapters.size} chương):" else "Danh sách chương khớp (${state.parsedChapters.size} chương):",
+                        style = LegadoTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .border(1.dp, LegadoTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small)
+                            .padding(8.dp)
+                    ) {
+                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                            items(state.parsedChapters) { chapterTitle ->
+                                AppText(
+                                    text = chapterTitle,
+                                    style = LegadoTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    )
 }

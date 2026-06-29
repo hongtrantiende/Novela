@@ -437,7 +437,7 @@ class ExportBookService : BaseService(), KoinComponent {
         exportMsg.remove(book.bookUrl)
         notifyExportBookChanged(book.bookUrl)
         val fileDoc = FileDoc.fromDir(path)
-        val ext = if (convertToWebp) "webp.cbz" else "cbz"
+        val ext = "cbz"
         val filename = book.getExportFileName(ext)
         fileDoc.find(filename)?.delete()
         val bookDoc = fileDoc.createFileIfNotExist(filename)
