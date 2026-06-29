@@ -178,6 +178,18 @@ class ExtensionViewModel(
         }
     }
 
+    fun deleteExtensionFromGitHub(name: String, callback: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = extensionLoader.deleteExtensionFromGitHub(name)
+            _isLoading.value = false
+            if (result.isSuccess) {
+                fetchAllExtensions(force = true)
+            }
+            callback(result)
+        }
+    }
+
     fun toggleExtensionEnabled(extensionId: String, enabled: Boolean) {
         viewModelScope.launch {
             extensionDao.setEnabled(extensionId, enabled)

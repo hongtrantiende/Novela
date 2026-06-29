@@ -11,8 +11,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipInputStream
@@ -639,5 +641,136 @@ class ExtensionLoader(
             Log.e(TAG, "Failed to auto-install missing extension $extensionId: ${e.message}")
         }
         false
+    }
+
+    suspend fun deleteExtensionFromGitHub(name: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val slug = name.toSlug()
+            
+            // 1. Get plugin.json content and SHA
+            val pluginUrl = "https://api.github.com/repos/hongtrantiende/Extransion-TTC/contents/plugin.json"
+            val getRequest = newRequest(pluginUrl).newBuilder()
+                .header("Accept", "application/vnd.github.v3+json")
+                .build()
+            
+            val getResponse = httpClient.newCall(getRequest).execute()
+            if (!getResponse.isSuccessful) {
+                return@withContext Result.failure(Exception("Không thể lấy thông tin plugin.json: ${getResponse.message}"))
+            }
+            
+            val responseBody = getResponse.body?.string() ?: ""
+            val jsonObject = org.json.JSONObject(responseBody)
+            val sha = jsonObject.getString("sha")
+            val base64Content = jsonObject.getString("content").replace("\n", "").replace("\r", "")
+            val decodedBytes = android.util.Base64.decode(base64Content, android.util.Base64.DEFAULT)
+            val decodedString = String(decodedBytes, Charsets.UTF_8)
+            
+            // Parse plugin.json list
+            val pluginJson = org.json.JSONObject(decodedString)
+            val dataArray = pluginJson.getJSONArray("data")
+            var foundIndex = -1
+            var zipPathInRepo = "zips/$slug.zip"
+            var iconPathInRepo = "icons/$slug.png"
+            
+            for (i in 0 until dataArray.length()) {
+                val item = dataArray.getJSONObject(i)
+                if (item.getString("name").equals(name, ignoreCase = true) || item.getString("name").toSlug().equals(slug, ignoreCase = true)) {
+                    foundIndex = i
+                    val pathUrl = item.optString("path", "")
+                    if (pathUrl.isNotBlank()) {
+                        zipPathInRepo = pathUrl.substringAfter("/Extransion-TTC/main/")
+                    }
+                    val iconUrl = item.optString("icon", "")
+                    if (iconUrl.isNotBlank()) {
+                        iconPathInRepo = iconUrl.substringAfter("/Extransion-TTC/main/")
+                    }
+                    break
+                }
+            }
+            
+            if (foundIndex == -1) {
+                return@withContext Result.failure(Exception("Không tìm thấy tiện ích $name trong danh sách online"))
+            }
+            
+            // Remove from array
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+                dataArray.remove(foundIndex)
+            } else {
+                val newArray = org.json.JSONArray()
+                for (i in 0 until dataArray.length()) {
+                    if (i != foundIndex) {
+                        newArray.put(dataArray.get(i))
+                    }
+                }
+                pluginJson.put("data", newArray)
+            }
+            
+            val updatedString = pluginJson.toString(2)
+            val updatedBase64 = android.util.Base64.encodeToString(updatedString.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+            
+            // Update plugin.json on GitHub
+            val putBody = org.json.JSONObject().apply {
+                put("message", "Delete extension $name")
+                put("content", updatedBase64)
+                put("sha", sha)
+            }.toString()
+            
+            val putRequestBody = putBody.toRequestBody("application/json; charset=utf-8".toMediaType())
+            
+            val putRequest = newRequest(pluginUrl).newBuilder()
+                .put(putRequestBody)
+                .header("Accept", "application/vnd.github.v3+json")
+                .build()
+                
+            val putResponse = httpClient.newCall(putRequest).execute()
+            if (!putResponse.isSuccessful) {
+                return@withContext Result.failure(Exception("Lỗi cập nhật plugin.json: ${putResponse.message}"))
+            }
+            
+            // 2. Delete ZIP file from GitHub (if exists)
+            val zipUrl = "https://api.github.com/repos/hongtrantiende/Extransion-TTC/contents/$zipPathInRepo"
+            val getZipRequest = newRequest(zipUrl).newBuilder()
+                .header("Accept", "application/vnd.github.v3+json")
+                .build()
+            val getZipResponse = httpClient.newCall(getZipRequest).execute()
+            if (getZipResponse.isSuccessful) {
+                val zipSha = org.json.JSONObject(getZipResponse.body?.string() ?: "").getString("sha")
+                val deleteZipBody = org.json.JSONObject().apply {
+                    put("message", "Delete zip file for $name")
+                    put("sha", zipSha)
+                }.toString()
+                val deleteZipRequestBody = deleteZipBody.toRequestBody("application/json; charset=utf-8".toMediaType())
+                val deleteZipRequest = newRequest(zipUrl).newBuilder()
+                    .delete(deleteZipRequestBody)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .build()
+                httpClient.newCall(deleteZipRequest).execute()
+            }
+            
+            // 3. Delete Icon file from GitHub (if exists)
+            val iconUrl = "https://api.github.com/repos/hongtrantiende/Extransion-TTC/contents/$iconPathInRepo"
+            val getIconRequest = newRequest(iconUrl).newBuilder()
+                .header("Accept", "application/vnd.github.v3+json")
+                .build()
+            val getIconResponse = httpClient.newCall(getIconRequest).execute()
+            if (getIconResponse.isSuccessful) {
+                val iconSha = org.json.JSONObject(getIconResponse.body?.string() ?: "").getString("sha")
+                val deleteIconBody = org.json.JSONObject().apply {
+                    put("message", "Delete icon file for $name")
+                    put("sha", iconSha)
+                }.toString()
+                val deleteIconRequestBody = deleteIconBody.toRequestBody("application/json; charset=utf-8".toMediaType())
+                val deleteIconRequest = newRequest(iconUrl).newBuilder()
+                    .delete(deleteIconRequestBody)
+                    .header("Accept", "application/vnd.github.v3+json")
+                    .build()
+                httpClient.newCall(deleteIconRequest).execute()
+            }
+            
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ExtLoader", "deleteExtensionFromGitHub failed", e)
+            Result.failure(e)
+        }
     }
 }

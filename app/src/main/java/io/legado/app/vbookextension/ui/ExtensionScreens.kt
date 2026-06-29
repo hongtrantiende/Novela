@@ -240,6 +240,7 @@ fun InstalledExtensionsTab(viewModel: ExtensionViewModel) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
+    val context = LocalContext.current
     val available by viewModel.availableExtensions.collectAsStateWithLifecycle()
     val installedList by viewModel.installedExtensions.collectAsStateWithLifecycle(initialValue = emptyList())
     val repos by viewModel.repositories.collectAsStateWithLifecycle(initialValue = emptyList())
@@ -252,6 +253,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
     var showAddRepoDialog by remember { mutableStateOf(false) }
     var repoToDelete by remember { mutableStateOf<RepositoryEntity?>(null) }
     var searchQuery by remember { mutableStateOf("") }
+    var extensionToDeleteFromGitHub by remember { mutableStateOf<ExtensionInfo?>(null) }
 
     val filteredExtensions = remember(available, searchQuery) {
         if (searchQuery.isBlank()) available else {
@@ -491,6 +493,20 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
 
                             Spacer(modifier = Modifier.width(12.dp))
 
+                            val isAdmin = io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com"
+                            if (isAdmin) {
+                                IconButton(
+                                    onClick = { extensionToDeleteFromGitHub = info }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = "Xóa khỏi GitHub",
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+
                             Button(
                                 onClick = { viewModel.installExtension(info) },
                                 enabled = buttonEnabled,
@@ -575,6 +591,36 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
             },
             dismissText = "Hủy",
             onDismiss = { repoToDelete = null }
+        )
+    }
+
+    extensionToDeleteFromGitHub?.let { info ->
+        AlertDialog(
+            onDismissRequest = { extensionToDeleteFromGitHub = null },
+            title = { Text("Xóa tiện ích khỏi GitHub?") },
+            text = { Text("Bạn có chắc chắn muốn xóa tiện ích \"${info.name}\" khỏi kho lưu trữ GitHub không? Hành động này không thể hoàn tác.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val nameToDelete = info.name
+                        extensionToDeleteFromGitHub = null
+                        viewModel.deleteExtensionFromGitHub(nameToDelete) { result ->
+                            if (result.isSuccess) {
+                                Toast.makeText(context, "Đã xóa thành công tiện ích $nameToDelete khỏi GitHub", Toast.LENGTH_LONG).show()
+                            } else {
+                                Toast.makeText(context, "Lỗi khi xóa: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Xác nhận xóa", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { extensionToDeleteFromGitHub = null }) {
+                    Text("Hủy")
+                }
+            }
         )
     }
 }
