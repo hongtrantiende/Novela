@@ -7,10 +7,12 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,12 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -415,10 +415,21 @@ fun ReadBookRouteScreen(
 
     // ── View layer + Compose UI ───────────────────────────────────────
 
+    val msg = state.msg
+    val isPageLoading = state.curTextChapter == null || 
+            state.curTextChapter?.pages.isNullOrEmpty() ||
+            state.curTextChapter?.pages?.getOrNull(state.durPageIndex)?.text?.contains("Đang tải dữ liệu", ignoreCase = true) == true
+            
+    val showLoadingOverlay = (isPageLoading || !msg.isNullOrBlank()) && 
+            (msg == null || (!msg.contains("lỗi", ignoreCase = true) && 
+                             !msg.contains("error", ignoreCase = true) && 
+                             !msg.contains("failed", ignoreCase = true)))
+
     Box(Modifier.fillMaxSize()) {
         key(controller) {
             ReadBookViewLayer(
                 modifier = Modifier
+                    .graphicsLayer { alpha = if (showLoadingOverlay) 0f else 1f }
                     .then(if (useMenuHazeSource) Modifier.hazeSource(menuHazeState) else Modifier)
                     .layerBackdrop(menuBackdrop),
                 onRefsReady = { controller.onRefsReady(it) },
@@ -427,60 +438,48 @@ fun ReadBookRouteScreen(
                 contentTextViewCallBack = controller,
             )
         }
-        ReadBookColorTheme(
-            styleConfig = state.styleConfig,
-            preferences = readPreferences,
+        Box(
+            modifier = Modifier.graphicsLayer { alpha = if (showLoadingOverlay) 0f else 1f }
         ) {
-            ReadBookMenuBar(
-                state = state,
-                onIntent = viewModel::onIntent,
-                backdrop = menuBackdrop,
-                hazeState = if (useMenuHazeSource) menuHazeState else null,
-            )
-            ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
-            ReadBookScreen(
-                state = state,
-                onIntent = viewModel::onIntent,
-                onBack = { controller.closeReadBook() },
-                onNavigateToTranslationSettings = onNavigateToTranslationSettings,
-            )
+            ReadBookColorTheme(
+                styleConfig = state.styleConfig,
+                preferences = readPreferences,
+            ) {
+                ReadBookMenuBar(
+                    state = state,
+                    onIntent = viewModel::onIntent,
+                    backdrop = menuBackdrop,
+                    hazeState = if (useMenuHazeSource) menuHazeState else null,
+                )
+                ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
+                ReadBookScreen(
+                    state = state,
+                    onIntent = viewModel::onIntent,
+                    onBack = { controller.closeReadBook() },
+                    onNavigateToTranslationSettings = onNavigateToTranslationSettings,
+                )
+            }
         }
-        val isMsgLoading = state.msg != null && (
-            state.msg!!.contains("tải") || 
-            state.msg!!.contains("loading", ignoreCase = true) || 
-            state.msg == context.getString(R.string.loading) ||
-            state.msg == context.getString(R.string.data_loading)
-        )
-        val showLoading = isMsgLoading || (state.curTextChapter == null && state.msg == null)
-        if (showLoading) {
-            val loadingText = if (state.msg != null) state.msg!! else context.getString(R.string.data_loading)
-            PremiumLoadingScreen(msg = loadingText)
-        }
-    }
-}
-
-@Composable
-private fun PremiumLoadingScreen(msg: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(androidx.compose.material3.MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            AppContainedLoadingIndicator()
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = msg,
-                color = androidx.compose.material3.MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-                fontFamily = FontFamily.SansSerif,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 0.5.sp
-            )
+        
+        if (showLoadingOverlay) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF121212)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AppContainedLoadingIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = if (!msg.isNullOrBlank()) msg else "Đang tải...",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 14.sp
+                    )
+                }
+            }
         }
     }
 }

@@ -12,6 +12,12 @@ import io.legado.app.vbookextension.loader.ExtensionLoader
 import io.legado.app.vbookextension.model.ExtensionInfo
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.Request
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
+import io.legado.app.help.http.okHttpClient
 
 class ExtensionViewModel(
     private val appContext: Context,
@@ -178,18 +184,6 @@ class ExtensionViewModel(
         }
     }
 
-    fun deleteExtensionFromGitHub(name: String, callback: (Result<Unit>) -> Unit) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            val result = extensionLoader.deleteExtensionFromGitHub(name)
-            _isLoading.value = false
-            if (result.isSuccess) {
-                fetchAllExtensions(force = true)
-            }
-            callback(result)
-        }
-    }
-
     fun toggleExtensionEnabled(extensionId: String, enabled: Boolean) {
         viewModelScope.launch {
             extensionDao.setEnabled(extensionId, enabled)
@@ -240,5 +234,96 @@ class ExtensionViewModel(
             .replace(Regex("[^a-z0-9]"), "-")
             .replace(Regex("-+"), "-")
             .trim('-')
+    }
+    fun deleteExtensionFromGithub(info: ExtensionInfo, onSuccess: () -> Unit, onFailure: (String) -> Unit) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                withContext(Dispatchers.IO) {
+                    val repoUrl = "https://api.github.com/repos/hongtrantiende/Extransion-TTC/contents/plugin.json"
+                    
+                    // 1. Fetch current content and SHA
+                    val getRequest = Request.Builder()
+                        .url(repoUrl)
+                        .header("Authorization", "token ${io.legado.app.constant.AppConst.githubToken}")
+                        .header("Accept", "application/vnd.github+json")
+                        .get()
+                        .build()
+                        
+                    okHttpClient.newCall(getRequest).execute().use { response ->
+                        if (!response.isSuccessful) {
+                            throw Exception("Failed to fetch GitHub metadata: HTTP ${response.code}")
+                        }
+                        val body = response.body.string() ?: throw Exception("Empty metadata response")
+                        val jsonObj = org.json.JSONObject(body)
+                        val sha = jsonObj.getString("sha")
+                        val base64Content = jsonObj.getString("content").replace("\n", "").replace("\r", "")
+                        val decodedBytes = android.util.Base64.decode(base64Content, android.util.Base64.DEFAULT)
+                        val decodedString = String(decodedBytes, Charsets.UTF_8)
+                        
+                        // 2. Parse as dynamic JSON array inside the plugins object to safely filter
+                        val rootObj = org.json.JSONObject(decodedString)
+                        val jsonArray = rootObj.getJSONArray("plugins")
+                        val newList = org.json.JSONArray()
+                        var found = false
+                        for (i in 0 until jsonArray.length()) {
+                            val obj = jsonArray.getJSONObject(i)
+                            val name = obj.optString("name", "")
+                            if (name.equals(info.name, ignoreCase = true)) {
+                                found = true
+                            } else {
+                                newList.put(obj)
+                            }
+                        }
+                        
+                        if (!found) {
+                            throw Exception("Không tìm thấy tiện ích này trong danh sách GitHub")
+                        }
+                        
+                        rootObj.put("plugins", newList)
+                        
+                        // 3. Serialize and encode base64
+                        val updatedJson = rootObj.toString(2)
+                        val updatedBytes = updatedJson.toByteArray(Charsets.UTF_8)
+                        val updatedBase64 = android.util.Base64.encodeToString(updatedBytes, android.util.Base64.NO_WRAP)
+                        
+                        // 4. PUT updated file back to GitHub
+                        val putBodyObj = org.json.JSONObject().apply {
+                            put("message", "Delete extension via App: ${info.name}")
+                            put("content", updatedBase64)
+                            put("sha", sha)
+                        }
+                        val mediaType = "application/json; charset=utf-8".toMediaType()
+                        val putRequestBody = putBodyObj.toString().toRequestBody(mediaType)
+                        
+                        val putRequest = Request.Builder()
+                            .url(repoUrl)
+                            .header("Authorization", "token ${io.legado.app.constant.AppConst.githubToken}")
+                            .header("Accept", "application/vnd.github+json")
+                            .put(putRequestBody)
+                            .build()
+                            
+                        okHttpClient.newCall(putRequest).execute().use { putResponse ->
+                            if (!putResponse.isSuccessful) {
+                                throw Exception("GitHub Update Failed: HTTP ${putResponse.code}")
+                            }
+                            // 5. Reload data
+                            fetchAllExtensions(force = true)
+                            withContext(Dispatchers.Main) {
+                                onSuccess()
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error deleting extension from GitHub", e)
+                withContext(Dispatchers.Main) {
+                    onFailure(e.localizedMessage ?: e.message ?: "Lỗi chưa xác định")
+                }
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 }

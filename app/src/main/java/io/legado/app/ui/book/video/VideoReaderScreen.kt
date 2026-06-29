@@ -107,42 +107,35 @@ import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingI
 
 private fun isEmbedPlayerUrl(url: String?): Boolean {
     if (url == null) return false
+    val lower = url.lowercase()
     
     val path = try { android.net.Uri.parse(url).path?.lowercase() ?: "" } catch (e: Exception) { "" }
     if (path.endsWith(".js") || path.endsWith(".css") || path.endsWith(".png") || 
         path.endsWith(".jpg") || path.endsWith(".jpeg") || path.endsWith(".gif") || 
         path.endsWith(".svg") || path.endsWith(".woff") || path.endsWith(".woff2") || 
-        path.endsWith(".json") || path.endsWith(".webp") || path.endsWith(".ico")) {
+        path.endsWith(".json") || path.endsWith(".webp") ||
+        path.endsWith(".m3u8") || path.endsWith(".mp4") || path.endsWith(".ts") ||
+        path.endsWith(".m4s") || path.endsWith(".mpd") || path.endsWith(".webm")) {
         return false
     }
 
-    val host = try { android.net.Uri.parse(url).host?.lowercase() ?: "" } catch (e: Exception) { "" }
-    if (host.isBlank()) return false
-    
-    if (host.contains("amung.us") || host.contains("dtscout") || host.contains("google-analytics") || 
-        host.contains("doubleclick") || host.contains("facebook") || host.contains("adnxs") || 
-        host.contains("pubmatic") || host.contains("criteo") || host.contains("cloudflare")) {
-        return false
-    }
-
-    val lowerHost = host
-    val lowerUrl = url.lowercase()
-
-    return lowerHost.contains("embed") 
-        || lowerHost.contains("player") 
-        || lowerHost.contains("hayip") 
-        || lowerHost.contains("streamc") 
-        || lowerHost.contains("streamfree") 
-        || lowerHost.contains("playzone")
-        || lowerHost.contains("ssplay")
-        || lowerHost.contains("fdrive")
-        || lowerHost.contains("opstream")
-        || lowerHost.contains("iframe")
-        || lowerHost.contains("streaming")
-        || path.contains("/play")
-        || path.contains("/embed/")
-        || path.contains("watch")
-        || path.contains("/v/")
+    return lower.contains("embed") 
+        || lower.contains("player") 
+        || lower.contains("hayip") 
+        || lower.contains("streamc.xyz") 
+        || lower.contains("streamfree") 
+        || lower.contains("playzone")
+        || lower.contains("/play")
+        || lower.contains("ssplay")
+        || lower.contains("fdrive")
+        || lower.contains("opstream")
+        || lower.contains("watch")
+        || lower.contains("iframe")
+        || lower.contains("streaming")
+        || lower.contains("/v/")
+        || lower.contains("xem-phim")
+        || lower.contains("/xem")
+        || lower.contains("/tap-")
 }
 
 private suspend fun probeIsVideoUrl(url: String): Boolean {
@@ -756,10 +749,10 @@ private fun VideoContent(
 
     // Nạp link video vào ExoPlayer với dynamic headers và hỗ trợ MergingMediaSource cho Bilibili
     val currentSniffedUrl = sniffedVideoUrl
-    LaunchedEffect(currentSniffedUrl, resolvedVideoAudio, resolvedVideoHeaders) {
+    LaunchedEffect(currentSniffedUrl) {
         if (!currentSniffedUrl.isNullOrBlank()) {
             val headersMap = mutableMapOf<String, String>()
-            headersMap["User-Agent"] = "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+            headersMap["User-Agent"] = chromeUA
             
             resolvedVideoHeaders?.forEach { (key, value) ->
                 val existingKey = headersMap.keys.firstOrNull { it.equals(key, ignoreCase = true) }
@@ -787,6 +780,10 @@ private fun VideoContent(
                     headersMap["Origin"] = "https://www.bilibili.tv"
                     headersMap["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
                     "https://www.bilibili.tv/"
+                }
+                lowerUrl.contains("mgtv.com") -> {
+                    headersMap["Origin"] = "https://www.mgtv.com"
+                    "https://www.mgtv.com/"
                 }
                 else -> headersMap["Referer"] ?: novelUrl
             }
@@ -1055,19 +1052,17 @@ private fun VideoContent(
                     }
             ) {
                 var isBuffering by remember { mutableStateOf(false) }
+                var isPlayerReady by remember { mutableStateOf(false) }
                 var duration by remember { mutableStateOf(0L) }
                 DisposableEffect(exoPlayer) {
                     val listener = object : androidx.media3.common.Player.Listener {
                         override fun onPlaybackStateChanged(playbackState: Int) {
                             isBuffering = playbackState == androidx.media3.common.Player.STATE_BUFFERING
+                            isPlayerReady = playbackState == androidx.media3.common.Player.STATE_READY
                             if (playbackState == androidx.media3.common.Player.STATE_READY) {
+                                playbackError = null
                                 val d = exoPlayer.duration
                                 duration = if (d > 0) d else 0L
-                                if (d <= 0) {
-                                    playbackError = "Không tìm thấy thời lượng hợp lệ cho video này (Có thể liên kết bị lỗi hoặc định dạng không được hỗ trợ)"
-                                } else {
-                                    playbackError = null
-                                }
                             }
                         }
                         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
@@ -1076,6 +1071,7 @@ private fun VideoContent(
                     }
                     exoPlayer.addListener(listener)
                     isBuffering = exoPlayer.playbackState == androidx.media3.common.Player.STATE_BUFFERING
+                    isPlayerReady = exoPlayer.playbackState == androidx.media3.common.Player.STATE_READY
                     val d = exoPlayer.duration
                     duration = if (d > 0) d else 0L
                     onDispose {
@@ -1083,16 +1079,56 @@ private fun VideoContent(
                     }
                 }
 
-                val isPlayerReady = duration > 0
-
                 val isSniffing = resolvedVideoUrl != null && !isDirectLink && sniffedVideoUrl == null && !sniffingTimeout
+                LaunchedEffect(isSniffing, sniffingWebViewInstance) {
+                    if (isSniffing && sniffingWebViewInstance != null) {
+                        while (sniffedVideoUrl == null) {
+                            kotlinx.coroutines.delay(1200)
+                            sniffingWebViewInstance?.let { wv ->
+                                wv.post {
+                                    try {
+                                        val width = wv.width.takeIf { it > 0 } ?: 100
+                                        val height = wv.height.takeIf { it > 0 } ?: 100
+                                        val cx = width / 2f
+                                        val cy = height / 2f
+                                        
+                                        val now = android.os.SystemClock.uptimeMillis()
+                                        
+                                        // Click 1: Player center at top (16:9 aspect ratio of full width)
+                                        val cy1 = width * 9f / 32f
+                                        val down1 = android.view.MotionEvent.obtain(now, now, android.view.MotionEvent.ACTION_DOWN, cx, cy1, 0)
+                                        wv.dispatchTouchEvent(down1)
+                                        down1.recycle()
+                                        val up1 = android.view.MotionEvent.obtain(now, now + 30, android.view.MotionEvent.ACTION_UP, cx, cy1, 0)
+                                        wv.dispatchTouchEvent(up1)
+                                        up1.recycle()
+
+                                        // Click 2: Screen center (for full screen iframe redirects)
+                                        val down2 = android.view.MotionEvent.obtain(now + 50, now + 50, android.view.MotionEvent.ACTION_DOWN, cx, cy, 0)
+                                        wv.dispatchTouchEvent(down2)
+                                        down2.recycle()
+                                        val up2 = android.view.MotionEvent.obtain(now + 50, now + 80, android.view.MotionEvent.ACTION_UP, cx, cy, 0)
+                                        wv.dispatchTouchEvent(up2)
+                                        up2.recycle()
+                                        
+                                        android.util.Log.d("ReaderSniffing", "--> Đã mô phỏng click thực tế tại top ($cx, $cy1) và center ($cx, $cy)")
+                                    } catch (e: Exception) {
+                                        // ignore
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (isSniffing) {
                     key(resolvedVideoUrl) {
                         AndroidView(
                             factory = { ctx ->
                                 WebView(ctx).apply {
                                     sniffingWebViewInstance = this
-                                    visibility = android.view.View.INVISIBLE
+                                    visibility = android.view.View.VISIBLE
+                                    alpha = 0.01f
                                     layoutParams = ViewGroup.LayoutParams(
                                         ViewGroup.LayoutParams.MATCH_PARENT,
                                         ViewGroup.LayoutParams.MATCH_PARENT
@@ -1122,11 +1158,33 @@ private fun VideoContent(
                                                                 videos[i].muted = true;
                                                                 videos[i].play().catch(function(e) {});
                                                             }
-                                                            var playSelectors = ['.play', '.btn-play', '.vjs-big-play-button', '[class*="play-button"]', '[id*="play-button"]', 'iframe'];
+                                                            var playSelectors = ['.play', '.btn-play', '.vjs-big-play-button', '[class*="play-button"]', '[id*="play-button"]', '.jw-display-icon-container', '.jw-icon-display', 'body', 'video'];
                                                             playSelectors.forEach(function(sel) {
                                                                 var btn = document.querySelector(sel);
-                                                                if (btn && (btn.offsetWidth > 0 || btn.offsetHeight > 0)) {
+                                                                if (btn) {
                                                                     btn.click();
+                                                                }
+                                                            });
+                                                            var centerX = window.innerWidth / 2;
+                                                            var centerY = window.innerHeight / 2;
+                                                            var playerY = window.innerWidth * 9 / 32;
+                                                            [centerY, playerY].forEach(function(y) {
+                                                                var el = document.elementFromPoint(centerX, y);
+                                                                if (el) {
+                                                                    var clickEvt = new MouseEvent('click', {
+                                                                        clientX: centerX,
+                                                                        clientY: y,
+                                                                        bubbles: true,
+                                                                        cancelable: true,
+                                                                        view: window
+                                                                    });
+                                                                    el.dispatchEvent(clickEvt);
+                                                                    try {
+                                                                        var ts = new TouchEvent('touchstart', { bubbles: true });
+                                                                        var te = new TouchEvent('touchend', { bubbles: true });
+                                                                        el.dispatchEvent(ts);
+                                                                        el.dispatchEvent(te);
+                                                                    } catch (te) {}
                                                                 }
                                                             });
                                                         }, 1000);
@@ -1140,6 +1198,9 @@ private fun VideoContent(
                                         }
                                     }
                                     webViewClient = object : WebViewClient() {
+                                        @Volatile
+                                        private var hasCaptured = false
+
                                         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                                             val url = request?.url?.toString() ?: ""
                                             return if (url.startsWith("http://") || url.startsWith("https://")) {
@@ -1164,6 +1225,9 @@ private fun VideoContent(
                                             view: WebView?,
                                             request: WebResourceRequest?
                                         ): WebResourceResponse? {
+                                            if (hasCaptured || sniffedVideoUrl != null) {
+                                                return null
+                                            }
                                             val reqUrl = request?.url?.toString() ?: ""
                                             val lowerUrl = reqUrl.lowercase()
                                             
@@ -1175,9 +1239,10 @@ private fun VideoContent(
                                                 )
                                             }
                                             
-                                            if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".m4s") || lowerUrl.contains(".ts") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
+                                            if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
                                                 val realVideoUrl = extractRealVideoUrl(reqUrl)
                                                 if (isValidVideoUrl(realVideoUrl)) {
+                                                    hasCaptured = true
                                                     (view?.context as? Activity)?.runOnUiThread {
                                                         if (sniffedVideoUrl == null) {
                                                             android.util.Log.d("ReaderSniffing", "--> Bắt được link stream thật: $realVideoUrl")

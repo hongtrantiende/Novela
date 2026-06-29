@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.ui.theme.LegadoTheme
+import io.legado.app.utils.toastOnUi
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.card.GlassCard
@@ -253,7 +254,6 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
     var showAddRepoDialog by remember { mutableStateOf(false) }
     var repoToDelete by remember { mutableStateOf<RepositoryEntity?>(null) }
     var searchQuery by remember { mutableStateOf("") }
-    var extensionToDeleteFromGitHub by remember { mutableStateOf<ExtensionInfo?>(null) }
 
     val filteredExtensions = remember(available, searchQuery) {
         if (searchQuery.isBlank()) available else {
@@ -493,34 +493,82 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
 
                             Spacer(modifier = Modifier.width(12.dp))
 
-                            val isAdmin = io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com"
-                            if (isAdmin) {
-                                IconButton(
-                                    onClick = { extensionToDeleteFromGitHub = info }
+                            val isAdmin = remember {
+                                io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com"
+                            }
+                            
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { viewModel.installExtension(info) },
+                                    enabled = buttonEnabled,
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (installed != null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                    ),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier.height(36.dp)
                                 ) {
-                                    Icon(
-                                        Icons.Default.Delete,
-                                        contentDescription = "Xóa khỏi GitHub",
-                                        tint = MaterialTheme.colorScheme.error
+                                    AppText(
+                                        text = buttonText,
+                                        fontSize = 12.sp,
+                                        color = if (buttonEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(8.dp))
-                            }
-
-                            Button(
-                                onClick = { viewModel.installExtension(info) },
-                                enabled = buttonEnabled,
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (installed != null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                AppText(
-                                    text = buttonText,
-                                    fontSize = 12.sp,
-                                    color = if (buttonEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                )
+                                
+                                if (isAdmin) {
+                                    var showConfirmDialog by remember { mutableStateOf(false) }
+                                    
+                                    Button(
+                                        onClick = { showConfirmDialog = true },
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                        ),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                        modifier = Modifier.height(36.dp)
+                                    ) {
+                                        Text(
+                                            text = "Xóa",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    
+                                    if (showConfirmDialog) {
+                                        AlertDialog(
+                                            onDismissRequest = { showConfirmDialog = false },
+                                            title = { Text("Xác nhận xóa") },
+                                            text = { Text("Bạn có chắc chắn muốn xóa tiện ích này khỏi kho GitHub?") },
+                                            confirmButton = {
+                                                TextButton(
+                                                    onClick = {
+                                                        showConfirmDialog = false
+                                                        viewModel.deleteExtensionFromGithub(
+                                                            info = info,
+                                                            onSuccess = {
+                                                                context.toastOnUi("Xóa tiện ích thành công")
+                                                            },
+                                                            onFailure = { err ->
+                                                                context.toastOnUi("Lỗi: $err")
+                                                            }
+                                                        )
+                                                    }
+                                                ) {
+                                                    Text("Xóa", color = MaterialTheme.colorScheme.error)
+                                                }
+                                            },
+                                            dismissButton = {
+                                                TextButton(onClick = { showConfirmDialog = false }) {
+                                                    Text("Hủy")
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -591,36 +639,6 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
             },
             dismissText = "Hủy",
             onDismiss = { repoToDelete = null }
-        )
-    }
-
-    extensionToDeleteFromGitHub?.let { info ->
-        AlertDialog(
-            onDismissRequest = { extensionToDeleteFromGitHub = null },
-            title = { Text("Xóa tiện ích khỏi GitHub?") },
-            text = { Text("Bạn có chắc chắn muốn xóa tiện ích \"${info.name}\" khỏi kho lưu trữ GitHub không? Hành động này không thể hoàn tác.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val nameToDelete = info.name
-                        extensionToDeleteFromGitHub = null
-                        viewModel.deleteExtensionFromGitHub(nameToDelete) { result ->
-                            if (result.isSuccess) {
-                                Toast.makeText(context, "Đã xóa thành công tiện ích $nameToDelete khỏi GitHub", Toast.LENGTH_LONG).show()
-                            } else {
-                                Toast.makeText(context, "Lỗi khi xóa: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-                            }
-                        }
-                    }
-                ) {
-                    Text("Xác nhận xóa", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { extensionToDeleteFromGitHub = null }) {
-                    Text("Hủy")
-                }
-            }
         )
     }
 }

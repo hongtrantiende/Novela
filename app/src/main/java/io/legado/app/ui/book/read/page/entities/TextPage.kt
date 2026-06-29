@@ -373,9 +373,10 @@ data class TextPage(
         } else {
             0
         }
-        renderHeight = ceil(lines.last().lineBottom).toInt() + underlineExtraHeight
+        val lastLineBottom = lines.lastOrNull()?.lineBottom ?: 0f
+        renderHeight = ceil(lastLineBottom).toInt() + underlineExtraHeight
         if (leftLineSize > 0 && leftLineSize != lines.size) {
-            val leftHeight = ceil(lines[leftLineSize - 1].lineBottom).toInt() + underlineExtraHeight
+            val leftHeight = ceil(lines.getOrNull(leftLineSize - 1)?.lineBottom ?: 0f).toInt() + underlineExtraHeight
             renderHeight = max(renderHeight, leftHeight)
         }
     }
