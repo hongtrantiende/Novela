@@ -110,6 +110,65 @@ class KtorServer(private val port: Int) {
                         if (tempFile.exists()) tempFile.delete()
                     }
                 }
+                post("/uploadExtension") {
+                    WebService.serve()
+                    val multipart = call.receiveMultipart()
+                    var fileName: String? = null
+                    val tempFile = File(appCtx.cacheDir, "ext_upload_${System.currentTimeMillis()}.zip")
+                    try {
+                        multipart.forEachPart { part ->
+                            when (part) {
+                                is PartData.FormItem -> {
+                                    if (part.name == "fileName") fileName = part.value
+                                }
+                                is PartData.FileItem -> {
+                                    val channel = part.provider()
+                                    tempFile.outputStream().use { output ->
+                                        val buffer = ByteArray(8192)
+                                        while (true) {
+                                            val bytesRead = channel.readAvailable(buffer)
+                                            if (bytesRead == -1) break
+                                            output.write(buffer, 0, bytesRead)
+                                        }
+                                    }
+                                    if (fileName == null) {
+                                        fileName = part.originalFileName
+                                    }
+                                }
+                                else -> {}
+                            }
+                            part.dispose()
+                        }
+                        if (tempFile.exists()) {
+                            val returnData = withContext(Dispatchers.IO) {
+                                kotlin.runCatching {
+                                    val extensionLoader: io.legado.app.vbookextension.loader.ExtensionLoader =
+                                        org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+                                    
+                                    val zipBytes = tempFile.readBytes()
+                                    val loaded = extensionLoader.installExtensionFromZip(zipBytes)
+                                    if (loaded != null) {
+                                        extensionLoader.clearCache(loaded.id)
+                                        val extensionRunner: io.legado.app.vbookextension.runtime.VBookJsExtensionRunner =
+                                            org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+                                        extensionRunner.clearCache(loaded.id)
+                                        ReturnData().setData(true)
+                                    } else {
+                                        ReturnData().setErrorMsg("Install extension from zip failed")
+                                    }
+                                }.getOrElse {
+                                    LogUtils.e(TAG, it.stackTraceStr)
+                                    ReturnData().setErrorMsg(it.localizedMessage ?: "Upload extension error")
+                                }
+                            }
+                            respondReturnData(returnData)
+                        } else {
+                            call.respond(HttpStatusCode.BadRequest, "Missing file data")
+                        }
+                    } finally {
+                        if (tempFile.exists()) tempFile.delete()
+                    }
+                }
                 post("/saveReadConfig") { handlePost { BookController.saveWebReadConfig(it) } }
                 post("/saveRssSource") { handlePost { RssSourceController.saveSource(it) } }
                 post("/saveRssSources") { handlePost { RssSourceController.saveSources(it) } }

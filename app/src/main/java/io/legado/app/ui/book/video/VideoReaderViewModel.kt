@@ -210,7 +210,8 @@ class VideoReaderViewModel(
                 
                 val realUrl = if (serverUrl.trim().startsWith("{")) {
                     try {
-                        org.json.JSONObject(serverUrl).optString("url", org.json.JSONObject(serverUrl).optString("link", serverUrl))
+                        val json = org.json.JSONObject(serverUrl)
+                        json.optString("url", json.optString("link", json.optString("data", serverUrl)))
                     } catch (e: Exception) {
                         serverUrl
                     }

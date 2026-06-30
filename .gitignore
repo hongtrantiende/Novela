@@ -39,3 +39,8 @@ README_RELEASES.md
 /docs/
 /viet-sources-web/
 package.json
+
+# AI Agent scratch & local cookies
+.agents/
+cookies.txt
+

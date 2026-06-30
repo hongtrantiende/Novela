@@ -644,6 +644,27 @@ private val mockDevToolsDetectorJS = """
     })();
 """.trimIndent()
 
+private val mockObjectUrlJS = """
+    (function() {
+        if (window.__object_url_overridden) return;
+        window.__object_url_overridden = true;
+        var originalCreate = URL.createObjectURL;
+        URL.createObjectURL = function(blob) {
+            var url = originalCreate.apply(this, arguments);
+            if (blob) {
+                blob.text().then(function(text) {
+                    if (text && text.indexOf('#EXTM3U') === 0) {
+                        if (window.JSInterface) {
+                            window.JSInterface.onPlaylistDecrypted(text);
+                        }
+                    }
+                }).catch(function(e) {});
+            }
+            return url;
+        };
+    })();
+""".trimIndent()
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1144,10 +1165,21 @@ private fun VideoContent(
                                         cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
                                     }
                                     clearCache(true)
+                                    addJavascriptInterface(SniffingJSInterface { text ->
+                                        (context as? Activity)?.runOnUiThread {
+                                            if (sniffedVideoUrl == null) {
+                                                val base64 = android.util.Base64.encodeToString(text.toByteArray(Charsets.UTF_8), android.util.Base64.NO_WRAP)
+                                                val dataUri = "data:application/vnd.apple.mpegurl;base64,$base64#manifest.m3u8"
+                                                android.util.Log.d("ReaderSniffing", "--> Bắt được playlist giải mã qua JSInterface, size: ${text.length}")
+                                                sniffedVideoUrl = dataUri
+                                            }
+                                        }
+                                    }, "JSInterface")
                                     webChromeClient = object : WebChromeClient() {
                                         override fun onProgressChanged(view: WebView?, newProgress: Int) {
                                             super.onProgressChanged(view, newProgress)
                                             if (newProgress > 40) {
+                                                view?.evaluateJavascript(mockObjectUrlJS, null)
                                                 view?.evaluateJavascript("""
                                                     (function() {
                                                         if (window.__sniff_injected) return;
@@ -1211,6 +1243,7 @@ private fun VideoContent(
                                         }
                                         override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                                             super.onPageStarted(view, url, favicon)
+                                            view?.evaluateJavascript(mockObjectUrlJS, null)
                                             view?.evaluateJavascript("""
                                                 (function() {
                                                     var style = document.createElement('style');
@@ -1225,11 +1258,36 @@ private fun VideoContent(
                                             view: WebView?,
                                             request: WebResourceRequest?
                                         ): WebResourceResponse? {
+                                            val reqUrl = request?.url?.toString() ?: ""
+                                            val lowerUrl = reqUrl.lowercase()
+
+                                            if (lowerUrl.contains("ssplay.net") && (request?.isForMainFrame == true || lowerUrl.contains("/v/"))) {
+                                                try {
+                                                    val conn = java.net.URL(reqUrl).openConnection() as java.net.HttpURLConnection
+                                                    conn.requestMethod = "GET"
+                                                    conn.setRequestProperty("User-Agent", chromeUA)
+                                                    conn.connectTimeout = 8000
+                                                    conn.readTimeout = 8000
+                                                    val code = conn.responseCode
+                                                    if (code in 200..299) {
+                                                        var bodyString = conn.inputStream.bufferedReader().use { it.readText() }
+                                                        bodyString = bodyString.replace("top.location==self.location", "false")
+                                                        bodyString = bodyString.replace("top.location == self.location", "false")
+                                                        android.util.Log.d("ReaderSniffing", "--> Đã gỡ bỏ chặn anti-frame của ssplay.net")
+                                                        return WebResourceResponse(
+                                                            "text/html",
+                                                            "UTF-8",
+                                                            java.io.ByteArrayInputStream(bodyString.toByteArray(Charsets.UTF_8))
+                                                        )
+                                                    }
+                                                } catch (e: Exception) {
+                                                    android.util.Log.e("ReaderSniffing", "Error bypassing anti-frame on ssplay.net: $reqUrl", e)
+                                                }
+                                            }
+
                                             if (hasCaptured || sniffedVideoUrl != null) {
                                                 return null
                                             }
-                                            val reqUrl = request?.url?.toString() ?: ""
-                                            val lowerUrl = reqUrl.lowercase()
                                             
                                             if (lowerUrl.contains("devtools-detector") || lowerUrl.contains("devtools_detector")) {
                                                 return WebResourceResponse(
@@ -1238,14 +1296,48 @@ private fun VideoContent(
                                                     java.io.ByteArrayInputStream(mockDevToolsDetectorJS.toByteArray(Charsets.UTF_8))
                                                 )
                                             }
+
+                                            if ((lowerUrl.contains("jwplayer") && lowerUrl.contains(".js")) || lowerUrl.contains("core.bundle.js") || lowerUrl.contains("lite.bundle.js") || lowerUrl.contains("player.js")) {
+                                                try {
+                                                    val conn = java.net.URL(reqUrl).openConnection() as java.net.HttpURLConnection
+                                                    conn.requestMethod = "GET"
+                                                    conn.setRequestProperty("User-Agent", chromeUA)
+                                                    request?.requestHeaders?.forEach { (k, v) ->
+                                                        conn.setRequestProperty(k, v)
+                                                    }
+                                                    conn.connectTimeout = 8000
+                                                    conn.readTimeout = 8000
+                                                    val code = conn.responseCode
+                                                    if (code in 200..299) {
+                                                        val bodyString = conn.inputStream.bufferedReader().use { it.readText() }
+                                                        val modifiedJs = mockObjectUrlJS + "\n" + mockDevToolsDetectorJS + "\n" + bodyString
+                                                        android.util.Log.d("ReaderSniffing", "--> Đã tiêm JS giải mã vào file: $reqUrl")
+                                                        return WebResourceResponse(
+                                                            "application/javascript",
+                                                            "UTF-8",
+                                                            java.io.ByteArrayInputStream(modifiedJs.toByteArray(Charsets.UTF_8))
+                                                        )
+                                                    }
+                                                } catch (e: Exception) {
+                                                    android.util.Log.e("ReaderSniffing", "Error intercepting JS script via HttpURLConnection: $reqUrl", e)
+                                                }
+                                            }
                                             
-                                            if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mp4") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
+                                            if (lowerUrl.contains(".m3u8") || lowerUrl.contains(".mpd") || lowerUrl.contains("/hls/") || lowerUrl.contains("/dash/")) {
                                                 val realVideoUrl = extractRealVideoUrl(reqUrl)
                                                 if (isValidVideoUrl(realVideoUrl)) {
                                                     hasCaptured = true
                                                     (view?.context as? Activity)?.runOnUiThread {
-                                                        if (sniffedVideoUrl == null) {
-                                                            android.util.Log.d("ReaderSniffing", "--> Bắt được link stream thật: $realVideoUrl")
+                                                        android.util.Log.d("ReaderSniffing", "--> Bắt được link stream thật (M3U8/DASH): $realVideoUrl")
+                                                        sniffedVideoUrl = realVideoUrl
+                                                    }
+                                                }
+                                            } else if (lowerUrl.contains(".mp4") || lowerUrl.contains(".mkv") || lowerUrl.contains(".webm") || lowerUrl.contains("googlevideo.com")) {
+                                                val realVideoUrl = extractRealVideoUrl(reqUrl)
+                                                if (isValidVideoUrl(realVideoUrl)) {
+                                                    (view?.context as? Activity)?.runOnUiThread {
+                                                        if (sniffedVideoUrl == null || !sniffedVideoUrl!!.lowercase().contains(".m3u8")) {
+                                                            android.util.Log.d("ReaderSniffing", "--> Bắt được link stream dự phòng (MP4/WebM): $realVideoUrl")
                                                             sniffedVideoUrl = realVideoUrl
                                                         }
                                                     }
@@ -1254,7 +1346,8 @@ private fun VideoContent(
                                             
                                             if (request != null && !request.isForMainFrame) {
                                                 val isEmbed = isEmbedPlayerUrl(reqUrl)
-                                                if (isEmbed && resolvedVideoUrl != null && reqUrl != resolvedVideoUrl) {
+                                                val isMainAlreadyEmbed = isEmbedPlayerUrl(resolvedVideoUrl)
+                                                if (isEmbed && !isMainAlreadyEmbed && resolvedVideoUrl != null && reqUrl != resolvedVideoUrl) {
                                                     (view?.context as? Activity)?.runOnUiThread {
                                                         val loadedUrl = view.tag as? String
                                                         if (loadedUrl != reqUrl) {
@@ -2272,11 +2365,40 @@ private fun isValidVideoUrl(url: String): Boolean {
     if (lower.contains("ping.gif") || lower.contains("/ping") || lower.contains("analytics") || lower.contains("telemetry")) {
         return false
     }
+    
+    // Ads filters
+    val adKeywords = listOf(
+        "vast", "vpaid", "preroll", "pre-roll", "midroll", "mid-roll", "postroll", "post-roll",
+        "adserver", "ad-server", "adsystem", "ad-system", "advertising", "adsterra", "exoclick",
+        "propeller", "doubleclick", "googlesyndication", "popads", "popcash", "popunder",
+        "exosrv", "realsrv", "mgid", "taboola", "adnxs", "pubmatic", "ad-delivery", "ad_delivery",
+        "googleads", "analytics", "tracking", "beacon", "telemetry", "advert"
+    )
+    if (adKeywords.any { lower.contains(it) }) {
+        return false
+    }
+
+    // Special checks for "ad" with boundaries
+    if (lower.contains("/ad/") || lower.contains("/ads/") || 
+        lower.contains("_ad_") || lower.contains("-ad-") ||
+        lower.contains("?ad=") || lower.contains("&ad=") ||
+        lower.contains(".ad/") || lower.contains("ad.doubleclick") ||
+        lower.contains("ad.google") || lower.contains("ads.google")) {
+        return false
+    }
+
     val path = try { android.net.Uri.parse(url).path?.lowercase() ?: "" } catch(e: Exception) { "" }
-    val invalidExts = listOf(".gif", ".png", ".jpg", ".jpeg", ".webp", ".js", ".css", ".ico", ".woff", ".ttf")
+    val invalidExts = listOf(".gif", ".png", ".jpg", ".jpeg", ".webp", ".js", ".css", ".ico", ".woff", ".ttf", ".html", ".htm", ".php")
     if (invalidExts.any { path.endsWith(it) }) {
         return false
     }
     return true
+}
+
+class SniffingJSInterface(private val onPlaylistDecrypted: (String) -> Unit) {
+    @android.webkit.JavascriptInterface
+    fun onPlaylistDecrypted(text: String) {
+        onPlaylistDecrypted(text)
+    }
 }
 
