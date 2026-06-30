@@ -413,13 +413,14 @@ fun ReadBookRouteScreen(
         }
     }
 
-    // ── View layer + Compose UI ───────────────────────────────────────
+    val isPageLoading = state.curTextChapter == null || 
+            state.curTextChapter?.pages.isNullOrEmpty() ||
+            state.curTextChapter?.pages?.getOrNull(state.durPageIndex)?.text?.contains("Đang tải dữ liệu", ignoreCase = true) == true
 
-    // Loading overlay shows until contentLoadFinish() fires (sets isInitFinish=true).
-    // This is the definitive signal that chapter content is ready to display.
-    // Native ReadView stays INVISIBLE until then, preventing the parchment
-    // "Đang tải dữ liệu..." page from ever appearing.
-    val showLoadingOverlay = !state.isInitFinish
+    // Keep the dark loading overlay visible until the content is fully ready to display
+    // (i.e. pages are loaded and do not contain the placeholder "Đang tải dữ liệu...")
+    // and there are no ongoing messages/errors.
+    val showLoadingOverlay = !state.isInitFinish || isPageLoading || !state.msg.isNullOrBlank()
 
     Box(Modifier.fillMaxSize()) {
         key(controller) {
