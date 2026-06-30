@@ -1,2 +1,0 @@
-* Do giới hạn quyền truy cập bộ nhớ của Android, ứng dụng cần thiết lập **thư mục con thuộc thư mục chung** để thực hiện sao chép và tải sách xuống (ví dụ: `Documents/Books`, `Download/Books`).
-* Nếu không thiết lập thư mục này, bạn sẽ không thể sử dụng bình thường các tính năng liên quan đến sách cục bộ và đồng bộ sách WebDAV.
