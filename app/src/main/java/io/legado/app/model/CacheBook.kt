@@ -80,7 +80,7 @@ object CacheBook {
                     }
                     var emitted = false
                     taskMap.forEach { (_, model) ->
-                        if (model.hasLaunchableChapters()) {
+                        if (model.hasLaunchableChapters() && model.reserveLaunchSlot()) {
                             emit(model)
                             emitted = true
                         }
@@ -90,10 +90,14 @@ object CacheBook {
             }.onStart {
                 updateSummary()
             }.onEachParallel(maxDownloadConcurrency) {
-                val delayMs = BookDownloadConfig.getDelay(it.book.bookUrl)
-                if (delayMs > 0) delay(delayMs)
-                coroutineScope {
-                    it.download(this, context)
+                try {
+                    val delayMs = BookDownloadConfig.getDelay(it.book.bookUrl)
+                    if (delayMs > 0) delay(delayMs)
+                    coroutineScope {
+                        it.download(this, context)
+                    }
+                } finally {
+                    it.releaseLaunchSlot()
                 }
             }.onCompletion {
                 updateSummary()

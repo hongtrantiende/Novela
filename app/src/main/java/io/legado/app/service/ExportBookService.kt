@@ -359,8 +359,9 @@ class ExportBookService : BaseService(), KoinComponent {
 
         val scopeSet = scopeStr?.takeIf { it.isNotBlank() }?.let { parseScope(it) }
         val allChapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
-        val targetChapters = allChapters.filterIndexed { idx, _ ->
-            scopeSet == null || scopeSet.contains(idx)
+        val targetChapters = allChapters.filterIndexed { idx, chapter ->
+            (scopeSet == null || scopeSet.contains(idx)) &&
+                    (chapter.isVolume || BookHelp.hasContent(book, chapter))
         }
 
         val threads = if (AppConfig.parallelExportBook) {
@@ -444,8 +445,9 @@ class ExportBookService : BaseService(), KoinComponent {
 
         val scopeSet = scopeStr?.takeIf { it.isNotBlank() }?.let { parseScope(it) }
         val allChapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
-        val targetChapters = allChapters.filterIndexed { idx, _ ->
-            scopeSet == null || scopeSet.contains(idx)
+        val targetChapters = allChapters.filterIndexed { idx, chapter ->
+            (scopeSet == null || scopeSet.contains(idx)) &&
+                    (chapter.isVolume || BookHelp.hasContent(book, chapter))
         }
 
         val threads = if (AppConfig.parallelExportBook) {
@@ -570,7 +572,9 @@ class ExportBookService : BaseService(), KoinComponent {
             val allChapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
             allChapters.forEachIndexed { idx, chapter ->
                 if (scopeSet == null || scopeSet.contains(idx)) {
-                    emit(chapter)
+                    if (chapter.isVolume || BookHelp.hasContent(book, chapter)) {
+                        emit(chapter)
+                    }
                 }
             }
         }.mapAsync(threads) { chapter ->
@@ -841,7 +845,9 @@ class ExportBookService : BaseService(), KoinComponent {
         var parentSection: TOCReference? = null
         flow {
             appDb.bookChapterDao.getChapterList(book.bookUrl).forEach { chapter ->
-                emit(chapter)
+                if (chapter.isVolume || BookHelp.hasContent(book, chapter)) {
+                    emit(chapter)
+                }
             }
         }.mapAsyncIndexed(threads) { index, chapter ->
             val content = when (source) {
@@ -1030,7 +1036,9 @@ class ExportBookService : BaseService(), KoinComponent {
             var chapterList: MutableList<BookChapter> = ArrayList()
             appDb.bookChapterDao.getChapterList(book.bookUrl).forEachIndexed { index, chapter ->
                 if (scope.contains(index)) {
-                    chapterList.add(chapter)
+                    if (chapter.isVolume || BookHelp.hasContent(book, chapter)) {
+                        chapterList.add(chapter)
+                    }
                 }
                 if (scope.size == chapterList.size) {
                     return@forEachIndexed

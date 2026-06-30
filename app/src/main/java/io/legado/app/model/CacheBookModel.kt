@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.CoroutineContext
 
 class CacheBookModel(
@@ -29,6 +30,24 @@ class CacheBookModel(
     @Volatile var book: Book,
     private val host: Host,
 ) {
+
+    private val isDownloadingBatch = AtomicBoolean(false)
+
+    @Synchronized
+    fun reserveLaunchSlot(): Boolean {
+        if (isDownloadingBatch.get()) {
+            return false
+        }
+        if (!hasLaunchableChapters()) {
+            return false
+        }
+        isDownloadingBatch.set(true)
+        return true
+    }
+
+    fun releaseLaunchSlot() {
+        isDownloadingBatch.set(false)
+    }
 
     private companion object {
         /** Download timeout: 2 minutes */
@@ -161,7 +180,7 @@ class CacheBookModel(
      */
     @Synchronized
     fun hasLaunchableChapters(): Boolean {
-        return !isPaused && (queue.waitingCount() > 0 || isLoading)
+        return !isPaused && (queue.waitingCount() > 0 || isLoading) && !isDownloadingBatch.get()
     }
 
     @Synchronized
@@ -187,6 +206,7 @@ class CacheBookModel(
         isPaused = true
         isLoading = false
         waitingRetry = false
+        isDownloadingBatch.set(false)
         chapterTasks.values.toList().forEach { task ->
             tasks.delete(task)
             task.cancel()
@@ -200,6 +220,7 @@ class CacheBookModel(
     fun resume(): Boolean {
         if (!isPaused && pausedChapterSet.isEmpty()) return false
         isPaused = false
+        isDownloadingBatch.set(false)
         if (pausedChapterSet.isNotEmpty()) {
             queue.enqueue(ChapterSelection.Indices(pausedChapterSet.toSet()))
             pausedChapterSet.clear()
@@ -221,6 +242,7 @@ class CacheBookModel(
         isStopped = true
         isPaused = false
         isLoading = false
+        isDownloadingBatch.set(false)
         onDownloadSet.clear()
         notifyDownloadSetChanged()
         host.onTaskQueuesChanged(book.bookUrl)
@@ -404,56 +426,55 @@ class CacheBookModel(
     }
 
     /**
-     * 从待下载列表内取第一条下载
+     * Từ danh sách chờ tải, lấy và tải tuần tự một đợt tối đa [threadLimit] chương.
      */
-    fun download(scope: CoroutineScope, context: CoroutineContext) {
-        val candidate = nextDownloadCandidate() ?: return
-        val chapterIndex = candidate.chapterIndex
-        val chapter = repository.getChapter(book.bookUrl, chapterIndex) ?: run {
-            onSkipped(chapterIndex)
-            return
-        }
-        if (chapter.isVolume) {
-            host.emitChapterCached(chapter)
-            onSkipped(chapterIndex)
-            return
-        }
-        if (repository.hasImageContent(book, chapter)) {
-            onSkipped(chapterIndex)
-            return
-        }
+    suspend fun download(scope: CoroutineScope, context: CoroutineContext) {
+        val threadLimit = BookDownloadConfig.getThreadCount(book.bookUrl)
+        for (i in 1..threadLimit) {
+            val candidate = nextDownloadCandidate() ?: break
+            val chapterIndex = candidate.chapterIndex
+            val chapter = repository.getChapter(book.bookUrl, chapterIndex) ?: run {
+                onSkipped(chapterIndex)
+                continue
+            }
+            if (chapter.isVolume) {
+                host.emitChapterCached(chapter)
+                onSkipped(chapterIndex)
+                continue
+            }
+            if (repository.hasImageContent(book, chapter)) {
+                onSkipped(chapterIndex)
+                continue
+            }
 
-        if (repository.hasContent(book, chapter)) {
-            val task = repository.saveCachedImagesTask(
-                scope = scope,
-                context = context,
-                bookSource = bookSource,
-                book = book,
-                chapter = chapter,
-                start = CoroutineStart.LAZY,
-            )
+            val task = if (repository.hasContent(book, chapter)) {
+                repository.saveCachedImagesTask(
+                    scope = scope,
+                    context = context,
+                    bookSource = bookSource,
+                    book = book,
+                    chapter = chapter,
+                    start = CoroutineStart.LAZY,
+                )
+            } else {
+                repository.cacheContentTask(
+                    scope = scope,
+                    bookSource = bookSource,
+                    book = book,
+                    chapter = chapter,
+                    context = context,
+                    start = CoroutineStart.LAZY,
+                    executeContext = context,
+                )
+            }
+
             if (!attachTaskIfActive(task, chapter, chapterIndex)) {
                 task.cancel()
-                return
+                continue
             }
             task.start()
-            return
+            task.join()
         }
-
-        val task = repository.cacheContentTask(
-            scope = scope,
-            bookSource = bookSource,
-            book = book,
-            chapter = chapter,
-            context = context,
-            start = CoroutineStart.LAZY,
-            executeContext = context,
-        )
-        if (!attachTaskIfActive(task, chapter, chapterIndex)) {
-            task.cancel()
-            return
-        }
-        task.start()
     }
 
     @Synchronized

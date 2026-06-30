@@ -84,15 +84,6 @@ class TTS {
                 val isViAvailable = tts.isLanguageAvailable(viLocale)
                 if (isViAvailable != TextToSpeech.LANG_MISSING_DATA && isViAvailable != TextToSpeech.LANG_NOT_SUPPORTED) {
                     tts.language = viLocale
-                    
-                    val voices = tts.voices
-                    if (!voices.isNullOrEmpty()) {
-                        val targetVoice = voices.find { it.name.equals("vi-vn-x-vif-network", ignoreCase = true) }
-                            ?: voices.find { it.name.equals("vi-vn-x-vif-local", ignoreCase = true) }
-                        if (targetVoice != null) {
-                            tts.voice = targetVoice
-                        }
-                    }
                 }
             } else {
                 tts.language = java.util.Locale.getDefault()

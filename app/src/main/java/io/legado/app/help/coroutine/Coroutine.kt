@@ -69,6 +69,10 @@ class Coroutine<T>(
     val isCompleted: Boolean
         get() = job.isCompleted
 
+    suspend fun join() {
+        job.join()
+    }
+
     init {
         this.job = executeInternal(context, block)
     }

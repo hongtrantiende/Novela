@@ -52,16 +52,23 @@ class CacheDownloadRepository {
         executeContext: CoroutineContext = context,
         semaphore: Semaphore? = null,
     ): Coroutine<String> {
-        return WebBook.getContent(
+        return Coroutine.async(
             scope = scope,
-            bookSource = bookSource,
-            book = book,
-            bookChapter = chapter,
             context = context,
             start = start,
             executeContext = executeContext,
-            semaphore = semaphore,
-        )
+        ) {
+            if (semaphore != null) {
+                semaphore.acquire()
+                try {
+                    downloadContentAwait(bookSource, book, chapter)
+                } finally {
+                    semaphore.release()
+                }
+            } else {
+                downloadContentAwait(bookSource, book, chapter)
+            }
+        }
     }
 
     fun cacheContentTask(
@@ -79,11 +86,7 @@ class CacheDownloadRepository {
             start = start,
             executeContext = executeContext,
         ) {
-            val content = WebBook.getContentAwait(bookSource, book, chapter)
-            if (book.isImage && content.isNotBlank()) {
-                BookHelp.saveImages(bookSource, book, chapter, content, 1)
-            }
-            content
+            downloadContentAwait(bookSource, book, chapter)
         }
     }
 
@@ -92,10 +95,21 @@ class CacheDownloadRepository {
         book: Book,
         chapter: BookChapter,
     ): String {
-        val content = WebBook.getContentAwait(bookSource, book, chapter)
-        if (book.isImage && content.isNotBlank()) {
-            BookHelp.saveImages(bookSource, book, chapter, content, 1)
+        var lastError: Throwable? = null
+        for (retry in 1..3) {
+            try {
+                val content = WebBook.getContentAwait(bookSource, book, chapter)
+                if (book.isImage && content.isNotBlank()) {
+                    BookHelp.saveImages(bookSource, book, chapter, content, 1)
+                }
+                return content
+            } catch (e: Throwable) {
+                lastError = e
+                if (retry < 3) {
+                    kotlinx.coroutines.delay(1500)
+                }
+            }
         }
-        return content
+        throw lastError ?: Exception("Lỗi tải chương")
     }
 }

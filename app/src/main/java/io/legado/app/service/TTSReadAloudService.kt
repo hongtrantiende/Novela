@@ -74,18 +74,6 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                 val isViAvailable = tts.isLanguageAvailable(viLocale)
                 if (isViAvailable != TextToSpeech.LANG_MISSING_DATA && isViAvailable != TextToSpeech.LANG_NOT_SUPPORTED) {
                     tts.language = viLocale
-                    
-                    val voices = tts.voices
-                    if (!voices.isNullOrEmpty()) {
-                        val targetVoice = voices.find { it.name.equals("vi-vn-x-vif-network", ignoreCase = true) }
-                            ?: voices.find { it.name.equals("vi-vn-x-vif-local", ignoreCase = true) }
-                        if (targetVoice != null) {
-                            tts.voice = targetVoice
-                            LogUtils.d(TAG, "Successfully set TTS voice to ${targetVoice.name}")
-                        } else {
-                            LogUtils.d(TAG, "TTS voice vi-vn-x-vif-network/local not found. Available voices: ${voices.map { it.name }}")
-                        }
-                    }
                 }
             } else {
                 tts.language = java.util.Locale.getDefault()

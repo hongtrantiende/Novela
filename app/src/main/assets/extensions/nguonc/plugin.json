@@ -1,0 +1,17 @@
+{
+  "metadata": {
+    "name": "NguonC Phim",
+    "author": "Thiên Thư Các",
+    "version": 1,
+    "source": "https://phim.nguonc.com",
+    "description": "Nguồn xem phim từ phim.nguonc.com",
+    "type": "video",
+    "locale": "vi_VN"
+  },
+  "script": {
+    "search": "search.js",
+    "detail": "detail.js",
+    "toc": "toc.js",
+    "chap": "chap.js"
+  }
+}
