@@ -117,7 +117,7 @@ class AudioPlayService : BaseService(),
     private var upPlayProgressJob: Job? = null
     private var playSpeed: Float = 1f
     private var cover: Bitmap =
-        BitmapFactory.decodeResource(appCtx.resources, R.drawable.ic_launcher)!!
+        BitmapFactory.decodeResource(appCtx.resources, R.drawable.image_legado)!!
 
     override fun onCreate() {
         super.onCreate()

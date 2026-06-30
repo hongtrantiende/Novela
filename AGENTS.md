@@ -1,166 +1,149 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Hướng dẫn tổng hợp cho AI agents (Antigravity, Codex, Claude) khi làm việc với repository Legado (Novela fork).
 
-## Coding Guidelines
+---
 
-**Tradeoff:** These guidelines bias toward caution over speed. For trivial tasks, use judgment.
+## 1. AGENT WORKFLOW & COMMUNICATION
 
-### Think Before Coding
+### Quy trình làm việc chuẩn
+- **Phase 0 - Tiếp nhận**: Đọc yêu cầu 2 lần. Xác định rõ Input / Output / Constraints / Unknowns. Nếu không rõ thì hỏi.
+- **Phase 1 - Lập kế hoạch**: Chia nhỏ task, ưu tiên blocking dependencies, trình plan cho user duyệt.
+- **Phase 2 - Thực thi**: Làm tuần tự, đánh dấu progress. Readable > Clever, xử lý edge cases.
+- **Phase 3 - Debug**: Framework 5 câu hỏi: WHAT → WHERE → WHEN → WHY → FIX (sửa gốc rễ, không patch triệu chứng).
+- **Phase 4 - Xác minh**: Build/compile, test edge cases, báo cáo rõ ràng.
 
-- State assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them — don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+### Giao tiếp
+- Ngắn gọn khi yêu cầu rõ. Gom câu hỏi lại hỏi 1 lần nếu chưa rõ.
+- Dừng ngay nếu cách tiếp cận sai, đề xuất phương án thay thế kèm trade-off.
+- Báo cáo: Đã làm gì / Files thay đổi / Cách test / Lưu ý.
 
-### Simplicity First
+---
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+## 2. CODING STANDARDS
 
-### Surgical Changes
+- **Readable > Clever**: Code viết cho người đọc tiếp theo.
+- **Clean Naming**: Boolean→`is/has/can/should`, Function→verb, Array→plural, Constant→`UPPER_SNAKE_CASE`.
+- **SRP**: Mỗi function/class làm đúng 1 việc.
+- **Guard Clauses**: Kiểm tra lỗi và return sớm ở đầu hàm.
+- **Constants**: Dùng hằng số thay magic numbers/strings.
+- **Surgical Changes**: Không sửa code lân cận không liên quan. Match style hiện có. Xóa import/var do edit của mình gây unused, không xóa dead code có sẵn.
 
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it — don't delete it.
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
+---
 
-### Goal-Driven Execution
+## 3. BUILD / TEST / DEPLOY (Windows PowerShell)
 
-Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
+> **QUAN TRỌNG**: Hệ điều hành Windows, Shell PowerShell. Luôn dùng `.\gradlew.bat` thay cho `./gradlew`.
 
-## Build / Test / Run
-
-```bash
-# Quick compile check (Kotlin only, no dex/package — fastest for verifying code compiles)
+### Build Commands
+```powershell
+# Quick compile check (Kotlin only — nhanh nhất, chỉ kiểm tra code compile)
 .\gradlew.bat :app:compileAppDebugKotlin
 
-# Assemble all variants
-./gradlew assembleAppRelease
+# Build debug APK (tạo file APK để cài test)
+.\gradlew.bat assembleAppDebug
 
-# Assemble without R8 (for crash debugging — no minification/shrinking)
-./gradlew assembleAppNoR8
+# Build release APK (có R8 minify/shrink)
+.\gradlew.bat assembleAppRelease
 
-# Debug build
-./gradlew assembleAppDebug
+# Run unit tests
+.\gradlew.bat test
 
-# Run unit tests (JVM, local)
-./gradlew test
-
-# Run a single test class
-./gradlew test --tests "io.legado.app.model.cache.CacheDownloadQueueTest"
-
-# Run connected Android tests
-./gradlew connectedAndroidTest
+# Run single test class
+.\gradlew.bat test --tests "io.legado.app.model.cache.CacheDownloadQueueTest"
 
 # Lint
-./gradlew lint
-
-# Update Cronet (after changing CronetVersion in gradle.properties)
-./gradlew app:downloadCronet
+.\gradlew.bat lint
 ```
 
-The project uses JDK 21 for development (set in `build.gradle.kts` via `jvmToolchain`). CI uses JDK 17 for building.
+### APK Output Paths
+```
+# Debug APKs — Flavor "app", ABI splits:
+app/build/outputs/apk/app/debug/Novela-arm64-v8a-debug.apk      ← Dùng file này cho điện thoại
+app/build/outputs/apk/app/debug/Novela-armeabi-v7a-debug.apk
+app/build/outputs/apk/app/debug/Novela-universal-debug.apk
 
-Gradle properties: 8 GB heap, configuration cache disabled (`gradle.properties:31`), non-transitive R classes, precise resource shrinking enabled.
-
-## Architecture
-
-This is a Material Design 3 fork of [Legado](https://github.com/gedoor/legado). `app/src/main/java/io/legado/app/` uses **Clean Architecture** with three layers:
-
-| Layer | Package | Role |
-|---|---|---|
-| Data | `data/` | Room DB (`AppDatabase`, version 85, ~22 DAOs, ~25 entities), repository implementations |
-| Domain | `domain/` | Gateway interfaces, use cases (14), domain models — no framework dependencies |
-| UI | `ui/` | Jetpack Compose screens, Navigation 3 routes, ViewModels |
-
-Additional top-level packages:
-- **`help/`** — Infrastructure "glue": HTTP (OkHttp + Cronet), book content processing, backup/WebDAV, JS engine, config
-- **`model/`** — Runtime state coordinators (not entities): `ReadBook`, `AudioPlay`, `CacheBook`, `BookCover`, etc.
-- **`service/`** — Android foreground/background services (audio playback, TTS, download, web server)
-- **`web/`** — Embedded HTTP server (Ktor) for remote bookshelf/source editing
-- **`lib/`** — Third-party library wrappers (MOBI parser, WebDAV client, legacy View theme system, cronet)
-- **`base/`** — Abstract Activity/Fragment/ViewModel base classes
-- **`utils/`** — Extension functions and utility classes (~70 files)
-
-Modules: `:app`, `:modules:book` (epub/TXT parsing, namespace `me.ag2s`), `:modules:rhino` (Rhino JS wrapper, namespace `com.script`). There is also a Vue 3 web frontend in `modules/web/` (pnpm, separate from the Android build).
-
-## Dependency Injection (Koin)
-
-Two modules loaded in `App.onCreate()`:
-
-```kotlin
-startKoin {
-    modules(appDatabaseModule, appModule)
-}
+# Release APKs:
+app/build/outputs/apk/app/release/Novela-arm64-v8a-release.apk
 ```
 
-- **`di/appDatabaseModule.kt`** — Singleton `AppDatabase` + factory bindings for all 22 DAOs
-- **`di/appModule.kt`** — Singletons (repositories, use cases, gateways, Coil `ImageLoader`), `viewModelOf` / `viewModel { }` for all ViewModels, some parameterized definitions
+### Deploy to Device (ADB)
+```powershell
+# Kiểm tra thiết bị kết nối
+& "C:\Users\Admin\AppData\Local\Android\Sdk\platform-tools\adb.exe" devices -l
 
-Gateways are bound to their repository implementations explicitly (e.g., `single<LocalBookGateway> { LocalBookRepository(get()) }`), not through `singleOf`.
-
-## Navigation
-
-Uses **Jetpack Navigation 3** (`androidx.navigation3`) with type-safe `@Serializable` sealed interfaces for route keys:
-
-```kotlin
-@Serializable
-private sealed interface MainRoute : NavKey
-@Serializable
-private data object MainRouteHome : MainRoute
-@Serializable
-private data class MainRouteCache(val groupId: Long) : MainRoute
+# Cài debug APK vào điện thoại (Redmi Note 13 Pro+, device ID: PNAUU475TOYPLV7H)
+& "C:\Users\Admin\AppData\Local\Android\Sdk\platform-tools\adb.exe" -s PNAUU475TOYPLV7H install -r -d "app/build/outputs/apk/app/debug/Novela-arm64-v8a-debug.apk"
 ```
 
-`MainActivity` holds a single `NavDisplay` with `entryProvider { ... }` defining all composable entries. `Launcher0` through `LauncherW` extend `MainActivity` to provide multiple launcher icon alias entries. Separate activities handle the reader (`ReadBookActivity` — still View-based), book info, source management, replace rules, file manager, QR scanner, etc.
+### Gradle Tips
+- Lọc output dài: thêm `2>&1 | Select-Object -Last 15` cuối lệnh.
+- Configuration cache đã bật sẵn → build lần 2+ nhanh hơn nhiều.
+- Chỉ chạy compile check khi sửa code nhỏ, assembleAppDebug khi cần test trên máy.
 
-## Theme System
+### Environment
+- **JDK**: 21 (local dev), 17 (CI)
+- **SDK**: Compile 37, Target 37, Min 26
+- **Gradle Heap**: 8 GB
+- **APK Splits**: `armeabi-v7a`, `arm64-v8a`, universal
+- **App Name**: Novela (APK filename), nhưng `applicationId = "io.legato.kazusa"`, `namespace = "io.legado.app"`
+- **Debug suffix**: `.debug` (applicationId = `io.legato.kazusa.debug`)
 
-A multi-engine theming system in `ui/theme/`:
+### Pinned Dependencies — KHÔNG CẬP NHẬT
+- **Jsoup**: Giữ ≤ `1.16.2` (phiên bản mới phá vỡ `AnalyzeByJSoup` và JsoupXpath)
+- **Hutool**: Giữ ≤ `5.8.22` (pinned trong `libs.versions.toml`)
 
-1. **Material 3 Expressive** (default): Uses `MaterialExpressiveTheme` with `MotionScheme.expressive()`
-2. **Miuix** (alternative): Uses `top.yukonga.miuix.kmp` theming engine
+---
 
-14 theme modes (`AppThemeMode` enum) — Dynamic (Monet), 12 named presets, Custom (MaterialKolor seed-color generation), Transparent. `CustomColorScheme` wraps `com.materialkolor` with configurable `PaletteStyle` (TonalSpot, Neutral, Vibrant, Expressive, Rainbow, etc.) and `ColorSpec` (2021 vs 2025).
+## 4. ARCHITECTURE & DI
 
-Legacy View-based theme still exists in `lib/theme/` (used by non-migrated screens like `ReadBookActivity`).
+### Clean Architecture
+```
+app/src/main/java/io/legado/app/
+├── data/        # Room DB (v85, ~22 DAOs, ~25 entities), repository implementations
+├── domain/      # Gateway interfaces, use cases (14), domain models (no framework deps)
+├── ui/          # Compose screens, Navigation 3 routes, ViewModels
+├── help/        # HTTP (OkHttp+Cronet), book processing, backup/WebDAV, JS engine, config
+├── model/       # Runtime state: ReadBook, AudioPlay, CacheBook, BookCover
+├── service/     # Foreground/background services
+├── web/         # Embedded HTTP server (Ktor)
+├── lib/         # Third-party wrappers (MOBI, WebDAV, cronet)
+├── base/        # Abstract Activity/Fragment/ViewModel base classes
+└── utils/       # Extension functions (~70 files)
+```
 
-## Hybrid Compose + View
+### Modules
+- `:app` — Main Android app
+- `:modules:book` — EPUB/TXT parsing (namespace `me.ag2s`)
+- `:modules:rhino` — Rhino JS wrapper (namespace `com.script`)
+- `modules/web/` — Vue 3 + TypeScript + Vite web frontend (pnpm, tách biệt Android build)
 
-The app is mid-migration from Views to Compose. View-based screens (reader, book info, source management) coexist with Compose screens (main tabs, settings, search, RSS, cache management). XML layouts, `viewBinding`, and traditional Activities are still heavily used. The `viewBinding` build feature is enabled but Compose screens are the target.
+### Dependency Injection (Koin)
+- 2 modules: `appDatabaseModule` (DB + 22 DAOs) + `appModule` (repos, use cases, ViewModels)
+- Register ViewModel: `viewModelOf(::XxxViewModel)` hoặc `viewModel { XxxViewModel(...) }`
+- Bind gateway → repo: `single<LocalBookGateway> { LocalBookRepository(get()) }`
 
-## Jetpack Compose Requirements (new screens MUST follow)
+### Navigation
+- **Jetpack Navigation 3** (`androidx.navigation3`) với `@Serializable` sealed interfaces
+- `MainActivity` → `NavDisplay` + `entryProvider { ... }` chứa tất cả route
+- Routes: `MainRoute` sealed interface trong `MainNavKey.kt`
+- **Screens KHÔNG truy cập navigator trực tiếp** — nhận `onBack`, `onNavigateToXxx` lambdas
 
-All **new** UI screens must be implemented in Jetpack Compose following the patterns below. Do **not
-** create new View-based Activities/Fragments/XML layouts. Existing View-based screens can remain
-until migrated.
+---
+
+## 5. JETPACK COMPOSE REQUIREMENTS
 
 ### MVI/UDF Architecture
-
-Every Compose screen follows a strict **Model-View-Intent** pattern with three artifacts defined in
-a `*Contract.kt` file:
-
 ```
 ui/{feature}/
-├── XxxContract.kt      // UiState, Intent, Effect (and optionally Sheet/Dialog)
+├── XxxContract.kt      // UiState, Intent, Effect (Sheet/Dialog)
 ├── XxxViewModel.kt     // ViewModel
-├── XxxScreen.kt        // Screen composable
-└── XxxRouteScreen.kt   // (optional) outer wrapper for activity results / lifecycle
+├── XxxScreen.kt        // Stateless screen composable
+└── XxxRouteScreen.kt   // Outer wrapper (optional)
 ```
 
-**Contract definitions:**
-
+### Contract
 ```kotlin
-// @Stable data class — all screen state in one place
 @Stable
 data class XxxUiState(
     val loading: Boolean = false,
@@ -169,221 +152,80 @@ data class XxxUiState(
     val activeDialog: XxxDialog? = null,
 )
 
-// sealed interface — every user action is an Intent
-sealed interface XxxIntent {
-    data class LoadData(val id: Long) : XxxIntent
-    data object Refresh : XxxIntent
-}
-
-// sealed interface — one-shot side effects (navigation, toast, etc.)
-sealed interface XxxEffect {
-    data class ShowToast(val message: String) : XxxEffect
-    data class NavigateTo(val route: MainRoute) : XxxEffect
-}
-
-// (optional) sealed interface for multi-sheet/dialog scenarios
-sealed interface XxxSheet { data object Filter : XxxSheet }
-sealed interface XxxDialog { data class Confirm(val msg: String) : XxxDialog }
+sealed interface XxxIntent { ... }
+sealed interface XxxEffect { ... }
 ```
-
-**Naming rules:**
-
-- State: `{Feature}UiState` — `@Stable data class`
-- Intent: `{Feature}Intent` — `sealed interface` with `data class` / `data object` members
-- Effect: `{Feature}Effect` — `sealed interface`
-- Sheet/Dialog: `{Feature}Sheet`, `{Feature}Dialog` — `sealed interfaces` stored in UiState
 
 ### ViewModel
-
-```kotlin
-class XxxViewModel(/* injected dependencies */) : ViewModel() {
-
-    private val _uiState = MutableStateFlow(XxxUiState())
-    val uiState = _uiState.asStateFlow()
-
-    private val _effects = MutableSharedFlow<XxxEffect>(extraBufferCapacity = 16)
-    val effects = _effects.asSharedFlow()
-
-    fun onIntent(intent: XxxIntent) {
-        when (intent) {
-            is XxxIntent.LoadData -> loadData(intent.id)
-            is XxxIntent.Refresh -> refresh()
-        }
-    }
-
-    private fun loadData(id: Long) {
-        // Use viewModelScope, update _uiState via update { it.copy(...) }
-    }
-}
-```
-
-Key rules:
-
-- Extend `ViewModel()` directly (not `BaseViewModel`).
-- `_uiState` is `MutableStateFlow`, exposed as `StateFlow` via `.asStateFlow()`.
-- `_effects` is `MutableSharedFlow(extraBufferCapacity = 16)`, exposed via `.asSharedFlow()`.
-- Emit effects via `_effects.tryEmit(...)`.
-- Single `onIntent()` entry point, dispatched via `when`.
+- Kế thừa `ViewModel()` trực tiếp (KHÔNG dùng `BaseViewModel`)
+- `_uiState`: `MutableStateFlow`, expose `.asStateFlow()`
+- `_effects`: `MutableSharedFlow(extraBufferCapacity = 16)`, expose `.asSharedFlow()`
+- Entry point duy nhất: `onIntent()`
 
 ### Screen Composable
+- **Stateless**: Nhận `state`, `onIntent`, `effects`
+- Collect state: `collectAsStateWithLifecycle()` ở route/entry
+- Collect effects: `LaunchedEffect(Unit) { effects.collectLatest { ... } }`
+- **@Stable** trên tất cả UiState, UI model. `ImmutableList` thay `List`.
+- Dùng widget dự án: `AppScaffold`, `AppText`, `AppIcon`, `AppAlertDialog`, `AppModalBottomSheet`, `GlassMediumFlexibleTopAppBar`, `TopBarNavigationButton`
 
-```kotlin
-// Stateless screen — ViewModel wired in entry provider or RouteScreen
-@Composable
-fun XxxScreen(
-    state: XxxUiState,
-    onIntent: (XxxIntent) -> Unit,
-    effects: Flow<XxxEffect>,                   // one-shot effects from ViewModel
-    onBack: () -> Unit,
-    onNavigateToYyy: (YyyRoute) -> Unit,
-) {
-    // Collect effects
-    LaunchedEffect(Unit) {
-        effects.collectLatest { effect ->
-            when (effect) {
-                is XxxEffect.ShowToast -> { /* ... */ }
-                is XxxEffect.NavigateTo -> onNavigateToYyy(effect.route)
-            }
-        }
-    }
+### Theme & Layout
+- Dual theme: Material 3 Expressive (default) + Miuix
+- Branch: `ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)`
+- **Edge-to-Edge**: `Scaffold` insets hoặc `WindowInsets.safeDrawing` padding
+- **Predictive Back**: `BackHandler` cho confirmation states
 
-    AppScaffold(
-        topBar = {
-            GlassMediumFlexibleTopAppBar(
-                title = { Text("Title") },
-                scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior(),
-                navigationButton = { TopBarNavigationButton(onBack) },
-            )
-        },
-    ) { contentPadding ->
-        // UI content, no business logic here
-    }
-}
-```
+---
 
-Key rules:
+## 6. UI/UX CONSISTENCY RULES — BẮT BUỘC
 
-- Screen is **stateless** — receives `state`, `onIntent`, `effects`, never accesses ViewModel
-  directly.
-- Effects collected in `LaunchedEffect(Unit) { ... }` using `collectLatest`.
-- Alternatively, effects can be collected in the outer `RouteScreen` or entry provider if the screen
-  doesn't need them directly.
-- Use project custom widgets: `AppScaffold`, `AppText`, `AppIcon`, `AppIcons`, `AppAlertDialog`,
-  `AppModalBottomSheet`, `NormalCard`, `GlassMediumFlexibleTopAppBar`, `TopBarNavigationButton`,
-  `TopBarActionButton`, etc.
-- No business logic, no direct DB/network calls in composables.
+> Tất cả loading state, transitions, và theme PHẢI đồng bộ qua toàn bộ ứng dụng.
 
-Two input patterns are acceptable:
+### Loading & Transition Standards
+- **Loading overlay chung**: Nền `Color(0xFF121212)` + `AppContainedLoadingIndicator()` + text trắng
+- **KHÔNG BAO GIỜ** để `MaterialTheme.colorScheme.background` hoặc theme sáng làm background cho loading states khi chuyển sang reader hoặc content screen
+- **Transition rule**: Khi chuyển route, nếu cần loading thì background PHẢI tối đồng nhất, tránh flash nền sáng/vàng/trắng
+- **One-directional loading**: Một khi content đã hiện thì loading overlay KHÔNG được hiện lại (dùng cờ `hasShownContent` pattern)
+- **AndroidView z-order**: Native views trong `AndroidView` phải bắt đầu `visibility = View.INVISIBLE` trong `factory` block, chỉ `VISIBLE` khi dữ liệu sẵn sàng
+- **Animation**: Dùng `Modifier.graphicsLayer { alpha = ... }` cho fade transitions, kết hợp với native view visibility
 
-- **Stateless (preferred for new screens):** `state: XxxUiState` + `onIntent: (XxxIntent) -> Unit` —
-  ViewModel wired in entry provider or RouteScreen.
-- **ViewModel as default param:** `viewModel: XxxViewModel = koinViewModel()` — simpler for
-  standalone screens.
+### Color Token Standards
+- Loading background: `Color(0xFF121212)` — dark neutral
+- Loading text: `Color.White.copy(alpha = 0.8f)` — semi-transparent white
+- Loading indicator: `AppContainedLoadingIndicator()` — project standard widget
+- Error states: Giữ nguyên `MaterialTheme.colorScheme.error`
 
-### Stability
+### Reader-Specific
+- `ReadBookRouteScreen` loading: Dark overlay + spinner + "Đang tải..." text
+- `MainNavGraph` isVideoBook check: `Color(0xFF121212)` background (KHÔNG dùng MaterialTheme)
+- Native `ReadView` (PageView): bắt đầu INVISIBLE, chỉ VISIBLE khi chapter loaded
 
-- All `UiState` and UI item data classes **must** be annotated with `@Stable`.
-- Use `ImmutableList` (from `kotlinx.collections.immutable`) for list properties in state classes,
-  not `List` or `MutableList`.
-- Prefer `persistentListOf()` / `toImmutableList()` for default values.
+---
 
-### Navigation
+## 7. BACKEND ENGINE CONSTRAINTS
 
-Uses **Navigation 3** (`androidx.navigation3`). Routes are `@Serializable` sealed interfaces:
+### Rhino JavaScript Engine
+- Book/RSS sources và HTTP TTS dùng JavaScript rules
+- `initRhino()` trong `App.kt` đăng ký `NativeBaseSource` wrappers
+- Rule parsing: `help/source/` và `model/analyzeRule/`
 
-```kotlin
-// In MainNavKey.kt
-@Serializable
-data class MainRouteXxx(val id: Long) : MainRoute
-```
-
-Entry registered in `MainNavGraph.kt`:
-
-```kotlin
-entry<MainRouteXxx> { route ->
-    val viewModel = koinViewModel<XxxViewModel>()
-    XxxScreen(
-        state = viewModel.uiState.collectAsStateWithLifecycle().value,
-        onIntent = viewModel::onIntent,
-        onBack = { onNavigateBack() },
-        onNavigateToYyy = { onNavigateToRoute(it) },
-    )
-}
-```
-
-Key rules:
-
-- Screens **never** reference the navigator directly — receive `onBack`, `onNavigateToXxx` lambdas.
-- Navigation is callback-based, wired by the entry provider.
-- New routes added to the `MainRoute` sealed interface in `MainNavKey.kt`.
-
-### Koin DI
-
-- Register ViewModels in `di/appModule.kt` with `viewModelOf(::XxxViewModel)`.
-- Inject in Compose via `koinViewModel()` (default param or explicit in entry provider).
-- For keyed ViewModels (e.g. per-book): `koinViewModel<XxxViewModel>(key = route.bookUrl)`.
-- Repositories/gateways/use cases registered as `singleOf(::...)`.
-
-### Activity Base Class
-
-New standalone Compose activities extend `BaseComposeActivity`:
-
-```kotlin
-class XxxActivity : BaseComposeActivity() {
-    @Composable
-    override fun Content() {
-        // Screen content — AppTheme is already applied by the base class
-    }
-}
-```
-
-### RouteScreen Wrapper
-
-For screens needing activity result handling, lifecycle observation, or permission requests, use a
-two-layer pattern:
-
-- Outer `XxxRouteScreen`: handles `ActivityResultLauncher`, lifecycle callbacks, file pickers,
-  permission requests. Wires ViewModel.
-- Inner `XxxScreen`: pure UI, stateless with `state` + `onIntent`.
-
-### Material 3 vs Miuix
-
-The project supports two Compose theme engines. If a screen needs engine-specific UI, branch on:
-
-```kotlin
-if (ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)) {
-    // Miuix implementation
-} else {
-    // Material 3 implementation
-}
-```
-
-For detailed Compose review conventions and migration patterns, see
-`.Codex/skills/legado-compose-review/`.
-
-## Rhino JavaScript Engine
-
-Book sources, RSS sources, and HTTP TTS use JavaScript rules. `initRhino()` in `App.kt` registers `NativeBaseSource` wrappers for `BookSource`, `RssSource`, `HttpTTS` (writable JS objects) and `ReadOnlyJavaObject` wrappers for rule entities. Rule parsing logic lives in `help/source/` and `model/analyzeRule/`.
-
-## Important Constraints
-
-- **Do not update jsoup** beyond 1.16.2 — a breaking change in newer versions (see [jsoup#2017](https://github.com/jhy/jsoup/pull/2017)) affects `AnalyzeByJSoup.kt` and the JsoupXpath library
-- **Do not update hutool** beyond 5.8.22 — pinned in `libs.versions.toml:42`
-- Package name discrepancy: code namespace is `io.legado.app` but `applicationId` is `io.legato.kazusa`
-- Min SDK 26, target SDK 37, compile SDK 37
-- Release builds enable R8 minification + resource shrinking; `noR8` variant disables both for crash debugging
-- APK is split by ABI (`armeabi-v7a`, `arm64-v8a`, plus universal)
-- Firebase Analytics and Performance are included; `google-services` plugin applied
-
-## Web Frontend
-
-Located in `modules/web/` — a Vue 3 + TypeScript + Vite project for remote bookshelf and source editing. Must connect to the app's built-in HTTP server (started via `WebService` in the main activity settings). Commands:
-
+### Web Frontend
 ```bash
 cd modules/web
 pnpm install
 pnpm dev       # dev server
 pnpm build     # production build
 ```
+- Set `VITE_API` trong `.env.development` thành IP web service của app
 
-Set `VITE_API` in `.env.development` to the app's web service IP.
+---
+
+## 8. DEVICE INFO
+
+| Field | Value |
+|-------|-------|
+| Device | Redmi Note 13 Pro+ (Xiaomi 2311DRK48C, codename duchamp) |
+| ADB Serial | PNAUU475TOYPLV7H |
+| Architecture | arm64-v8a |
+| APK file | `Novela-arm64-v8a-debug.apk` |
+| ADB path | `C:\Users\Admin\AppData\Local\Android\Sdk\platform-tools\adb.exe` |

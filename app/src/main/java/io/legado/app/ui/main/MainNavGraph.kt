@@ -84,6 +84,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
 import io.legado.app.data.appDb
 import io.legado.app.data.repository.BookRepository
 import io.legado.app.help.book.isVideo
@@ -319,7 +320,7 @@ fun MainActivity.mainEntryProvider(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(Color(0xFF121212)),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()

@@ -1,19 +1,50 @@
-﻿---
-name: debugging-guide
-description: Huong dan chi tiet quy trinh debug co he thong, phan loai loi va cach doc stack trace hieu qua.
 ---
+name: debugging-guide
+description: >
+  Hướng dẫn chi tiết quy trình debug có hệ thống cho dự án Legado Android,
+  bao gồm phân loại lỗi, cách đọc stack trace, và xử lý lỗi UI/UX.
+---
+
 # Debugging Guide
-## Mindset Debug dung
-Debug khong phai la doan mo - la dieu tra co he thong.
-## Framework 5 cau hoi
-1. WHAT: Loi gi? (mo ta chinh xac trieu chung)
-2. WHERE: Loi o dau? (file, function, line)
-3. WHEN: Khi nao xay ra? (action nao trigger, dieu kien gi)
-4. WHY: Tai sao xay ra? (root cause)
-5. FIX: Fix dung cho hay dang patch symptom?
-## Debug theo loai loi
-- Syntax Error: Kiem tra dau ngoac, dau phay, dung linter.
-- Runtime Error: Doc stack trace tu tren xuong, tim file cua minh, trace nguoc du lieu.
-- Logic Error: So sanh Expected vs Actual. Su dung binary search tren data flow.
-- Environment Error: Kiem tra version, dependencies, file permissions, port conflict.
-- Integration/API Error: Kiem tra Auth token, URL, Headers, va log Request/Response.
+
+## Mindset Debug đúng
+Debug không phải đoán mò — là điều tra có hệ thống.
+
+## Framework 5 câu hỏi
+1. **WHAT**: Lỗi gì? (mô tả chính xác triệu chứng — crash? flash? sai UI?)
+2. **WHERE**: Lỗi ở đâu? (file, function, line)
+3. **WHEN**: Khi nào xảy ra? (action nào trigger, điều kiện gì)
+4. **WHY**: Tại sao xảy ra? (root cause — state bounce? z-order? lifecycle?)
+5. **FIX**: Fix đúng chỗ hay đang patch symptom?
+
+## Debug theo loại lỗi
+
+### Compile Error (Kotlin)
+- Đọc lỗi từ cuối output Gradle: `2>&1 | Select-Object -Last 20`
+- Kiểm tra: import thiếu, type mismatch, override signature sai
+- Quick compile: `.\gradlew.bat :app:compileAppDebugKotlin`
+
+### UI Flash/Flicker
+- **Nguyên nhân thường gặp**:
+  1. `AndroidView` native view visible trước khi Compose overlay render
+  2. `MaterialTheme.colorScheme.background` sáng/vàng dùng cho loading state
+  3. State bouncing: `showLoadingOverlay` toggle true→false→true nhanh
+- **Fix pattern**:
+  - Native view: `visibility = View.INVISIBLE` trong `factory` block
+  - Loading background: `Color(0xFF121212)` thay MaterialTheme
+  - State stability: `hasShownContent` cờ one-directional
+
+### State/Lifecycle
+- Compose: kiểm tra `collectAsStateWithLifecycle()`, `LaunchedEffect` key
+- ReadBook singleton: `ReadBook.msg`, `ReadBook.curTextChapter` thay đổi từ background thread
+- ViewModel sync: `syncFromReadBook()` gọi nhiều lần qua callbacks
+
+### Runtime Crash
+- Đọc stack trace từ trên xuống, tìm file `io.legado.app`
+- NPE: kiểm tra nullable access, `?.` vs `!!`
+- ANR: kiểm tra blocking call trên Main thread
+
+### Build/Environment
+- Gradle: Configuration cache lỗi → xóa `.gradle/configuration-cache/`
+- ADB: Device not found → kiểm tra USB debugging, `adb devices -l`
+- JDK: Phải dùng JDK 21, kiểm tra `JAVA_HOME`

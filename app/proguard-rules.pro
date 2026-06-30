@@ -169,3 +169,24 @@ cn.hutool.core.util.**{*;}
 -keepclassmembers class * {
     @com.google.api.client.util.Key <fields>;
 }
+
+# ==============================================================================
+# Navigation 3 — @Serializable route classes (kotlinx.serialization)
+# ==============================================================================
+# Route classes dùng @Serializable và được resolve qua NavKey.
+# R8 có thể strip/rename class names cần thiết cho type-safe navigation.
+-keep class io.legado.app.ui.main.MainRoute { *; }
+-keep class * implements io.legado.app.ui.main.MainRoute { *; }
+# Keep kotlinx.serialization generated serializers for route classes
+-keepclassmembers class * implements io.legado.app.ui.main.MainRoute {
+    *** Companion;
+}
+-keepclassmembers class * {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# ==============================================================================
+# Koin — ViewModel reflective creation
+# ==============================================================================
+# viewModelOf(::XxxViewModel) dùng KClass reference qua reflection
+-keep class * extends androidx.lifecycle.ViewModel { <init>(...); }

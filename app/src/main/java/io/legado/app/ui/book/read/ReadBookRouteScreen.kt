@@ -415,15 +415,11 @@ fun ReadBookRouteScreen(
 
     // ── View layer + Compose UI ───────────────────────────────────────
 
-    val msg = state.msg
-    val isPageLoading = state.curTextChapter == null || 
-            state.curTextChapter?.pages.isNullOrEmpty() ||
-            state.curTextChapter?.pages?.getOrNull(state.durPageIndex)?.text?.contains("Đang tải dữ liệu", ignoreCase = true) == true
-            
-    val showLoadingOverlay = (isPageLoading || !msg.isNullOrBlank()) && 
-            (msg == null || (!msg.contains("lỗi", ignoreCase = true) && 
-                             !msg.contains("error", ignoreCase = true) && 
-                             !msg.contains("failed", ignoreCase = true)))
+    // Loading overlay shows until contentLoadFinish() fires (sets isInitFinish=true).
+    // This is the definitive signal that chapter content is ready to display.
+    // Native ReadView stays INVISIBLE until then, preventing the parchment
+    // "Đang tải dữ liệu..." page from ever appearing.
+    val showLoadingOverlay = !state.isInitFinish
 
     Box(Modifier.fillMaxSize()) {
         key(controller) {
@@ -432,6 +428,7 @@ fun ReadBookRouteScreen(
                     .graphicsLayer { alpha = if (showLoadingOverlay) 0f else 1f }
                     .then(if (useMenuHazeSource) Modifier.hazeSource(menuHazeState) else Modifier)
                     .layerBackdrop(menuBackdrop),
+                showLoadingOverlay = showLoadingOverlay,
                 onRefsReady = { controller.onRefsReady(it) },
                 onCursorTouch = controller,
                 readViewCallBack = controller,
@@ -474,7 +471,7 @@ fun ReadBookRouteScreen(
                     AppContainedLoadingIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = if (!msg.isNullOrBlank()) msg else "Đang tải...",
+                        text = if (!state.msg.isNullOrBlank()) state.msg!! else "Đang tải...",
                         color = Color.White.copy(alpha = 0.8f),
                         fontSize = 14.sp
                     )
@@ -487,6 +484,7 @@ fun ReadBookRouteScreen(
 @Composable
 private fun ReadBookViewLayer(
     modifier: Modifier = Modifier,
+    showLoadingOverlay: Boolean,
     onRefsReady: (ReadBookViewRefs) -> Unit,
     onCursorTouch: View.OnTouchListener,
     readViewCallBack: ReadView.CallBack,
@@ -496,6 +494,10 @@ private fun ReadBookViewLayer(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
             FrameLayout(context).apply {
+                // Start invisible to prevent parchment/yellow background from flashing
+                // before the Compose loading overlay can render on top.
+                // INVISIBLE still allows layout so ReadView.onSizeChanged fires correctly.
+                visibility = View.INVISIBLE
                 val readView = ReadView(
                     context = context,
                     callBack = readViewCallBack,
@@ -560,5 +562,8 @@ private fun ReadBookViewLayer(
                 )
             }
         },
+        update = { view ->
+            view.visibility = if (showLoadingOverlay) View.INVISIBLE else View.VISIBLE
+        }
     )
 }

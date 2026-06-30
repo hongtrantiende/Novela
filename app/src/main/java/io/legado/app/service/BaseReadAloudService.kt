@@ -131,7 +131,7 @@ abstract class BaseReadAloudService : BaseService(),
     private var dsJob: Job? = null
     private var upNotificationJob: Coroutine<*>? = null
     private var cover: Bitmap =
-        BitmapFactory.decodeResource(appCtx.resources, R.drawable.ic_launcher)
+        BitmapFactory.decodeResource(appCtx.resources, R.drawable.image_legado)
     var pageChanged = false
     private var toLast = false
     var paragraphStartPos = 0
