@@ -14,7 +14,28 @@ node_modules/
 /app/gradle.properties
 /package-lock.json
 .idea/
+
 # Kotlin 2.0
 .kotlin/
-/.vscode/settings.json
-/.codex/skills
+
+# IDE / Editor
+/.vscode/
+
+# AI Agent configs (keep .agents/ only — that's the canonical one)
+/.claude/
+/.codex/
+/.gemini/
+CLAUDE.md
+
+# Dev artifacts — not for GitHub
+build_out.txt
+work_log.md
+/apks/
+avd.bat
+avd.sh
+api.md
+English.md
+README_RELEASES.md
+/docs/
+/viet-sources-web/
+package.json
