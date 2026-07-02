@@ -96,8 +96,13 @@ cn.hutool.core.util.**{*;}
 # markwon
 -dontwarn org.commonmark.ext.gfm.**
 
--keep class okhttp3.*{*;}
--keep class okio.*{*;}
+# Keep OkHttp & Okio fully for JS engine reflective access
+-keep class okhttp3.** { *; }
+-keep interface okhttp3.** { *; }
+-dontwarn okhttp3.**
+-keep class okio.** { *; }
+-keep interface okio.** { *; }
+-dontwarn okio.**
 -keep class com.jayway.jsonpath.*{*;}
 
 # LiveEventBus
