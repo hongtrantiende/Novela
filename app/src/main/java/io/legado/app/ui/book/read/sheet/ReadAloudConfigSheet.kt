@@ -390,7 +390,7 @@ fun HttpTtsEditSheet(
                                 tts.copy(
                                     name = name, url = url, contentType = contentType.ifBlank { null },
                                     concurrentRate = concurrentRate, header = header.ifBlank { null },
-                                    loginUrl = ttsSpeechRate.toString(), loginUi = serializedLoginUi.ifBlank { null },
+                                    loginUrl = String.format(java.util.Locale.US, "%.1f", (ttsSpeechRate.toInt() + 5) / 10f), loginUi = serializedLoginUi.ifBlank { null },
                                     loginCheckJs = loginCheckJs.ifBlank { null }, jsLib = jsLib.ifBlank { null },
                                 )
                             )
@@ -453,7 +453,7 @@ fun HttpTtsEditSheet(
                                 contentType = contentType.ifBlank { null },
                                 concurrentRate = concurrentRate,
                                 header = header.ifBlank { null },
-                                loginUrl = ttsSpeechRate.toString(),
+                                loginUrl = String.format(java.util.Locale.US, "%.1f", (ttsSpeechRate.toInt() + 5) / 10f),
                                 loginUi = serializedLoginUi.ifBlank { null },
                                 loginCheckJs = loginCheckJs.ifBlank { null },
                                 jsLib = jsLib.ifBlank { null },
@@ -640,7 +640,7 @@ fun HttpTtsEditSheet(
                                     contentType = contentType.ifBlank { null },
                                     concurrentRate = concurrentRate,
                                     header = header.ifBlank { null },
-                                    loginUrl = ttsSpeechRate.toString(),
+                                    loginUrl = String.format(java.util.Locale.US, "%.1f", (ttsSpeechRate.toInt() + 5) / 10f),
                                     loginUi = serializedLoginUi.ifBlank { null },
                                     loginCheckJs = loginCheckJs.ifBlank { null },
                                     jsLib = jsLib.ifBlank { null },

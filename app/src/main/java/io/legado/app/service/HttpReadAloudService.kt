@@ -331,7 +331,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 if (nextChapterOffset in nextContentList.indices) {
                                     val content = nextContentList[nextChapterOffset]
                                     val titleMd5 = MD5Utils.md5Encode16(nextChapter.title)
-                                    val contentMd5 = MD5Utils.md5Encode16("${httpTts.url}-|-10-|-$content")
+                                    val contentMd5 = MD5Utils.md5Encode16("${httpTts.url}-|-${httpTts.loginUrl ?: "1.0"}-|-$content")
                                     val fileName = "${titleMd5}_${contentMd5}"
                                     val speakText = content.replace(AppPattern.notReadAloudRegex, "")
                                     
@@ -374,7 +374,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 currentCoroutineContext().ensureActive()
                 
                 val titleMd5 = MD5Utils.md5Encode16(chapter.title)
-                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-10-|-$content")
+                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-${ReadAloud.httpTTS?.loginUrl ?: "1.0"}-|-$content")
                 val fileName = "${titleMd5}_${contentMd5}"
                 
                 val speakText = content.replace(AppPattern.notReadAloudRegex, "")
@@ -461,7 +461,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             contentList.forEach { content ->
                 currentCoroutineContext().ensureActive()
                 val titleMd5 = MD5Utils.md5Encode16(chapter.title)
-                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-10-|-$content")
+                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-${ReadAloud.httpTTS?.loginUrl ?: "1.0"}-|-$content")
                 val fileName = "${titleMd5}_${contentMd5}"
                 
                 val speakText = content.replace(AppPattern.notReadAloudRegex, "")
@@ -600,8 +600,9 @@ class HttpReadAloudService : BaseReadAloudService(),
      */
     private fun md5SpeakFileName(content: String, textChapter: TextChapter? = this.textChapter): String {
         val titleToUse = textChapter?.chapter?.title ?: ""
+        val httpTts = ReadAloud.httpTTS
         return MD5Utils.md5Encode16(titleToUse) + "_" +
-                MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-10-|-$content")
+                MD5Utils.md5Encode16("${httpTts?.url}-|-${httpTts?.loginUrl ?: "1.0"}-|-$content")
     }
 
     private fun createSilentSound(fileName: String) {
