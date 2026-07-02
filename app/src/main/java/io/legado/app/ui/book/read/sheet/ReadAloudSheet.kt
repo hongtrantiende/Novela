@@ -60,7 +60,13 @@ fun ReadAloudContent(
     modifier: Modifier = Modifier,
 ) {
     val timerMinute = state.readAloudTtsTimer
-    val ttsSpeechRate = state.readAloudTtsSpeechRate
+    val httpTts = io.legado.app.model.ReadAloud.httpTTS
+    val ttsSpeechRate = if (httpTts != null) {
+        val currentSpeedValue = httpTts.loginUrl?.toFloatOrNull() ?: 1.0f
+        (currentSpeedValue * 10f - 5f).toInt().coerceIn(5, 15)
+    } else {
+        state.readAloudTtsSpeechRate
+    }
 
     var serviceState by remember { mutableStateOf(getServiceState()) }
     LaunchedEffect(Unit) {
@@ -152,44 +158,41 @@ fun ReadAloudContent(
 
         Spacer(Modifier.height(12.dp))
 
-        val isSystemTts = io.legado.app.model.ReadAloud.httpTTS == null
-        if (isSystemTts) {
-            var localSpeechRate by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
-            
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 12.dp),
+        var localSpeechRate by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
+        
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AppText(
-                        text = stringResource(R.string.read_aloud_speed),
-                        style = LegadoTheme.typography.titleSmallEmphasized,
-                        color = LegadoTheme.colorScheme.onSurface,
-                    )
-                    AppText(
-                        text = String.format(Locale.ROOT, "%.1fX", (localSpeechRate.toInt() + 5) / 10f),
-                        style = LegadoTheme.typography.titleSmallEmphasized,
-                        color = LegadoTheme.colorScheme.primary,
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-                AppSlider(
-                    value = localSpeechRate.coerceIn(5f, 15f),
-                    onValueChange = {
-                        localSpeechRate = it
-                    },
-                    onValueChangeFinished = {
-                        onIntent(ReadBookIntent.SetReadAloudTtsFollowSys(false))
-                        onIntent(ReadBookIntent.SetReadAloudTtsSpeechRate(localSpeechRate.toInt()))
-                    },
-                    valueRange = 5f..15f,
-                    steps = 9,
-                    modifier = Modifier.fillMaxWidth(),
+                AppText(
+                    text = stringResource(R.string.read_aloud_speed),
+                    style = LegadoTheme.typography.titleSmallEmphasized,
+                    color = LegadoTheme.colorScheme.onSurface,
+                )
+                AppText(
+                    text = String.format(Locale.ROOT, "%.1fX", (localSpeechRate.toInt() + 5) / 10f),
+                    style = LegadoTheme.typography.titleSmallEmphasized,
+                    color = LegadoTheme.colorScheme.primary,
                 )
             }
+            Spacer(Modifier.height(4.dp))
+            AppSlider(
+                value = localSpeechRate.coerceIn(5f, 15f),
+                onValueChange = {
+                    localSpeechRate = it
+                },
+                onValueChangeFinished = {
+                    onIntent(ReadBookIntent.SetReadAloudTtsFollowSys(false))
+                    onIntent(ReadBookIntent.SetReadAloudTtsSpeechRate(localSpeechRate.toInt()))
+                },
+                valueRange = 5f..15f,
+                steps = 9,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
 
         Spacer(Modifier.height(16.dp))

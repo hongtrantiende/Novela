@@ -1767,6 +1767,24 @@ class ReadBookViewModel(
             readAloudSettingsRepository.setTtsSpeechRate(value)
             ReadAloud.upTtsSpeechRate(context)
         }
+        val httpTts = ReadAloud.httpTTS
+        if (httpTts != null) {
+            val speedFloat = (value + 5) / 10f
+            val updatedTts = httpTts.copy(loginUrl = speedFloat.toString())
+            ReadAloud.httpTTS = updatedTts
+            viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                appDb.httpTTSDao.insert(updatedTts)
+                try {
+                    val baseDir = context.externalCacheDir ?: context.cacheDir
+                    val ttsFolder = java.io.File(baseDir, "httpTTS")
+                    val cacheFolder = java.io.File(baseDir, "httpTTS_cache")
+                    io.legado.app.utils.FileUtils.delete(ttsFolder.absolutePath)
+                    io.legado.app.utils.FileUtils.delete(cacheFolder.absolutePath)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
         _uiState.update { it.copy(readAloudTtsSpeechRate = value) }
     }
 

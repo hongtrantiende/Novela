@@ -135,6 +135,15 @@ object DefaultData {
     fun importDefaultHttpTTS() {
         appDb.httpTTSDao.deleteDefault()
         appDb.httpTTSDao.insert(*httpTTS.toTypedArray())
+        try {
+            val baseDir = appCtx.externalCacheDir ?: appCtx.cacheDir
+            val ttsFolder = java.io.File(baseDir, "httpTTS")
+            val cacheFolder = java.io.File(baseDir, "httpTTS_cache")
+            io.legado.app.utils.FileUtils.delete(ttsFolder.absolutePath)
+            io.legado.app.utils.FileUtils.delete(cacheFolder.absolutePath)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun importDefaultTocRules() {
