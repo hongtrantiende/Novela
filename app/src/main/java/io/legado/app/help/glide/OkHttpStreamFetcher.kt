@@ -64,7 +64,8 @@ class OkHttpStreamFetcher(
             return
         }
 
-        options.get(OkHttpModelLoader.sourceOriginOption)?.let { sourceUrl ->
+        val sourceUrl = options.get(OkHttpModelLoader.sourceOriginOption)
+        if (sourceUrl != null) {
             source = SourceHelp.getSource(sourceUrl)
         }
 
@@ -76,6 +77,21 @@ class OkHttpStreamFetcher(
 
         val requestBuilder = Request.Builder().url(analyzedUrl.toStringUrl())
         requestBuilder.addHeaders(analyzedUrl.headers)
+
+        if (source == null && sourceUrl != null && sourceUrl.startsWith("ext_")) {
+            val extId = sourceUrl.removePrefix("ext_")
+            val extEntity = io.legado.app.data.appDb.extensionDao.getExtensionByIdSync(extId)
+            if (extEntity != null && extEntity.source.isNotBlank()) {
+                val refererVal = if (extEntity.source.endsWith("/")) extEntity.source else "${extEntity.source}/"
+                if (!analyzedUrl.headers.containsKey("Referer") && !analyzedUrl.headers.containsKey("referer")) {
+                    requestBuilder.addHeader("Referer", refererVal)
+                }
+                if (!analyzedUrl.headers.containsKey("User-Agent") && !analyzedUrl.headers.containsKey("user-agent")) {
+                    requestBuilder.addHeader("User-Agent", io.legado.app.help.config.AppConfig.userAgent)
+                }
+            }
+        }
+
         val request: Request = requestBuilder.build()
         this.callback = callback
         call = if (manga) {
