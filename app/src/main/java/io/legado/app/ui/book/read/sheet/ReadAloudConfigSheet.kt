@@ -45,6 +45,9 @@ import io.legado.app.ui.widget.components.settingItem.SliderSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinyClickableSettingItem
 import io.legado.app.ui.widget.components.settingItem.TinySwitchSettingItem
 import io.legado.app.utils.GSON
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 import io.legado.app.ui.config.readConfig.ReadConfig
 
@@ -292,8 +295,8 @@ fun SpeakEngineConfigSheet(
                         null
                     },
                     onClick = { pendingEngineSelection = PendingSpeakEngineSelection(item.value) },
-                    onLongClick = if (httpTtsId != null && !item.loginUrl.isNullOrBlank()) {
-                        { onIntent(ReadBookIntent.OpenHttpTtsLogin(httpTtsId)) }
+                    onLongClick = if (httpTtsId != null) {
+                        { onIntent(ReadBookIntent.EditHttpTts(httpTtsId)) }
                     } else null,
                     trailingContent = if (httpTtsId != null && httpTtsId >= 0) {
                         {
@@ -326,13 +329,37 @@ fun HttpTtsEditSheet(
 ) {
     val tts = httpTTS ?: return
     val clipboardManager = LocalClipboardManager.current
+    val coroutineScope = rememberCoroutineScope()
     var name by remember(httpTTS) { mutableStateOf(tts.name) }
     var url by remember(httpTTS) { mutableStateOf(tts.url) }
     var contentType by remember(httpTTS) { mutableStateOf(tts.contentType ?: "") }
     var concurrentRate by remember(httpTTS) { mutableStateOf(tts.concurrentRate ?: "0") }
     var header by remember(httpTTS) { mutableStateOf(tts.header ?: "") }
     var loginUrl by remember(httpTTS) { mutableStateOf(tts.loginUrl ?: "") }
-    var loginUi by remember(httpTTS) { mutableStateOf(tts.loginUi ?: "") }
+    var configJson by remember(httpTTS) { mutableStateOf(tts.loginUi ?: "") }
+    val configObj = try {
+        org.json.JSONObject(configJson)
+    } catch (e: Exception) {
+        null
+    }
+    var pitch by remember(configJson) {
+        mutableStateOf(configObj?.optString("pitch", "0.0") ?: "0.0")
+    }
+    var volumeGain by remember(configJson) {
+        mutableStateOf(configObj?.optString("volumeGain", "0.0") ?: "0.0")
+    }
+    var effectsProfile by remember(configJson) {
+        mutableStateOf(configObj?.optString("effectsProfile", "") ?: "")
+    }
+    var audioEncoding by remember(configJson) {
+        mutableStateOf(configObj?.optString("audioEncoding", "MP3") ?: "MP3")
+    }
+    var sampleRate by remember(configJson) {
+        mutableStateOf(configObj?.optString("sampleRate", "") ?: "")
+    }
+    var ttsSpeechRate by remember(httpTTS) {
+        mutableStateOf(ReadConfig.ttsSpeechRate.toFloat())
+    }
     var loginCheckJs by remember(httpTTS) { mutableStateOf(tts.loginCheckJs ?: "") }
     var jsLib by remember(httpTTS) { mutableStateOf(tts.jsLib ?: "") }
 
@@ -352,12 +379,19 @@ fun HttpTtsEditSheet(
                         text = stringResource(R.string.copy_text),
                         onClick = {
                             expanded = false
+                            val map = mutableMapOf<String, Any>()
+                            pitch.replace(",", ".").toDoubleOrNull()?.let { map["pitch"] = it }
+                            volumeGain.replace(",", ".").toDoubleOrNull()?.let { map["volumeGain"] = it }
+                            if (effectsProfile.isNotBlank()) map["effectsProfile"] = effectsProfile
+                            if (audioEncoding.isNotBlank()) map["audioEncoding"] = audioEncoding
+                            if (sampleRate.isNotBlank()) map["sampleRate"] = sampleRate
+                            val serializedLoginUi = GSON.toJson(map)
                             val json = GSON.toJson(
                                 tts.copy(
-                                    name = name, url = url, contentType = contentType,
-                                    concurrentRate = concurrentRate, header = header,
-                                    loginUrl = loginUrl, loginUi = loginUi,
-                                    loginCheckJs = loginCheckJs, jsLib = jsLib,
+                                    name = name, url = url, contentType = contentType.ifBlank { null },
+                                    concurrentRate = concurrentRate, header = header.ifBlank { null },
+                                    loginUrl = ttsSpeechRate.toString(), loginUi = serializedLoginUi.ifBlank { null },
+                                    loginCheckJs = loginCheckJs.ifBlank { null }, jsLib = jsLib.ifBlank { null },
                                 )
                             )
                             clipboardManager.setText(AnnotatedString(json))
@@ -375,7 +409,7 @@ fun HttpTtsEditSheet(
                                     concurrentRate = imported.concurrentRate ?: "0"
                                     header = imported.header ?: ""
                                     loginUrl = imported.loginUrl ?: ""
-                                    loginUi = imported.loginUi ?: ""
+                                    configJson = imported.loginUi ?: ""
                                     loginCheckJs = imported.loginCheckJs ?: ""
                                     jsLib = imported.jsLib ?: ""
                                 }
@@ -389,6 +423,29 @@ fun HttpTtsEditSheet(
             SmallTonalButton(
                 icon = Icons.Default.Save,
                 onClick = {
+                    val map = mutableMapOf<String, Any>()
+                    pitch.replace(",", ".").toDoubleOrNull()?.let { map["pitch"] = it }
+                    volumeGain.replace(",", ".").toDoubleOrNull()?.let { map["volumeGain"] = it }
+                    if (effectsProfile.isNotBlank()) map["effectsProfile"] = effectsProfile
+                    if (audioEncoding.isNotBlank()) map["audioEncoding"] = audioEncoding
+                    if (sampleRate.isNotBlank()) map["sampleRate"] = sampleRate
+                    val serializedLoginUi = GSON.toJson(map)
+                    
+                    // Save reading speed globally
+                    ReadConfig.ttsSpeechRate = Math.round(ttsSpeechRate)
+                    io.legado.app.model.ReadAloud.upTtsSpeechRate(splitties.init.appCtx)
+                    
+                    // Clear TTS cache files to force download of fresh configs outside
+                    try {
+                        val baseDir = splitties.init.appCtx.externalCacheDir ?: splitties.init.appCtx.cacheDir
+                        val ttsFolder = java.io.File(baseDir, "httpTTS")
+                        val cacheFolder = java.io.File(baseDir, "httpTTS_cache")
+                        io.legado.app.utils.FileUtils.delete(ttsFolder.absolutePath)
+                        io.legado.app.utils.FileUtils.delete(cacheFolder.absolutePath)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    
                     onIntent(
                         ReadBookIntent.SaveHttpTts(
                             tts.copy(
@@ -396,8 +453,8 @@ fun HttpTtsEditSheet(
                                 contentType = contentType.ifBlank { null },
                                 concurrentRate = concurrentRate,
                                 header = header.ifBlank { null },
-                                loginUrl = loginUrl.ifBlank { null },
-                                loginUi = loginUi.ifBlank { null },
+                                loginUrl = ttsSpeechRate.toString(),
+                                loginUi = serializedLoginUi.ifBlank { null },
                                 loginCheckJs = loginCheckJs.ifBlank { null },
                                 jsLib = jsLib.ifBlank { null },
                             )
@@ -413,86 +470,214 @@ fun HttpTtsEditSheet(
                 .padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            val isDefaultVoice = tts.id < 0
+
+            if (!isDefaultVoice) {
+                item {
+                    AppTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = stringResource(R.string.name),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    AppTextField(
+                        value = url,
+                        onValueChange = { url = it },
+                        label = "URL",
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    AppTextField(
+                        value = contentType,
+                        onValueChange = { contentType = it },
+                        label = "Content-Type",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    AppTextField(
+                        value = concurrentRate,
+                        onValueChange = { concurrentRate = it },
+                        label = stringResource(R.string.concurrent_rate),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    AppTextField(
+                        value = header,
+                        onValueChange = { header = it },
+                        label = stringResource(R.string.source_http_header),
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+            item {
+                SliderSettingItem(
+                    title = "Tốc độ tải mặc định",
+                    description = "Tốc độ tổng hợp từ server (Mặc định: 1.0x, Hiện tại: ${loginUrl.replace(",", ".").toFloatOrNull() ?: 1.0f}x)",
+                    value = loginUrl.replace(",", ".").toFloatOrNull() ?: 1.0f,
+                    defaultValue = 1.0f,
+                    valueRange = 0.5f..3.0f,
+                    onValueChange = { loginUrl = String.format(java.util.Locale.US, "%.1f", it) }
+                )
+            }
+            item {
+                SliderSettingItem(
+                    title = "Tốc độ đọc",
+                    description = "Tốc độ phát của trình phát (Hiện tại: ${String.format(java.util.Locale.US, "%.1fx", (ttsSpeechRate.toInt() + 5) / 10f)})",
+                    value = ttsSpeechRate,
+                    defaultValue = 5.0f,
+                    valueRange = 0.0f..25.0f,
+                    onValueChange = { ttsSpeechRate = it }
+                )
+            }
+            item {
+                SliderSettingItem(
+                    title = "Độ cao giọng (Pitch)",
+                    description = "Trầm (-10) đến Cao (+10) (Mặc định: 0.0, Hiện tại: ${pitch.replace(",", ".").toFloatOrNull() ?: 0.0f})",
+                    value = pitch.replace(",", ".").toFloatOrNull() ?: 0.0f,
+                    defaultValue = 0.0f,
+                    valueRange = -10.0f..10.0f,
+                    onValueChange = { pitch = String.format(java.util.Locale.US, "%.1f", it) }
+                )
+            }
+            item {
+                SliderSettingItem(
+                    title = "Âm lượng tăng cường (dB)",
+                    description = "Nhỏ (-20) đến To (+16) (Mặc định: 0.0, Hiện tại: ${volumeGain.replace(",", ".").toFloatOrNull() ?: 0.0f} dB)",
+                    value = volumeGain.replace(",", ".").toFloatOrNull() ?: 0.0f,
+                    defaultValue = 0.0f,
+                    valueRange = -20.0f..16.0f,
+                    onValueChange = { volumeGain = String.format(java.util.Locale.US, "%.1f", it) }
+                )
+            }
             item {
                 AppTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = stringResource(R.string.name),
+                    value = effectsProfile,
+                    onValueChange = { effectsProfile = it },
+                    label = "Tối ưu thiết bị (VD: headphone-class-device)",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
             item {
                 AppTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = "URL",
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                AppTextField(
-                    value = contentType,
-                    onValueChange = { contentType = it },
-                    label = "Content-Type",
+                    value = audioEncoding,
+                    onValueChange = { audioEncoding = it },
+                    label = "Mã hóa âm thanh (VD: MP3 hoặc OGG_OPUS)",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
             item {
                 AppTextField(
-                    value = concurrentRate,
-                    onValueChange = { concurrentRate = it },
-                    label = stringResource(R.string.concurrent_rate),
+                    value = sampleRate,
+                    onValueChange = { sampleRate = it },
+                    label = "Tần số lấy mẫu (Chỉ hỗ trợ: 8000, 16000, 24000, 32000, 44100, 48000)",
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            item {
-                AppTextField(
-                    value = header,
-                    onValueChange = { header = it },
-                    label = stringResource(R.string.source_http_header),
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            if (!isDefaultVoice) {
+                item {
+                    AppTextField(
+                        value = loginCheckJs,
+                        onValueChange = { loginCheckJs = it },
+                        label = stringResource(R.string.login_check_js),
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    AppTextField(
+                        value = jsLib,
+                        onValueChange = { jsLib = it },
+                        label = "jsLib",
+                        minLines = 2,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             item {
-                AppTextField(
-                    value = loginUrl,
-                    onValueChange = { loginUrl = it },
-                    label = stringResource(R.string.login_url),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                AppTextField(
-                    value = loginUi,
-                    onValueChange = { loginUi = it },
-                    label = stringResource(R.string.login_ui),
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                AppTextField(
-                    value = loginCheckJs,
-                    onValueChange = { loginCheckJs = it },
-                    label = stringResource(R.string.login_check_js),
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                AppTextField(
-                    value = jsLib,
-                    onValueChange = { jsLib = it },
-                    label = "jsLib",
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.material3.Button(
+                        onClick = {
+                            coroutineScope.launch {
+                                // Save reading speed globally so it is picked up by player
+                                ReadConfig.ttsSpeechRate = Math.round(ttsSpeechRate)
+                                io.legado.app.model.ReadAloud.upTtsSpeechRate(splitties.init.appCtx)
+                                
+                                // If the service is running, stop it and wait until it stops to reload config
+                                if (io.legado.app.service.BaseReadAloudService.isRun) {
+                                    io.legado.app.model.ReadAloud.stop(splitties.init.appCtx)
+                                    for (i in 1..20) {
+                                        if (!io.legado.app.service.BaseReadAloudService.isRun) break
+                                        delay(50)
+                                    }
+                                }
+
+                                val tempMap = org.json.JSONObject()
+                                pitch.replace(",", ".").toDoubleOrNull()?.let { tempMap.put("pitch", it) }
+                                volumeGain.replace(",", ".").toDoubleOrNull()?.let { tempMap.put("volumeGain", it) }
+                                if (effectsProfile.isNotBlank()) tempMap.put("effectsProfile", effectsProfile)
+                                if (audioEncoding.isNotBlank()) tempMap.put("audioEncoding", audioEncoding)
+                                if (sampleRate.isNotBlank()) tempMap.put("sampleRate", sampleRate)
+                                val serializedLoginUi = tempMap.toString()
+                                
+                                val tempTts = tts.copy(
+                                    name = name, url = url,
+                                    contentType = contentType.ifBlank { null },
+                                    concurrentRate = concurrentRate,
+                                    header = header.ifBlank { null },
+                                    loginUrl = ttsSpeechRate.toString(),
+                                    loginUi = serializedLoginUi.ifBlank { null },
+                                    loginCheckJs = loginCheckJs.ifBlank { null },
+                                    jsLib = jsLib.ifBlank { null },
+                                )
+                                
+                                // Clear TTS cache files to bypass cache and force download
+                                try {
+                                    val baseDir = splitties.init.appCtx.externalCacheDir ?: splitties.init.appCtx.cacheDir
+                                    val ttsFolder = java.io.File(baseDir, "httpTTS")
+                                    val cacheFolder = java.io.File(baseDir, "httpTTS_cache")
+                                    io.legado.app.utils.FileUtils.delete(ttsFolder.absolutePath)
+                                    io.legado.app.utils.FileUtils.delete(cacheFolder.absolutePath)
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                                
+                                ReadConfig.ttsEngine = tempTts.id.toString()
+                                io.legado.app.model.ReadBook.book?.setTtsEngine(tempTts.id.toString())
+                                io.legado.app.model.ReadAloud.upReadAloudClass()
+                                // MUST SET httpTTS AFTER upReadAloudClass to avoid database override!
+                                io.legado.app.model.ReadAloud.httpTTS = tempTts
+                                io.legado.app.model.ReadBook.readAloud(play = true)
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        androidx.compose.material3.Text("Nghe thử")
+                    }
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = {
+                            io.legado.app.model.ReadAloud.stop(splitties.init.appCtx)
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        androidx.compose.material3.Text("Dừng nghe")
+                    }
+                }
             }
             item { Spacer(Modifier.height(16.dp)) }
         }

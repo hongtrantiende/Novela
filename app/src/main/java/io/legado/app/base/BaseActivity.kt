@@ -103,6 +103,20 @@ abstract class BaseActivity<VB : ViewBinding>(
                     val lp = window.attributes
                     lp.preferredDisplayModeId = maxMode.modeId
                     window.attributes = lp
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        try {
+                            val userFps = io.legado.app.ui.config.otherConfig.OtherConfig.preferredDisplayFps
+                            val targetFps = if (userFps > 0) userFps.toFloat() else maxMode.refreshRate
+                            val setFrameRateMethod = window.decorView.javaClass.getMethod(
+                                "setFrameRate",
+                                java.lang.Float.TYPE,
+                                java.lang.Integer.TYPE
+                            )
+                            setFrameRateMethod.invoke(window.decorView, targetFps, 0)
+                        } catch (e: Throwable) {
+                            e.printStackTrace()
+                        }
+                    }
                 }
             }
         }

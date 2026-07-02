@@ -2642,12 +2642,7 @@ private fun loadToolButtons(
                 onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
             },
         ) {
-            if (state.isReadAloudRunning) {
-                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
-            } else {
-                onIntent(ReadBookIntent.ToggleReadAloud)
-                onIntent(ReadBookIntent.HideMenu)
-            }
+            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
         },
         infoMap.getValue("setting").toButton {
             onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle))
@@ -2989,12 +2984,7 @@ private fun loadFloatingIcons(
         "search" to { onIntent(ReadBookIntent.OpenSearch(null)) },
         "catalog" to { onIntent(ReadBookIntent.OpenChapterList) },
         "read_aloud" to {
-            if (state.isReadAloudRunning) {
-                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
-            } else {
-                onIntent(ReadBookIntent.ToggleReadAloud)
-                onIntent(ReadBookIntent.HideMenu)
-            }
+            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
         },
         "setting" to { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle)) },
         "addBookmark" to { onIntent(ReadBookIntent.AddBookmark) },

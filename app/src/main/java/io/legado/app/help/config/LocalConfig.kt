@@ -88,7 +88,7 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         get() = isLastVersion(1, "ruleHelpVersion")
 
     val needUpHttpTTS: Boolean
-        get() = !isLastVersion(9, "httpTtsVersion")
+        get() = !isLastVersion(10, "httpTtsVersion")
 
     val needUpTxtTocRule: Boolean
         get() = !isLastVersion(3, "txtTocRuleVersion")
@@ -170,6 +170,12 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         get() = getString("accessToken", null)
         set(value) {
             edit { putString("accessToken", value) }
+        }
+
+    var refreshToken: String?
+        get() = getString("refreshToken", null)
+        set(value) {
+            edit { putString("refreshToken", value) }
         }
 
     var vipExpireFromServer: Long

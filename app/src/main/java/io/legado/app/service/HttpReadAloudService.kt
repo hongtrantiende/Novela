@@ -528,7 +528,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 val analyzeUrl = AnalyzeUrl(
                     httpTts.url,
                     speakText = speakText,
-                    speakSpeed = 10,
+                    speakSpeed = (httpTts.loginUrl?.toFloatOrNull()?.let { (it * 10).toInt() } ?: 10),
                     source = httpTts,
                     readTimeout = 300 * 1000L,
                     coroutineContext = currentCoroutineContext()

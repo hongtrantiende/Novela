@@ -152,53 +152,44 @@ fun ReadAloudContent(
 
         Spacer(Modifier.height(12.dp))
 
-        TinySwitchSettingItem(
-            title = stringResource(R.string.flow_sys),
-            checked = state.readAloudTtsFollowSys,
-            onCheckedChange = {
-                onIntent(ReadBookIntent.SetReadAloudTtsFollowSys(it))
-            },
-        )
-
-        var localSpeechRate by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
-        
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 12.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        val isSystemTts = io.legado.app.model.ReadAloud.httpTTS == null
+        if (isSystemTts) {
+            var localSpeechRate by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
+            
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 12.dp),
             ) {
-                AppText(
-                    text = stringResource(R.string.read_aloud_speed),
-                    style = LegadoTheme.typography.titleSmallEmphasized,
-                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = if (!state.readAloudTtsFollowSys) 1f else 0.5f),
-                )
-                AppText(
-                    text = String.format(Locale.ROOT, "%.1fX", (localSpeechRate.toInt() + 5) / 10f),
-                    style = LegadoTheme.typography.titleSmallEmphasized,
-                    color = LegadoTheme.colorScheme.primary.copy(alpha = if (!state.readAloudTtsFollowSys) 1f else 0.5f),
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppText(
+                        text = stringResource(R.string.read_aloud_speed),
+                        style = LegadoTheme.typography.titleSmallEmphasized,
+                        color = LegadoTheme.colorScheme.onSurface,
+                    )
+                    AppText(
+                        text = String.format(Locale.ROOT, "%.1fX", (localSpeechRate.toInt() + 5) / 10f),
+                        style = LegadoTheme.typography.titleSmallEmphasized,
+                        color = LegadoTheme.colorScheme.primary,
+                    )
+                }
+                Spacer(Modifier.height(4.dp))
+                AppSlider(
+                    value = localSpeechRate.coerceIn(5f, 15f),
+                    onValueChange = {
+                        localSpeechRate = it
+                    },
+                    onValueChangeFinished = {
+                        onIntent(ReadBookIntent.SetReadAloudTtsFollowSys(false))
+                        onIntent(ReadBookIntent.SetReadAloudTtsSpeechRate(localSpeechRate.toInt()))
+                    },
+                    valueRange = 5f..15f,
+                    steps = 9,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
-            Spacer(Modifier.height(4.dp))
-            AppSlider(
-                value = localSpeechRate.coerceIn(5f, 15f),
-                onValueChange = {
-                    if (!state.readAloudTtsFollowSys) {
-                        localSpeechRate = it
-                    }
-                },
-                onValueChangeFinished = {
-                    if (!state.readAloudTtsFollowSys) {
-                        onIntent(ReadBookIntent.SetReadAloudTtsSpeechRate(localSpeechRate.toInt()))
-                    }
-                },
-                valueRange = 5f..15f,
-                steps = 9,
-                enabled = !state.readAloudTtsFollowSys,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
 
         Spacer(Modifier.height(16.dp))

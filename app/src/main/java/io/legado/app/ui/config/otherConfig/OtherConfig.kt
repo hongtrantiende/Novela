@@ -6,6 +6,11 @@ import io.legado.app.ui.config.prefDelegate
 
 object OtherConfig {
 
+    var preferredDisplayFps by prefDelegate(
+        PreferKey.preferredDisplayFps,
+        90
+    )
+
     var language by prefDelegate(
         PreferKey.language,
         "auto",

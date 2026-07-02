@@ -670,6 +670,7 @@ class ReadBookController(
                 activity.lifecycleScope.launch(IO) {
                     if (BaseReadAloudService.isPlay()) {
                         ReadBook.curTextChapter?.let { textChapter ->
+                            ReadBook.durChapterPos = effect.chapterStart
                             val pageIndex = ReadBook.durPageIndex
                             val aloudSpanStart =
                                 effect.chapterStart - textChapter.getReadLength(pageIndex)

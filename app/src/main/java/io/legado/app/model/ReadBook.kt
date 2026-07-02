@@ -616,11 +616,15 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     /**
      * 朗读
      */
-    fun readAloud(play: Boolean = true, startPos: Int = 0) {
+    fun readAloud(play: Boolean = true, startPos: Int = -1) {
         book ?: return
         val textChapter = curTextChapter ?: return
         if (textChapter.isCompleted) {
-            ReadAloud.play(appCtx, play, startPos = startPos)
+            val actualStartPos = if (startPos >= 0) startPos else {
+                val pageIndex = durPageIndex
+                maxOf(0, durChapterPos - textChapter.getReadLength(pageIndex))
+            }
+            ReadAloud.play(appCtx, play, startPos = actualStartPos)
         }
     }
 

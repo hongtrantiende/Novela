@@ -219,10 +219,14 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
             try {
                 val jsonObject = org.json.JSONObject(responseBody!!)
                 val accessToken = jsonObject.getString("access_token")
+                val refreshToken = jsonObject.optString("refresh_token", "")
                 val user = jsonObject.getJSONObject("user")
                 val userEmail = user.getString("email").lowercase().trim()
 
                 LocalConfig.accessToken = accessToken
+                if (refreshToken.isNotBlank()) {
+                    LocalConfig.refreshToken = refreshToken
+                }
                 LocalConfig.userEmail = userEmail
 
                 // Sync VIP status from both user_metadata and profiles.vip_until table

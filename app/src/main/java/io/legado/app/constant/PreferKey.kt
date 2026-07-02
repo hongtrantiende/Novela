@@ -2,6 +2,7 @@ package io.legado.app.constant
 
 @Suppress("ConstPropertyName")
 object PreferKey {
+    const val preferredDisplayFps = "preferredDisplayFps"
     const val language = "language"
     const val fontScale = "fontScale"
     const val appFontPath = "appFontPath"

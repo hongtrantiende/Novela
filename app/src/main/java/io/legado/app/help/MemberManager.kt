@@ -180,66 +180,133 @@ object MemberManager {
 
     fun checkVipStatus(accessToken: String): Result<Long> {
         return try {
-            val request = okhttp3.Request.Builder()
+            val apikey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8"
+            var activeToken = accessToken
+            
+            var request = okhttp3.Request.Builder()
                 .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
-                .header("apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8")
-                .header("Authorization", "Bearer $accessToken")
+                .header("apikey", apikey)
+                .header("Authorization", "Bearer $activeToken")
                 .get()
                 .build()
 
-            var vipExpire = 0L
-            var userId = ""
+            var responseCode = 0
+            var responseBodyStr = ""
+            var success = false
+            
             io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
-                val responseBody = response.body?.string()
-                if (response.isSuccessful && !responseBody.isNullOrBlank()) {
-                    val jsonObject = org.json.JSONObject(responseBody)
-                    userId = jsonObject.optString("id", "")
-                    val userMetadata = jsonObject.optJSONObject("user_metadata")
-                    vipExpire = userMetadata?.optLong("vip_expire", 0L) ?: 0L
+                responseCode = response.code
+                responseBodyStr = response.body?.string() ?: ""
+                success = response.isSuccessful
+            }
+
+            if (responseCode == 401) {
+                val refreshToken = io.legado.app.help.config.LocalConfig.refreshToken
+                if (!refreshToken.isNullOrBlank()) {
+                    val refreshJson = org.json.JSONObject()
+                    refreshJson.put("refresh_token", refreshToken)
+                    val mediaType = "application/json; charset=utf-8".toMediaType()
+                    val refreshBody = refreshJson.toString().toRequestBody(mediaType)
+                    
+                    val refreshRequest = okhttp3.Request.Builder()
+                        .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/token?grant_type=refresh_token")
+                        .header("apikey", apikey)
+                        .header("Authorization", "Bearer $apikey")
+                        .post(refreshBody)
+                        .build()
+                        
+                    try {
+                        io.legado.app.help.http.okHttpClient.newCall(refreshRequest).execute().use { refreshResponse ->
+                            if (refreshResponse.isSuccessful) {
+                                val refreshBodyStr = refreshResponse.body?.string()
+                                if (!refreshBodyStr.isNullOrBlank()) {
+                                    val refreshJsonObj = org.json.JSONObject(refreshBodyStr)
+                                    val newAccessToken = refreshJsonObj.getString("access_token")
+                                    val newRefreshToken = refreshJsonObj.optString("refresh_token", "")
+                                    
+                                    io.legado.app.help.config.LocalConfig.accessToken = newAccessToken
+                                    if (newRefreshToken.isNotBlank()) {
+                                        io.legado.app.help.config.LocalConfig.refreshToken = newRefreshToken
+                                    }
+                                    activeToken = newAccessToken
+                                    
+                                    request = okhttp3.Request.Builder()
+                                        .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
+                                        .header("apikey", apikey)
+                                        .header("Authorization", "Bearer $activeToken")
+                                        .get()
+                                        .build()
+                                        
+                                    io.legado.app.help.http.okHttpClient.newCall(request).execute().use { retryResponse ->
+                                        responseCode = retryResponse.code
+                                        responseBodyStr = retryResponse.body?.string() ?: ""
+                                        success = retryResponse.isSuccessful
+                                    }
+                                }
+                            } else {
+                                if (refreshResponse.code == 400) {
+                                    io.legado.app.help.config.LocalConfig.accessToken = null
+                                    io.legado.app.help.config.LocalConfig.refreshToken = null
+                                    io.legado.app.help.config.LocalConfig.vipExpireFromServer = 0L
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             }
 
-            if (userId.isNotBlank()) {
-                val profileRequest = okhttp3.Request.Builder()
-                    .url("https://arsnnqwcqzaqhndxemgz.supabase.co/rest/v1/profiles?id=eq.$userId&select=vip_until")
-                    .header("apikey", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8")
-                    .header("Authorization", "Bearer $accessToken")
-                    .get()
-                    .build()
+            if (success && responseBodyStr.isNotBlank()) {
+                val jsonObject = org.json.JSONObject(responseBodyStr)
+                val userId = jsonObject.optString("id", "")
+                val userMetadata = jsonObject.optJSONObject("user_metadata")
+                var vipExpire = userMetadata?.optLong("vip_expire", 0L) ?: 0L
 
-                try {
-                    io.legado.app.help.http.okHttpClient.newCall(profileRequest).execute().use { resp ->
-                        val body = resp.body?.string()
-                        if (resp.isSuccessful && !body.isNullOrBlank()) {
-                            val arr = org.json.JSONArray(body)
-                            if (arr.length() > 0) {
-                                val item = arr.getJSONObject(0)
-                                if (!item.isNull("vip_until")) {
-                                    val vipUntilStr = item.optString("vip_until", "")
-                                    if (vipUntilStr.isNotBlank()) {
-                                        val dateStr = vipUntilStr.substringBefore("T")
-                                        val formatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                                        val date = formatter.parse(dateStr)
-                                        if (date != null) {
-                                            val profileVip = date.time + 24 * 60 * 60 * 1000L - 1000L
-                                            if (profileVip > vipExpire) {
-                                                vipExpire = profileVip
+                if (userId.isNotBlank()) {
+                    val profileRequest = okhttp3.Request.Builder()
+                        .url("https://arsnnqwcqzaqhndxemgz.supabase.co/rest/v1/profiles?id=eq.$userId&select=vip_until")
+                        .header("apikey", apikey)
+                        .header("Authorization", "Bearer $activeToken")
+                        .get()
+                        .build()
+
+                    try {
+                        io.legado.app.help.http.okHttpClient.newCall(profileRequest).execute().use { resp ->
+                            val body = resp.body?.string()
+                            if (resp.isSuccessful && !body.isNullOrBlank()) {
+                                val arr = org.json.JSONArray(body)
+                                if (arr.length() > 0) {
+                                    val item = arr.getJSONObject(0)
+                                    if (!item.isNull("vip_until")) {
+                                        val vipUntilStr = item.optString("vip_until", "")
+                                        if (vipUntilStr.isNotBlank()) {
+                                            val dateStr = vipUntilStr.substringBefore("T")
+                                            val formatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                                            val date = formatter.parse(dateStr)
+                                            if (date != null) {
+                                                val profileVip = date.time + 24 * 60 * 60 * 1000L - 1000L
+                                                if (profileVip > vipExpire) {
+                                                    vipExpire = profileVip
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
                         }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
                 }
-            }
 
-            io.legado.app.help.config.LocalConfig.vipExpireFromServer = vipExpire
-            Result.success(vipExpire)
+                io.legado.app.help.config.LocalConfig.vipExpireFromServer = vipExpire
+                Result.success(vipExpire)
+            } else {
+                Result.success(io.legado.app.help.config.LocalConfig.vipExpireFromServer)
+            }
         } catch (e: Exception) {
-            Result.failure(e)
+            Result.success(io.legado.app.help.config.LocalConfig.vipExpireFromServer)
         }
     }
 }

@@ -109,6 +109,16 @@ fun OtherConfigScreen(
                 )
 
                 DropdownListSettingItem(
+                    title = "Tốc độ làm tươi màn hình (FPS)",
+                    selectedValue = OtherConfig.preferredDisplayFps.toString(),
+                    displayEntries = arrayOf("60 FPS", "90 FPS (Mặc định)", "120 FPS", "Tối đa thiết bị"),
+                    entryValues = arrayOf("60", "90", "120", "0"),
+                    onValueChange = { newValue ->
+                        OtherConfig.preferredDisplayFps = newValue.toInt()
+                    }
+                )
+
+                DropdownListSettingItem(
                     title = stringResource(R.string.update_to_variant_title),
                     description = stringResource(R.string.update_to_variant_summary),
                     selectedValue = OtherConfig.updateToVariant,
