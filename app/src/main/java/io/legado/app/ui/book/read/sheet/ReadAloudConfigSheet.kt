@@ -170,6 +170,37 @@ fun SpeakEngineConfigSheet(
     var pendingEngineSelection by remember { mutableStateOf<PendingSpeakEngineSelection?>(null) }
     var showImportSheet by remember { mutableStateOf(false) }
     var showUrlInput by remember { mutableStateOf(false) }
+    var selectedTabIndex by remember { mutableStateOf(0) }
+
+    // Split items into 4 tabs:
+    // Tab 0 "Thế hệ 1": System TTS + custom (id >= 0 or null) + Wavenet (id -101 to -106)
+    // Tab 1 "Thế hệ 2": Neural2 (id -107 to -108)
+    // Tab 2 "Thế hệ 3": Chirp3-HD (id -109 to -138)
+    // Tab 3 "Edge TTS": Edge TTS (id <= -200)
+    val gen1Items = remember(items) {
+        items.filter { item ->
+            val id = item.value?.toLongOrNull()
+            id == null || id >= 0 || (id in -106L..-101L)
+        }
+    }
+    val gen2Items = remember(items) {
+        items.filter { item ->
+            val id = item.value?.toLongOrNull()
+            id != null && id in -108L..-107L
+        }
+    }
+    val gen3Items = remember(items) {
+        items.filter { item ->
+            val id = item.value?.toLongOrNull()
+            id != null && id in -138L..-109L
+        }
+    }
+    val edgeItems = remember(items) {
+        items.filter { item ->
+            val id = item.value?.toLongOrNull()
+            id != null && id <= -200
+        }
+    }
 
     AppAlertDialog(
         show = pendingEngineSelection != null,
@@ -229,62 +260,97 @@ fun SpeakEngineConfigSheet(
         onDismissRequest = onDismissRequest,
         title = stringResource(R.string.speak_engine),
         startAction = {
-            SmallTonalButton(
-                onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
-                icon = Icons.Default.Add
-            )
+            if (selectedTabIndex == 0) {
+                SmallTonalButton(
+                    onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
+                    icon = Icons.Default.Add
+                )
+            }
         },
         endAction = {
-            var expanded by remember { mutableStateOf(false) }
-            val selectedId = selectedValue?.toLongOrNull()
-            val isPremiumSelected = selectedId != null && selectedId <= -108 && selectedId >= -138
-            Box {
-                SmallTonalButton(
-                    onClick = { expanded = true },
-                    icon = Icons.Default.MoreVert
-                )
-                RoundDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.import_tts),
-                        onClick = {
-                            expanded = false
-                            showImportSheet = true
-                        },
+            if (selectedTabIndex == 0) {
+                var expanded by remember { mutableStateOf(false) }
+                val selectedId = selectedValue?.toLongOrNull()
+                val isPremiumSelected = selectedId != null && selectedId <= -108 && selectedId >= -138
+                Box {
+                    SmallTonalButton(
+                        onClick = { expanded = true },
+                        icon = Icons.Default.MoreVert
                     )
-                    if (!isPremiumSelected) {
+                    RoundDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         RoundDropdownMenuItem(
-                            text = stringResource(R.string.export),
+                            text = stringResource(R.string.import_tts),
                             onClick = {
                                 expanded = false
-                                onIntent(ReadBookIntent.ExportAllHttpTts)
+                                showImportSheet = true
                             },
                         )
+                        if (!isPremiumSelected) {
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.export),
+                                onClick = {
+                                    expanded = false
+                                    onIntent(ReadBookIntent.ExportAllHttpTts)
+                                },
+                            )
+                            RoundDropdownMenuItem(
+                                text = stringResource(R.string.copy_url),
+                                onClick = {
+                                    expanded = false
+                                    onIntent(ReadBookIntent.ExportAllHttpTtsAsUrl)
+                                },
+                            )
+                        }
                         RoundDropdownMenuItem(
-                            text = stringResource(R.string.copy_url),
+                            text = stringResource(R.string.clear_cache),
                             onClick = {
                                 expanded = false
-                                onIntent(ReadBookIntent.ExportAllHttpTtsAsUrl)
+                                onIntent(ReadBookIntent.ClearTtsCache)
                             },
                         )
                     }
-                    RoundDropdownMenuItem(
-                        text = stringResource(R.string.clear_cache),
-                        onClick = {
-                            expanded = false
-                            onIntent(ReadBookIntent.ClearTtsCache)
-                        },
-                    )
                 }
             }
         },
     ) {
+        // 4 tabs: Gen1 (Wavenet), Gen2 (Neural2), Gen3 (Chirp3-HD), Edge TTS
+        val tabTitles = listOf("Thế hệ 1", "Thế hệ 2", "Thế hệ 3", "Edge TTS")
+        androidx.compose.material3.ScrollableTabRow(
+            selectedTabIndex = selectedTabIndex,
+            modifier = Modifier.fillMaxWidth(),
+            edgePadding = 8.dp,
+        ) {
+            tabTitles.forEachIndexed { index, title ->
+                androidx.compose.material3.Tab(
+                    selected = selectedTabIndex == index,
+                    onClick = { selectedTabIndex = index },
+                    text = {
+                        androidx.compose.material3.Text(
+                            text = title,
+                            maxLines = 1,
+                        )
+                    },
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        val displayItems = when (selectedTabIndex) {
+            0 -> gen1Items
+            1 -> gen2Items
+            2 -> gen3Items
+            3 -> edgeItems
+            else -> gen1Items
+        }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f, fill = false)
                 .padding(bottom = 8.dp),
         ) {
-            items(items) { item ->
+            items(displayItems) { item ->
                 val httpTtsId = item.value?.toLongOrNull()
                 val isSelected = item.value == selectedValue
                 TinyClickableSettingItem(
@@ -453,7 +519,7 @@ fun HttpTtsEditSheet(
                                 contentType = contentType.ifBlank { null },
                                 concurrentRate = concurrentRate,
                                 header = header.ifBlank { null },
-                                loginUrl = String.format(java.util.Locale.US, "%.1f", (ttsSpeechRate.toInt() + 5) / 10f),
+                                loginUrl = loginUrl.ifBlank { null },
                                 loginUi = serializedLoginUi.ifBlank { null },
                                 loginCheckJs = loginCheckJs.ifBlank { null },
                                 jsLib = jsLib.ifBlank { null },
@@ -471,6 +537,8 @@ fun HttpTtsEditSheet(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val isDefaultVoice = tts.id < 0
+            val isEdgeTtsVoice = io.legado.app.help.tts.EdgeTtsClient.isEdgeTtsUrl(tts.url)
+            val isChirp3Voice = tts.id in -138L..-109L
 
             if (!isDefaultVoice) {
                 item {
@@ -521,8 +589,8 @@ fun HttpTtsEditSheet(
             }
             item {
                 SliderSettingItem(
-                    title = "Tốc độ tải mặc định",
-                    description = "Tốc độ tổng hợp từ server (Mặc định: 1.0x, Hiện tại: ${loginUrl.replace(",", ".").toFloatOrNull() ?: 1.0f}x)",
+                    title = "Tốc độ đọc tải",
+                    description = "Tốc độ đọc khi tải từ server (Mặc định: 1.0x, Hiện tại: ${loginUrl.replace(",", ".").toFloatOrNull() ?: 1.0f}x)",
                     value = loginUrl.replace(",", ".").toFloatOrNull() ?: 1.0f,
                     defaultValue = 1.0f,
                     valueRange = 0.5f..3.0f,
@@ -539,52 +607,58 @@ fun HttpTtsEditSheet(
                     onValueChange = { ttsSpeechRate = it }
                 )
             }
-            item {
-                SliderSettingItem(
-                    title = "Độ cao giọng (Pitch)",
-                    description = "Trầm (-10) đến Cao (+10) (Mặc định: 0.0, Hiện tại: ${pitch.replace(",", ".").toFloatOrNull() ?: 0.0f})",
-                    value = pitch.replace(",", ".").toFloatOrNull() ?: 0.0f,
-                    defaultValue = 0.0f,
-                    valueRange = -10.0f..10.0f,
-                    onValueChange = { pitch = String.format(java.util.Locale.US, "%.1f", it) }
-                )
+            // Chirp3-HD does NOT support pitch/volume (Google API limitation)
+            if (!isChirp3Voice) {
+                item {
+                    SliderSettingItem(
+                        title = "Độ cao giọng (Pitch)",
+                        description = "Trầm (-10) đến Cao (+10) (Mặc định: 0.0, Hiện tại: ${pitch.replace(",", ".").toFloatOrNull() ?: 0.0f})",
+                        value = pitch.replace(",", ".").toFloatOrNull() ?: 0.0f,
+                        defaultValue = 0.0f,
+                        valueRange = -10.0f..10.0f,
+                        onValueChange = { pitch = String.format(java.util.Locale.US, "%.1f", it) }
+                    )
+                }
+                item {
+                    SliderSettingItem(
+                        title = "Âm lượng tăng cường (dB)",
+                        description = "Nhỏ (-20) đến To (+16) (Mặc định: 0.0, Hiện tại: ${volumeGain.replace(",", ".").toFloatOrNull() ?: 0.0f} dB)",
+                        value = volumeGain.replace(",", ".").toFloatOrNull() ?: 0.0f,
+                        defaultValue = 0.0f,
+                        valueRange = -20.0f..16.0f,
+                        onValueChange = { volumeGain = String.format(java.util.Locale.US, "%.1f", it) }
+                    )
+                }
             }
-            item {
-                SliderSettingItem(
-                    title = "Âm lượng tăng cường (dB)",
-                    description = "Nhỏ (-20) đến To (+16) (Mặc định: 0.0, Hiện tại: ${volumeGain.replace(",", ".").toFloatOrNull() ?: 0.0f} dB)",
-                    value = volumeGain.replace(",", ".").toFloatOrNull() ?: 0.0f,
-                    defaultValue = 0.0f,
-                    valueRange = -20.0f..16.0f,
-                    onValueChange = { volumeGain = String.format(java.util.Locale.US, "%.1f", it) }
-                )
-            }
-            item {
-                AppTextField(
-                    value = effectsProfile,
-                    onValueChange = { effectsProfile = it },
-                    label = "Tối ưu thiết bị (VD: headphone-class-device)",
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                AppTextField(
-                    value = audioEncoding,
-                    onValueChange = { audioEncoding = it },
-                    label = "Mã hóa âm thanh (VD: MP3 hoặc OGG_OPUS)",
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            item {
-                AppTextField(
-                    value = sampleRate,
-                    onValueChange = { sampleRate = it },
-                    label = "Tần số lấy mẫu (Chỉ hỗ trợ: 8000, 16000, 24000, 32000, 44100, 48000)",
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+            // Google-specific audio config fields
+            if (!isEdgeTtsVoice && !isChirp3Voice) {
+                item {
+                    AppTextField(
+                        value = effectsProfile,
+                        onValueChange = { effectsProfile = it },
+                        label = "Tối ưu thiết bị (VD: headphone-class-device)",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    AppTextField(
+                        value = audioEncoding,
+                        onValueChange = { audioEncoding = it },
+                        label = "Mã hóa âm thanh (VD: MP3 hoặc OGG_OPUS)",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                item {
+                    AppTextField(
+                        value = sampleRate,
+                        onValueChange = { sampleRate = it },
+                        label = "Tần số lấy mẫu (Chỉ hỗ trợ: 8000, 16000, 24000, 32000, 44100, 48000)",
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
             if (!isDefaultVoice) {
                 item {
@@ -640,7 +714,7 @@ fun HttpTtsEditSheet(
                                     contentType = contentType.ifBlank { null },
                                     concurrentRate = concurrentRate,
                                     header = header.ifBlank { null },
-                                    loginUrl = String.format(java.util.Locale.US, "%.1f", (ttsSpeechRate.toInt() + 5) / 10f),
+                                    loginUrl = loginUrl.ifBlank { null },
                                     loginUi = serializedLoginUi.ifBlank { null },
                                     loginCheckJs = loginCheckJs.ifBlank { null },
                                     jsLib = jsLib.ifBlank { null },

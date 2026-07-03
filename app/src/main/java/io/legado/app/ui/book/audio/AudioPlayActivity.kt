@@ -253,13 +253,13 @@ class AudioPlayActivity :
         binding.ivTimer.isEnabled = false
         binding.ivFastForward.isEnabled = false
 
-        binding.ivPlayMode.setOnClickListener {
+        binding.ivSettings.setOnClickListener {
+            // Cycle play mode on click for now
             AudioPlay.changePlayMode()
         }
 
         observeEventSticky<AudioPlay.PlayMode>(EventBus.PLAY_MODE_CHANGED) {
             playMode = it
-            updatePlayModeIcon()
         }
         binding.fabPlayStop.setOnClickListener {
             playButton()
@@ -272,6 +272,17 @@ class AudioPlayActivity :
         }
         binding.ivSkipPrevious.setOnClickListener {
             AudioPlay.prev()
+        }
+        binding.ivFastRewind.setOnClickListener {
+            val current = binding.playerProgress.value.toInt()
+            val target = maxOf(0, current - 10000) // Rewind 10s
+            AudioPlay.adjustProgress(target)
+        }
+        binding.ivFastForward10.setOnClickListener {
+            val current = binding.playerProgress.value.toInt()
+            val max = binding.playerProgress.valueTo.toInt()
+            val target = minOf(max, current + 10000) // Forward 10s
+            AudioPlay.adjustProgress(target)
         }
 
 //        binding.playerProgress.setOnSeekBarChangeListener(object : SeekBarChangeListener {
@@ -418,9 +429,7 @@ class AudioPlayActivity :
         }
     }
 
-    private fun updatePlayModeIcon() {
-        binding.ivPlayMode.setIconResource(playMode.iconRes)
-    }
+    // PlayMode icon is no longer shown directly in bottom bar
 
     private fun upCover(path: String?) {
         BookCover.load(
@@ -603,8 +612,9 @@ class AudioPlayActivity :
 
         val stateList = ColorStateList(states, colors)
         listOf(
-            binding.ivSkipNext, binding.ivSkipPrevious, binding.ivPlayMode, binding.ivTimer,
-            binding.ivChapter, binding.ivFastForward, binding.btnReset, binding.fabPlayStop
+            binding.ivSkipNext, binding.ivSkipPrevious, binding.ivSettings, binding.ivTimer,
+            binding.ivChapter, binding.ivFastForward, binding.ivFastRewind, binding.ivFastForward10,
+            binding.btnReset, binding.fabPlayStop
         ).forEach { btn ->
             btn.setTextColor(stateList)
             btn.iconTint = stateList

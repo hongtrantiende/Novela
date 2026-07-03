@@ -35,18 +35,21 @@
             app:navigationIcon="@drawable/ic_arrow_back"/>
     </com.google.android.material.appbar.AppBarLayout>
 
+    <!-- Cover Card -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cd_cover"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:cardElevation="16dp"
-        android:layout_marginHorizontal="32dp"
+        android:layout_marginHorizontal="48dp"
         android:layout_marginBottom="16dp"
+        app:cardCornerRadius="24dp"
         app:layout_constraintDimensionRatio="1:1"
         app:layout_constraintBottom_toTopOf="@+id/ll_title"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/title_bar"
+        app:layout_constraintVertical_bias="0.3"
         app:strokeWidth="0dp">
 
         <ImageView
@@ -57,6 +60,7 @@
             android:scaleType="centerCrop" />
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Timer badge on cover -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cd_timer"
         android:layout_width="wrap_content"
@@ -97,6 +101,7 @@
 
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Speed badge on cover -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cd_speed"
         android:layout_width="wrap_content"
@@ -123,12 +128,14 @@
             tools:ignore="SmallSp" />
     </com.google.android.material.card.MaterialCardView>
 
+    <!-- Title Area -->
     <LinearLayout
         android:id="@+id/ll_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:layout_marginHorizontal="28dp"
+        android:layout_marginTop="12dp"
         app:layout_constraintTop_toBottomOf="@+id/cd_cover"
         app:layout_constraintBottom_toTopOf="@+id/player_progress">
 
@@ -138,8 +145,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
             android:gravity="center"
+            android:maxLines="2"
+            android:ellipsize="end"
             android:scrollbars="none"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             app:layout_constraintBottom_toTopOf="@+id/tv_sub_title"
             tools:text="@string/text" />
@@ -149,76 +158,100 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:scrollbars="none"
             android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="14sp"
-            android:textStyle="bold"
+            android:textSize="13sp"
             app:layout_constraintBottom_toTopOf="@+id/player_progress"
             tools:text="@string/text" />
 
     </LinearLayout>
 
-
-
-
-
-    <TextView
-        android:id="@+id/tv_dur_time"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="32dp"
-        android:layout_marginBottom="8dp"
-        android:text="@string/text"
-        android:textStyle="bold"
-        android:textColor="?attr/colorPrimary"
-        app:layout_constraintBottom_toTopOf="@id/ll_play_menu"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:ignore="HardcodedText,RtlSymmetry,TextContrastCheck" />
-
+    <!-- Progress Slider -->
     <com.google.android.material.slider.Slider
         android:id="@+id/player_progress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center_vertical"
-        android:layout_marginHorizontal="16dp"
+        android:layout_marginHorizontal="24dp"
         android:value="0"
         android:valueFrom="0"
         android:valueTo="100000"
         app:tickColorInactive="@android:color/transparent"
-        app:layout_constraintBottom_toTopOf="@id/tv_all_time"
+        app:layout_constraintBottom_toTopOf="@id/ll_time"
         app:thumbElevation="0dp"
         app:thumbHeight="12dp"
         app:thumbWidth="4dp"
         app:trackHeight="2dp" />
 
-    <TextView
-        android:id="@+id/tv_all_time"
-        android:layout_width="wrap_content"
+    <!-- Time Labels -->
+    <LinearLayout
+        android:id="@+id/ll_time"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="32dp"
-        android:layout_marginBottom="8dp"
-        android:text="@string/text"
-        android:textStyle="bold"
-        android:textColor="?attr/colorPrimary"
-        app:layout_constraintBottom_toTopOf="@id/ll_play_menu"
-        app:layout_constraintEnd_toEndOf="parent"
-        tools:ignore="HardcodedText,TextContrastCheck" />
+        android:layout_marginHorizontal="32dp"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toTopOf="@id/ll_play_menu">
 
+        <TextView
+            android:id="@+id/tv_dur_time"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/text"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            tools:ignore="HardcodedText,TextContrastCheck" />
+
+        <TextView
+            android:id="@+id/tv_all_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/text"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="?attr/colorPrimary"
+            tools:ignore="HardcodedText,TextContrastCheck" />
+    </LinearLayout>
+
+    <!-- Playback Controls: 5 buttons -->
     <LinearLayout
         android:id="@+id/ll_play_menu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="12dp"
+        android:layout_marginTop="8dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingHorizontal="6dp"
+        android:paddingHorizontal="12dp"
         app:layout_constraintBottom_toTopOf="@id/ll_sub_menu">
 
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_weight="2" />
+            android:layout_weight="1" />
 
+        <!-- Rewind 10s -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/iv_fast_rewind"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Tua lùi 10s"
+            app:icon="@drawable/ic_fast_rewind"
+            app:iconGravity="textStart"
+            app:iconSize="28dp"
+            app:strokeWidth="0dp"
+            tools:ignore="ImageContrastCheck,HardcodedText" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="0.5" />
+
+        <!-- Previous Chapter -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/iv_skip_previous"
             style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
@@ -234,8 +267,9 @@
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_weight="1" />
+            android:layout_weight="0.5" />
 
+        <!-- Play/Pause -->
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
@@ -243,14 +277,14 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/fab_play_stop"
                 style="@style/Widget.Material3Expressive.Button.IconButton"
-                android:layout_width="80dp"
+                android:layout_width="72dp"
                 android:contentDescription="@string/audio_play"
-                android:layout_height="80dp"
+                android:layout_height="72dp"
                 app:backgroundTint="?attr/colorSecondaryContainer"
                 app:icon="@drawable/play_anim"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"
-                app:iconSize="42dp"
+                app:iconSize="40dp"
                 app:iconTint="?attr/colorOnSecondaryContainer"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -274,8 +308,9 @@
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_weight="1" />
+            android:layout_weight="0.5" />
 
+        <!-- Next Chapter -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/iv_skip_next"
             style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
@@ -291,100 +326,171 @@
         <View
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_weight="2" />
+            android:layout_weight="0.5" />
+
+        <!-- Forward 10s -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/iv_fast_forward_10"
+            style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Tua tới 10s"
+            app:icon="@drawable/ic_fast_forward"
+            app:iconGravity="textStart"
+            app:iconSize="28dp"
+            app:strokeWidth="0dp"
+            tools:ignore="ImageContrastCheck,HardcodedText" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
     </LinearLayout>
 
+    <!-- Bottom Action Bar with Labels -->
     <LinearLayout
         android:id="@+id/ll_sub_menu"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="8dp"
         android:orientation="vertical"
         app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp">
 
-            <View
+            <!-- Mục lục -->
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="3" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/iv_play_mode"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="@string/play_mode"
-                app:icon="@drawable/ic_play_mode_list_end_stop"
-                app:iconGravity="textStart"
-                app:iconSize="20dp"
-                app:strokeWidth="0dp" />
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-            <View
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/iv_chapter"
+                    style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/chapter_list"
+                    app:icon="@drawable/ic_chapter_list"
+                    app:iconGravity="textStart"
+                    app:iconSize="20dp"
+                    app:strokeWidth="0dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="-8dp"
+                    android:text="Mục lục"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:ignore="HardcodedText,SmallSp" />
+            </LinearLayout>
+
+            <!-- Hẹn giờ -->
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/iv_timer"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:checkable="true"
-                android:contentDescription="@string/set_timer"
-                app:icon="@drawable/ic_timer_black_24dp"
-                app:iconGravity="textStart"
-                app:iconSize="20dp"
-                app:strokeWidth="0dp" />
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-            <View
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/iv_timer"
+                    style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:contentDescription="@string/set_timer"
+                    app:icon="@drawable/ic_timer_black_24dp"
+                    app:iconGravity="textStart"
+                    app:iconSize="20dp"
+                    app:strokeWidth="0dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="-8dp"
+                    android:text="Hẹn giờ"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:ignore="HardcodedText,SmallSp" />
+            </LinearLayout>
+
+            <!-- Tốc độ -->
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/iv_chapter"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="@string/chapter_list"
-                app:icon="@drawable/ic_chapter_list"
-                app:iconGravity="textStart"
-                app:iconSize="20dp"
-                app:strokeWidth="0dp" />
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-            <View
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/iv_fast_forward"
+                    style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checkable="true"
+                    android:contentDescription="@string/skip_next"
+                    app:icon="@drawable/ic_speed"
+                    app:iconGravity="textStart"
+                    app:strokeWidth="0dp"
+                    tools:ignore="ImageContrastCheck" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="-8dp"
+                    android:text="Tốc độ"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:ignore="HardcodedText,SmallSp" />
+            </LinearLayout>
+
+            <!-- Cài đặt -->
+            <LinearLayout
                 android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="1" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/iv_fast_forward"
-                style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:checkable="true"
-                android:contentDescription="@string/skip_next"
-                app:icon="@drawable/ic_speed"
-                app:iconGravity="textStart"
-                app:strokeWidth="0dp"
-                tools:ignore="ImageContrastCheck" />
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="1dp"
-                android:layout_weight="3" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/iv_settings"
+                    style="@style/Widget.Material3Expressive.Button.IconButton.Outlined"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="Cài đặt"
+                    app:icon="@drawable/ic_settings"
+                    app:iconGravity="textStart"
+                    app:iconSize="20dp"
+                    app:strokeWidth="0dp"
+                    tools:ignore="HardcodedText" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="-8dp"
+                    android:text="Cài đặt"
+                    android:textSize="11sp"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:ignore="HardcodedText,SmallSp" />
+            </LinearLayout>
+
         </LinearLayout>
 
+        <!-- Settings Slider (for speed/timer adjustment) -->
         <LinearLayout
             android:id="@+id/ll_set"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="4dp"
             android:visibility="gone"
             app:layout_constraintBottom_toBottomOf="parent">
 
@@ -409,7 +515,6 @@
                 android:valueFrom="0"
                 android:valueTo="1" />
         </LinearLayout>
-
 
     </LinearLayout>
 

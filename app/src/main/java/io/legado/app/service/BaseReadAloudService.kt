@@ -400,6 +400,33 @@ abstract class BaseReadAloudService : BaseService(),
         }
     }
 
+    fun seekToParagraph(index: Int) {
+        val target = index.coerceIn(contentList.indices)
+        if (target == nowSpeak) return
+        playStop()
+        var targetReadAloudNumber = 0
+        for (i in 0 until target) {
+            targetReadAloudNumber += contentList[i].length + 1
+        }
+        readAloudNumber = targetReadAloudNumber
+        paragraphStartPos = 0
+        nowSpeak = target
+        textChapter?.let {
+            for (p in 0 until it.pageSize) {
+                if (readAloudNumber >= it.getReadLength(p) && (p == it.pageSize - 1 || readAloudNumber < it.getReadLength(p + 1))) {
+                    if (pageIndex != p) {
+                        pageIndex = p
+                        ReadBook.skipToPage(p)
+                    }
+                    break
+                }
+            }
+        }
+        upTtsProgress(readAloudNumber + 1)
+        upMediaMetadata(showContent = true)
+        play()
+    }
+
     private fun setTimer(minute: Int) {
         timeMinute = minute
         doDs()

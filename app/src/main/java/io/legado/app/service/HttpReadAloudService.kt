@@ -523,6 +523,10 @@ class HttpReadAloudService : BaseReadAloudService(),
         httpTts: HttpTTS,
         speakText: String
     ): InputStream? {
+        // Edge TTS: route to WebSocket client
+        if (io.legado.app.help.tts.EdgeTtsClient.isEdgeTtsUrl(httpTts.url)) {
+            return getEdgeTtsSpeakStream(httpTts, speakText)
+        }
         while (true) {
             try {
                 val analyzeUrl = AnalyzeUrl(
@@ -586,6 +590,70 @@ class HttpReadAloudService : BaseReadAloudService(),
                             throw e
                         } else {
                             AppLog.put("Lỗi âm thanh tải xuống TTS, thay vào đó hãy sử dụng âm thanh im lặng.\nNói văn bản: $speakText")
+                            break
+                        }
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Edge TTS synthesis via WebSocket.
+     */
+    private suspend fun getEdgeTtsSpeakStream(
+        httpTts: HttpTTS,
+        speakText: String
+    ): InputStream? {
+        while (true) {
+            try {
+                val voiceName = io.legado.app.help.tts.EdgeTtsClient.parseVoiceName(httpTts.url)
+                // Convert speed: loginUrl stores float like "1.0", Edge TTS uses percent offset
+                val speedFloat = httpTts.loginUrl?.toFloatOrNull() ?: 1.0f
+                val ratePercent = ((speedFloat - 1.0f) * 100).toInt().coerceIn(-50, 200)
+                // Read pitch and volume from loginUi config JSON
+                val config = try {
+                    org.json.JSONObject(httpTts.loginUi ?: "{}")
+                } catch (_: Exception) { org.json.JSONObject() }
+                val pitchHz = try {
+                    val pitchVal = config.optDouble("pitch", 0.0)
+                    // pitch is -10..+10 semitones, Edge TTS uses Hz offset
+                    (pitchVal * 12).toInt().coerceIn(-100, 100)
+                } catch (_: Exception) { 0 }
+                val volumePercent = try {
+                    val volGain = config.optDouble("volumeGain", 0.0)
+                    // volumeGain is in dB (-20..+16), convert to percent for Edge TTS
+                    // Approximate: 6dB ≈ 100% increase
+                    (volGain * 100 / 6).toInt().coerceIn(-100, 100)
+                } catch (_: Exception) { 0 }
+                val stream = io.legado.app.help.tts.EdgeTtsClient.synthesize(
+                    text = speakText,
+                    voiceName = voiceName,
+                    rate = ratePercent,
+                    pitch = pitchHz,
+                    volume = volumePercent,
+                )
+                downloadErrorNo = 0
+                return stream
+            } catch (e: Exception) {
+                when (e) {
+                    is CancellationException -> throw e
+                    is SocketTimeoutException, is ConnectException -> {
+                        downloadErrorNo++
+                        if (downloadErrorNo > 5) {
+                            AppLog.put("Edge TTS timeout/connect error > 5 times\n${e.localizedMessage}", e, true)
+                            throw e
+                        }
+                    }
+                    else -> {
+                        downloadErrorNo++
+                        AppLog.put("Edge TTS download error\n${e.localizedMessage}", e)
+                        if (downloadErrorNo > 5) {
+                            AppLog.put("Edge TTS 5 consecutive errors, pausing.", e, true)
+                            throw e
+                        } else {
+                            AppLog.put("Edge TTS error, using silent audio.\nText: $speakText")
                             break
                         }
                     }
