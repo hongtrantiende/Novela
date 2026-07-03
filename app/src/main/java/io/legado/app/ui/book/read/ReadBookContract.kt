@@ -663,7 +663,9 @@ sealed interface ReadBookEffect {
 
 @Immutable
 sealed interface ReadBookSheet {
-    data object ScanNames : ReadBookSheet
+    data class ScanNames(val selectedText: String? = null) : ReadBookSheet
+    data object NerAnalyze : ReadBookSheet
+    data object DictManager : ReadBookSheet
     data object PageAnim : ReadBookSheet
     data object Download : ReadBookSheet
     data object Charset : ReadBookSheet

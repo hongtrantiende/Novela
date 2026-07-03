@@ -499,7 +499,7 @@ abstract class BaseReadAloudService : BaseService(),
         mediaSessionCompat.setPlaybackState(
             PlaybackStateCompat.Builder()
                 .setActions(MediaHelp.MEDIA_SESSION_ACTIONS)
-                .setState(state, nowSpeak.toLong(), 1f)
+                .setState(state, nowSpeak.toLong() * 1000, 1f)
                 // 为系统媒体控件添加定时按钮
 //                .addCustomAction(
 //                    PlaybackStateCompat.CustomAction.Builder(
@@ -528,6 +528,7 @@ abstract class BaseReadAloudService : BaseService(),
             .putText(MediaMetadataCompat.METADATA_KEY_ARTIST, textChapter?.title ?: "")
             .putText(MediaMetadataCompat.METADATA_KEY_ALBUM, ReadBook.book?.author ?: "")
             .putText(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, currentContent ?: "")
+            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, contentList.size.toLong() * 1000)
             .build()
         mediaSessionCompat.setMetadata(metadata)
     }
@@ -570,6 +571,10 @@ abstract class BaseReadAloudService : BaseService(),
                     stopSelf()
                 }
 
+                override fun onSeekTo(pos: Long) {
+                    seekToParagraph((pos / 1000).toInt())
+                }
+
                 override fun onCustomAction(action: String, extras: Bundle?) {
                     if (action == "ACTION_ADD_TIMER") addTimer()
                 }
@@ -582,6 +587,38 @@ abstract class BaseReadAloudService : BaseService(),
             })
         } else {
             mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
+                override fun onPlay() {
+                    resumeReadAloud()
+                }
+
+                override fun onPause() {
+                    pauseReadAloud()
+                }
+
+                override fun onSkipToNext() {
+                    if (ReadConfig.mediaButtonPerNext) {
+                        nextChapter()
+                    } else {
+                        nextP()
+                    }
+                }
+
+                override fun onSkipToPrevious() {
+                    if (ReadConfig.mediaButtonPerNext) {
+                        prevChapter()
+                    } else {
+                        prevP()
+                    }
+                }
+
+                override fun onStop() {
+                    stopSelf()
+                }
+
+                override fun onSeekTo(pos: Long) {
+                    seekToParagraph((pos / 1000).toInt())
+                }
+
                 override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
                     return MediaButtonReceiver.handleIntent(
                         this@BaseReadAloudService, mediaButtonEvent

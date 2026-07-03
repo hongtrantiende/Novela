@@ -50,6 +50,12 @@ object QuickTranslateEngine {
     @Volatile
     private var phienAmDict = HashMap<String, String>()
 
+    @Volatile
+    var currentBookKey: String? = null
+
+    @Volatile
+    private var privateDict = HashMap<String, String>()
+
     fun isDictLoaded(): Boolean = isLoaded
     fun isDictLoading(): Boolean = isLoading
 
@@ -76,16 +82,44 @@ object QuickTranslateEngine {
                 Log.d(TAG, "Starting to load dictionaries into memory (force=$force)...")
                 val startTime = System.currentTimeMillis()
 
-                val tempTranslationDict = HashMap<String, String>(1500000)
-                val tempPhienAmDict = HashMap<String, String>(25000)
+                val vpFile = File(dictDir, "VietPhrase.txt")
+                val nameFile = File(dictDir, "Name.txt")
+                val phienAmFile = File(dictDir, "PhienAm.txt")
 
-                val stringPool = HashMap<String, String>(100000)
+                fun getLineCount(file: File): Int {
+                    if (!file.exists()) return 0
+                    var lines = 0
+                    try {
+                        file.reader().use { reader ->
+                            val charBuffer = CharArray(8192)
+                            var read: Int
+                            while (reader.read(charBuffer).also { read = it } >= 0) {
+                                for (i in 0 until read) {
+                                    if (charBuffer[i] == '\n') {
+                                        lines++
+                                    }
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                    return lines
+                }
+
+                val totalTranslationLines = getLineCount(vpFile) + getLineCount(nameFile) + 10000
+                val translationCapacity = (totalTranslationLines / 0.75f).toInt() + 1
+                val tempTranslationDict = HashMap<String, String>(translationCapacity)
+
+                val totalPhienAmLines = getLineCount(phienAmFile) + 1000
+                val phienAmCapacity = (totalPhienAmLines / 0.75f).toInt() + 1
+                val tempPhienAmDict = HashMap<String, String>(phienAmCapacity)
+
                 fun dedup(str: String): String {
-                    return stringPool.getOrPut(str) { str }
+                    return str.intern()
                 }
 
                 // 1. Nạp PhienAm.txt (Hán Việt)
-                val phienAmFile = File(dictDir, "PhienAm.txt")
                 if (phienAmFile.exists()) {
                     phienAmFile.bufferedReader().useLines { lines ->
                         lines.forEach { line ->
@@ -106,8 +140,7 @@ object QuickTranslateEngine {
                 val priorityNameVp = prefs.getString("qt_dict_priority_name_vp", "Name > VP") ?: "Name > VP"
                 val luatNhanSetting = prefs.getString("qt_luat_nhan", "Không nhân") ?: "Không nhân"
 
-                val vpFile = File(dictDir, "VietPhrase.txt")
-                val nameFile = File(dictDir, "Name.txt")
+
 
                 fun loadVpFile() {
                     if (vpFile.exists()) {
@@ -206,6 +239,46 @@ object QuickTranslateEngine {
         }.start()
     }
 
+    fun initBookPrivateDict(context: Context, bookKey: String?) {
+        currentBookKey = bookKey
+        privateDict.clear()
+        if (bookKey.isNullOrBlank()) return
+
+        Thread {
+            try {
+                val dictDir = File(context.filesDir, "dict/book")
+                if (!dictDir.exists()) dictDir.mkdirs()
+
+                val nameFile = File(dictDir, "book_${bookKey}_name.txt")
+                val vpFile = File(dictDir, "book_${bookKey}_vp.txt")
+
+                val tempPrivateDict = HashMap<String, String>()
+                fun loadFile(file: File) {
+                    if (file.exists()) {
+                        file.bufferedReader().useLines { lines ->
+                            lines.forEach { line ->
+                                val parts = line.split('=', limit = 2)
+                                if (parts.size == 2) {
+                                    val key = parts[0].trim()
+                                    val valPart = parts[1].split('/', limit = 2)[0].trim()
+                                    if (key.isNotEmpty() && valPart.isNotEmpty()) {
+                                        tempPrivateDict[key] = valPart
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                loadFile(vpFile)
+                loadFile(nameFile)
+                privateDict = tempPrivateDict
+                Log.d(TAG, "Loaded private dict for book $bookKey: ${privateDict.size} entries")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }.start()
+    }
+
     /**
      * Dịch một đoạn văn bản tiếng Trung sang tiếng Việt.
      */
@@ -280,7 +353,10 @@ object QuickTranslateEngine {
                 if (vpLengthPriority == "Dài > Ngắn") {
                     for (l in limit downTo 1) {
                         val phrase = processedText.substring(i, i + l)
-                        val translation = currentDict[phrase]
+                        var translation = privateDict[phrase]
+                        if (translation == null) {
+                            translation = currentDict[phrase]
+                        }
                         if (translation != null) {
                             matchedLength = l
                             matchedTranslation = translation
@@ -290,7 +366,10 @@ object QuickTranslateEngine {
                 } else {
                     for (l in 1..limit) {
                         val phrase = processedText.substring(i, i + l)
-                        val translation = currentDict[phrase]
+                        var translation = privateDict[phrase]
+                        if (translation == null) {
+                            translation = currentDict[phrase]
+                        }
                         if (translation != null) {
                             matchedLength = l
                             matchedTranslation = translation

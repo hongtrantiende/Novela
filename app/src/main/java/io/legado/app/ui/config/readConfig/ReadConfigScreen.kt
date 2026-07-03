@@ -173,27 +173,7 @@ fun ReadConfigScreen(
                     }
                 )
 
-                    DropdownListSettingItem(
-                    title = stringResource(R.string.show_brightness_view),
-                        selectedValue = state.showBrightnessView,
-                        displayEntries = stringArrayResource(R.array.brightness_bar_mode_title),
-                        entryValues = stringArrayResource(R.array.brightness_bar_mode_value),
-                        onValueChange = {
-                        viewModel.onIntent(ReadConfigIntent.ShowBrightnessViewChanged(it))
-                    }
-                )
 
-                    if (state.showBrightnessView == "2") {
-                        DropdownListSettingItem(
-                            title = stringResource(R.string.brightness_bar_position),
-                            selectedValue = state.brightnessVwPos,
-                            displayEntries = stringArrayResource(R.array.brightness_bar_position_title),
-                            entryValues = stringArrayResource(R.array.brightness_bar_position_value),
-                            onValueChange = {
-                                viewModel.onIntent(ReadConfigIntent.BrightnessVwPosChanged(it))
-                            }
-                        )
-                    }
 
                 SwitchSettingItem(
                     title = stringResource(R.string.use_underline),

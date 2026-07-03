@@ -195,3 +195,11 @@ cn.hutool.core.util.**{*;}
 # ==============================================================================
 # viewModelOf(::XxxViewModel) dùng KClass reference qua reflection
 -keep class * extends androidx.lifecycle.ViewModel { <init>(...); }
+
+# ==============================================================================
+# Baidu LAC JNI Keep Rules
+# ==============================================================================
+-keep class baidu.lac.jni.** { *; }
+-keepclasseswithmembernames class baidu.lac.jni.** {
+    native <methods>;
+}

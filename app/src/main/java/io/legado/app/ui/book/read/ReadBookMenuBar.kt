@@ -278,74 +278,7 @@ fun ReadBookMenuBar(
             menuConfig = state.menuConfig,
             isFloating = false,
         )
-        AnimatedVisibility(
-            visible = brightnessMode == "2" && state.menuVisible,
-            enter = slideInHorizontally(
-                initialOffsetX = { if (brightnessIsLeft) -it else it }
-            ) + fadeIn(),
-            exit = slideOutHorizontally(
-                targetOffsetX = { if (brightnessIsLeft) -it else it }
-            ) + fadeOut(),
-            modifier = Modifier.align(
-                if (brightnessIsLeft) Alignment.CenterStart else Alignment.CenterEnd
-            ),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(
-                        start = if (brightnessIsLeft) 8.dp else 0.dp,
-                        end = if (brightnessIsLeft) 0.dp else 8.dp,
-                    ),
-                contentAlignment = if (brightnessIsLeft) Alignment.CenterStart else Alignment.CenterEnd,
-            ) {
-                Surface(
-                    modifier = if (useBrightnessHaze && hazeState != null) {
-                        Modifier.readMenuBottomBarHazeEffect(
-                            state = hazeState,
-                            colors = menuColors,
-                            shape = brightnessShape,
-                            menuConfig = state.menuConfig,
-                            progressive = false,
-                        )
-                    } else {
-                        Modifier
-                    },
-                    shape = brightnessShape,
-                    color = if (useBrightnessHaze) {
-                        Color.Transparent
-                    } else {
-                        menuColors.background.copy(
-                            alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-                        )
-                    },
-                    contentColor = LegadoTheme.colorScheme.onSurface,
-                ) {
-                    BrightnessBar(
-                        brightness = state.menuConfig.readBrightness,
-                        onBrightnessChange = { value ->
-                            onIntent(ReadBookIntent.SetBrightness(value))
-                        },
-                        brightnessAuto = state.menuConfig.brightnessAuto,
-                        onToggleAuto = {
-                            onIntent(ReadBookIntent.ToggleBrightnessAuto(!state.menuConfig.brightnessAuto))
-                        },
-                        onTogglePosition = {
-                            onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.BrightnessVwPos(if (brightnessIsLeft) "1" else "0")))
-                        },
-                        vertical = true,
-                        colors = menuColors,
-                        menuConfig = state.menuConfig,
-                        backdrop = backdrop,
-                        buttonGlassEnabled = readMenuBottomBarButtonLiquidGlassEnabled(
-                            backdrop = backdrop,
-                            menuConfig = state.menuConfig,
-                        ),
-                        glassThumbEnabled = false,
-                    )
-                }
-            }
-        }
+
 
         // Bottom menu + floating icon row (bottom positions)
         AnimatedVisibility(
@@ -1701,7 +1634,27 @@ private fun OverflowDropdownMenu(
             leadingIcon = menuIcon(Icons.Default.Search),
             onClick = {
                 dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ScanNames))
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ScanNames()))
+            }
+        )
+
+        // Phân tích NER
+        RoundDropdownMenuItem(
+            text = "Phân tích NER",
+            leadingIcon = menuIcon(Icons.Default.Search),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.NerAnalyze))
+            }
+        )
+
+        // Quản lý từ điển
+        RoundDropdownMenuItem(
+            text = "Quản lý từ điển",
+            leadingIcon = menuIcon(Icons.Default.AutoStories),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.DictManager))
             }
         )
 
@@ -1834,6 +1787,14 @@ private fun OverflowDropdownMenu(
             onClick = {
                 dismiss()
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageAnim))
+            },
+        )
+        RoundDropdownMenuItem(
+            text = stringResource(R.string.config_btn),
+            leadingIcon = menuIcon(Icons.Default.Build),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ToolButtonConfig))
             },
         )
 
@@ -2080,26 +2041,7 @@ private fun MenuBottomBar(
             .padding(top = 8.dp, bottom = contentBottomPadding)
             .animateContentSize(),
     ) {
-        if (state.menuConfig.showBrightnessView == "1") {
-            BrightnessBar(
-                brightness = state.menuConfig.readBrightness,
-                onBrightnessChange = { value ->
-                    onIntent(ReadBookIntent.SetBrightness(value))
-                },
-                brightnessAuto = state.menuConfig.brightnessAuto,
-                onToggleAuto = {
-                    onIntent(ReadBookIntent.ToggleBrightnessAuto(!state.menuConfig.brightnessAuto))
-                },
-                onTogglePosition = {},
-                vertical = false,
-                colors = colors,
-                menuConfig = state.menuConfig,
-                backdrop = backdrop,
-                buttonGlassEnabled = buttonGlassEnabled,
-                glassThumbEnabled = buttonGlassEnabled,
-            )
-            Spacer(Modifier.height(4.dp))
-        }
+
 
         // Seek bar row: prev + slider + next
         AnimatedVisibility(visible = state.menuConfig.readSliderMode != "1") {
@@ -2629,9 +2571,6 @@ private fun loadToolButtons(
     }
     val infoMap = readMenuButtonInfos(context).associateBy { it.id }
     val allButtons = listOf(
-        infoMap.getValue("search").toButton {
-            onIntent(ReadBookIntent.OpenSearch(null))
-        },
         infoMap.getValue("catalog").toButton {
             onIntent(ReadBookIntent.OpenChapterList)
         },
@@ -2664,14 +2603,7 @@ private fun loadToolButtons(
         infoMap.getValue("replace_badge").toButton {
             onIntent(ReadBookIntent.ChangeReplaceRule(true))
         },
-        infoMap.getValue("auto_page").toButton(isActive = state.isAutoPage) {
-            if (state.isAutoPage) {
-                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
-            } else {
-                onIntent(ReadBookIntent.ToggleAutoPage)
-                onIntent(ReadBookIntent.HideMenu)
-            }
-        },
+
         infoMap.getValue("translate").toButton {
             onIntent(ReadBookIntent.ToggleTranslation)
         },
@@ -2980,7 +2912,6 @@ private fun loadFloatingIcons(
     val infoMap = readMenuButtonInfos(context).associateBy { it.id }
 
     val actionMap: Map<String, () -> Unit> = mapOf(
-        "search" to { onIntent(ReadBookIntent.OpenSearch(null)) },
         "catalog" to { onIntent(ReadBookIntent.OpenChapterList) },
         "read_aloud" to {
             onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
@@ -2992,20 +2923,11 @@ private fun loadFloatingIcons(
         "next_chapter" to { onIntent(ReadBookIntent.NextChapter) },
         "replace" to { onIntent(ReadBookIntent.ChangeReplaceRule(true)) },
         "replace_badge" to { onIntent(ReadBookIntent.ChangeReplaceRule(true)) },
-        "auto_page" to {
-            if (state.isAutoPage) {
-                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
-            } else {
-                onIntent(ReadBookIntent.ToggleAutoPage)
-                onIntent(ReadBookIntent.HideMenu)
-            }
-        },
         "translate" to { onIntent(ReadBookIntent.ToggleTranslation) },
     )
 
     val activeIds = buildSet {
         if (state.isReadAloudRunning) add("read_aloud")
-        if (state.isAutoPage) add("auto_page")
     }
 
     return state.menuConfig.titleBarButtons

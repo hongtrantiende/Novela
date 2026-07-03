@@ -124,6 +124,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun resetData(book: Book) {
         ReadBook.book = book
+        val bookKey = io.legado.app.utils.MD5Utils.md5Encode16(book.bookUrl)
+        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(appCtx, bookKey)
         readRecord.bookName = book.name
         readRecord.bookAuthor = book.author
         readRecord.readTime = appDb.readRecordDao.getReadTime("", book.name, book.author) ?: 0
@@ -154,6 +156,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun upData(book: Book) {
         ReadBook.book = book
+        val bookKey = io.legado.app.utils.MD5Utils.md5Encode16(book.bookUrl)
+        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(appCtx, bookKey)
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()

@@ -12,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +25,7 @@ import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.ReplaceRule
 import io.legado.app.help.book.BookHelp
+import io.legado.app.help.LacAnalyzerHelper
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.model.ReadBook
 import io.legado.app.model.TranslationLoader
@@ -45,6 +47,7 @@ fun ReplaceScanNamesSheet(
     onDismissRequest: () -> Unit,
     onRulesAdded: () -> Unit
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val book = remember { ReadBook.book }
     
@@ -63,6 +66,12 @@ fun ReplaceScanNamesSheet(
     var aiModel by remember { mutableStateOf("") }
     val sharedPrefs: SharedPreferences = remember { appCtx.getSharedPreferences("ai_config", Context.MODE_PRIVATE) }
     
+    // NER Model states
+    var isModelDownloaded by remember { mutableStateOf(false) }
+    var showDownloadModelDialog by remember { mutableStateOf(false) }
+    val isDownloading by LacAnalyzerHelper.isDownloading.collectAsState()
+    val downloadProgress by LacAnalyzerHelper.downloadProgress.collectAsState()
+
     val loadAiConfig = {
         aiUrlBase = sharedPrefs.getString("url_base", "https://api.openai.com/v1") ?: "https://api.openai.com/v1"
         aiApiKey = sharedPrefs.getString("api_key", "") ?: ""
@@ -80,6 +89,7 @@ fun ReplaceScanNamesSheet(
     LaunchedEffect(show) {
         if (show) {
             loadAiConfig()
+            isModelDownloaded = LacAnalyzerHelper.isModelDownloaded(context)
         }
     }
     
@@ -133,6 +143,49 @@ fun ReplaceScanNamesSheet(
         )
     }
 
+    if (showDownloadModelDialog) {
+        AppAlertDialog(
+            show = showDownloadModelDialog,
+            title = "Tải model NER offline",
+            content = {
+                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+                    Text(
+                        text = "Để quét Name offline bằng công cụ Baidu LAC, bạn cần tải mô hình ngôn ngữ (khoảng 3.2 MB).",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    if (isDownloading) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            AppCircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(text = downloadProgress, fontSize = 14.sp)
+                        }
+                    }
+                }
+            },
+            confirmText = "Tải ngay",
+            onConfirm = if (isDownloading) null else {
+                {
+                    coroutineScope.launch {
+                        val success = LacAnalyzerHelper.downloadAndExtractModel(context)
+                        if (success) {
+                            isModelDownloaded = true
+                            showDownloadModelDialog = false
+                        }
+                    }
+                }
+            },
+            dismissText = "Hủy",
+            onDismiss = if (isDownloading) null else { { showDownloadModelDialog = false } },
+            onDismissRequest = { if (!isDownloading) showDownloadModelDialog = false }
+        )
+    }
+
     // Nếu không có sách đang đọc
     if (book == null) {
         if (show) {
@@ -151,52 +204,64 @@ fun ReplaceScanNamesSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "Quét Name: ${book.name}"
+        title = "Bộ công cụ Quét Name"
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.85f)
-                .padding(bottom = 16.dp)
+                .padding(bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Chế độ quét & thông tin
             if (scannedNames.isEmpty() && !isScanning) {
+                // UI Lựa chọn quét ban đầu
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .weight(1f)
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "Chọn chế độ quét",
+                        text = "Phạm vi quét",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
                     
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
+                        modifier = Modifier.fillMaxWidth(0.9f),
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { scanMode = 0 }
-                        ) {
-                            RadioButton(selected = scanMode == 0, onClick = { scanMode = 0 })
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Chương hiện tại")
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.clickable { scanMode = 1 }
-                        ) {
-                            RadioButton(selected = scanMode == 1, onClick = { scanMode = 1 })
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Tất cả chương đã tải")
-                        }
+                        RadioButton(
+                            selected = scanMode == 0,
+                            onClick = { scanMode = 0 }
+                        )
+                        Text(
+                            "Chương hiện tại",
+                            modifier = Modifier
+                                .clickable { scanMode = 0 }
+                                .padding(start = 4.dp, end = 24.dp)
+                                .align(Alignment.CenterVertically),
+                            fontSize = 14.sp
+                        )
+                        
+                        RadioButton(
+                            selected = scanMode == 1,
+                            onClick = { scanMode = 1 }
+                        )
+                        Text(
+                            "Tất cả chương đã tải",
+                            modifier = Modifier
+                                .clickable { scanMode = 1 }
+                                .padding(start = 4.dp)
+                                .align(Alignment.CenterVertically),
+                            fontSize = 14.sp
+                        )
                     }
                     
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
                     Row(
                         modifier = Modifier.fillMaxWidth(0.9f),
@@ -205,6 +270,10 @@ fun ReplaceScanNamesSheet(
                     ) {
                         Button(
                             onClick = {
+                                if (!isModelDownloaded) {
+                                    showDownloadModelDialog = true
+                                    return@Button
+                                }
                                 isScanning = true
                                 coroutineScope.launch {
                                     val targetChapters = withContext(Dispatchers.IO) {
@@ -220,8 +289,8 @@ fun ReplaceScanNamesSheet(
                                     }
                                     
                                     if (targetChapters.isNotEmpty()) {
-                                        val names = scanNamesFromChapters(book, targetChapters) { scanned, total ->
-                                            progressText = "Đang quét chương $scanned / $total..."
+                                        val names = scanNamesFromChapters(context, book, targetChapters) { scanned, total ->
+                                            progressText = "Đang quét NER chương $scanned / $total..."
                                         }
                                         scannedNames = names.map { ScanNameItem(it.first, it.second, "") }
                                     } else {
@@ -230,9 +299,9 @@ fun ReplaceScanNamesSheet(
                                     isScanning = false
                                 }
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.weight(1.3f)
                         ) {
-                            Text("Quét thường", maxLines = 1)
+                            Text("Quét NER Offline", maxLines = 1)
                         }
                         
                         Button(
@@ -424,7 +493,6 @@ fun ReplaceScanNamesSheet(
                                 
                                 withContext(Dispatchers.Main) {
                                     TranslateUtils.clearCache()
-                                    // Reset chương hiện tại để làm mới giao diện đọc ngay lập tức
                                     ReadBook.curTextChapter = null
                                     onRulesAdded()
                                     onDismissRequest()
@@ -452,148 +520,53 @@ private data class ScanNameItem(
 )
 
 private suspend fun scanNamesFromChapters(
+    context: Context,
     book: Book,
     chapters: List<BookChapter>,
     onProgress: (scanned: Int, total: Int) -> Unit
 ): List<Pair<String, String>> = withContext(Dispatchers.Default) {
+    if (!LacAnalyzerHelper.init(context)) return@withContext emptyList()
     val data = TranslationLoader.loadTranslationData() ?: return@withContext emptyList()
-    val nameMap = mutableMapOf<String, String>() // Tiếng Việt -> Tiếng Trung
+    val nameSet = mutableSetOf<String>()
     
-    val chineseLastNames = setOf(
-        '张', '張', '王', '李', '刘', '劉', '陈', '陳', '杨', '楊', '赵', '趙', '黄', '黃', '周', '吴', '吳', '徐', 
-        '孙', '孫', '胡', '朱', '高', '林', '何', '郭', '马', '馬', '罗', '羅', '梁', '宋', '郑', '鄭', '谢', '謝', 
-        '韩', '韓', '唐', '冯', '馮', '于', '董', '萧', '蕭', '程', '曹', '袁', '邓', '鄧', '许', '許', '傅', '沈', 
-        '曾', '彭', '吕', '呂', '苏', '蘇', '卢', '盧', '蒋', '蔣', '蔡', '贾', '賈', '丁', '魏', '薛', '叶', '葉', 
-        '阎', '閻', '余', '潘', '杜', '戴', '夏', '锺', '鍾', '汪', '田', '任', '姜', '范', '方', '石', '廖', '邹', 
-        '鄒', '熊', '金', '陆', '陸', '郝', '孔', '白', '崔', '康', '毛', '邱', '秦', '江', '史', '顾', '顧', '侯', 
-        '邵', '孟', '龙', '龍', '万', '萬', '段', '雷', '钱', '錢', '汤', '湯', '尹', '黎', '易', '常', '武', '乔', 
-        '喬', '贺', '賀', '赖', '賴', '龚', '龔', '文'
-    )
-    
-    val vietnameseLastNames = setOf(
-        "vương", "lý", "lâm", "trần", "tô", "triệu", "diệp", "tiêu", "thạch", "bạch", "tần", "cổ", "la", "lục", 
-        "sở", "hạ", "mộ", "nạp", "độc", "hàn", "đường", "tống", "trịnh", "tạ", "phương", "kim", "long", "đông", 
-        "tây", "nam", "bắc", "mộ dung", "âu dương", "gia cát", "thượng quan", "nạp lan", "độc cô", "thẩm", "tăng", 
-        "bành", "lữ", "lư", "tưởng", "sái", "giả", "đinh", "ngụy", "tiết", "diêm", "dư", "phan", "đỗ", "đái", 
-        "uông", "điền", "nhậm", "khương", "phạm", "liêu", "trâu", "hùng", "hác", "khổng", "thôi", "khang", "mao", 
-        "khâu", "giang", "sử", "cố", "hầu", "mạnh", "vạn", "đoạn", "lôi", "tiền", "thang", "doãn", "lê", "dịch", 
-        "thường", "vũ", "kiều", "lại", "cung", "văn", "út", "lâu", "tiểu", "mạc", "hỉ", "hỷ", "nhan", "bùi", 
-        "tư mã", "công dương", "đàm", "tào", "liễu", "phong", "vân", "thích", "hoa", "cảnh", "hạng", "cát", "tích", 
-        "mộc", "hoàng", "chu", "ngô", "từ", "tôn", "hồ", "cao", "hà", "quách", "mã", "lương", "phùng", "viên"
-    )
-    
-    val vietnameseCommonWords = setOf(
-        "nói", "cười", "đi", "đến", "vào", "ra", "lên", "xuống", "chạy", "nhìn", "nghe", "thấy", "nghĩ", "muốn", 
-        "cần", "phải", "được", "bị", "là", "thì", "mà", "ở", "tại", "trong", "ngoài", "trên", "dưới", "của", "cho", 
-        "để", "với", "như", "nhưng", "tuy", "vì", "bởi", "nên", "và", "hoặc", "cũng", "đều", "đã", "đang", "sẽ", 
-        "rồi", "mới", "vừa", "lại", "qua", "lại", "ra", "vào", "có", "không", "chưa", "chẳng", "không", "này", 
-        "kia", "đó", "ấy", "đây", "nào", "gì", "sao", "thế", "vậy", "quá", "rất", "lắm", "hơn", "nhất", "tự", 
-        "nhau", "mình", "người", "nhà", "tay", "chân", "mắt", "mũi", "miệng", "đầu", "lưng", "lực", "thần", "sắc", 
-        "khí", "tâm", "thế", "đạo", "pháp", "trời", "đất", "sơn", "hải", "gió", "mưa", "lôi", "điện", "hỏa", "thủy",
-        "kiếm", "đao", "thương", "tiễn", "phù", "trận", "đan", "dược", "thú", "yêu", "ma", "quỷ", "tiên", "phật",
-        "đại", "tiểu", "lão", "trung", "thanh", "bạch", "hắc", "hồng", "tử", "kim", "ngân", "đồng", "thiết", "thạch",
-        "bản", "chương", "truyện", "sách", "chữ", "nghĩa", "từ", "câu", "đoạn", "trang", "hàng", "lớp", "bậc", "cấp",
-        "châm", "túi", "giáp", "đỉnh", "tháp", "chuông", "kính", "gương", "cung", "bạt", "băng", "hoàn", "dịch",
-        "thược", "chìa", "khóa", "dây", "xích", "giấy", "hộp", "rương", "bình", "lọ", "chén", "bát", "quyết", "kinh",
-        "điển", "lục", "đồ", "bản", "tại", "nơi", "chỗ", "phương", "hướng", "phía", "bên", "vùng", "miền", "đất"
-    )
-
     chapters.forEachIndexed { index, chapter ->
         val content = withContext(Dispatchers.IO) {
             BookHelp.getContent(book, chapter)
         }
         if (!content.isNullOrBlank()) {
-            // 1. Quét chữ Hán tiếng Trung thô (nếu có chữ Hán trong chương)
-            val isChinese = content.any { it.code in 0x4E00..0x9FFF }
-            if (isChinese) {
-                val tokens = TranslateUtils.tokenize(content, data)
-                for (token in tokens) {
-                    if (token.length in 2..4) {
-                        val isKnownName = data.names.findLongestMatch(token, 0)?.let { (len, _) -> len == token.length } ?: false
-                        val firstChar = token[0]
-                        val isPotentialName = firstChar in chineseLastNames && token.all { it.code in 0x4E00..0x9FFF }
-                        
-                        if (isKnownName || isPotentialName) {
-                            var translation: String? = null
-                            data.names.findLongestMatch(token, 0)?.let { (len, value) -> 
-                                if (len == token.length) translation = value 
-                            }
-                            if (translation == null) {
-                                data.vietPhrase.findLongestMatch(token, 0)?.let { (len, value) -> 
-                                    if (len == token.length) translation = value 
-                                }
-                            }
-                            
-                            val displayTranslation = if (translation != null) {
-                                if (translation.contains("/")) translation.split("/")[0] else translation
-                            } else {
-                                token.map { char -> data.chinesePhienAm[char.toString()] ?: char.toString() }
-                                    .joinToString(" ") { it.trim().replaceFirstChar { c -> c.uppercase() } }
-                            }
-                            val cleanTranslation = displayTranslation.trim()
-                            val normalizedName = cleanTranslation.split(Regex("\\s+"))
-                                .joinToString(" ") { it.lowercase().replaceFirstChar { c -> c.uppercase() } }
-                            val lastWord = normalizedName.split(" ").lastOrNull()?.lowercase()
-                            
-                            if (lastWord != null && vietnameseCommonWords.contains(lastWord)) {
-                                continue
-                            }
-                            if (normalizedName.isNotEmpty()) {
-                                nameMap[normalizedName] = token
-                            }
-                        }
+            val tokens = LacAnalyzerHelper.analyze(content)
+            for (token in tokens) {
+                // Lọc Tên người (PER), Địa danh (LOC), Tổ chức (ORG)
+                if (token.tag == "PER" || token.tag == "LOC" || token.tag == "ORG") {
+                    val word = token.word.trim()
+                    if (word.length in 2..4 && word.all { it.code in 0x4E00..0x9FFF }) {
+                        nameSet.add(word)
                     }
                 }
-            }
-            
-            // 2. Quét văn bản tiếng Việt dịch stv (quét song song cho mọi nội dung)
-            val rawWords = content.split(Regex("\\s+")).filter { it.isNotEmpty() }
-            var i = 0
-            val size = rawWords.size
-            while (i < size) {
-                val cleanWord = rawWords[i].trim { !it.isLetter() }.lowercase()
-                if (vietnameseLastNames.contains(cleanWord)) {
-                    val hasPunct = rawWords[i].any { !it.isLetter() }
-                    if (!hasPunct) {
-                        for (len in 2..3) {
-                            if (i + len - 1 < size) {
-                                val subList = rawWords.subList(i, i + len)
-                                var hasSeparator = false
-                                for (j in 0 until subList.size - 1) {
-                                    if (subList[j].any { !it.isLetter() }) {
-                                        hasSeparator = true
-                                        break
-                                    }
-                                }
-                                if (!hasSeparator) {
-                                    val cleanWords = subList.map { it.trim { c -> !c.isLetter() } }
-                                    val lastClean = cleanWords.last().lowercase()
-                                    
-                                    val isAllValid = cleanWords.all { it.isNotEmpty() && it.all { c -> c.isLetter() } }
-                                            && cleanWords.drop(1).none { vietnameseCommonWords.contains(it.lowercase()) }
-                                            
-                                    if (isAllValid) {
-                                        val nameText = cleanWords.joinToString(" ") { 
-                                            it.lowercase().replaceFirstChar { c -> c.uppercase() } 
-                                        }
-                                        if (!nameMap.containsKey(nameText)) {
-                                            nameMap[nameText] = ""
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                i++
             }
         }
         onProgress(index + 1, chapters.size)
     }
     
     val nameList = ArrayList<Pair<String, String>>()
-    nameMap.forEach { (vietnamese, chinese) ->
-        nameList.add(Pair(chinese, vietnamese))
+    for (name in nameSet) {
+        var translation: String? = null
+        data.names.findLongestMatch(name, 0)?.let { (len, value) -> 
+            if (len == name.length) translation = value 
+        }
+        if (translation == null) {
+            data.vietPhrase.findLongestMatch(name, 0)?.let { (len, value) -> 
+                if (len == name.length) translation = value 
+            }
+        }
+        
+        val displayTranslation = if (translation != null) {
+            if (translation.contains("/")) translation.split("/")[0] else translation
+        } else {
+            name.map { char -> data.chinesePhienAm[char.toString()] ?: char.toString() }
+                .joinToString(" ") { it.trim().replaceFirstChar { c -> c.uppercase() } }
+        }
+        nameList.add(Pair(name, displayTranslation))
     }
     
     nameList.sortedBy { it.second }
@@ -611,7 +584,6 @@ private suspend fun scanNamesWithAi(
         throw Exception("API Key không được để trống!")
     }
     
-    // Ghép nội dung tối đa 3 chương để gửi lên AI phân tích
     val chaptersToScan = chapters.take(3)
     val contentBuilder = StringBuilder()
     chaptersToScan.forEachIndexed { idx, ch ->

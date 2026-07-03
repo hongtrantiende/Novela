@@ -831,8 +831,6 @@ internal data class ReadMenuButtonInfo(
 )
 
 internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = listOf(
-    ReadMenuButtonInfo("search", Icons.Default.Search, context.getString(R.string.search_content)),
-    ReadMenuButtonInfo("auto_page", Icons.Default.PlayArrow, context.getString(R.string.auto_next_page)),
     ReadMenuButtonInfo("catalog", Icons.AutoMirrored.Filled.List, context.getString(R.string.chapter_list)),
     ReadMenuButtonInfo("read_aloud", Icons.Default.RecordVoiceOver, context.getString(R.string.read_aloud)),
     ReadMenuButtonInfo("setting", Icons.Default.Settings, context.getString(R.string.setting)),

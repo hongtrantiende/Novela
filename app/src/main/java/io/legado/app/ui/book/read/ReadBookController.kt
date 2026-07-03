@@ -561,6 +561,11 @@ class ReadBookController(
                 return true
             }
 
+            R.id.menu_ner -> {
+                viewModel.onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ScanNames(selectedText)))
+                return true
+            }
+
 
 
             R.id.menu_dict -> {

@@ -1,5 +1,6 @@
 package io.legado.app.ui.book.read.sheet
 
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -16,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookHelp
+import io.legado.app.help.LacAnalyzerHelper
 import io.legado.app.model.ReadBook
 import io.legado.app.model.TranslationLoader
 import io.legado.app.ui.book.read.ReadBookIntent
@@ -27,33 +30,55 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.DictManager
 import io.legado.app.utils.TranslateUtils
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
 fun ScanNamesSheet(
     show: Boolean,
+    selectedText: String?,
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    
+    var isModelDownloaded by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var nameList by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     var editingNamePair by remember { mutableStateOf<Pair<String, String>?>(null) }
 
-    LaunchedEffect(show, state.durChapterIndex, state.curTextChapter) {
+    // Download state flows
+    val isDownloading by LacAnalyzerHelper.isDownloading.collectAsState()
+    val downloadProgress by LacAnalyzerHelper.downloadProgress.collectAsState()
+
+    LaunchedEffect(show) {
         if (show) {
+            isModelDownloaded = LacAnalyzerHelper.isModelDownloaded(context)
+        }
+    }
+
+    LaunchedEffect(show, isModelDownloaded, state.durChapterIndex, state.curTextChapter) {
+        if (show && isModelDownloaded) {
             isLoading = true
             coroutineScope.launch {
-                val book = state.book
-                val chapter = state.curTextChapter?.chapter
-                if (book != null && chapter != null) {
-                    val rawContent = withContext(Dispatchers.IO) {
-                        BookHelp.getContent(book, chapter)
-                    }
-                    if (!rawContent.isNullOrBlank()) {
-                        nameList = scanNamesFromContent(rawContent)
+                val textToScan = selectedText
+                if (!textToScan.isNullOrBlank()) {
+                    nameList = scanNamesFromContent(context, textToScan)
+                } else {
+                    val book = state.book
+                    val chapter = state.curTextChapter?.chapter
+                    if (book != null && chapter != null) {
+                        val rawContent = withContext(Dispatchers.IO) {
+                            BookHelp.getContent(book, chapter)
+                        }
+                        if (!rawContent.isNullOrBlank()) {
+                            nameList = scanNamesFromContent(context, rawContent)
+                        } else {
+                            nameList = emptyList()
+                        }
                     } else {
                         nameList = emptyList()
                     }
@@ -66,7 +91,7 @@ fun ScanNamesSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "Quét Name chương này"
+        title = "Quét Name chương này (NER Offline)"
     ) {
         Box(
             modifier = Modifier
@@ -74,7 +99,48 @@ fun ScanNamesSheet(
                 .fillMaxHeight(0.6f)
                 .padding(bottom = 16.dp)
         ) {
-            if (isLoading) {
+            if (!isModelDownloaded) {
+                // UI gợi ý tải model NER
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "Tính năng quét Name offline sử dụng mô hình trí tuệ nhân tạo Baidu LAC để phân tích chính xác tên nhân vật, địa danh tiếng Trung.",
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    
+                    if (isDownloading) {
+                        AppCircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = downloadProgress,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    } else {
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    val success = LacAnalyzerHelper.downloadAndExtractModel(context)
+                                    if (success) {
+                                        isModelDownloaded = true
+                                    }
+                                }
+                            }
+                        ) {
+                            Text("Tải mô hình phân tích NER (3.2 MB)")
+                        }
+                    }
+                }
+            } else if (isLoading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -86,7 +152,7 @@ fun ScanNamesSheet(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    EmptyMessage(message = "Không phát hiện Name tiếng Trung nào trong chương này.")
+                    EmptyMessage(message = "Không phát hiện tên nhân vật/địa danh nào trong chương này.")
                 }
             } else {
                 LazyColumn(
@@ -177,34 +243,21 @@ fun ScanNamesSheet(
     }
 }
 
-private suspend fun scanNamesFromContent(rawContent: String): List<Pair<String, String>> = withContext(Dispatchers.Default) {
+private suspend fun scanNamesFromContent(context: Context, rawContent: String): List<Pair<String, String>> = withContext(Dispatchers.Default) {
+    if (!LacAnalyzerHelper.init(context)) return@withContext emptyList()
+    
     val data = TranslationLoader.loadTranslationData() ?: return@withContext emptyList()
-    val tokens = TranslateUtils.tokenize(rawContent, data)
+    val tokens = LacAnalyzerHelper.analyze(rawContent)
+    
     val nameSet = mutableSetOf<String>()
     
-    val chineseLastNames = setOf(
-        '张', '王', '李', '刘', '陈', '杨', '赵', '黄', '周', '吴', '徐', '孙', '胡', '朱', '高', '林', '何', '郭', '马', 
-        '罗', '梁', '宋', '郑', '谢', '韩', '唐', '冯', '于', '董', '萧', '程', '曹', '袁', '邓', '许', '傅', '沈', '曾', 
-        '彭', '吕', '苏', '卢', '蒋', '蔡', '贾', '丁', '魏', '薛', '叶', '阎', '余', '潘', '杜', '戴', '夏', '锺', '汪', 
-        '田', '任', '姜', '范', '方', '石', '廖', '邹', '熊', '金', '陆', '郝', '孔', '白', '崔', '康', '毛', '邱', '秦', 
-        '江', '史', '顾', '侯', '邵', '孟', '龙', '万', '段', '雷', '钱', '汤', '尹', '黎', '易', '常', '武', '乔', '贺', 
-        '赖', '龚', '文'
-    )
-    
     for (token in tokens) {
-        if (token.length in 2..4) {
-            val isKnownName = data.names.findLongestMatch(token, 0)?.let { (len, _) -> len == token.length } ?: false
-            if (isKnownName) {
-                nameSet.add(token)
-                continue
-            }
-            
-            val firstChar = token[0]
-            if (firstChar in chineseLastNames) {
-                val isAllChinese = token.all { it.code in 0x4E00..0x9FFF }
-                if (isAllChinese) {
-                    nameSet.add(token)
-                }
+        // Lọc các tag: PER (Tên người), LOC (Địa danh), ORG (Tổ chức)
+        if (token.tag == "PER" || token.tag == "LOC" || token.tag == "ORG") {
+            val word = token.word.trim()
+            // Chỉ lấy từ 2 đến 4 ký tự tiếng Trung thuần
+            if (word.length in 2..4 && word.all { it.code in 0x4E00..0x9FFF }) {
+                nameSet.add(word)
             }
         }
     }
