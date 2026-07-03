@@ -224,27 +224,7 @@ fun BackupConfigScreen(
                 bottom = 120.dp
             )
         ) {
-            item {
-                SplicedColumnGroup(title = stringResource(R.string.backup_restore)) {
-                    ClickableSettingItem(
-                        title = "Sao lưu cấu hình",
-                        description = "Sao lưu dữ liệu cấu hình vào bộ nhớ máy",
-                        onClick = {
-                            executeBackup("local", context, viewModel, scope, snackbarHostState, {
-                                showLoadingDialog = false
-                            }, { showLoadingDialog = true; loadingText = it })
-                        }
-                    )
 
-                    ClickableSettingItem(
-                        title = "Khôi phục cấu hình",
-                        description = "Khôi phục cấu hình từ tập tin sao lưu cục bộ (.zip)",
-                        onClick = {
-                            restoreFileLauncher.launch(arrayOf("application/zip"))
-                        }
-                    )
-                }
-            }
 
             item {
                 var googleDriveEmail by remember { mutableStateOf(BackupConfig.googleDriveEmail) }

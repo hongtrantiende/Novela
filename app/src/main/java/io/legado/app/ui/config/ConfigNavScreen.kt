@@ -81,10 +81,7 @@ fun ConfigNavScreen(
                         title = stringResource(R.string.translation_config),
                         onClick = onNavigateToTranslation
                     )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.lab_setting),
-                        onClick = onNavigateToLab
-                    )
+
                 }
             }
         }

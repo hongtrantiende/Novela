@@ -243,29 +243,7 @@ fun ReadConfigScreen(
                     }
                 )
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.volume_key_page),
-                    checked = state.volumeKeyPage,
-                    onCheckedChange = {
-                        viewModel.onIntent(ReadConfigIntent.VolumeKeyPageChanged(it))
-                    }
-                )
 
-                SwitchSettingItem(
-                    title = stringResource(R.string.volume_key_page_on_play),
-                    checked = state.volumeKeyPageOnPlay,
-                    onCheckedChange = {
-                        viewModel.onIntent(ReadConfigIntent.VolumeKeyPageOnPlayChanged(it))
-                    }
-                )
-
-                SwitchSettingItem(
-                    title = stringResource(R.string.key_page_on_long_press),
-                    checked = state.keyPageOnLongPress,
-                    onCheckedChange = {
-                        viewModel.onIntent(ReadConfigIntent.KeyPageOnLongPressChanged(it))
-                    }
-                )
 
                 SliderSettingItem(
                     title = stringResource(R.string.page_touch_slop_title),

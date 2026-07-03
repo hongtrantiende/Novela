@@ -472,7 +472,7 @@ object TranslateUtils {
         return null
     }
 
-    private fun tokenize(text: String, data: io.legado.app.model.TranslationData): List<String> {
+    fun tokenize(text: String, data: io.legado.app.model.TranslationData): List<String> {
         val output = ArrayList<String>()
         var currentIndex = 0
         val length = text.length

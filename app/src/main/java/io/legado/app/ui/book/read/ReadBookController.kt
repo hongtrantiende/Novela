@@ -561,10 +561,7 @@ class ReadBookController(
                 return true
             }
 
-            R.id.menu_search_content -> {
-                viewModel.onIntent(ReadBookIntent.TextActionSearchContent(selectedText))
-                return true
-            }
+
 
             R.id.menu_dict -> {
                 viewModel.onIntent(ReadBookIntent.TextActionDict(selectedText))

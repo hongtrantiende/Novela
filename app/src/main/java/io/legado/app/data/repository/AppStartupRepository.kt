@@ -21,7 +21,7 @@ class AppStartupRepository(
             appDatabase.httpTTSDao.insert(*DefaultData.httpTTS.toTypedArray())
         } else {
             DefaultData.httpTTS.forEach { defaultTts ->
-                if (defaultTts.id in -138..-101 || appDatabase.httpTTSDao.get(defaultTts.id) == null) {
+                if (defaultTts.id in -299L..-101L || appDatabase.httpTTSDao.get(defaultTts.id) == null) {
                     appDatabase.httpTTSDao.insert(defaultTts)
                 }
             }

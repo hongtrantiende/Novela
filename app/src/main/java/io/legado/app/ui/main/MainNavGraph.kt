@@ -435,16 +435,7 @@ fun MainActivity.mainEntryProvider(
         }
     }
 
-    entry<MainRouteSearchContent> { route ->
-        val viewModel = koinViewModel<SearchContentViewModel>(
-            key = "SearchContent:${route.bookUrl}",
-            parameters = { parametersOf(route) }
-        )
-        SearchContentScreen(
-            viewModel = viewModel,
-            onBack = { onNavigateBack() },
-        )
-    }
+
 
     entry<MainRouteSearch> { route ->
         val searchViewModel = koinViewModel<SearchViewModel>()

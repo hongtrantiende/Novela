@@ -663,6 +663,7 @@ sealed interface ReadBookEffect {
 
 @Immutable
 sealed interface ReadBookSheet {
+    data object ScanNames : ReadBookSheet
     data object PageAnim : ReadBookSheet
     data object Download : ReadBookSheet
     data object Charset : ReadBookSheet

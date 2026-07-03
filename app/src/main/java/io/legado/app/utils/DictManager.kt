@@ -2,7 +2,8 @@ package io.legado.app.utils
 
 import android.content.Context
 import android.net.Uri
-
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import io.legado.app.model.TranslationLoader
 import splitties.init.appCtx
 import java.io.BufferedReader
@@ -155,5 +156,37 @@ object DictManager {
         } else {
             false
         }
+    }
+
+    /**
+     * Add or update a name entry in the custom Names.txt dictionary.
+     * Automatically updates memory cache and triggers rebuild.
+     */
+    suspend fun addOrUpdateCustomName(key: String, value: String) = withContext(Dispatchers.IO) {
+        val file = getCustomDictFile(DictType.NAMES)
+        if (!file.exists()) {
+            file.parentFile?.mkdirs()
+            file.createNewFile()
+        }
+        
+        val lines = file.readLines().toMutableList()
+        var found = false
+        for (i in lines.indices) {
+            val line = lines[i].trim()
+            if (line.startsWith("$key=")) {
+                lines[i] = "$key=$value"
+                found = true
+                break
+            }
+        }
+        if (!found) {
+            lines.add("$key=$value")
+        }
+        
+        file.writeText(lines.joinToString("\n"))
+        
+        // Clear memory caches and trigger binary rebuild in background
+        TranslateUtils.clearCache()
+        TranslationLoader.prebuildType(DictType.NAMES)
     }
 }

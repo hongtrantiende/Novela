@@ -270,21 +270,7 @@ private fun PageControlSettings(
         checked = preferences.mouseWheelPage,
         onCheckedChange = onMouseWheelPageChange,
     )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.volume_key_page),
-        checked = preferences.volumeKeyPage,
-        onCheckedChange = onVolumeKeyPageChange,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.volume_key_page_on_play),
-        checked = preferences.volumeKeyPageOnPlay,
-        onCheckedChange = onVolumeKeyPageOnPlayChange,
-    )
-    TinySwitchSettingItem(
-        title = stringResource(R.string.key_page_on_long_press),
-        checked = preferences.keyPageOnLongPress,
-        onCheckedChange = onKeyPageOnLongPressChange,
-    )
+
 }
 
 @Composable

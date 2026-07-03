@@ -1,4 +1,4 @@
-﻿[
+[
   {
     "id": -101,
     "name": "Google TTS - vi-VN (Mặc định)",
@@ -263,6 +263,18 @@
     "name": "Nữ V14",
     "url": "@js:\nvar config = {};\ntry {\n  if (source.loginUi) {\n    config = JSON.parse(source.loginUi);\n  }\n} catch(e) {}\n\nvar cleanText = speakText\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\"/g, '&quot;')\n  .replace(/'/g, '&apos;');\n\nvar safeText = cleanText.replace(/([.,!?:;])/g, '$1<break time=\"70ms\"/>');\n\nvar rate = speakSpeed / 10.0;\n\nvar option = {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({\n    input: { ssml: \"<speak>\" + safeText + \"</speak>\" },\n    voice: { languageCode: \"vi-VN\", name: \"vi-VN-Chirp3-HD-Zephyr\" },\n    audioConfig: {\n      audioEncoding: config.audioEncoding || \"MP3\",\n      speakingRate: rate\n    }\n  })\n};\n\"https://texttospeech.googleapis.com/v1/text:synthesize?key=AIzaSyA33f9cSqKdR-V4XNkZNZ_rh_dbT1VQJFo,\" + JSON.stringify(option);",
     "loginCheckJs": "var responseString = result.body().string();\nif (result.code() != 200) {\n  throw new Error(\"HTTP \" + result.code() + \": \" + responseString.substring(0, 150));\n}\nvar json = JSON.parse(responseString);\nif (json.error) {\n  throw new Error(\"API Err: \" + JSON.stringify(json.error).substring(0, 150));\n}\nif (!json.audioContent) {\n  throw new Error(\"No audioContent\");\n}\nvar audioBytes = Packages.android.util.Base64.decode(json.audioContent, 0);\nvar mediaType = Packages.okhttp3.MediaType.parse(\"audio/mpeg\");\nvar responseBody;\ntry {\n  responseBody = Packages.okhttp3.ResponseBody.create(audioBytes, mediaType);\n} catch (e) {\n  responseBody = Packages.okhttp3.ResponseBody.create(mediaType, audioBytes);\n}\nresult.newBuilder().body(responseBody).header(\"Content-Type\", \"audio/mpeg\").build();",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -200,
+    "name": "Edge TTS - Hoài Mỹ (Nữ)",
+    "url": "edge-tts://vi-VN-HoaiMyNeural",
+    "contentType": "audio/mpeg"
+  },
+  {
+    "id": -201,
+    "name": "Edge TTS - Nam Minh (Nam)",
+    "url": "edge-tts://vi-VN-NamMinhNeural",
     "contentType": "audio/mpeg"
   }
 ]

@@ -69,63 +69,7 @@ fun ReadAloudConfigSheet(
                 .padding(bottom = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            TinySwitchSettingItem(
-                title = stringResource(R.string.ignore_audio_focus_title),
-                description = stringResource(R.string.ignore_audio_focus_summary),
-                checked = state.readAloudIgnoreAudioFocus,
-                onCheckedChange = {
-                    onIntent(ReadBookIntent.SetReadAloudIgnoreAudioFocus(it))
-                },
-            )
-            TinySwitchSettingItem(
-                title = stringResource(R.string.pause_read_aloud_while_phone_calls_title),
-                description = stringResource(R.string.pause_read_aloud_while_phone_calls_summary),
-                checked = state.readAloudPauseOnPhoneCall,
-                enabled = state.readAloudIgnoreAudioFocus,
-                onCheckedChange = {
-                    onIntent(ReadBookIntent.SetReadAloudPauseOnPhoneCall(it))
-                },
-            )
-            TinySwitchSettingItem(
-                title = stringResource(R.string.read_aloud_wake_lock),
-                description = stringResource(R.string.read_aloud_wake_lock_summary),
-                checked = state.readAloudWakeLock,
-                onCheckedChange = {
-                    onIntent(ReadBookIntent.SetReadAloudWakeLock(it))
-                },
-            )
-            TinySwitchSettingItem(
-                title = stringResource(R.string.pref_media_button_per_next),
-                description = stringResource(R.string.pref_media_button_per_next_summary),
-                checked = state.readAloudMediaButtonPerNext,
-                onCheckedChange = {
-                    onIntent(ReadBookIntent.SetReadAloudMediaButtonPerNext(it))
-                },
-            )
-            TinySwitchSettingItem(
-                title = stringResource(R.string.read_aloud_by_page),
-                description = stringResource(R.string.read_aloud_by_page_summary),
-                checked = state.readAloudByPage,
-                onCheckedChange = {
-                    onIntent(ReadBookIntent.SetReadAloudByPage(it))
-                },
-            )
-            TinySwitchSettingItem(
-                title = stringResource(R.string.system_media_control_compatibility_change),
-                description = stringResource(R.string.system_media_control_compatibility_change_summary),
-                checked = state.readAloudSystemMediaCompat,
-                onCheckedChange = {
-                    onIntent(ReadBookIntent.SetReadAloudSystemMediaCompat(it))
-                },
-            )
-            TinySwitchSettingItem(
-                title = stringResource(R.string.stream_read_aloud_audio),
-                description = stringResource(R.string.stream_read_aloud_audio_summary),
-                checked = state.readAloudStreamAudio,
-                onCheckedChange = {
-                    onIntent(ReadBookIntent.SetReadAloudStreamAudio(it))
-                },
-            )
+
             TinyClickableSettingItem(
                 title = stringResource(R.string.speak_engine),
                 description = state.speakEngineName.ifEmpty {

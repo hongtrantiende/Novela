@@ -376,19 +376,9 @@ fun ThemeConfigScreen(
 
                 SplicedColumnGroup(title = stringResource(R.string.main_activity)) {
                     SwitchSettingItem(
-                        title = stringResource(R.string.show_home),
-                        checked = ThemeConfig.showHome,
-                        onCheckedChange = { ThemeConfig.showHome = it }
-                    )
-                    SwitchSettingItem(
                         title = stringResource(R.string.show_discovery),
                         checked = ThemeConfig.showDiscovery,
                         onCheckedChange = { ThemeConfig.showDiscovery = it }
-                    )
-                    SwitchSettingItem(
-                        title = stringResource(R.string.show_rss),
-                        checked = ThemeConfig.showRss,
-                        onCheckedChange = { ThemeConfig.showRss = it }
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.show_updates),

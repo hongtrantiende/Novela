@@ -60,6 +60,7 @@ import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
 import io.legado.app.ui.book.read.sheet.PhotoSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudConfigSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
+import io.legado.app.ui.book.read.sheet.ScanNamesSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
 import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
@@ -196,6 +197,13 @@ fun ReadBookScreen(
     // for proper enter/exit animations
     val dismissSheet = { onIntent(ReadBookIntent.DismissSheet) }
 
+    ScanNamesSheet(
+        show = state.activeSheet is ReadBookSheet.ScanNames,
+        state = state,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet
+    )
+
     ShadowSetSheet(
         show = state.activeSheet is ReadBookSheet.ShadowSet,
         onDismissRequest = dismissSheet,
@@ -303,7 +311,7 @@ fun ReadBookScreen(
         state = state,
         onIntent = onIntent,
         onDismissRequest = {
-            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
+            onIntent(ReadBookIntent.DismissSheet)
         },
     )
     HttpTtsEditSheet(

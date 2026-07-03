@@ -97,6 +97,7 @@ fun ReplaceRuleScreen(
     var showUrlInput by remember { mutableStateOf(false) }
     var showImportSheet by remember { mutableStateOf(false) }
     var showExportSheet by remember { mutableStateOf(false) }
+    var showReplaceScanNamesSheet by remember { mutableStateOf(false) }
 
     var showDeleteRuleDialog by remember { mutableStateOf<ReplaceRule?>(null) }
     var showGroupManageSheet by remember { mutableStateOf(false) }
@@ -262,6 +263,14 @@ fun ReplaceRuleScreen(
         onDismiss = { showDeleteRuleDialog = null }
     )
 
+    ReplaceScanNamesSheet(
+        show = showReplaceScanNamesSheet,
+        onDismissRequest = { showReplaceScanNamesSheet = false },
+        onRulesAdded = {
+            // Room flow will automatically trigger update
+        }
+    )
+
     RuleListScaffold(
         title = "Quy tắc thay thế",
         state = uiState,
@@ -340,6 +349,10 @@ fun ReplaceRuleScreen(
         },
         snackbarHostState = snackbarHostState,
         dropDownMenuContent = { dismiss ->
+            RoundDropdownMenuItem(
+                text = "Quét Name",
+                onClick = { showReplaceScanNamesSheet = true; dismiss() }
+            )
             RoundDropdownMenuItem(
                 text = stringResource(R.string.import_str),
                 onClick = { showImportSheet = true; dismiss() }

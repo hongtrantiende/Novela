@@ -65,11 +65,12 @@ object DefaultData {
     }
 
     val httpTTS: List<HttpTTS> by lazy {
-        val json =
+        val rawJson =
             String(
                 appCtx.assets.open("defaultData${File.separator}httpTTS.json")
                     .readBytes()
             )
+        val json = if (rawJson.startsWith("\uFEFF")) rawJson.substring(1) else rawJson
         HttpTTS.fromJsonArray(json).getOrElse {
             emptyList()
         }

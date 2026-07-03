@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,12 +32,14 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -53,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.R
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookSheet
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.button.series.MediumTonalButton
 import io.legado.app.ui.widget.components.image.cover.BookCoverImage
@@ -63,12 +67,26 @@ import androidx.compose.runtime.setValue
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppSlider
 import java.util.Locale
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import io.legado.app.service.BaseReadAloudService
@@ -114,6 +132,34 @@ fun ReadAloudContent(
 
     var activeSlider by remember { mutableStateOf<String?>(null) }
     var localSpeechRate by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
+
+    val fallbackContentList = remember(state.curTextChapter, state.readAloudByPage) {
+        state.curTextChapter?.getNeedReadAloud(0, state.readAloudByPage, 0)
+            ?.split("\n")?.filter { it.isNotEmpty() } ?: emptyList()
+    }
+
+    val initialNowSpeak = remember(state.curTextChapter, state.durChapterPos, state.readAloudByPage) {
+        state.curTextChapter?.let { textChapter ->
+            val pNum = textChapter.getParagraphNum(state.durChapterPos + 1, state.readAloudByPage)
+            if (pNum >= 1) pNum - 1 else 0
+        } ?: 0
+    }
+
+    val contentList = remember(serviceState.contentList, fallbackContentList) {
+        if (serviceState.contentList.isNotEmpty()) {
+            serviceState.contentList
+        } else {
+            fallbackContentList
+        }
+    }
+
+    val nowSpeak = remember(serviceState.nowSpeak, serviceState.contentList, initialNowSpeak) {
+        if (serviceState.nowSpeak >= 0 && serviceState.contentList.isNotEmpty()) {
+            serviceState.nowSpeak
+        } else {
+            initialNowSpeak
+        }
+    }
 
     // Warm play button color (cream/tan like image 3)
     val playButtonColor = Color(0xFFF0D9B5)
@@ -246,16 +292,9 @@ fun ReadAloudContent(
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Segmented Progress Bar ──
-            if (serviceState.contentList.isNotEmpty()) {
-                SegmentedProgressBar(state = serviceState)
-                Spacer(Modifier.height(8.dp))
-            }
-
             // ── Progress Slider ──
-            val totalParagraphs = serviceState.contentList.size
+            val totalParagraphs = contentList.size
             if (totalParagraphs > 0) {
-                val nowSpeak = serviceState.nowSpeak
                 val progress = if (nowSpeak >= 0) nowSpeak.toFloat() else 0f
                 var localProgress by remember(progress) { mutableFloatStateOf(progress) }
 
@@ -264,27 +303,47 @@ fun ReadAloudContent(
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                 ) {
-                    AppSlider(
+                    ReadAloudSlider(
                         value = localProgress,
                         onValueChange = { localProgress = it },
                         onValueChangeFinished = {
-                            BaseReadAloudService.instance?.seekToParagraph(localProgress.toInt())
+                            if (BaseReadAloudService.instance != null) {
+                                BaseReadAloudService.instance?.seekToParagraph(localProgress.toInt())
+                            } else {
+                                val targetPos = state.curTextChapter?.getParagraphs(state.readAloudByPage)
+                                    ?.getOrNull(localProgress.toInt())?.chapterPosition ?: 0
+                                onIntent(ReadBookIntent.OpenChapter(state.durChapterIndex, targetPos))
+                            }
                         },
                         valueRange = 0f..(totalParagraphs - 1).toFloat().coerceAtLeast(1f),
-                        steps = (totalParagraphs - 1).coerceAtLeast(1),
+                        bufferedValue = serviceState.cachedIndices.size.toFloat(),
+                        playButtonColor = playButtonColor,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
+                        val statusText = buildString {
+                            append("Đã đọc: ${localProgress.toInt()}/$totalParagraphs")
+                            if (serviceState.cachedIndices.isNotEmpty()) {
+                                append(" • Tải: ${serviceState.cachedIndices.size}/$totalParagraphs")
+                            }
+                            if (serviceState.downloadingIndices.isNotEmpty()) {
+                                append(" • Đang tải: ${serviceState.downloadingIndices.size}")
+                            }
+                        }
                         Text(
-                            text = "Đoạn ${localProgress.toInt() + 1}/$totalParagraphs",
+                            text = statusText,
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.5f)
                         )
                         Text(
-                            text = if (state.isReadAloudPaused) "Đang tạm dừng" else "Đang phát",
+                            text = buildString {
+                                append("Đoạn ${localProgress.toInt() + 1}")
+                                append(" • ")
+                                append(if (state.isReadAloudPaused) "Tạm dừng" else "Đang phát")
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = if (state.isReadAloudPaused) Color.White.copy(alpha = 0.5f) else playButtonColor
                         )
@@ -326,12 +385,73 @@ fun ReadAloudContent(
                     )
                 }
 
-                // Main Play/Pause — large cream circle (ảnh 3)
+                // Bông hoa 10 cánh cho nút Play/Pause (giống hệt ContainedLoadingIndicator)
+                val density = androidx.compose.ui.platform.LocalDensity.current
+                val rInnerDiff = remember(density) { with(density) { 3.5.dp.toPx() } }
+                val ctrlDiff = remember(density) { with(density) { 2.dp.toPx() } }
+
+                val flowerShape = remember(rInnerDiff, ctrlDiff) {
+                    androidx.compose.foundation.shape.GenericShape { size, _ ->
+                        val center = size.width / 2f
+                        val rOuter = size.width / 2f
+                        val rInner = rOuter - rInnerDiff
+                        val numPetals = 10
+                        val angleStep = 360f / numPetals
+                        
+                        moveTo(center + rInner, center)
+                        for (i in 0 until numPetals) {
+                            val angle = i * angleStep
+                            val nextAngle = (i + 1) * angleStep
+                            val midAngle = angle + angleStep / 2f
+                            
+                            val ctrlAngleRad = Math.toRadians(midAngle.toDouble())
+                            val endAngleRad = Math.toRadians(nextAngle.toDouble())
+                            
+                            val ctrlX = center + (rOuter + ctrlDiff) * Math.cos(ctrlAngleRad).toFloat()
+                            val ctrlY = center + (rOuter + ctrlDiff) * Math.sin(ctrlAngleRad).toFloat()
+                            
+                            val endX = center + rInner * Math.cos(endAngleRad).toFloat()
+                            val endY = center + rInner * Math.sin(endAngleRad).toFloat()
+                            
+                            quadraticTo(ctrlX, ctrlY, endX, endY)
+                        }
+                        close()
+                    }
+                }
+
+                val showPlayIcon = !state.isReadAloudRunning || state.isReadAloudPaused
+                var renderPlayIcon by remember { mutableStateOf(showPlayIcon) }
+                val playRotation = remember { androidx.compose.animation.core.Animatable(0f) }
+
+                LaunchedEffect(showPlayIcon) {
+                    if (playRotation.value > 0f || state.isReadAloudRunning) {
+                        playRotation.animateTo(
+                            targetValue = playRotation.value + 180f,
+                            animationSpec = androidx.compose.animation.core.tween(
+                                durationMillis = 200,
+                                easing = androidx.compose.animation.core.LinearOutSlowInEasing
+                            )
+                        )
+                        renderPlayIcon = showPlayIcon
+                        playRotation.animateTo(
+                            targetValue = playRotation.value + 180f,
+                            animationSpec = androidx.compose.animation.core.tween(
+                                durationMillis = 200,
+                                easing = androidx.compose.animation.core.LinearOutSlowInEasing
+                            )
+                        )
+                    } else {
+                        renderPlayIcon = showPlayIcon
+                    }
+                }
+
+                // Main Play/Pause — large cream flower shape (ảnh 3 style)
                 Box(
                     modifier = Modifier
                         .size(68.dp)
-                        .shadow(12.dp, CircleShape, ambientColor = playButtonColor.copy(alpha = 0.3f))
-                        .clip(CircleShape)
+                        .graphicsLayer { rotationZ = playRotation.value }
+                        .shadow(12.dp, flowerShape, ambientColor = playButtonColor.copy(alpha = 0.3f))
+                        .clip(flowerShape)
                         .background(playButtonColor)
                         .combinedClickable(
                             onClick = { onIntent(ReadBookIntent.ReadAloudTogglePause) },
@@ -343,9 +463,9 @@ fun ReadAloudContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (state.isReadAloudPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                        imageVector = if (renderPlayIcon) Icons.Default.PlayArrow else Icons.Default.Pause,
                         contentDescription = stringResource(
-                            if (state.isReadAloudPaused) R.string.audio_play else R.string.pause
+                            if (renderPlayIcon) R.string.audio_play else R.string.pause
                         ),
                         modifier = Modifier.size(32.dp),
                         tint = Color(0xFF2A2118)
@@ -380,7 +500,21 @@ fun ReadAloudContent(
             Spacer(Modifier.height(12.dp))
 
             // ── Active Slider (Timer/Speed) ──
-            if (activeSlider != null) {
+            androidx.compose.animation.AnimatedVisibility(
+                visible = activeSlider != null,
+                enter = androidx.compose.animation.expandVertically(
+                    expandFrom = Alignment.Bottom,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 300)
+                ) + androidx.compose.animation.fadeIn(
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 300)
+                ),
+                exit = androidx.compose.animation.shrinkVertically(
+                    shrinkTowards = Alignment.Bottom,
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 250)
+                ) + androidx.compose.animation.fadeOut(
+                    animationSpec = androidx.compose.animation.core.tween(durationMillis = 200)
+                ),
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -466,11 +600,10 @@ fun ReadAloudContent(
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 8.dp)
                     .background(
-                        Color.White.copy(alpha = 0.08f),
-                        RoundedCornerShape(28.dp)
+                        Color.White.copy(alpha = 0.06f),
+                        RoundedCornerShape(24.dp)
                     )
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BottomBarItem(
@@ -478,6 +611,7 @@ fun ReadAloudContent(
                     label = "Mục lục",
                     selected = showChapterList,
                     onClick = { showChapterList = !showChapterList },
+                    modifier = Modifier.weight(1f)
                 )
                 BottomBarItem(
                     icon = Icons.Default.AccessTime,
@@ -486,6 +620,7 @@ fun ReadAloudContent(
                     onClick = {
                         activeSlider = if (activeSlider == "timer") null else "timer"
                     },
+                    modifier = Modifier.weight(1f)
                 )
                 BottomBarItem(
                     icon = Icons.Default.Tune,
@@ -494,12 +629,23 @@ fun ReadAloudContent(
                     onClick = {
                         activeSlider = if (activeSlider == "speed") null else "speed"
                     },
+                    modifier = Modifier.weight(1f)
+                )
+                BottomBarItem(
+                    icon = Icons.Default.VolumeUp,
+                    label = "Công cụ đọc",
+                    selected = false,
+                    onClick = {
+                        onIntent(ReadBookIntent.SelectSpeakEngine)
+                    },
+                    modifier = Modifier.weight(1f)
                 )
                 BottomBarItem(
                     icon = Icons.Default.Settings,
                     label = "Cài đặt",
                     selected = false,
                     onClick = onShowReadAloudConfig,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -548,38 +694,48 @@ private fun PillControlButton(
  * Bottom bar item (ảnh 2 style)
  */
 @Composable
-private fun BottomBarItem(
+private fun RowScope.BottomBarItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val activeColor = Color(0xFFF0D9B5)
+    val inactiveColor = Color.White.copy(alpha = 0.6f)
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable { onClick() }
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .padding(vertical = 6.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(width = 48.dp, height = 36.dp)
-                .clip(RoundedCornerShape(18.dp))
+                .size(width = 44.dp, height = 28.dp)
+                .clip(CircleShape)
                 .background(
-                    if (selected) Color.White.copy(alpha = 0.18f)
-                    else Color.White.copy(alpha = 0.06f)
+                    if (selected) Color.White.copy(alpha = 0.12f)
+                    else Color.Transparent
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = if (selected) Color.White else Color.White.copy(alpha = 0.7f),
-                modifier = Modifier.size(18.dp)
+                tint = if (selected) activeColor else inactiveColor,
+                modifier = Modifier.size(20.dp)
             )
         }
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(4.dp))
         Text(
             text = label,
             fontSize = 10.sp,
-            color = if (selected) Color.White else Color.White.copy(alpha = 0.5f)
+            fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal,
+            color = if (selected) activeColor else inactiveColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -796,6 +952,130 @@ private fun AudioChapterListOverlay(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+fun ReadAloudSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    onValueChangeFinished: (() -> Unit)?,
+    valueRange: ClosedFloatingPointRange<Float>,
+    bufferedValue: Float,
+    modifier: Modifier = Modifier,
+    playButtonColor: Color = Color(0xFFF0D9B5)
+) {
+    val rangeLength = valueRange.endInclusive - valueRange.start
+    val fraction = if (rangeLength > 0f) (value - valueRange.start) / rangeLength else 0f
+    val bufferedFraction = if (rangeLength > 0f) (bufferedValue - valueRange.start) / rangeLength else 0f
+
+    var isDragging by remember { mutableStateOf(false) }
+
+    val thumbRadius by animateDpAsState(
+        targetValue = if (isDragging) 8.dp else 5.dp,
+        animationSpec = tween(150),
+        label = "thumb_size"
+    )
+
+    val trackHeight by animateDpAsState(
+        targetValue = if (isDragging) 6.dp else 4.dp,
+        animationSpec = tween(150),
+        label = "track_size"
+    )
+
+    val density = androidx.compose.ui.platform.LocalDensity.current
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(32.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        val widthPx = constraints.maxWidth.toFloat()
+        val thumbRadiusPx = with(density) { thumbRadius.toPx() }
+        val trackHeightPx = with(density) { trackHeight.toPx() }
+
+        val dragModifier = Modifier
+            .pointerInput(rangeLength, widthPx) {
+                detectTapGestures(
+                    onPress = { offset ->
+                        isDragging = true
+                        val newValue = (offset.x / widthPx) * rangeLength + valueRange.start
+                        onValueChange(newValue.coerceIn(valueRange))
+                        tryAwaitRelease()
+                        isDragging = false
+                        onValueChangeFinished?.invoke()
+                    }
+                )
+            }
+            .pointerInput(rangeLength, widthPx) {
+                detectHorizontalDragGestures(
+                    onDragStart = { isDragging = true },
+                    onDragEnd = {
+                        isDragging = false
+                        onValueChangeFinished?.invoke()
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                    },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        val deltaFraction = dragAmount / widthPx
+                        val newValue = value + deltaFraction * rangeLength
+                        onValueChange(newValue.coerceIn(valueRange))
+                    }
+                )
+            }
+
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(dragModifier)
+        ) {
+            val centerY = size.height / 2f
+
+            // 1. Inactive track (nền nâu xám rất mờ, mỏng)
+            drawRoundRect(
+                color = Color.White.copy(alpha = 0.12f),
+                topLeft = Offset(0f, centerY - trackHeightPx / 2f),
+                size = Size(size.width, trackHeightPx),
+                cornerRadius = CornerRadius(trackHeightPx / 2f, trackHeightPx / 2f)
+            )
+
+            // 2. Buffered progress track (đã tải về máy)
+            if (bufferedFraction > 0f) {
+                drawRoundRect(
+                    color = playButtonColor.copy(alpha = 0.22f),
+                    topLeft = Offset(0f, centerY - trackHeightPx / 2f),
+                    size = Size(size.width * bufferedFraction.coerceIn(0f, 1f), trackHeightPx),
+                    cornerRadius = CornerRadius(trackHeightPx / 2f, trackHeightPx / 2f)
+                )
+            }
+
+            // 3. Active progress track (đã đọc)
+            drawRoundRect(
+                color = playButtonColor,
+                topLeft = Offset(0f, centerY - trackHeightPx / 2f),
+                size = Size(size.width * fraction.coerceIn(0f, 1f), trackHeightPx),
+                cornerRadius = CornerRadius(trackHeightPx / 2f, trackHeightPx / 2f)
+            )
+
+            // 4. Thumb (núm trượt tròn màu kem)
+            val thumbCenterX = size.width * fraction.coerceIn(0f, 1f)
+
+            // Hiệu ứng phát sáng mờ xung quanh thumb
+            drawCircle(
+                color = playButtonColor.copy(alpha = 0.22f),
+                radius = thumbRadiusPx + 4.dp.toPx(),
+                center = Offset(thumbCenterX, centerY)
+            )
+
+            drawCircle(
+                color = playButtonColor,
+                radius = thumbRadiusPx,
+                center = Offset(thumbCenterX, centerY)
+            )
         }
     }
 }

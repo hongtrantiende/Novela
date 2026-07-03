@@ -299,9 +299,7 @@ fun ReadBookRouteScreen(
                                     }
                                 )
                             }
-                            is ReadBookEffect.OpenSearchActivity -> {
-                                onOpenSearch(effect.word, effect.bookUrl)
-                            }
+
                             is ReadBookEffect.MenuSettingReplace -> {
                                 replaceLauncher.launch(Intent(context, ReplaceRuleActivity::class.java))
                             }
@@ -413,14 +411,22 @@ fun ReadBookRouteScreen(
         }
     }
 
+    var hasShownContent by remember(state.book?.bookUrl) { mutableStateOf(false) }
+
     val isPageLoading = state.curTextChapter == null || 
             state.curTextChapter?.pages.isNullOrEmpty() ||
             state.curTextChapter?.pages?.getOrNull(state.durPageIndex)?.text?.contains("Đang tải dữ liệu", ignoreCase = true) == true
 
+    val currentLoading = !state.isInitFinish || isPageLoading || !state.msg.isNullOrBlank()
+
+    if (!currentLoading && !hasShownContent) {
+        hasShownContent = true
+    }
+
     // Keep the dark loading overlay visible until the content is fully ready to display
     // (i.e. pages are loaded and do not contain the placeholder "Đang tải dữ liệu...")
-    // and there are no ongoing messages/errors.
-    val showLoadingOverlay = !state.isInitFinish || isPageLoading || !state.msg.isNullOrBlank()
+    // and there are no ongoing messages/errors. Once shown, do not show again.
+    val showLoadingOverlay = !hasShownContent && currentLoading
 
     Box(Modifier.fillMaxSize()) {
         key(controller) {

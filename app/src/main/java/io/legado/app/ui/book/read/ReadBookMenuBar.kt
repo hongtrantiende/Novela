@@ -1695,6 +1695,16 @@ private fun OverflowDropdownMenu(
             )
         }
 
+        // Quét Name
+        RoundDropdownMenuItem(
+            text = "Quét Name chương này",
+            leadingIcon = menuIcon(Icons.Default.Search),
+            onClick = {
+                dismiss()
+                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ScanNames))
+            }
+        )
+
         // Local book
         if (state.isLocalBook) {
             RoundDropdownMenuItem(
@@ -1723,33 +1733,10 @@ private fun OverflowDropdownMenu(
                 onIntent(ReadBookIntent.OpenContentEdit)
             },
         )
-        if (!state.isLocalBook) {
-            RoundDropdownMenuItem(
-                text = stringResource(R.string.offline_cache),
-                leadingIcon = menuIcon(Icons.Default.CloudDownload),
-                onClick = {
-                    dismiss()
-                    onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.Download))
-                },
-            )
-        }
         RoundDropdownMenuItem(
             text = stringResource(R.string.update_toc),
             leadingIcon = menuIcon(AppIcons.Replay),
             onClick = { dismiss(); onIntent(ReadBookIntent.MenuUpdateToc) },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.simulated_reading),
-            leadingIcon = menuIcon(Icons.Default.AutoStories),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.SimulatedReading))
-            },
-        )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.reverse_content),
-            leadingIcon = menuIcon(Icons.Default.SwapVert),
-            onClick = { dismiss(); onIntent(ReadBookIntent.MenuReverseContent) },
         )
 
         PillDivider()
@@ -1780,12 +1767,7 @@ private fun OverflowDropdownMenu(
             isSelected = state.sameTitleRemoved,
             onClick = { onIntent(ReadBookIntent.MenuSameTitleRemoved) },
         )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.re_segment),
-            leadingIcon = menuIcon(Icons.Default.Toc),
-            isSelected = state.reSegment,
-            onClick = { onIntent(ReadBookIntent.MenuReSegment) },
-        )
+
 
         // EPUB
         if (state.isEpub) {
@@ -1854,14 +1836,7 @@ private fun OverflowDropdownMenu(
                 onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.PageAnim))
             },
         )
-        RoundDropdownMenuItem(
-            text = stringResource(R.string.config_btn),
-            leadingIcon = menuIcon(Icons.Default.Build),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ToolButtonConfig))
-            },
-        )
+
 
         // Progress sync
         if (state.isReadingProgressSyncConfigured) {
