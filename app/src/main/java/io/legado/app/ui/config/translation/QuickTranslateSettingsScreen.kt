@@ -33,6 +33,7 @@ import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.vbookextension.util.QuickTranslateEngine
 import io.legado.app.utils.QuickTranslateDictHelper
 import kotlinx.coroutines.Dispatchers
@@ -667,7 +668,7 @@ fun QuickTranslateSettingsScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    AppCircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
                     AppText(text = downloadProgressText, fontSize = 15.sp)
                 }

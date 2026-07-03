@@ -82,7 +82,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.CircularProgressIndicator
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import io.legado.app.data.appDb
@@ -323,7 +323,7 @@ fun MainActivity.mainEntryProvider(
                     .background(Color(0xFF121212)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                AppContainedLoadingIndicator()
             }
         } else if (isVideoBook == true) {
             VideoReaderScreen(

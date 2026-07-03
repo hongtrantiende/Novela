@@ -33,3 +33,4 @@
    - One-directional loading: dùng `hasShownContent` pattern
 4. **Pinned libraries**: Jsoup ≤ 1.16.2, Hutool ≤ 5.8.22
 5. **Package names**: namespace `io.legado.app`, applicationId `io.legato.kazusa`
+6. **Design System**: Khi tạo hoặc sửa bất kỳ giao diện nào, **BẮT BUỘC** đọc và tuân thủ [DESIGN_SYSTEM.md](.agents/DESIGN_SYSTEM.md). Không được tự sáng tạo style, màu sắc, component mới. Chỉ dùng component có sẵn trong `ui/widget/components/`.

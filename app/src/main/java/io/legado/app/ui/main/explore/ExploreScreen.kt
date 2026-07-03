@@ -106,7 +106,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Surface
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.CircularProgressIndicator
+import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
@@ -997,7 +997,7 @@ fun AiConfigDialog(
                         modifier = Modifier.height(54.dp)
                     ) {
                         if (isScanning) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            AppCircularProgressIndicator(modifier = Modifier.size(20.dp))
                         } else {
                             Text("Quét", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
