@@ -222,8 +222,6 @@ object QuickTranslateEngine {
                     }
                 }
 
-                stringPool.clear()
-
                 translationDict = tempTranslationDict
                 phienAmDict = tempPhienAmDict
 
