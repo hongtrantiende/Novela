@@ -28,6 +28,7 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.LacAnalyzerHelper
 import io.legado.app.ui.book.read.ReadBookUiState
+import io.legado.app.model.TranslationLoader
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
@@ -36,6 +37,12 @@ import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.utils.QuickTranslateDictHelper
 import io.legado.app.utils.TranslateUtils
 import io.legado.app.utils.MD5Utils
+import io.legado.app.help.http.okHttpClient
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import com.google.gson.Gson
+import com.google.gson.JsonParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -308,31 +315,19 @@ fun NerAnalyzeSheet(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             SelectableTagButton(
-                                text = "LAC (Off)",
+                                text = if (selectLac) "LAC (On)" else "LAC (Off)",
                                 isSelected = selectLac,
                                 onClick = { selectLac = !selectLac }
                             )
                             SelectableTagButton(
-                                text = "Texsmart (On)",
+                                text = if (selectTexsmart) "Texsmart (On)" else "Texsmart (Off)",
                                 isSelected = selectTexsmart,
-                                onClick = {
-                                    selectTexsmart = !selectTexsmart
-                                    if (selectTexsmart) {
-                                        Toast.makeText(context, "Chế độ offline chỉ hỗ trợ LAC", Toast.LENGTH_SHORT).show()
-                                        selectTexsmart = false
-                                    }
-                                }
+                                onClick = { selectTexsmart = !selectTexsmart }
                             )
                             SelectableTagButton(
-                                text = "IBM (On)",
+                                text = if (selectIbm) "IBM (On)" else "IBM (Off)",
                                 isSelected = selectIbm,
-                                onClick = {
-                                    selectIbm = !selectIbm
-                                    if (selectIbm) {
-                                        Toast.makeText(context, "Chế độ offline chỉ hỗ trợ LAC", Toast.LENGTH_SHORT).show()
-                                        selectIbm = false
-                                    }
-                                }
+                                onClick = { selectIbm = !selectIbm }
                             )
                         }
                     }
@@ -346,8 +341,8 @@ fun NerAnalyzeSheet(
                                 Toast.makeText(context, "Hãy chọn ít nhất một Loại phân tích", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-                            if (!selectLac) {
-                                Toast.makeText(context, "Hãy bật công cụ LAC", Toast.LENGTH_SHORT).show()
+                            if (!selectLac && !selectTexsmart && !selectIbm) {
+                                Toast.makeText(context, "Hãy bật ít nhất một công cụ phân tích", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
                             isScanning = true
@@ -361,6 +356,9 @@ fun NerAnalyzeSheet(
                                     selectPer = selectPer,
                                     selectLoc = selectLoc,
                                     selectOrg = selectOrg,
+                                    selectLac = selectLac,
+                                    selectTexsmart = selectTexsmart,
+                                    selectIbm = selectIbm,
                                     state = state,
                                     onStatusChange = { scanStatus = it },
                                     onComplete = { result ->
@@ -509,6 +507,9 @@ private suspend fun performNerAnalyze(
     selectPer: Boolean,
     selectLoc: Boolean,
     selectOrg: Boolean,
+    selectLac: Boolean,
+    selectTexsmart: Boolean,
+    selectIbm: Boolean,
     state: ReadBookUiState,
     onStatusChange: (String) -> Unit,
     onComplete: (List<NerResultItem>) -> Unit
@@ -570,30 +571,34 @@ private suspend fun performNerAnalyze(
     // 3. Tần suất tối thiểu
     val minFreq = minFreqStr.trim().toIntOrNull() ?: 2
 
-    // 4. Kiểm tra nạp Model
-    onStatusChange("Đang kiểm tra mô hình NER...")
-    if (!LacAnalyzerHelper.isModelDownloaded(context)) {
-        onStatusChange("Đang tải xuống mô hình (3.2 MB)...")
-        val downloadSuccess = LacAnalyzerHelper.downloadAndExtractModel(context)
-        if (!downloadSuccess) {
-            onStatusChange("Lỗi tải xuống mô hình.")
-            onComplete(emptyList())
-            return
+    // Kiểm tra xem dải chương có chứa tiếng Trung hay không
+    onStatusChange("Đang quét nội dung sơ bộ...")
+    var hasChineseContent = false
+    for (idx in targetChapterIndexes) {
+        val testContent = BookHelp.getContent(book, chapters[idx])
+        if (!testContent.isNullOrBlank()) {
+            if (testContent.any { it.code in 0x4E00..0x9FFF }) {
+                hasChineseContent = true
+                break
+            }
         }
     }
 
-    onStatusChange("Đang khởi tạo bộ phân tích LAC...")
-    var initSuccess = false
-    try {
-        initSuccess = LacAnalyzerHelper.init(context)
-    } catch (e: Exception) {
-        e.printStackTrace()
-    }
-
-    if (!initSuccess) {
-        onStatusChange("Lỗi khởi tạo thư viện JNI LAC")
-        onComplete(emptyList())
-        return
+    var useLac = false
+    if (hasChineseContent && selectLac) {
+        val isModelAvailable = LacAnalyzerHelper.isModelDownloaded(context)
+        if (isModelAvailable) {
+            onStatusChange("Đang khởi tạo bộ phân tích LAC...")
+            var initSuccess = false
+            try {
+                initSuccess = LacAnalyzerHelper.init(context)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            if (initSuccess) {
+                useLac = true
+            }
+        }
     }
 
     // 5. Đọc text từ các chương và phân tích
@@ -606,28 +611,147 @@ private suspend fun performNerAnalyze(
             val content = BookHelp.getContent(book, chapters[idx])
             if (!content.isNullOrBlank()) {
                 loadedChaps++
-                // Chia nhỏ chương thành các câu ngắn để mô hình LAC phân tích chính xác nhất
-                val sentences = content.split('\n', '。', '？', '！', '，', '、', ',', ';')
-                sentences.forEach { sentence ->
-                    val cleanSentence = sentence.trim()
-                    if (cleanSentence.length >= minLen) {
-                        // Cắt thành các chuỗi tối đa 100 ký tự để an toàn bộ nhớ JNI LAC
-                        val chunks = cleanSentence.chunked(100)
-                        chunks.forEach { chunk ->
-                            val tokens = LacAnalyzerHelper.analyze(chunk)
-                            tokens.forEach { token ->
-                                val tag = token.tag
-                                val word = token.word
-                                
-                                // Lọc theo tag được chọn
+                if (hasChineseContent) {
+                    var scanned = false
+                    
+                    // 1. Phân tích online bằng Tencent TexSmart nếu được chọn
+                    if (selectTexsmart) {
+                        onStatusChange("Đang phân tích online bằng Tencent TexSmart (chương ${idx + 1})...")
+                        val entities = analyzeWithTexsmart(content)
+                        if (entities.isNotEmpty()) {
+                            scanned = true
+                            entities.forEach { (word, tag) ->
                                 val isTagMatch = (selectPer && tag == "PER") ||
                                         (selectLoc && tag == "LOC") ||
                                         (selectOrg && tag == "ORG")
-                                
-                                // Lọc theo độ dài tiếng Trung
                                 val isLenMatch = word.length in minLen..maxLen
-                                
                                 if (isTagMatch && isLenMatch) {
+                                    val current = frequencyMap[word]
+                                    if (current != null) {
+                                        frequencyMap[word] = Pair(tag, current.second + 1)
+                                    } else {
+                                        frequencyMap[word] = Pair(tag, 1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    // 2. Phân tích offline bằng LAC
+                    if (!scanned && selectLac && useLac) {
+                        // Chia nhỏ chương thành các câu ngắn để mô hình LAC phân tích chính xác nhất
+                        val sentences = content.split('\n', '。', '？', '！', '，', '、', ',', ';')
+                        sentences.forEach { sentence ->
+                            val cleanSentence = sentence.trim()
+                            if (cleanSentence.length >= minLen) {
+                                // Cắt thành các chuỗi tối đa 100 ký tự để an toàn bộ nhớ JNI LAC
+                                val chunks = cleanSentence.chunked(100)
+                                chunks.forEach { chunk ->
+                                    val tokens = LacAnalyzerHelper.analyze(chunk)
+                                    tokens.forEach { token ->
+                                        val tag = token.tag
+                                        val word = token.word
+                                        
+                                        // Lọc theo tag được chọn
+                                        val isTagMatch = (selectPer && (tag == "PER" || tag == "nr")) ||
+                                                (selectLoc && (tag == "LOC" || tag == "ns")) ||
+                                                (selectOrg && (tag == "ORG" || tag == "nt"))
+                                        
+                                        // Lọc theo độ dài tiếng Trung
+                                        val isLenMatch = word.length in minLen..maxLen
+                                        
+                                        if (isTagMatch && isLenMatch) {
+                                            val current = frequencyMap[word]
+                                            if (current != null) {
+                                                frequencyMap[word] = Pair(tag, current.second + 1)
+                                            } else {
+                                                frequencyMap[word] = Pair(tag, 1)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        scanned = true
+                    }
+                    
+                    // 3. Fallback quét bằng từ điển
+                    if (!scanned) {
+                        val data = TranslationLoader.loadTranslationData()
+                        if (data != null) {
+                            val sentences = content.split('\n', '。', '？', '！', '，', '、', ',', ';')
+                            sentences.forEach { sentence ->
+                                val cleanSentence = sentence.trim()
+                                if (cleanSentence.isEmpty()) return@forEach
+                                
+                                val chars = cleanSentence.filter { it.code in 0x4E00..0x9FFF }.map { it.toString() }
+                                if (chars.size < minLen) return@forEach
+                                
+                                for (len in minLen..maxLen) {
+                                    for (start in 0..chars.size - len) {
+                                        val word = chars.subList(start, start + len).joinToString("")
+                                        
+                                        // Lọc các từ thông dụng trong VietPhrase
+                                        var isCommon = false
+                                        data.vietPhrase.findLongestMatch(word, 0)?.let { (matchLen, value) ->
+                                            if (matchLen == word.length && value.isNotEmpty() && value.first().isLowerCase()) {
+                                                isCommon = true
+                                            }
+                                        }
+                                        
+                                        if (!isCommon) {
+                                            val tag = "nr" // mặc định là nhân danh nr
+                                            val current = frequencyMap[word]
+                                            if (current != null) {
+                                                frequencyMap[word] = Pair(tag, current.second + 1)
+                                            } else {
+                                                frequencyMap[word] = Pair(tag, 1)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Quét tên viết hoa tiếng Việt
+                    val sentences = content.split(Regex("(?<=[.!?\\n])\\s+"))
+                    val nameRegex = Regex("""(?U)\b\p{Lu}\p{Ll}*(?:\s+\p{Lu}\p{Ll}*){1,3}\b""")
+                    sentences.forEach { sentence ->
+                        val trimmed = sentence.trim()
+                        if (trimmed.isEmpty()) return@forEach
+                        
+                        val matches = nameRegex.findAll(trimmed).toList()
+                        matches.forEachIndexed { index, match ->
+                            // Bỏ qua match đầu tiên nếu nó nằm ở vị trí đầu câu (index 0)
+                            if (index == 0 && match.range.first == 0) {
+                                return@forEachIndexed
+                            }
+                            
+                            val word = match.value.trim()
+                            val wordCount = word.split(Regex("\\s+")).size
+                            
+                            if (wordCount in minLen..maxLen) {
+                                val tag = if (word.endsWith("Thành") || word.endsWith("Thôn") || word.endsWith("Trấn") || 
+                                             word.endsWith("Sơn") || word.endsWith("Động") || word.endsWith("Giang") || 
+                                             word.endsWith("Hải") || word.endsWith("Cốc") || word.endsWith("Điện") ||
+                                             word.endsWith("Quốc") || word.endsWith("Khư") || word.endsWith("Mộ") ||
+                                             word.endsWith("Tinh") || word.endsWith("Tinh Cầu") || word.endsWith("Đại Lục")) {
+                                    "LOC"
+                                } else if (word.endsWith("Môn") || word.endsWith("Phái") || word.endsWith("Tông") || 
+                                           word.endsWith("Hội") || word.endsWith("Gia") || word.endsWith("Viện") ||
+                                           word.endsWith("Đường") || word.endsWith("Các") || word.endsWith("Cung") ||
+                                           word.endsWith("Lâu") || word.endsWith("Liên Minh")) {
+                                    "ORG"
+                                } else {
+                                    "PER"
+                                }
+                                
+                                val isTagMatch = (selectPer && tag == "PER") ||
+                                        (selectLoc && tag == "LOC") ||
+                                        (selectOrg && tag == "ORG")
+                                        
+                                if (isTagMatch) {
                                     val current = frequencyMap[word]
                                     if (current != null) {
                                         frequencyMap[word] = Pair(tag, current.second + 1)
@@ -644,7 +768,9 @@ private suspend fun performNerAnalyze(
     } catch (e: Exception) {
         e.printStackTrace()
     } finally {
-        LacAnalyzerHelper.destroy()
+        if (hasChineseContent && selectLac && useLac) {
+            LacAnalyzerHelper.destroy()
+        }
     }
 
     if (loadedChaps == 0) {
@@ -653,20 +779,26 @@ private suspend fun performNerAnalyze(
         return
     }
 
-    // 7. Sắp xếp kết quả và dịch Hán Việt tạm thời
+    // 7. Sắp xếp kết quả và dịch đồng bộ với nội dung truyện
     onStatusChange("Đang hoàn thành danh sách bản dịch...")
+    val targetMode = if (io.legado.app.ui.config.translation.TranslationConfig.translationTarget == "Hán Việt") "hanviet" else "vi"
+    
     val result = frequencyMap.entries
         .filter { it.value.second >= minFreq }
         .map { entry ->
             val word = entry.key
             val tag = when (entry.value.first) {
-                "PER" -> "Nhân danh"
-                "LOC" -> "Địa danh"
-                "ORG" -> "Tổ chức"
+                "PER", "nr" -> "Nhân danh"
+                "LOC", "ns" -> "Địa danh"
+                "ORG", "nt" -> "Tổ chức"
                 else -> entry.value.first
             }
-            // Dịch Hán Việt tạm thời
-            val trans = TranslateUtils.translatePhienAm(word)
+            // Dịch đồng bộ 100% bằng bộ dịch QuickTranslate có sẵn của app
+            val trans = if (word.any { it.code in 0x4E00..0x9FFF }) {
+                io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, word, targetMode)
+            } else {
+                word
+            }
             NerResultItem(
                 word = word,
                 tag = tag,
@@ -677,4 +809,50 @@ private suspend fun performNerAnalyze(
         .sortedByDescending { it.count }
 
     onComplete(result)
+}
+
+private suspend fun analyzeWithTexsmart(text: String): List<Pair<String, String>> = withContext(Dispatchers.IO) {
+    if (text.isBlank()) return@withContext emptyList()
+    
+    val requestUrl = "https://texsmart.qq.com/api"
+    val payload = mapOf("str" to text)
+    val jsonPayload = Gson().toJson(payload)
+    val request = Request.Builder()
+        .url(requestUrl)
+        .header("Content-Type", "application/json; charset=utf-8")
+        .post(jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType()))
+        .build()
+        
+    try {
+        val response = okHttpClient.newCall(request).execute()
+        if (response.isSuccessful) {
+            val responseBody = response.body?.string()
+            if (!responseBody.isNullOrBlank()) {
+                val jsonObject = JsonParser.parseString(responseBody).asJsonObject
+                val entityList = jsonObject.getAsJsonArray("entity_list")
+                val results = ArrayList<Pair<String, String>>()
+                if (entityList != null) {
+                    for (element in entityList) {
+                        val obj = element.asJsonObject
+                        val word = obj.get("str")?.asString ?: ""
+                        val type = obj.get("type")?.asString ?: ""
+                        
+                        val tag = when {
+                            type.startsWith("person", ignoreCase = true) -> "PER"
+                            type.startsWith("org", ignoreCase = true) -> "ORG"
+                            type.startsWith("loc", ignoreCase = true) -> "LOC"
+                            else -> ""
+                        }
+                        if (tag.isNotEmpty() && word.isNotEmpty()) {
+                            results.add(Pair(word, tag))
+                        }
+                    }
+                }
+                return@withContext results
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    emptyList()
 }

@@ -525,7 +525,101 @@ private suspend fun scanNamesFromChapters(
     chapters: List<BookChapter>,
     onProgress: (scanned: Int, total: Int) -> Unit
 ): List<Pair<String, String>> = withContext(Dispatchers.Default) {
-    if (!LacAnalyzerHelper.init(context)) return@withContext emptyList()
+    // Sơ quét xem có chứa tiếng Trung hay không
+    var hasChinese = false
+    for (chapter in chapters) {
+        val testContent = withContext(Dispatchers.IO) {
+            BookHelp.getContent(book, chapter)
+        }
+        if (!testContent.isNullOrBlank()) {
+            if (testContent.any { it.code in 0x4E00..0x9FFF }) {
+                hasChinese = true
+                break
+            }
+        }
+    }
+
+    if (!hasChinese) {
+        // Quét tên viết hoa tiếng Việt
+        val nameSet = mutableSetOf<String>()
+        val nameRegex = Regex("""(?U)\b\p{Lu}\p{Ll}*(?:\s+\p{Lu}\p{Ll}*){1,3}\b""")
+        
+        chapters.forEachIndexed { index, chapter ->
+            val content = withContext(Dispatchers.IO) {
+                BookHelp.getContent(book, chapter)
+            }
+            if (!content.isNullOrBlank()) {
+                val sentences = content.split(Regex("(?<=[.!?\\n])\\s+"))
+                sentences.forEach { sentence ->
+                    val trimmed = sentence.trim()
+                    if (trimmed.isEmpty()) return@forEach
+                    
+                    val matches = nameRegex.findAll(trimmed).toList()
+                    matches.forEachIndexed { i, match ->
+                        if (i == 0 && match.range.first == 0) {
+                            return@forEachIndexed
+                        }
+                        val word = match.value.trim()
+                        val wordCount = word.split(Regex("\\s+")).size
+                        if (wordCount in 2..4) {
+                            nameSet.add(word)
+                        }
+                    }
+                }
+            }
+            onProgress(index + 1, chapters.size)
+        }
+        return@withContext nameSet.map { Pair(it, it) }.sortedBy { it.first }
+    }
+
+    // Nếu là tiếng Trung, kiểm tra xem model LAC đã tải và khởi tạo được chưa
+    val isModelAvailable = LacAnalyzerHelper.isModelDownloaded(context)
+    if (isModelAvailable && LacAnalyzerHelper.init(context)) {
+        val data = TranslationLoader.loadTranslationData() ?: return@withContext emptyList()
+        val nameSet = mutableSetOf<String>()
+        
+        chapters.forEachIndexed { index, chapter ->
+            val content = withContext(Dispatchers.IO) {
+                BookHelp.getContent(book, chapter)
+            }
+            if (!content.isNullOrBlank()) {
+                val tokens = LacAnalyzerHelper.analyze(content)
+                for (token in tokens) {
+                    // Lọc Tên người (PER/nr), Địa danh (LOC/ns), Tổ chức (ORG/nt)
+                    if (token.tag == "PER" || token.tag == "nr" || token.tag == "LOC" || token.tag == "ns" || token.tag == "ORG" || token.tag == "nt") {
+                        val word = token.word.trim()
+                        if (word.length in 2..4 && word.all { it.code in 0x4E00..0x9FFF }) {
+                            nameSet.add(word)
+                        }
+                    }
+                }
+            }
+            onProgress(index + 1, chapters.size)
+        }
+        
+        val targetMode = if (io.legado.app.ui.config.translation.TranslationConfig.translationTarget == "Hán Việt") "hanviet" else "vi"
+        val nameList = ArrayList<Pair<String, String>>()
+        for (name in nameSet) {
+            val displayTranslation = if (name.any { it.code in 0x4E00..0x9FFF }) {
+                io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, name, targetMode)
+            } else {
+                name
+            }
+            nameList.add(Pair(name, displayTranslation))
+        }
+        nameList.sortedBy { it.second }
+    } else {
+        // Fallback quét bằng từ điển có sẵn
+        scanNamesByDict(context, book, chapters, onProgress)
+    }
+}
+
+private suspend fun scanNamesByDict(
+    context: Context,
+    book: Book,
+    chapters: List<BookChapter>,
+    onProgress: (scanned: Int, total: Int) -> Unit
+): List<Pair<String, String>> = withContext(Dispatchers.Default) {
     val data = TranslationLoader.loadTranslationData() ?: return@withContext emptyList()
     val nameSet = mutableSetOf<String>()
     
@@ -534,13 +628,26 @@ private suspend fun scanNamesFromChapters(
             BookHelp.getContent(book, chapter)
         }
         if (!content.isNullOrBlank()) {
-            val tokens = LacAnalyzerHelper.analyze(content)
-            for (token in tokens) {
-                // Lọc Tên người (PER), Địa danh (LOC), Tổ chức (ORG)
-                if (token.tag == "PER" || token.tag == "LOC" || token.tag == "ORG") {
-                    val word = token.word.trim()
-                    if (word.length in 2..4 && word.all { it.code in 0x4E00..0x9FFF }) {
-                        nameSet.add(word)
+            val sentences = content.split(Regex("(?<=[。！？\\n])\\s*"))
+            sentences.forEach { sentence ->
+                val cleanSentence = sentence.trim()
+                if (cleanSentence.isEmpty()) return@forEach
+                
+                val chars = cleanSentence.filter { it.code in 0x4E00..0x9FFF }.map { it.toString() }
+                if (chars.size < 2) return@forEach
+                
+                for (len in 2..4) {
+                    for (start in 0..chars.size - len) {
+                        val word = chars.subList(start, start + len).joinToString("")
+                        var isCommon = false
+                        data.vietPhrase.findLongestMatch(word, 0)?.let { (matchLen, value) ->
+                            if (matchLen == word.length && value.isNotEmpty() && value.first().isLowerCase()) {
+                                isCommon = true
+                            }
+                        }
+                        if (!isCommon) {
+                            nameSet.add(word)
+                        }
                     }
                 }
             }
@@ -548,23 +655,13 @@ private suspend fun scanNamesFromChapters(
         onProgress(index + 1, chapters.size)
     }
     
+    val targetMode = if (io.legado.app.ui.config.translation.TranslationConfig.translationTarget == "Hán Việt") "hanviet" else "vi"
     val nameList = ArrayList<Pair<String, String>>()
     for (name in nameSet) {
-        var translation: String? = null
-        data.names.findLongestMatch(name, 0)?.let { (len, value) -> 
-            if (len == name.length) translation = value 
-        }
-        if (translation == null) {
-            data.vietPhrase.findLongestMatch(name, 0)?.let { (len, value) -> 
-                if (len == name.length) translation = value 
-            }
-        }
-        
-        val displayTranslation = if (translation != null) {
-            if (translation.contains("/")) translation.split("/")[0] else translation
+        val displayTranslation = if (name.any { it.code in 0x4E00..0x9FFF }) {
+            io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, name, targetMode)
         } else {
-            name.map { char -> data.chinesePhienAm[char.toString()] ?: char.toString() }
-                .joinToString(" ") { it.trim().replaceFirstChar { c -> c.uppercase() } }
+            name
         }
         nameList.add(Pair(name, displayTranslation))
     }
