@@ -41,6 +41,6 @@ README_RELEASES.md
 package.json
 
 # AI Agent scratch & local cookies
-.agents/
+.agents/skills/
 cookies.txt
 
