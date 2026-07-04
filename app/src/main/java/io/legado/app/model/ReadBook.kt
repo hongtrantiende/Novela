@@ -464,6 +464,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun moveToNextChapter(upContent: Boolean, upContentInPlace: Boolean = true): Boolean {
         if (durChapterIndex < simulatedChapterSize - 1) {
+            if (BaseReadAloudService.isRun) {
+                BaseReadAloudService.instance?.playStop()
+            }
             durChapterPos = 0
             durChapterIndex++
             clearExpiredChapterLoadingJob()
@@ -527,6 +530,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         upContentInPlace: Boolean = true
     ): Boolean {
         if (durChapterIndex > 0) {
+            if (BaseReadAloudService.isRun) {
+                BaseReadAloudService.instance?.playStop()
+            }
             durChapterPos = if (toLast) prevTextChapter?.lastReadLength ?: Int.MAX_VALUE else 0
             durChapterIndex--
             clearExpiredChapterLoadingJob()
@@ -587,6 +593,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         success: (() -> Unit)? = null
     ) {
         if (index < chapterSize) {
+            if (BaseReadAloudService.isRun) {
+                BaseReadAloudService.instance?.playStop()
+            }
             clearTextChapter()
             if (upContent) callBack?.upContent()
             durChapterIndex = index

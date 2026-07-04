@@ -109,6 +109,8 @@ class HttpReadAloudService : BaseReadAloudService(),
     private var preDownloadWindowJob: Job? = null
     private var playNextJob: Job? = null
     private val cachedFiles = java.util.Collections.synchronizedSet(HashSet<String>())
+    /** True while transitioning between paragraphs/chapters; prevents stale callbacks from pausing. */
+    @Volatile private var isTransitioningPlayback = false
 
     private fun initCachedFiles() {
         Coroutine.async {
@@ -163,6 +165,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun play() {
+        isTransitioningPlayback = false  // Clear transition flag before new playback starts
         pageChanged = false
         exoPlayer.stop()
         if (!requestFocus()) return
@@ -181,8 +184,13 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     override fun playStop() {
-        exoPlayer.stop()
+        isTransitioningPlayback = true  // Signal: don't let stale callbacks change play state
+        // Cancel ALL async jobs so orphaned coroutines cannot call pauseReadAloud()
+        downloadTask?.cancel()
+        playNextJob?.cancel()
+        preDownloadWindowJob?.cancel()
         playIndexJob?.cancel()
+        exoPlayer.stop()
     }
 
     private fun updateNextPos() {
@@ -220,6 +228,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                     } else {
                         val success = downloadSpeakFile(httpTts, fileName, speakText, waitIfDownloading = true)
                         if (!success && !hasSpeakFile(fileName)) {
+                            // Guard: if this coroutine was cancelled, don't touch the play state
+                            ensureActive()
                             pauseReadAloud()
                             return@execute
                         }
@@ -492,7 +502,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                             is InterruptedException,
                             is CancellationException -> Unit
 
-                            else -> pauseReadAloud()
+                            // Guard: only pause if not in a playStop → play transition
+                            else -> if (!isTransitioningPlayback) pauseReadAloud()
                         }
                     }.getOrThrow()
                 } ?: resources.openRawResource(R.raw.silent_sound)

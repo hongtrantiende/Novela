@@ -242,7 +242,7 @@ class TocViewModel(
         tocPreferences,
         reverseFlow
     ) { collapsed, tocPreferences, isReverse ->
-        val finalReverse = if (fromRead) true else isReverse
+        val finalReverse = isReverse  // Always follow user setting, same as audio chapter list
         TocUiConfig(collapsed, tocPreferences.useReplace, tocPreferences.showWordCount, finalReverse)
     }
 

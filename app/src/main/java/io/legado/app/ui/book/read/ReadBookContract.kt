@@ -231,13 +231,13 @@ internal val ReadBookButtonIds = listOf(
     "catalog",
     "read_aloud",
     "setting",
+    "translate",
     "addBookmark",
     "theme",
     "prev_chapter",
     "next_chapter",
     "replace",
     "replace_badge",
-    "translate",
 )
 
 sealed interface ReadBookIntent {
