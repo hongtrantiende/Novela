@@ -242,7 +242,8 @@ class TocViewModel(
         tocPreferences,
         reverseFlow
     ) { collapsed, tocPreferences, isReverse ->
-        TocUiConfig(collapsed, tocPreferences.useReplace, tocPreferences.showWordCount, isReverse)
+        val finalReverse = if (fromRead) true else isReverse
+        TocUiConfig(collapsed, tocPreferences.useReplace, tocPreferences.showWordCount, finalReverse)
     }
 
     private val titleReplaceCache = MutableStateFlow<Map<Int, String>>(emptyMap())
