@@ -5,11 +5,12 @@ import android.content.Context
 import android.content.Intent
 import androidx.activity.result.contract.ActivityResultContract
 
-class TocActivityResult : ActivityResultContract<String, Triple<Int, Int, Boolean>?>() {
+class TocActivityResult(private val fromRead: Boolean = false) : ActivityResultContract<String, Triple<Int, Int, Boolean>?>() {
 
     override fun createIntent(context: Context, input: String): Intent {
         return Intent(context, TocActivity::class.java)
             .putExtra("bookUrl", input)
+            .putExtra("fromRead", fromRead)
     }
 
     override fun parseResult(resultCode: Int, intent: Intent?): Triple<Int, Int, Boolean>? {

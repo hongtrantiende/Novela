@@ -271,37 +271,30 @@
 
         <!-- Play/Pause -->
         <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content">
+            android:layout_width="72dp"
+            android:layout_height="72dp">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/fab_play_stop"
                 style="@style/Widget.Material3Expressive.Button.IconButton"
-                android:layout_width="72dp"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
                 android:contentDescription="@string/audio_play"
-                android:layout_height="72dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
                 app:backgroundTint="?attr/colorSecondaryContainer"
                 app:icon="@drawable/play_anim"
-                app:iconGravity="textStart"
                 app:iconPadding="0dp"
                 app:iconSize="40dp"
-                app:iconTint="?attr/colorOnSecondaryContainer"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:iconTint="?attr/colorOnSecondaryContainer" />
 
             <com.google.android.material.loadingindicator.LoadingIndicator
                 android:id="@+id/progress_loading"
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:visibility="invisible"
-                app:layout_constraintWidth="parent"
-                app:layout_constraintHeight="parent"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="invisible" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 

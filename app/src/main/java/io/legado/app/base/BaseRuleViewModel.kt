@@ -73,7 +73,7 @@ abstract class BaseRuleViewModel<T : SelectableItem<ID>, Entity, ID, S : ListUiS
     }
 
     @OptIn(FlowPreview::class)
-    private val itemsFlow: Flow<List<T>> by lazy {
+    protected val itemsFlow: Flow<List<T>> by lazy {
         combine(
             rawDataFlow,
             _searchKey,

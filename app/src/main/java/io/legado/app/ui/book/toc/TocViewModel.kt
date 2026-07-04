@@ -311,6 +311,79 @@ class TocViewModel(
     val useReplace get() = tocPreferences.value.useReplace
     val showWordCount get() = tocPreferences.value.showWordCount
 
+    val fromRead = savedStateHandle.get<Boolean>("fromRead") ?: false
+    val visibleCount = MutableStateFlow(50)
+
+    fun loadMoreChapters() {
+        visibleCount.value += 50
+    }
+
+    override val uiState: StateFlow<TocActionState> by lazy {
+        combine(
+            itemsFlow,
+            _selectedIds,
+            _isSearchMode,
+            _isUploading,
+            _importState,
+            visibleCount,
+            bookState
+        ) { args ->
+            @Suppress("UNCHECKED_CAST")
+            val items = args[0] as List<TocItemUi>
+            @Suppress("UNCHECKED_CAST")
+            val selectedIds = args[1] as Set<Int>
+            val isSearch = args[2] as Boolean
+            val isUploading = args[3] as Boolean
+            @Suppress("UNCHECKED_CAST")
+            val importState = args[4] as BaseImportUiState<TocDomainItem>
+            val count = args[5] as Int
+            val book = args[6] as io.legado.app.data.entities.Book?
+
+            val durIndex = book?.durChapterIndex ?: -1
+            val updatedItems = items.map { uiItem ->
+                uiItem.copy(
+                    isSelected = uiItem.id in selectedIds,
+                    isDur = uiItem.id == durIndex
+                )
+            }
+            val finalItems = if (!fromRead && updatedItems.size > count) {
+                val minVisible = maxOf(50, durIndex + 1)
+                val currentCount = maxOf(count, minVisible)
+                if (updatedItems.size > currentCount) {
+                    updatedItems.take(currentCount) + TocItemUi(
+                        id = -9999,
+                        title = "Tiếp tục xem",
+                        tag = null,
+                        isVolume = false,
+                        isVip = false,
+                        isPay = false,
+                        isDur = false,
+                        isSelected = false,
+                        downloadState = DownloadState.NONE,
+                        wordCount = null
+                    )
+                } else {
+                    updatedItems
+                }
+            } else {
+                updatedItems
+            }
+            TocActionState(
+                items = finalItems,
+                selectedIds = selectedIds,
+                isSearch = isSearch,
+                isLoading = isUploading,
+                downloadSummary = downloadSummary.value,
+                useReplace = tocPreferences.value.useReplace,
+                showWordCount = tocPreferences.value.showWordCount,
+            )
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = initialState
+        )
+    }
+
     override fun filterData(data: List<TocDomainItem>, key: String): List<TocDomainItem> {
         val collapsed = _collapsedVolumes.value
         val isSearch = key.isNotBlank()

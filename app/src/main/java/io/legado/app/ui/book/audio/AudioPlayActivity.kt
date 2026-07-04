@@ -112,7 +112,7 @@ class AudioPlayActivity :
             java.text.SimpleDateFormat("mm:ss", Locale.getDefault())
         }
     }
-    private val tocActivityResult = registerForActivityResult(TocActivityResult()) {
+    private val tocActivityResult = registerForActivityResult(TocActivityResult(fromRead = true)) {
         it?.let {
             if (it.first != AudioPlay.book?.durChapterIndex
                 || it.second == 0

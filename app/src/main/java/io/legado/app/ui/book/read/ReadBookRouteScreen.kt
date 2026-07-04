@@ -128,7 +128,7 @@ fun ReadBookRouteScreen(
 
     // ── ActivityResult Launchers ──────────────────────────────────────
 
-    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
+    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult(fromRead = true)) { result ->
         result?.let { (index, chapterPos, _) ->
             viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
         }
