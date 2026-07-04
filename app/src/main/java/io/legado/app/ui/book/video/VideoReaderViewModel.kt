@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import io.legado.app.help.book.removeType
+import splitties.init.appCtx
+import io.legado.app.utils.toastOnUi
 
 data class TrackInfo(
     val url: String?,
@@ -67,6 +70,34 @@ class VideoReaderViewModel(
 
     private val _isResolvingTrack = MutableStateFlow(false)
     val isResolvingTrack = _isResolvingTrack.asStateFlow()
+
+    fun addCurrentBookToBookshelfAndFinish(onFinish: () -> Unit) {
+        val currentBook = novel.value ?: return
+        execute {
+            val toc = appDb.bookChapterDao.getChapterList(currentBook.bookUrl)
+            currentBook.removeType(io.legado.app.constant.BookType.notShelf)
+            if (currentBook.order == 0) {
+                currentBook.order = appDb.bookDao.minOrder - 1
+            }
+            appDb.bookDao.insert(currentBook)
+            if (toc.isNotEmpty()) {
+                appDb.bookChapterDao.insert(*toc.toTypedArray())
+            }
+        }.onSuccess {
+            onFinish()
+        }.onError {
+            appCtx.toastOnUi("Không thể thêm sách")
+        }
+    }
+
+    fun removeFromBookshelfAndFinish(onFinish: () -> Unit) {
+        val currentBook = novel.value
+        execute {
+            currentBook?.delete()
+        }.onSuccess {
+            onFinish()
+        }
+    }
 
     fun loadBookAndChapters(extensionId: String, bookUrl: String, initialChapterUrl: String) {
         viewModelScope.launch {

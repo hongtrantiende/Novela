@@ -74,7 +74,8 @@ object QuickTranslateDictHelper {
         context: Context,
         fileName: String,
         inputStream: java.io.InputStream,
-        mode: Int // 0: Thay thế toàn bộ, 1: Gộp từ điển, 2: Chỉ thêm từ thiếu
+        mode: Int, // 0: Thay thế toàn bộ, 1: Gộp từ điển, 2: Chỉ thêm từ thiếu
+        targetTag: String? = null
     ): Boolean = withContext(Dispatchers.IO) {
         try {
             val newEntries = ArrayList<Pair<String, String>>()
@@ -83,7 +84,23 @@ object QuickTranslateDictHelper {
                     if (line.isNotBlank() && line.contains("=")) {
                         val parts = line.split('=', limit = 2)
                         if (parts.size == 2) {
-                            newEntries.add(Pair(parts[0].trim(), parts[1].trim()))
+                            val key = parts[0].trim()
+                            var value = parts[1].trim()
+                            if (targetTag != null) {
+                                val lastSlashIndex = value.lastIndexOf('/')
+                                val cleanValue = if (lastSlashIndex != -1) {
+                                    val tag = value.substring(lastSlashIndex + 1).trim()
+                                    if (tag == "PER" || tag == "LOC" || tag == "ORG" || tag == "PRON" || tag == "USER") {
+                                        value.substring(0, lastSlashIndex).trim()
+                                    } else {
+                                        value
+                                    }
+                                } else {
+                                    value
+                                }
+                                value = "$cleanValue/$targetTag"
+                            }
+                            newEntries.add(Pair(key, value))
                         }
                     }
                 }

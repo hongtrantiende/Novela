@@ -1,4 +1,4 @@
-$filePath = "c:\Users\Admin\Documents\NAM\legado\app\src\main\assets\defaultData\httpTTS.json"
+$filePath = "$PSScriptRoot\app\src\main\assets\defaultData\httpTTS.json"
 $content = [System.IO.File]::ReadAllText($filePath, [System.Text.Encoding]::UTF8)
 
 # Only fix Neural2-D and Neural2-A entries: add back pitch/volumeGainDb/effectsProfileId/sampleRateHertz

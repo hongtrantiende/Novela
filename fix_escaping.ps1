@@ -1,4 +1,4 @@
-$filePath = "c:\Users\Admin\Documents\NAM\legado\app\src\main\assets\defaultData\httpTTS.json"
+$filePath = "$PSScriptRoot\app\src\main\assets\defaultData\httpTTS.json"
 $content = [System.IO.File]::ReadAllText($filePath, [System.Text.Encoding]::UTF8)
 
 # ConvertTo-Json double-escaped the backslashes in Gen1 entries

@@ -312,7 +312,57 @@ class SearchBooksUseCase(
          * - containsBooks: 书名或作者包含搜索词（非精确匹配）
          * - otherBooks:  其他结果（仅 DEFAULT 模式保留）
          */
+        private fun String.containsChinese(): Boolean {
+            for (char in this) {
+                val block = Character.UnicodeBlock.of(char)
+                if (block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS ||
+                    block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS ||
+                    block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A ||
+                    block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B
+                ) {
+                    return true
+                }
+            }
+            return false
+        }
+
         private suspend fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
+            val rawKeyword = keyword.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val rawBookName = book.name.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val rawBookAuthor = book.author.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+            val matchesEqualRaw = rawBookName == rawKeyword || rawBookAuthor == rawKeyword
+            val matchesContainsRaw = rawBookName.contains(rawKeyword) || rawBookAuthor.contains(rawKeyword)
+
+            val kindMatchesRaw = book.kind?.let { kind ->
+                kind.lowercase().contains(rawKeyword)
+            } ?: false
+
+            if (matchesEqualRaw) {
+                return equalBooks
+            }
+
+            // Check if we need translation to match
+            val keywordHasChinese = keyword.containsChinese()
+            val nameHasChinese = book.name.containsChinese()
+            val authorHasChinese = book.author.containsChinese()
+
+            val needTranslation = keywordHasChinese || nameHasChinese || authorHasChinese
+
+            if (!needTranslation) {
+                // If no Chinese characters, raw matches are final
+                return when {
+                    matchesContainsRaw -> {
+                        if (matchMode == MatchMode.EXACT) null else containsBooks
+                    }
+                    kindMatchesRaw -> {
+                        if (matchMode != MatchMode.DEFAULT) null else tagsBooks
+                    }
+                    else -> null
+                }
+            }
+
+            // Perform translation for comparison
             val normKeyword = io.legado.app.utils.TranslateUtils.translateMeta(keyword)
                 .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
             val normBookName = io.legado.app.utils.TranslateUtils.translateMeta(book.name)
@@ -320,32 +370,23 @@ class SearchBooksUseCase(
             val normBookAuthor = io.legado.app.utils.TranslateUtils.translateMeta(book.author)
                 .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
 
-            val rawKeyword = keyword.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
-            val rawBookName = book.name.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
-            val rawBookAuthor = book.author.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val matchesEqualNorm = normBookName == normKeyword || normBookAuthor == normKeyword
+            val matchesContainsNorm = normBookName.contains(normKeyword) || normBookAuthor.contains(normKeyword)
 
-            val matchesEqual = rawBookName == rawKeyword || rawBookAuthor == rawKeyword ||
-                    normBookName == normKeyword || normBookAuthor == normKeyword
-
-            val matchesContains = rawBookName.contains(rawKeyword) || rawBookAuthor.contains(rawKeyword) ||
-                    normBookName.contains(normKeyword) || normBookAuthor.contains(normKeyword)
-
-            val kindMatches = book.kind?.let { kind ->
+            val kindMatchesNorm = book.kind?.let { kind ->
                 val normKind = io.legado.app.utils.TranslateUtils.translateMeta(kind).lowercase()
-                val rawKind = kind.lowercase()
-                rawKind.contains(rawKeyword) || normKind.contains(normKeyword)
+                normKind.contains(normKeyword)
             } ?: false
 
             return when {
-                matchesEqual -> equalBooks
-                kindMatches -> {
-                    if (matchMode != MatchMode.DEFAULT) null else tagsBooks
-                }
-                matchesContains -> {
+                matchesEqualNorm -> equalBooks
+                matchesContainsNorm -> {
                     if (matchMode == MatchMode.EXACT) null else containsBooks
                 }
-                matchMode != MatchMode.DEFAULT -> null
-                else -> otherBooks
+                kindMatchesNorm -> {
+                    if (matchMode != MatchMode.DEFAULT) null else tagsBooks
+                }
+                else -> null
             }
         }
 

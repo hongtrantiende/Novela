@@ -281,7 +281,9 @@ class ChangeSourceSearchUseCase(
                 contentProcessor
             )
         }
-        return book.toSearchBook()
+        return book.toSearchBook().apply {
+            chapterWordCountText = "Tổng số chương: ${chapters.size}"
+        }
     }
 
     private suspend fun loadBookWordCount(

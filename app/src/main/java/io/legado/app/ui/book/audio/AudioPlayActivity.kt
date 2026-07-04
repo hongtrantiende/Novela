@@ -165,11 +165,69 @@ class AudioPlayActivity :
         viewModel.initData(intent)
         initView()
         onBackPressedDispatcher.addCallback(this){
-            if (savedInstanceState != null || !AudioPlay.inBookshelf) {
+            if (savedInstanceState != null) {
                 supportFinishAfterTransition()
+            } else if (!AudioPlay.inBookshelf) {
+                if (io.legado.app.ui.config.otherConfig.OtherConfig.showAddToShelfAlert) {
+                    showAddToShelfAlert()
+                } else {
+                    removeFromBookshelfAndFinish()
+                }
             } else {
                 callBackBookEnd()
                 supportFinishAfterTransition()
+            }
+        }
+    }
+
+    private fun showAddToShelfAlert() {
+        val book = AudioPlay.book ?: return
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.add_to_bookshelf)
+            .setMessage(getString(R.string.check_add_bookshelf, book.name))
+            .setPositiveButton(R.string.ok) { _, _ ->
+                addCurrentBookToBookshelfAndFinish()
+            }
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                removeFromBookshelfAndFinish()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun addCurrentBookToBookshelfAndFinish() {
+        val book = AudioPlay.book ?: return
+        lifecycleScope.launch(IO) {
+            try {
+                val toc = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
+                book.removeType(io.legado.app.constant.BookType.notShelf)
+                if (book.order == 0) {
+                    book.order = io.legado.app.data.appDb.bookDao.minOrder - 1
+                }
+                io.legado.app.data.appDb.bookDao.insert(book)
+                if (toc.isNotEmpty()) {
+                    io.legado.app.data.appDb.bookChapterDao.insert(*toc.toTypedArray())
+                }
+                AudioPlay.inBookshelf = true
+                withContext(Dispatchers.Main) {
+                    callBackBookEnd()
+                    finish()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    toastOnUi("Không thể thêm sách")
+                }
+            }
+        }
+    }
+
+    private fun removeFromBookshelfAndFinish() {
+        val book = AudioPlay.book
+        lifecycleScope.launch(IO) {
+            book?.delete()
+            withContext(Dispatchers.Main) {
+                callBackBookEnd()
+                finish()
             }
         }
     }

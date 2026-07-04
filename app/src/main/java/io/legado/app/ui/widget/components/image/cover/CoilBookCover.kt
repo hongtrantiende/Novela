@@ -84,7 +84,7 @@ fun BookCoverImage(
     }
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
-    var isOnlineCoverLoaded by remember(finalPath) {
+    var isOnlineCoverLoaded by remember {
         mutableStateOf(sharedCoverKey != null && finalPath != null)
     }
 
@@ -98,8 +98,12 @@ fun BookCoverImage(
         mutableStateOf(finalPath == null)
     }
 
+    val initialPath = remember { finalPath }
+
     LaunchedEffect(finalPath, isOnlineCoverLoaded) {
-        if (finalPath != null && !isOnlineCoverLoaded) {
+        if (finalPath == null) {
+            showPlaceholder = true
+        } else if (!isOnlineCoverLoaded) {
             delay(150)
             showPlaceholder = true
         } else {
@@ -134,6 +138,7 @@ fun BookCoverImage(
                     loadOnlyWifi = CoverConfig.loadCoverOnlyWifi,
                     crossfade = showLoadingPlaceholder,
                     memoryCacheKey = memoryCacheKey ?: finalPath,
+                    placeholderKey = memoryCacheKey ?: initialPath,
                     configure = requestBuilder,
                 ),
                 contentDescription = null,
@@ -189,7 +194,7 @@ fun CoilBookCover(
     }
 
     val hasCustomDefault = !randomPath.isNullOrBlank()
-    var isOnlineCoverLoaded by remember(finalPath) {
+    var isOnlineCoverLoaded by remember {
         mutableStateOf(sharedCoverKey != null && finalPath != null)
     }
 
@@ -204,7 +209,9 @@ fun CoilBookCover(
     }
 
     LaunchedEffect(finalPath, isOnlineCoverLoaded) {
-        if (finalPath != null && !isOnlineCoverLoaded) {
+        if (finalPath == null) {
+            showPlaceholder = true
+        } else if (!isOnlineCoverLoaded) {
             delay(150)
             showPlaceholder = true
         } else {

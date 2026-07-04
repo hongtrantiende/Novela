@@ -227,35 +227,41 @@ object TranslationManager : KoinComponent {
         
         try {
             val prompt = """
-                Bạn là một trợ lý dịch thuật Trung-Việt chuyên nghiệp.
-                Nhiệm vụ: Hãy quét nội dung chương truyện tiếng Trung dưới đây để trích xuất và phân loại đầy đủ toàn bộ cả 4 nhóm thực thể quan trọng cùng một lúc thành từ điển truyện.
-                
-                Yêu cầu bắt buộc trích xuất đầy đủ 4 nhóm:
-                1. Tên nhân vật (nhãn /PER): Trích xuất tất cả tên nhân vật xuất hiện.
-                2. Tên địa danh (nhãn /LOC): Các địa điểm, thành trì, núi sông, khu vực.
-                3. Tên tổ chức (nhãn /ORG): Tông môn, gia tộc, trường học, bang hội.
-                4. Xưng hô (nhãn /PRON): Các đại từ xưng hô, cặp từ hô gọi đặc trưng (ví dụ: Sư phụ, Đệ tử, Lão tổ, v.v.).
-                
-                Thông tin ngữ cảnh bộ truyện:
-                - Thể loại truyện: $genre
-                
-                Yêu cầu phong cách dịch tên riêng (PER/LOC/ORG):
-                1. Hãy dịch tên riêng phù hợp nhất với thể loại truyện này:
-                   - Nếu là truyện tiên hiệp, kiếm hiệp, huyền huyễn cổ đại Trung Quốc: Hãy dịch tên theo đúng âm Hán-Việt tiêu chuẩn (ví dụ: 萧炎=Tiêu Viêm/PER, 云岚宗=Vân Lam Tông/ORG).
-                   - Nếu là truyện Võng Du, Khoa Huyễn, Tây Phương Huyền Huyễn: Dịch tên riêng theo phong cách Latin/Anh ngữ hoặc phiên âm phương Tây chuẩn (ví dụ: 杰克=Jack/PER, 史密斯=Smith/PER).
-                   - Nếu là truyện chuyển ngữ từ Light Novel Nhật Bản, Hàn Quốc: Dịch theo đúng dạng Romanji hoặc phiên âm đặc trưng của nước đó (ví dụ: 桐人=Kirito/PER, 亚丝娜=Asuna/PER).
-                2. TUYỆT ĐỐI KHÔNG dịch tên riêng thành nghĩa THUẦN VIỆT hoặc dịch nghĩa đen từ vựng (ví dụ: dịch 萧炎 thành Tiêu Viêm, tuyệt đối KHÔNG dịch thành Lửa Tiêu hay Viêm Tiêu).
-                3. Trích xuất các đại từ xưng hô đặc trưng của truyện (ví dụ: 老师=Sư phụ/PRON).
+                Bạn là một trợ lý dịch thuật Trung-Việt chuyên nghiệp, nhiệm vụ của bạn là xây dựng từ điển thuật ngữ cho bộ truyện.
 
-                Định dạng kết quả trả về (Xuất chính xác mỗi dòng một từ khóa, không có markdown, không giải thích gì thêm, không chia nhóm tiêu đề):
-                TừGốc=BảnDịch/TAG
-                
-                Trong đó TAG chỉ nhận một trong các giá trị sau:
-                - PER
-                - LOC
-                - ORG
-                - PRON
-                
+                ⚠️ NHIỆM VỤ BẮT BUỘC — PHẢI THỰC HIỆN NGHIÊM TÚC:
+                Đọc TOÀN BỘ văn bản chương truyện tiếng Trung dưới đây từ đầu đến cuối. Trích xuất và phân loại TOÀN BỘ, KHÔNG BỎ SÓT bất kỳ thực thể nào thuộc đúng 4 nhóm sau:
+
+                1. Tên nhân vật (TAG: PER): TẤT CẢ tên người, nhân vật xuất hiện — dù nhân vật chính, phụ, hay chỉ được nhắc đến 1 lần.
+                2. Địa danh (TAG: LOC): TẤT CẢ địa điểm, thành trì, núi, sông, vùng đất, cõi giới, thế giới.
+                3. Tổ chức (TAG: ORG): TẤT CẢ tông môn, gia tộc, bang hội, trường phái, đội nhóm, tổ chức.
+                4. Xưng hô (TAG: PRON): TẤT CẢ đại từ xưng hô, cách gọi đặc trưng (ví dụ: 师父=Sư phụ, 弟子=Đệ tử, 陛下=Bệ hạ).
+
+                Thông tin ngữ cảnh:
+                - Thể loại truyện: $genre
+
+                Quy tắc dịch thuật bắt buộc:
+                - Truyện tiên hiệp/kiếm hiệp/huyền huyễn cổ đại Trung Quốc → dịch âm Hán-Việt chuẩn (萧炎→Tiêu Viêm/PER, 云岚宗→Vân Lam Tông/ORG).
+                - Truyện Võng Du/Khoa Huyễn/Tây Phương → phiên âm Latin/Anh (杰克→Jack/PER).
+                - Light Novel Nhật/Hàn → Romaji hoặc phiên âm gốc (桐人→Kirito/PER).
+                - TUYỆT ĐỐI KHÔNG dịch nghĩa đen tên riêng (萧炎 KHÔNG được dịch thành "Lửa Tiêu").
+
+                ⚠️ CÁC RÀNG BUỘC BẮT BUỘC:
+                - Quét TOÀN BỘ văn bản, KHÔNG bỏ qua đoạn nào.
+                - Liệt kê TẤT CẢ thực thể, kể cả nhân vật/địa điểm chỉ xuất hiện 1 lần.
+                - KHÔNG chọn lọc hay chỉ lấy tên "quan trọng" — phải lấy hết.
+                - Mỗi thực thể chỉ xuất hiện 1 lần trong kết quả (không trùng lặp).
+                - Chỉ trả về danh sách thô, KHÔNG có markdown, KHÔNG có tiêu đề, KHÔNG giải thích.
+
+                Định dạng mỗi dòng (bắt buộc):
+                TừGốcTiếngTrung=BảnDịchTiếngViệt/TAG
+
+                Ví dụ:
+                萧炎=Tiêu Viêm/PER
+                云岚宗=Vân Lam Tông/ORG
+                迦南学院=Ca Nam Học Viện/LOC
+                师父=Sư phụ/PRON
+
                 Nội dung chương truyện:
                 $rawContent
             """.trimIndent()
@@ -268,7 +274,8 @@ object TranslationManager : KoinComponent {
                         put("content", prompt)
                     })
                 })
-                put("temperature", 0.3)
+                put("temperature", 0.1)
+                put("max_tokens", 4096)
             }
 
             val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()

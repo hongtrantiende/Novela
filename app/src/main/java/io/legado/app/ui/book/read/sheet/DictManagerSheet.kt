@@ -145,6 +145,7 @@ fun DictManagerSheet(
     var showAddWordDialog by remember { mutableStateOf(false) }
     var wordToEdit by remember { mutableStateOf<Pair<String, String>?>(null) }
     var entryToDelete by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var showDeleteAllConfirmDialog by remember { mutableStateOf(false) }
 
     // Input fields for Dialogs
     var inputKey by remember { mutableStateOf("") }
@@ -173,6 +174,7 @@ fun DictManagerSheet(
             1 -> "LOC"
             2 -> "ORG"
             3 -> "PRON"
+            4 -> "USER"
             else -> "PER"
         }
         
@@ -187,7 +189,8 @@ fun DictManagerSheet(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        animateSize = false
     ) {
         Column(
             modifier = Modifier
@@ -218,7 +221,10 @@ fun DictManagerSheet(
                 IconButton(onClick = {
                     val book = state.book
                     if (book != null) {
-                        bookExportLauncher.launch("book_${bookKey}_name.txt")
+                        val modelName = TranslationConfig.llmModel.ifBlank { "AI" }
+                        val rawFileName = "Từ điển - ${book.name} - ${downloadedChapters} chương - ${modelName}.txt"
+                        val exportFileName = rawFileName.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                        bookExportLauncher.launch(exportFileName)
                     }
                 }) {
                     Icon(Icons.Default.CloudDownload, contentDescription = "Xuất file TXT")
@@ -236,19 +242,29 @@ fun DictManagerSheet(
                 }) {
                     Icon(Icons.Default.Settings, contentDescription = "Cấu hình AI")
                 }
+                IconButton(onClick = {
+                    showDeleteAllConfirmDialog = true
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Xóa tất cả",
+                        tint = LegadoTheme.colorScheme.error
+                    )
+                }
                 IconButton(onClick = onDismissRequest) {
                     Icon(Icons.Default.Close, contentDescription = "Đóng")
                 }
             }
 
             // Tab Row
-            TabRow(
+            ScrollableTabRow(
                 selectedTabIndex = selectedTabIndex,
                 containerColor = Color.Transparent,
                 contentColor = LegadoTheme.colorScheme.primary,
+                edgePadding = 0.dp,
                 modifier = Modifier.padding(horizontal = 8.dp)
             ) {
-                val tabs = listOf("Tên nhân vật", "Tên địa danh", "Tên tổ chức", "Xưng hô")
+                val tabs = listOf("Tên nhân vật", "Tên địa danh", "Tên tổ chức", "Xưng hô", "Từ điển riêng")
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTabIndex == index,
@@ -488,6 +504,7 @@ fun DictManagerSheet(
                             1 -> "LOC"
                             2 -> "ORG"
                             3 -> "PRON"
+                            4 -> "USER"
                             else -> "PER"
                         }
                         scope.launch(Dispatchers.IO) {
@@ -549,6 +566,7 @@ fun DictManagerSheet(
                             1 -> "LOC"
                             2 -> "ORG"
                             3 -> "PRON"
+                            4 -> "USER"
                             else -> "PER"
                         }
                         scope.launch(Dispatchers.IO) {
@@ -751,6 +769,34 @@ fun DictManagerSheet(
             )
         }
 
+        if (showDeleteAllConfirmDialog) {
+            AppAlertDialog(
+                show = true,
+                onDismissRequest = { showDeleteAllConfirmDialog = false },
+                title = "Xác nhận xóa tất cả",
+                text = "Bạn có chắc chắn muốn xóa toàn bộ từ trong từ điển truyện không? Hành động này không thể hoàn tác.",
+                confirmText = "Xóa tất cả",
+                onConfirm = {
+                    scope.launch(Dispatchers.IO) {
+                        QuickTranslateDictHelper.deleteDictFile(context, privateNameFile)
+                        val book = state.book
+                        if (book != null) {
+                            io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, "Đã xóa toàn bộ từ điển", Toast.LENGTH_SHORT).show()
+                            io.legado.app.utils.TranslateUtils.clearCache()
+                            io.legado.app.model.ReadBook.loadContent(false)
+                            showDeleteAllConfirmDialog = false
+                            refreshListTrigger++
+                        }
+                    }
+                },
+                dismissText = "Hủy",
+                onDismiss = { showDeleteAllConfirmDialog = false }
+            )
+        }
+
         if (showResumeDialog) {
             val book = state.book
             val bookKeyStr = bookKey
@@ -836,7 +882,8 @@ fun DictManagerSheet(
                                         context,
                                         privateNameFile,
                                         stream,
-                                        importMode
+                                        importMode,
+                                        targetTag = "USER"
                                     )
                                     withContext(Dispatchers.Main) {
                                         if (success) {

@@ -56,30 +56,17 @@ fun ProvideThemeOverride(
     theme: ThemeOverrideState?,
     content: @Composable () -> Unit,
 ) {
-    var appliedTheme by remember { mutableStateOf<ThemeOverrideState?>(null) }
-    val baseTheme = LocalLegadoThemeColors.current
+    val defaultTheme = LocalLegadoThemeColors.current
+    val targetColorScheme = theme?.colorScheme ?: defaultTheme.colorScheme
+    val targetSeedColor = theme?.seedColor ?: defaultTheme.seedColor
+    val targetIsDark = theme?.isDark ?: defaultTheme.isDark
 
-    LaunchedEffect(theme) {
-        if (theme == null) {
-            appliedTheme = null
-        } else {
-            withFrameNanos { }
-            appliedTheme = theme
-        }
-    }
-
-    val currentTheme = appliedTheme
-
-    if (currentTheme != null) {
-        ProvideColorSchemeOverride(
-            colorScheme = currentTheme.colorScheme,
-            seedColor = currentTheme.seedColor,
-            overrideIsDark = currentTheme.isDark,
-            content = content
-        )
-    } else {
-        content()
-    }
+    ProvideColorSchemeOverride(
+        colorScheme = targetColorScheme,
+        seedColor = targetSeedColor,
+        overrideIsDark = targetIsDark,
+        content = content
+    )
 }
 
 @Composable
@@ -92,14 +79,14 @@ fun rememberThemeOverride(
     val usePureBlack = ThemeConfig.isPureBlack
 
     return remember(seedColor, isDark, paletteStyle, colorSpec, usePureBlack) {
-        seedColor?.let { color ->
-            buildThemeOverrideState(
-                seedColor = color,
-                isDark = isDark,
-                paletteStyle = paletteStyle,
-                colorSpec = colorSpec,
-                usePureBlack = usePureBlack
-            )
-        }
+        if (seedColor == null || seedColor == Color.Unspecified) return@remember null
+        
+        buildThemeOverrideState(
+            seedColor = seedColor,
+            isDark = isDark,
+            paletteStyle = paletteStyle,
+            colorSpec = colorSpec,
+            usePureBlack = usePureBlack
+        )
     }
 }

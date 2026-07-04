@@ -10,6 +10,7 @@ fun buildCoverImageRequest(
     loadOnlyWifi: Boolean,
     crossfade: Boolean = true,
     memoryCacheKey: String? = null,
+    placeholderKey: String? = memoryCacheKey,
     configure: ImageRequest.Builder.() -> Unit = {},
 ): ImageRequest {
     return ImageRequest.Builder(context)
@@ -18,7 +19,9 @@ fun buildCoverImageRequest(
         .apply {
             if (memoryCacheKey != null) {
                 memoryCacheKey(memoryCacheKey)
-                placeholderMemoryCacheKey(memoryCacheKey)
+            }
+            if (placeholderKey != null) {
+                placeholderMemoryCacheKey(placeholderKey)
             }
         }
         .setParameter("sourceOrigin", sourceOrigin)

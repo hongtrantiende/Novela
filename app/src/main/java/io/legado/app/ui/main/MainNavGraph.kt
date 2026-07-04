@@ -330,6 +330,7 @@ fun MainActivity.mainEntryProvider(
                 extensionId = extensionId,
                 novelUrl = novelUrl,
                 chapterUrl = chapterUrl,
+                inBookshelf = route.inBookshelf,
                 onBackClick = { onNavigateBack() }
             )
         } else {

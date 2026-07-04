@@ -294,6 +294,16 @@ fun ChangeSourceSheet(
                             )
                         },
                         supportingContent = {
+                            val totalChaptersText = remember(item.latestChapterTitle, item.chapterWordCountText) {
+                                val parsed = parseChapterCount(item.latestChapterTitle)
+                                if (item.chapterWordCountText != null) {
+                                    item.chapterWordCountText
+                                } else if (parsed != null) {
+                                    "Ước tính: $parsed chương"
+                                } else {
+                                    null
+                                }
+                            }
                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 AppText(
                                     text = item.author,
@@ -303,7 +313,7 @@ fun ChangeSourceSheet(
                                     text = item.getDisplayLastChapterTitle(),
                                     style = LegadoTheme.typography.labelMediumEmphasized
                                 )
-                                item.chapterWordCountText?.takeIf { loadWordCount }?.let {
+                                totalChaptersText?.let {
                                     AppText(
                                         text = it,
                                         style = LegadoTheme.typography.labelSmallEmphasized,
@@ -443,4 +453,18 @@ fun ChangeSourceSheet(
             showFilterSheet = false
         }
     )
+}
+
+private fun parseChapterCount(title: String?): Int? {
+    if (title.isNullOrBlank()) return null
+    Regex("""(?:Chương|第)\s*(\d+)""", RegexOption.IGNORE_CASE).find(title)?.groupValues?.get(1)?.toIntOrNull()?.let {
+        return it
+    }
+    Regex("""^\s*(\d+)""").find(title)?.groupValues?.get(1)?.toIntOrNull()?.let {
+        return it
+    }
+    Regex("""(\d+)""").find(title)?.groupValues?.get(1)?.toIntOrNull()?.let {
+        return it
+    }
+    return null
 }

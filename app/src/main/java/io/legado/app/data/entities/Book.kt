@@ -406,6 +406,7 @@ data class Book(
         BookHelp.clearCache(this)
         appDb.bookChapterDao.delByBook(bookUrl)
         appDb.bookDao.delete(this)
+        io.legado.app.model.CacheBook.remove(splitties.init.appCtx, bookUrl)
     }
 
     @Suppress("ConstPropertyName")

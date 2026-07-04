@@ -47,6 +47,7 @@ fun AppModalBottomSheet(
     title: String? = null,
     startAction: @Composable (() -> Unit)? = null,
     endAction: @Composable (() -> Unit)? = null,
+    animateSize: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colorScheme = LocalLegadoThemeColors.current.colorScheme
@@ -90,7 +91,7 @@ fun AppModalBottomSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 24.dp)
-                            .animateContentSize(),
+                            .let { if (animateSize) it.animateContentSize() else it },
                         content = content
                     )
                 }
@@ -122,7 +123,7 @@ fun AppModalBottomSheet(
                             .fillMaxWidth()
                             .padding(start = 16.dp, end = 16.dp, bottom = 0.dp)
                             .heightIn(max = maxHeight)
-                            .animateContentSize()
+                            .let { if (animateSize) it.animateContentSize() else it }
                             .then(modifier)
                     ) {
                         val hasHeader =
@@ -181,6 +182,7 @@ fun <T> AppModalBottomSheet(
     title: String? = null,
     startAction: @Composable (() -> Unit)? = null,
     endAction: @Composable (() -> Unit)? = null,
+    animateSize: Boolean = true,
     content: @Composable ColumnScope.(T) -> Unit
 ) {
     var cachedData by remember { mutableStateOf(data) }
@@ -197,6 +199,7 @@ fun <T> AppModalBottomSheet(
         title = title,
         startAction = startAction,
         endAction = endAction,
+        animateSize = animateSize,
         content = {
             if (currentData != null) {
                 content(currentData)

@@ -50,6 +50,8 @@ suspend fun ImageLoader.extractSeedColor(
     }
 }
 
+private val seedColorCache = java.util.concurrent.ConcurrentHashMap<Int, Color>()
+
 @Composable
 fun rememberImageSeedColor(
     imageLoader: ImageLoader,
@@ -58,20 +60,32 @@ fun rememberImageSeedColor(
     configureRequest: ImageRequest.Builder.() -> Unit = {},
 ): Color? {
     val context = LocalContext.current
-    var seedColor by remember { mutableStateOf<Color?>(null) }
+    val cacheKey = requestKey?.hashCode()
+    
+    // Khởi tạo ngay với cache nếu có, ngược lại dùng Color.Unspecified làm trạng thái loading
+    var seedColor by remember(requestKey) { 
+        mutableStateOf<Color?>(
+            if (cacheKey != null && seedColorCache.containsKey(cacheKey)) {
+                seedColorCache[cacheKey]
+            } else {
+                Color.Unspecified 
+            }
+        ) 
+    }
 
     LaunchedEffect(imageLoader, requestKey) {
         if (data == null) {
             seedColor = null
-        } else {
+        } else if (cacheKey == null || !seedColorCache.containsKey(cacheKey)) {
             val extracted = imageLoader.extractSeedColor(
                 context = context,
                 data = data,
                 configureRequest = configureRequest
             )
-            if (extracted != null) {
-                seedColor = extracted
+            if (extracted != null && cacheKey != null) {
+                seedColorCache[cacheKey] = extracted
             }
+            seedColor = extracted
         }
     }
     return seedColor

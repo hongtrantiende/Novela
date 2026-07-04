@@ -45,23 +45,27 @@ class CoverInterceptor : Interceptor {
             }
 
             val (finalUrl, headers) = cached ?: withContext(Dispatchers.IO) {
-                val result = AnalyzeUrl(data, source = source).getUrlAndHeaders()
+                var extBaseUrl = ""
+                var extReferer = ""
                 if (source == null && sourceOrigin != null && sourceOrigin.startsWith("ext_")) {
                     val extId = sourceOrigin.removePrefix("ext_")
                     val extEntity = io.legado.app.data.appDb.extensionDao.getExtensionByIdSync(extId)
                     if (extEntity != null && extEntity.source.isNotBlank()) {
-                        val newHeaders = result.second.toMutableMap()
-                        val refererVal = if (extEntity.source.endsWith("/")) extEntity.source else "${extEntity.source}/"
-                        if (!newHeaders.containsKey("Referer") && !newHeaders.containsKey("referer")) {
-                            newHeaders["Referer"] = refererVal
-                        }
-                        if (!newHeaders.containsKey("User-Agent") && !newHeaders.containsKey("user-agent")) {
-                            newHeaders["User-Agent"] = io.legado.app.help.config.AppConfig.userAgent
-                        }
-                        Pair(result.first, newHeaders)
-                    } else {
-                        result
+                        extBaseUrl = extEntity.source
+                        extReferer = if (extBaseUrl.endsWith("/")) extBaseUrl else "$extBaseUrl/"
                     }
+                }
+
+                val result = AnalyzeUrl(data, source = source, baseUrl = extBaseUrl).getUrlAndHeaders()
+                if (extBaseUrl.isNotBlank()) {
+                    val newHeaders = result.second.toMutableMap()
+                    if (!newHeaders.containsKey("Referer") && !newHeaders.containsKey("referer")) {
+                        newHeaders["Referer"] = extReferer
+                    }
+                    if (!newHeaders.containsKey("User-Agent") && !newHeaders.containsKey("user-agent")) {
+                        newHeaders["User-Agent"] = io.legado.app.help.config.AppConfig.userAgent
+                    }
+                    Pair(result.first, newHeaders)
                 } else {
                     result
                 }

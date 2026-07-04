@@ -723,6 +723,8 @@ object TranslateUtils {
     }
 }
 
+private val translateStateCache = android.util.LruCache<String, String>(500)
+
 @Composable
 fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = null): State<String> {
     val isEnabled = TranslateUtils.isTranslateEnabled()
@@ -736,13 +738,34 @@ fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = nul
         else -> "QT"
     }
 
-    val state = remember(text, isEnabled, mode, engine) { mutableStateOf(text ?: "") }
+    val cacheKey = if (text.isNullOrBlank()) null else "${text}_${isEnabled}_${mode}_${engine}_${TranslationConfig.translationTarget}_${isMeta}"
+
+    val state = remember(text, isEnabled, mode, engine) { 
+        mutableStateOf(
+            if (cacheKey != null && translateStateCache.get(cacheKey) != null) {
+                translateStateCache.get(cacheKey)!!
+            } else if (isEnabled) {
+                // Không hiển thị tiếng Trung khi đang đợi dịch lần đầu (tránh nháy chữ)
+                // Dùng khoảng trắng tàng hình (zero-width space) để giữ nguyên cấu trúc layout không bị sập
+                "\u200B"
+            } else {
+                text ?: ""
+            }
+        ) 
+    }
 
     LaunchedEffect(text, isEnabled, mode, engine) {
         if (text.isNullOrBlank()) {
             state.value = ""
             return@LaunchedEffect
         }
+        
+        val cached = cacheKey?.let { translateStateCache.get(it) }
+        if (cached != null) {
+            state.value = cached
+            return@LaunchedEffect
+        }
+        
         if (isEnabled) {
             if (engine == "QT") {
                 if (TranslationConfig.translationTarget == "Hán Việt") {
@@ -756,6 +779,10 @@ fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = nul
             }
         } else {
             state.value = text
+        }
+        
+        if (cacheKey != null) {
+            translateStateCache.put(cacheKey, state.value)
         }
     }
     return state

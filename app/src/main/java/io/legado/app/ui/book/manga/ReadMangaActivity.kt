@@ -16,6 +16,10 @@ import androidx.core.view.doOnLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import io.legado.app.help.book.removeType
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.PagerSnapHelper
 import com.bumptech.glide.Glide
@@ -236,10 +240,67 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
                 ?: MangaFooterConfig()
 
         onBackPressedDispatcher.addCallback(this){
-            if (savedInstanceState != null || !ReadManga.inBookshelf) {
-                finish()
+            if (savedInstanceState != null) {
+                supportFinishAfterTransition()
+            } else if (!ReadManga.inBookshelf) {
+                if (io.legado.app.ui.config.otherConfig.OtherConfig.showAddToShelfAlert) {
+                    showAddToShelfAlert()
+                } else {
+                    removeFromBookshelfAndFinish()
+                }
             } else {
                 supportFinishAfterTransition()
+            }
+        }
+    }
+
+    private fun showAddToShelfAlert() {
+        val book = ReadManga.book ?: return
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.add_to_bookshelf)
+            .setMessage(getString(R.string.check_add_bookshelf, book.name))
+            .setPositiveButton(R.string.ok) { _, _ ->
+                addCurrentBookToBookshelfAndFinish()
+            }
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                removeFromBookshelfAndFinish()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun addCurrentBookToBookshelfAndFinish() {
+        val book = ReadManga.book ?: return
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val toc = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
+                book.removeType(io.legado.app.constant.BookType.notShelf)
+                if (book.order == 0) {
+                    book.order = io.legado.app.data.appDb.bookDao.minOrder - 1
+                }
+                io.legado.app.data.appDb.bookDao.insert(book)
+                if (toc.isNotEmpty()) {
+                    io.legado.app.data.appDb.bookChapterDao.insert(*toc.toTypedArray())
+                }
+                ReadManga.inBookshelf = true
+                withContext(Dispatchers.Main) {
+                    finish()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    toastOnUi("Không thể thêm sách")
+                }
+            }
+        }
+    }
+
+    private fun removeFromBookshelfAndFinish() {
+        val book = ReadManga.book
+        lifecycleScope.launch(Dispatchers.IO) {
+            book?.delete()
+            withContext(Dispatchers.Main) {
+                setResult(READER_RESULT_DELETED)
+                finish()
             }
         }
     }

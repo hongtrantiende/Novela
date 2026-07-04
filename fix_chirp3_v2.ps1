@@ -1,4 +1,4 @@
-$filePath = "c:\Users\Admin\Documents\NAM\legado\app\src\main\assets\defaultData\httpTTS.json"
+$filePath = "$PSScriptRoot\app\src\main\assets\defaultData\httpTTS.json"
 $content = [System.IO.File]::ReadAllText($filePath, [System.Text.Encoding]::UTF8)
 
 $oldEscaped = ',\n      pitch: typeof config.pitch !== \"undefined\" ? parseFloat(config.pitch) : 0.0,\n      volumeGainDb: typeof config.volumeGain !== \"undefined\" ? parseFloat(config.volumeGain) : 0.0,\n      effectsProfileId: config.effectsProfile ? [config.effectsProfile] : undefined,\n      sampleRateHertz: config.sampleRate ? parseInt(config.sampleRate) : undefined\n    }\n  })\n};\n'

@@ -33,7 +33,10 @@ import kotlinx.coroutines.withTimeout
 import java.util.Collections
 import java.util.concurrent.Executors
 
-class ChangeCoverViewModel(application: Application) : BaseViewModel(application) {
+class ChangeCoverViewModel(
+    application: Application,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository
+) : BaseViewModel(application) {
     private val threadCount = OtherConfig.threadCount
     private var searchPool: ExecutorCoroutineDispatcher? = null
     private var searchSuccess: ((SearchBook) -> Unit)? = null
@@ -112,7 +115,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
             searchBooks.clear()
             upAdapter?.invoke()
             bookSourceParts.clear()
-            bookSourceParts.addAll(appDb.bookSourceDao.allEnabledPart)
+            bookSourceParts.addAll(io.legado.app.ui.book.search.SearchScope("").getBookSourceParts())
             initSearchPool()
             search()
         }
@@ -122,9 +125,7 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
         task = viewModelScope.launch(searchPool!!) {
             flow {
                 for (bs in bookSourceParts) {
-                    bs.getBookSource()?.let {
-                        emit(it)
-                    }
+                    emit(bs)
                 }
             }.onStart {
                 searchStateData.postValue(true)
@@ -142,20 +143,50 @@ class ChangeCoverViewModel(application: Application) : BaseViewModel(application
         }
     }
 
-    private suspend fun search(source: BookSource) {
-        if (source.getSearchRule().coverUrl.isNullOrBlank()) {
-            return
-        }
-        val searchBook = WebBook.searchBookAwait(
-            source, name,
-            shouldBreak = { it > 0 }).firstOrNull() ?: return
-        if (searchBook.name == name && searchBook.author == author
-            && !searchBook.coverUrl.isNullOrEmpty()
-        ) {
-            if (!searchBook.origin.startsWith("ext_")) {
-                appDb.searchBookDao.insert(searchBook)
+    private suspend fun search(part: BookSourcePart) {
+        val isExt = part.bookSourceUrl.startsWith("ext_")
+        val searchBooksResult = if (isExt) {
+            if (!io.legado.app.help.MemberManager.isVip) return
+            try {
+                extensionRepository.searchBooks(part.bookSourceUrl, name, 1)
+            } catch (_: Throwable) {
+                emptyList()
             }
-            searchSuccess?.invoke(searchBook)
+        } else {
+            val source = part.getBookSource() ?: return
+            if (source.getSearchRule().coverUrl.isNullOrBlank()) {
+                return
+            }
+            try {
+                WebBook.searchBookAwait(
+                    source, name,
+                    shouldBreak = { it > 0 })
+            } catch (_: Throwable) {
+                emptyList()
+            }
+        }
+
+        val normTargetName = io.legado.app.utils.TranslateUtils.translateMeta(name)
+            .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+        val normTargetAuthor = io.legado.app.utils.TranslateUtils.translateMeta(author)
+            .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+        for (searchBook in searchBooksResult) {
+            val normExtBookName = io.legado.app.utils.TranslateUtils.translateMeta(searchBook.name)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+            val normExtAuthor = io.legado.app.utils.TranslateUtils.translateMeta(searchBook.author)
+                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
+
+            val isNameMatch = normExtBookName == normTargetName
+            val isAuthorMatch = author.isBlank() || searchBook.author.isBlank() ||
+                    normExtAuthor.contains(normTargetAuthor) || normTargetAuthor.contains(normExtAuthor)
+
+            if (isNameMatch && isAuthorMatch && !searchBook.coverUrl.isNullOrEmpty()) {
+                if (!searchBook.origin.startsWith("ext_")) {
+                    appDb.searchBookDao.insert(searchBook)
+                }
+                searchSuccess?.invoke(searchBook)
+            }
         }
     }
 

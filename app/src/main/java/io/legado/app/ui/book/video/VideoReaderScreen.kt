@@ -170,6 +170,7 @@ fun VideoReaderScreen(
     extensionId: String,
     novelUrl: String,
     chapterUrl: String,
+    inBookshelf: Boolean,
     onBackClick: () -> Unit,
     viewModel: VideoReaderViewModel = koinViewModel(),
 ) {
@@ -238,6 +239,22 @@ fun VideoReaderScreen(
     var selectedServerIndex by remember(chapter, servers) {
         val defaultIdx = servers.indexOfFirst { it.first.contains("DASH", ignoreCase = true) }
         mutableStateOf(if (defaultIdx != -1) defaultIdx else 0)
+    }
+
+    var showAddToShelfDialog by remember { mutableStateOf(false) }
+
+    val handleBackClick = remember(inBookshelf, viewModel, onBackClick) {
+        {
+            if (!inBookshelf) {
+                if (io.legado.app.ui.config.otherConfig.OtherConfig.showAddToShelfAlert) {
+                    showAddToShelfDialog = true
+                } else {
+                    viewModel.removeFromBookshelfAndFinish { onBackClick() }
+                }
+            } else {
+                onBackClick()
+            }
+        }
     }
 
     // Tự động nạp dữ liệu phim
@@ -326,7 +343,7 @@ fun VideoReaderScreen(
                 } else if (action.endsWith(".VIDEO_STOP")) {
                     exoPlayer.pause()
                     cancelVideoNotification(context ?: return)
-                    onBackClick()
+                    handleBackClick()
                 }
             }
         }
@@ -487,8 +504,27 @@ fun VideoReaderScreen(
         if (isFullscreen) {
             exitImmersive()
         } else {
-            onBackClick()
+            handleBackClick()
         }
+    }
+
+    if (showAddToShelfDialog) {
+        io.legado.app.ui.widget.components.alert.AppAlertDialog(
+            show = true,
+            title = androidx.compose.ui.res.stringResource(R.string.add_to_bookshelf),
+            text = androidx.compose.ui.res.stringResource(R.string.check_add_bookshelf, novel?.name ?: ""),
+            onConfirm = {
+                showAddToShelfDialog = false
+                viewModel.addCurrentBookToBookshelfAndFinish { onBackClick() }
+            },
+            onDismissRequest = {
+                showAddToShelfDialog = false
+            },
+            onDismiss = {
+                showAddToShelfDialog = false
+                viewModel.removeFromBookshelfAndFinish { onBackClick() }
+            }
+        )
     }
 
     // Cài đặt giữ màn hình sáng
@@ -537,7 +573,7 @@ fun VideoReaderScreen(
                 }
             },
             onBackClick = {
-                if (isFullscreen) exitImmersive() else onBackClick()
+                        if (isFullscreen) exitImmersive() else handleBackClick()
             }
         )
     }

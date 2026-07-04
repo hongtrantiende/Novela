@@ -71,7 +71,7 @@ class ExploreShowViewModel(
     private val _kindState = MutableStateFlow(ExploreShowKindState())
     private val _displayState = MutableStateFlow(
         ExploreShowDisplayState(
-            layoutState = 0,
+            layoutState = 1,
             gridCount = if (appCtx.resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 7 else 3,
         )
     )
@@ -351,7 +351,7 @@ class ExploreShowViewModel(
 
     private fun loadLayoutMode() {
         viewModelScope.launch {
-            val mode = localPreferencesRepository.getPreference(LocalPreferencesKeys.EXPLORE_LAYOUT_MODE, 0).first()
+            val mode = localPreferencesRepository.getPreference(LocalPreferencesKeys.EXPLORE_LAYOUT_MODE, 1).first()
             _displayState.update { it.copy(layoutState = mode) }
         }
     }
