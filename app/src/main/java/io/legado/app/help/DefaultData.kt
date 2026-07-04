@@ -23,9 +23,7 @@ object DefaultData {
 
     fun upVersion() {
         Coroutine.async {
-            if (LocalConfig.needUpHttpTTS) {
-                importDefaultHttpTTS()
-            }
+            importDefaultHttpTTS()
             if (LocalConfig.needUpTxtTocRule) {
                 importDefaultTocRules()
             } else {
