@@ -73,6 +73,8 @@ import io.legado.app.ui.widget.components.AppSlider
 import io.legado.app.ui.widget.components.LoadMoreFooter
 import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import io.legado.app.ui.widget.components.book.SearchBookListItem
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
+import androidx.compose.ui.graphics.Color
 import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
@@ -206,6 +208,12 @@ fun ExploreShowScreen(
     }
     val listState = rememberLazyListState()
     val gridState = rememberLazyGridState()
+    var hasShownContent by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(books.isNotEmpty()) {
+        if (books.isNotEmpty()) {
+            hasShownContent = true
+        }
+    }
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val isGridMode = state.layoutState == 1
     val hazeState = remember { HazeState() }
@@ -493,125 +501,148 @@ fun ExploreShowScreen(
                 }
             }
 
-            AppPullToRefresh(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .weight(1f),
-                isRefreshing = state.isRefreshing,
-                onRefresh = { viewModel.onIntent(ExploreShowIntent.Refresh) },
-                topPadding = 0.dp
+                    .weight(1f)
             ) {
-                Crossfade(
-                    targetState = isGridMode,
-                    animationSpec = tween(250),
-                    label = "LayoutCrossfade"
-                ) { isGrid ->
-                    if (isGrid) {
-                        LazyVerticalGrid(
-                            state = gridState,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .responsiveHazeSource(hazeState),
-                            columns = GridCells.Fixed(state.gridCount),
-                            contentPadding = PaddingValues(
-                                top = 12.dp,
-                                bottom = paddingValues.calculateBottomPadding() + 12.dp,
-                                start = 12.dp,
-                                end = 12.dp
-                            ),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            itemsIndexed(
-                                items = books,
-                                key = { index, item -> "${item.book.bookUrl}:$index" }
-                            ) { index, item ->
-                                val sharedCoverKey = bookCoverSharedElementKey(
-                                    item.book.bookUrl,
-                                    "explore:grid:$index"
-                                )
-                                ExploreBookGridItem(
-                                    book = item.book,
-                                    shelfState = item.shelfState,
-                                    onClick = {
-                                        viewModel.onIntent(
-                                            ExploreShowIntent.OpenBook(
-                                                item.book,
-                                                sharedCoverKey
-                                            )
-                                        )
-                                    },
-                                    onLongClick = { book, coverKey ->
-                                        previewBook = book
-                                        previewSharedCoverKey = coverKey
-                                    },
-                                    modifier = Modifier.animateItem(),
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    sharedCoverKey = sharedCoverKey,
-                                )
-                            }
-
-                            if (showLoadMoreFooter) {
-                                item(span = { GridItemSpan(maxLineSpan) }) {
-                                    ExploreShowLoadMoreFooter(
-                                        state = state,
-                                        onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
-                                        onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                AppPullToRefresh(
+                    modifier = Modifier.fillMaxSize(),
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.onIntent(ExploreShowIntent.Refresh) },
+                    topPadding = 0.dp
+                ) {
+                    Crossfade(
+                        targetState = isGridMode,
+                        animationSpec = tween(250),
+                        label = "LayoutCrossfade"
+                    ) { isGrid ->
+                        if (isGrid) {
+                            LazyVerticalGrid(
+                                state = gridState,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .responsiveHazeSource(hazeState),
+                                columns = GridCells.Fixed(state.gridCount),
+                                contentPadding = PaddingValues(
+                                    top = 12.dp,
+                                    bottom = paddingValues.calculateBottomPadding() + 12.dp,
+                                    start = 12.dp,
+                                    end = 12.dp
+                                ),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                itemsIndexed(
+                                    items = books,
+                                    key = { index, item -> "${item.book.bookUrl}:$index" }
+                                ) { index, item ->
+                                    val sharedCoverKey = bookCoverSharedElementKey(
+                                        item.book.bookUrl,
+                                        "explore:grid:$index"
                                     )
+                                    ExploreBookGridItem(
+                                        book = item.book,
+                                        shelfState = item.shelfState,
+                                        onClick = {
+                                            viewModel.onIntent(
+                                                ExploreShowIntent.OpenBook(
+                                                    item.book,
+                                                    sharedCoverKey
+                                                )
+                                            )
+                                        },
+                                        onLongClick = { book, coverKey ->
+                                            previewBook = book
+                                            previewSharedCoverKey = coverKey
+                                        },
+                                        modifier = Modifier.animateItem(),
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        sharedCoverKey = sharedCoverKey,
+                                    )
+                                }
+
+                                if (showLoadMoreFooter) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        ExploreShowLoadMoreFooter(
+                                            state = state,
+                                            onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                            onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .responsiveHazeSource(hazeState),
+                                state = listState,
+                                contentPadding = PaddingValues(
+                                    top = 8.dp,
+                                    bottom = paddingValues.calculateBottomPadding() + 16.dp
+                                )
+                            ) {
+                                itemsIndexed(
+                                    items = books,
+                                    key = { index, item -> "${item.book.bookUrl}:$index" }
+                                ) { index, item ->
+                                    val sharedCoverKey = bookCoverSharedElementKey(
+                                        item.book.bookUrl,
+                                        "explore:list:$index"
+                                    )
+                                    ExploreBookItem(
+                                        book = item.book,
+                                        shelfState = item.shelfState,
+                                        onClick = {
+                                            viewModel.onIntent(
+                                                ExploreShowIntent.OpenBook(
+                                                    item.book,
+                                                    sharedCoverKey
+                                                )
+                                            )
+                                        },
+                                        onLongClick = { book, coverKey ->
+                                            previewBook = book
+                                            previewSharedCoverKey = coverKey
+                                        },
+                                        modifier = Modifier.animateItem(),
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        sharedCoverKey = sharedCoverKey,
+                                    )
+                                }
+
+                                if (showLoadMoreFooter) {
+                                    item {
+                                        ExploreShowLoadMoreFooter(
+                                            state = state,
+                                            onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                            onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                                        )
+                                    }
                                 }
                             }
                         }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .responsiveHazeSource(hazeState),
-                            state = listState,
-                            contentPadding = PaddingValues(
-                                top = 8.dp,
-                                bottom = paddingValues.calculateBottomPadding() + 16.dp
-                            )
-                        ) {
-                            itemsIndexed(
-                                items = books,
-                                key = { index, item -> "${item.book.bookUrl}:$index" }
-                            ) { index, item ->
-                                val sharedCoverKey = bookCoverSharedElementKey(
-                                    item.book.bookUrl,
-                                    "explore:list:$index"
-                                )
-                                ExploreBookItem(
-                                    book = item.book,
-                                    shelfState = item.shelfState,
-                                    onClick = {
-                                        viewModel.onIntent(
-                                            ExploreShowIntent.OpenBook(
-                                                item.book,
-                                                sharedCoverKey
-                                            )
-                                        )
-                                    },
-                                    onLongClick = { book, coverKey ->
-                                        previewBook = book
-                                        previewSharedCoverKey = coverKey
-                                    },
-                                    modifier = Modifier.animateItem(),
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    sharedCoverKey = sharedCoverKey,
-                                )
-                            }
+                    }
+                }
 
-                            if (showLoadMoreFooter) {
-                                item {
-                                    ExploreShowLoadMoreFooter(
-                                        state = state,
-                                        onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
-                                        onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
-                                    )
-                                }
-                            }
+                if (!hasShownContent && state.isLoading && state.errorMsg == null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color(0xFF121212)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            AppContainedLoadingIndicator()
+                            Spacer(modifier = Modifier.height(16.dp))
+                            AppText(
+                                text = "Đang tải dữ liệu...",
+                                color = Color.White.copy(alpha = 0.8f),
+                                style = LegadoTheme.typography.bodyMedium
+                            )
                         }
                     }
                 }

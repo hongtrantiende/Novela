@@ -246,36 +246,35 @@ class ExploreShowViewModel(
             _bookSource.value = appDb.bookSourceDao.getBookSource(incomingSourceUrl)
         }
 
+        _loadState.update { it.copy(isLoading = true, errorMsg = null) }
+
         viewModelScope.launch {
             val cacheKeyPrefix = incomingSourceUrl
-            val cachedKinds = ExploreShowCache.getKinds(cacheKeyPrefix)
-            val finalKinds: List<ExploreKind>
-            val homeKinds: List<ExploreKind>
-            val genreKinds: List<ExploreKind>
+            var finalKinds: List<ExploreKind> = emptyList()
+            var homeKinds: List<ExploreKind> = emptyList()
+            var genreKinds: List<ExploreKind> = emptyList()
 
-            if (cachedKinds != null) {
-                finalKinds = cachedKinds
-                if (incomingSourceUrl.startsWith("ext_")) {
-                    homeKinds = repository.getHomeKinds(incomingSourceUrl)
-                    genreKinds = repository.getGenreKinds(incomingSourceUrl)
+            try {
+                val cachedKinds = ExploreShowCache.getKinds(cacheKeyPrefix)
+                if (cachedKinds != null) {
+                    finalKinds = cachedKinds
+                    if (incomingSourceUrl.startsWith("ext_")) {
+                        homeKinds = repository.getHomeKinds(incomingSourceUrl)
+                        genreKinds = repository.getGenreKinds(incomingSourceUrl)
+                    }
                 } else {
-                    homeKinds = emptyList()
-                    genreKinds = emptyList()
+                    if (incomingSourceUrl.startsWith("ext_")) {
+                        homeKinds = repository.getHomeKinds(incomingSourceUrl)
+                        genreKinds = repository.getGenreKinds(incomingSourceUrl)
+                        finalKinds = homeKinds + genreKinds
+                    } else {
+                        finalKinds = repository.getSourceExploreKinds(incomingSourceUrl)
+                    }
+                    ExploreShowCache.putKinds(cacheKeyPrefix, finalKinds)
                 }
-            } else {
-                if (incomingSourceUrl.startsWith("ext_")) {
-                    val hk = repository.getHomeKinds(incomingSourceUrl)
-                    val gk = repository.getGenreKinds(incomingSourceUrl)
-                    homeKinds = hk
-                    genreKinds = gk
-                    finalKinds = hk + gk
-                } else {
-                    val k = repository.getSourceExploreKinds(incomingSourceUrl)
-                    homeKinds = emptyList()
-                    genreKinds = emptyList()
-                    finalKinds = k
-                }
-                ExploreShowCache.putKinds(cacheKeyPrefix, finalKinds)
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _loadState.update { it.copy(errorMsg = "Lỗi tải phân loại: ${e.localizedMessage}") }
             }
 
             _kindState.update {
@@ -315,7 +314,7 @@ class ExploreShowViewModel(
                 }
                 _kindState.update { it.copy(selectedKindTitle = cachedSelected) }
                 val cachedIsEnd = ExploreShowCache.getIsEnd(cacheKey) ?: false
-                _loadState.update { it.copy(isEnd = cachedIsEnd) }
+                _loadState.update { it.copy(isLoading = false, isEnd = cachedIsEnd) }
             } else {
                 val matchedKind = finalKinds.find { 
                     it.url == resolvedExploreUrl || 
@@ -326,7 +325,7 @@ class ExploreShowViewModel(
                 page = 1
                 autoPageCount = 0
                 _rawBooks.value = emptyList()
-                _loadState.value = ExploreShowLoadState()
+                _loadState.update { it.copy(isLoading = false, isEnd = false) }
                 loadMore(isRefresh = true)
             }
         }
@@ -388,7 +387,7 @@ class ExploreShowViewModel(
         val source = sourceUrl
         val url = exploreUrl
         val loadState = _loadState.value
-        if (source == null || loadState.isLoading || (loadState.isEnd && !isRefresh && !forceLoad)) return
+        if (source == null || (loadState.isLoading && !isRefresh) || (loadState.isEnd && !isRefresh && !forceLoad)) return
 
         _loadState.update {
             it.copy(
