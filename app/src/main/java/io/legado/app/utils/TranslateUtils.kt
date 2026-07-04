@@ -376,7 +376,7 @@ object TranslateUtils {
                 for (key in sortedKeys) {
                     val valPart = privateDict[key] ?: continue
                     val cleanTrans = valPart.substringBefore('/')
-                    processedText = processedText.replace(key, cleanTrans)
+                    processedText = safeReplace(processedText, key, cleanTrans)
                 }
             }
         }
@@ -650,7 +650,7 @@ object TranslateUtils {
                 for (key in sortedKeys) {
                     val valPart = privateDict[key] ?: continue
                     val cleanTrans = valPart.substringBefore('/')
-                    processedText = processedText.replace(key, cleanTrans)
+                    processedText = safeReplace(processedText, key, cleanTrans)
                 }
             }
         }
@@ -689,6 +689,37 @@ object TranslateUtils {
                 if (targetMode == "hanviet") translatePhienAm(text) else translateContent(text)
             }
         }
+    }
+
+    private fun isLatinLetterOrDigit(c: Char): Boolean {
+        return c.isDigit() || java.lang.Character.UnicodeScript.of(c.code) == java.lang.Character.UnicodeScript.LATIN
+    }
+
+    private fun safeReplace(text: String, target: String, replacement: String): String {
+        if (target.isEmpty() || !text.contains(target)) return text
+        val sb = StringBuilder()
+        var i = 0
+        val len = text.length
+        val targetLen = target.length
+        while (i < len) {
+            if (i <= len - targetLen && text.startsWith(target, i)) {
+                val hasLetterBefore = i > 0 && isLatinLetterOrDigit(text[i - 1])
+                val hasLetterAfter = i + targetLen < len && isLatinLetterOrDigit(text[i + targetLen])
+                
+                if (hasLetterBefore) {
+                    sb.append(' ')
+                }
+                sb.append(replacement)
+                if (hasLetterAfter) {
+                    sb.append(' ')
+                }
+                i += targetLen
+            } else {
+                sb.append(text[i])
+                i++
+            }
+        }
+        return sb.toString()
     }
 }
 
