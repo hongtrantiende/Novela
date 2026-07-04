@@ -44,6 +44,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.legado.app.ui.theme.LegadoTheme
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.foundation.layout.size
@@ -423,7 +424,7 @@ fun SupabaseMembersDialog(
                     if (isFetchingUsers) {
                         androidx.compose.material3.CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
-                            color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary,
+                            color = LegadoTheme.colorScheme.onPrimary,
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -461,7 +462,7 @@ fun SupabaseMembersDialog(
                                     modifier = Modifier.fillMaxWidth().padding(16.dp),
                                     contentAlignment = androidx.compose.ui.Alignment.Center
                                 ) {
-                                    androidx.compose.material3.Text("Không tìm thấy kết quả phù hợp", color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant)
+                                    androidx.compose.material3.Text("Không tìm thấy kết quả phù hợp", color = LegadoTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         } else {
@@ -490,10 +491,10 @@ fun SupabaseMembersDialog(
                                             modifier = Modifier
                                                 .size(40.dp)
                                                 .clip(CircleShape)
-                                                .background(androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                                .background(LegadoTheme.colorScheme.primary.copy(alpha = 0.1f))
                                                 .border(
                                                     width = 1.dp,
-                                                    color = if (isVip) androidx.compose.ui.graphics.Color(0xFFFFD700) else androidx.compose.material3.MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                    color = if (isVip) androidx.compose.ui.graphics.Color(0xFFFFD700) else LegadoTheme.colorScheme.primary.copy(alpha = 0.2f),
                                                     shape = CircleShape
                                                 ),
                                             contentAlignment = androidx.compose.ui.Alignment.Center
@@ -505,7 +506,7 @@ fun SupabaseMembersDialog(
                                             } else "U"
                                             androidx.compose.material3.Text(
                                                 text = initials,
-                                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                                color = LegadoTheme.colorScheme.primary,
                                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                                 fontSize = 14.sp
                                             )
@@ -535,7 +536,7 @@ fun SupabaseMembersDialog(
                                             androidx.compose.material3.Text(
                                                 text = user.email,
                                                 fontSize = 11.sp,
-                                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                                                color = LegadoTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
 
@@ -547,14 +548,14 @@ fun SupabaseMembersDialog(
                                             androidx.compose.material3.Text(
                                                 text = vipStatusText,
                                                 fontSize = 11.sp,
-                                                color = if (isVip) androidx.compose.ui.graphics.Color(0xFFE5A900) else androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                                color = if (isVip) androidx.compose.ui.graphics.Color(0xFFE5A900) else LegadoTheme.colorScheme.onSurfaceVariant,
                                                 fontWeight = if (isVip) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
                                             )
                                             Spacer(modifier = Modifier.height(4.dp))
                                             androidx.compose.material3.Icon(
                                                 imageVector = Icons.Default.Edit,
                                                 contentDescription = "Sửa",
-                                                tint = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                                                tint = LegadoTheme.colorScheme.onSurfaceVariant,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
@@ -630,7 +631,7 @@ fun EditProfileDialog(
                 androidx.compose.material3.Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
-                    tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                    tint = LegadoTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
@@ -648,8 +649,8 @@ fun EditProfileDialog(
             ) {
                 androidx.compose.material3.Text(
                     text = "Cấu hình cho tài khoản: ${user.email}",
-                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                    color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant
                 )
 
                 // Nickname field with save button
@@ -696,7 +697,7 @@ fun EditProfileDialog(
                                 }
                             },
                             enabled = !isSaving,
-                            colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(contentColor = androidx.compose.material3.MaterialTheme.colorScheme.primary)
+                            colors = androidx.compose.material3.IconButtonDefaults.iconButtonColors(contentColor = LegadoTheme.colorScheme.primary)
                         ) {
                             androidx.compose.material3.Icon(
                                 imageVector = Icons.Default.Check,
@@ -765,8 +766,8 @@ fun EditProfileDialog(
                     androidx.compose.foundation.layout.Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                            .border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
+                            .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .border(1.dp, LegadoTheme.colorScheme.outline.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
                             .padding(12.dp),
                         verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)
                     ) {
@@ -780,7 +781,7 @@ fun EditProfileDialog(
                             val dateText = if (vipUntilDate.isNotBlank()) vipUntilDate else "Chọn ngày"
                             androidx.compose.material3.Text(
                                 text = dateText,
-                                color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                color = LegadoTheme.colorScheme.primary,
                                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
                                 fontSize = 14.sp,
                                 modifier = Modifier
@@ -836,15 +837,15 @@ fun EditProfileDialog(
                                 androidx.compose.foundation.layout.Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .background(androidx.compose.material3.MaterialTheme.colorScheme.surface, RoundedCornerShape(6.dp))
-                                        .border(1.dp, androidx.compose.material3.MaterialTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                                        .background(LegadoTheme.colorScheme.surface, RoundedCornerShape(6.dp))
+                                        .border(1.dp, LegadoTheme.colorScheme.outline.copy(alpha = 0.15f), RoundedCornerShape(6.dp))
                                         .clickable(enabled = !isSaving) { handleGrantDays(days) }
                                         .padding(vertical = 8.dp),
                                     contentAlignment = androidx.compose.ui.Alignment.Center
                                 ) {
                                     androidx.compose.material3.Text(
                                         text = label,
-                                        color = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                        color = LegadoTheme.colorScheme.primary,
                                         fontSize = 11.sp,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                     )

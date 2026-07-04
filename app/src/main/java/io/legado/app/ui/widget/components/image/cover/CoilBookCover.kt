@@ -348,7 +348,7 @@ private fun CoverTextOverlay(
 
     if (!showName && !showAuthor) return
 
-    val secondaryColor = MaterialTheme.colorScheme.secondary.toArgb()
+    val secondaryColor = LegadoTheme.colorScheme.secondary.toArgb()
     val textColor = if (CoverConfig.coverDefaultColor) {
         secondaryColor
     } else {

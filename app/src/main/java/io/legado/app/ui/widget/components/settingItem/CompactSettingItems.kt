@@ -89,8 +89,8 @@ fun CompactDropdownSettingItem(
                     horizontalPadding = 8.dp,
                     verticalPadding = 4.dp,
                     text = currentEntry,
-                    backgroundColor = MaterialTheme.colorScheme.surfaceContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurface
+                    backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
+                    contentColor = LegadoTheme.colorScheme.onSurface
                 )
             },
             dropdownMenu = { onDismiss ->
@@ -283,7 +283,7 @@ fun CompactClickableSettingItem(
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             },
             onClick = onClick

@@ -219,7 +219,7 @@ fun HighlightRuleEditSheet(
                 modifier = Modifier.fillMaxWidth(),
                 isError = patternError != null,
                 supportingText = patternError?.let {
-                    { AppText(it, color = MaterialTheme.colorScheme.error) }
+                    { AppText(it, color = LegadoTheme.colorScheme.error) }
                 },
             )
 

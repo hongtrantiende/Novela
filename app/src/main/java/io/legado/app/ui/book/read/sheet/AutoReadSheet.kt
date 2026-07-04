@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -89,11 +90,11 @@ fun AutoReadContent(
         ) {
             Text(
                 text = stringResource(R.string.auto_page_speed),
-                style = MaterialTheme.typography.titleSmall,
+                style = LegadoTheme.typography.titleSmall,
             )
             Text(
                 text = String.format(Locale.ROOT, "%ds", speed.roundToInt()),
-                style = MaterialTheme.typography.bodyLarge,
+                style = LegadoTheme.typography.bodyLarge,
                 modifier = Modifier.padding(start = 8.dp),
             )
         }
@@ -166,7 +167,7 @@ private fun ActionButton(
         Spacer(Modifier.height(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
+            style = LegadoTheme.typography.labelSmall,
         )
     }
 }

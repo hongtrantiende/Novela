@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -60,7 +61,7 @@ fun CustomThemeScreen(
     val themeBackgroundColor = ThemeConfig.themeBackgroundColor
     val labelContainerColor = ThemeConfig.labelContainerColor
 
-    val primaryColor = MaterialTheme.colorScheme.primary
+    val primaryColor = LegadoTheme.colorScheme.primary
 
     // 自定义主题 seed color
     var showSeedColorPicker by remember { mutableStateOf(false) }
@@ -119,7 +120,7 @@ fun CustomThemeScreen(
                                         .background(Color(themeColor))
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
+                                            LegadoTheme.colorScheme.outlineVariant,
                                             CircleShape
                                         )
                                 )
@@ -143,7 +144,7 @@ fun CustomThemeScreen(
                                         .background(Color(secondaryThemeColor))
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
+                                            LegadoTheme.colorScheme.outlineVariant,
                                             CircleShape
                                         )
                                 )
@@ -167,7 +168,7 @@ fun CustomThemeScreen(
                                         .background(Color(primaryTextColor))
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
+                                            LegadoTheme.colorScheme.outlineVariant,
                                             CircleShape
                                         )
                                 )
@@ -191,7 +192,7 @@ fun CustomThemeScreen(
                                         .background(Color(secondaryTextColor))
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
+                                            LegadoTheme.colorScheme.outlineVariant,
                                             CircleShape
                                         )
                                 )
@@ -215,7 +216,7 @@ fun CustomThemeScreen(
                                         .background(Color(themeBackgroundColor))
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
+                                            LegadoTheme.colorScheme.outlineVariant,
                                             CircleShape
                                         )
                                 )
@@ -239,7 +240,7 @@ fun CustomThemeScreen(
                                         .background(Color(labelContainerColor))
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
+                                            LegadoTheme.colorScheme.outlineVariant,
                                             CircleShape
                                         )
                                 )
@@ -372,7 +373,7 @@ private fun ColorSwatch(colorValue: Int) {
             .background(Color(colorValue))
             .border(
                 1.dp,
-                MaterialTheme.colorScheme.outlineVariant,
+                LegadoTheme.colorScheme.outlineVariant,
                 CircleShape
             )
     )

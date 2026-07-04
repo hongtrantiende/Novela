@@ -358,7 +358,7 @@ private fun BookmarkGroupHeaderContent(
 ) {
 
     val contentColor by animateColorAsState(
-        if (isMiuix) MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary,
+        if (isMiuix) MiuixTheme.colorScheme.primary else LegadoTheme.colorScheme.primary,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )

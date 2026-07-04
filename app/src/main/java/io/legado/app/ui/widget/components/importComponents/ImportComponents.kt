@@ -363,10 +363,10 @@ fun ImportItemRow(
                 },
                 style = LegadoTheme.typography.labelMedium,
                 color = when (status) {
-                    ImportStatus.New -> MaterialTheme.colorScheme.primary
-                    ImportStatus.Update -> MaterialTheme.colorScheme.secondary
-                    ImportStatus.Error -> MaterialTheme.colorScheme.error
-                    else -> MaterialTheme.colorScheme.outline
+                    ImportStatus.New -> LegadoTheme.colorScheme.primary
+                    ImportStatus.Update -> LegadoTheme.colorScheme.secondary
+                    ImportStatus.Error -> LegadoTheme.colorScheme.error
+                    else -> LegadoTheme.colorScheme.outline
                 },
                 modifier = Modifier.padding(end = 4.dp)
             )

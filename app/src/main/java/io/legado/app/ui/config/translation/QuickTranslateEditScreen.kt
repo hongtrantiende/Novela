@@ -15,13 +15,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
+import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.QuickTranslateDictHelper
@@ -83,8 +83,8 @@ fun QuickTranslateEditScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                containerColor = LegadoTheme.colorScheme.primary,
+                contentColor = LegadoTheme.colorScheme.onPrimary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Thêm từ mới")
             }
@@ -99,7 +99,7 @@ fun QuickTranslateEditScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Tìm kiếm từ / nghĩa dịch") },
+                label = { AppText("Tìm kiếm từ / nghĩa dịch") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 modifier = Modifier
@@ -143,15 +143,14 @@ fun QuickTranslateEditScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = entry.first,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
+                                    style = LegadoTheme.typography.bodyLargeEmphasized,
+                                    color = LegadoTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
                                     text = entry.second,
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    style = LegadoTheme.typography.bodySmall,
+                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
                             }
                             
@@ -161,21 +160,21 @@ fun QuickTranslateEditScreen(
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Xóa",
-                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                    tint = LegadoTheme.colorScheme.error.copy(alpha = 0.8f)
                                 )
                             }
                         }
                         HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
                     }
                     
                     if (filteredEntries.size >= 200) {
                         item {
-                            Text(
+                            AppText(
                                 text = "Hiển thị tối đa 200 kết quả đầu tiên. Hãy gõ tìm kiếm để thu hẹp phạm vi.",
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                style = LegadoTheme.typography.bodySmall,
+                                color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 16.dp),
@@ -201,7 +200,7 @@ fun QuickTranslateEditScreen(
                     OutlinedTextField(
                         value = chineseKey,
                         onValueChange = { chineseKey = it },
-                        label = { Text("Từ tiếng Trung / Gốc") },
+                        label = { AppText("Từ tiếng Trung / Gốc") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -209,7 +208,7 @@ fun QuickTranslateEditScreen(
                     OutlinedTextField(
                         value = vietVal,
                         onValueChange = { vietVal = it },
-                        label = { Text("Nghĩa Việt / Thay thế") },
+                        label = { AppText("Nghĩa Việt / Thay thế") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -248,7 +247,7 @@ fun QuickTranslateEditScreen(
                     OutlinedTextField(
                         value = editVal,
                         onValueChange = { editVal = it },
-                        label = { Text("Nghĩa Việt / Thay thế") },
+                        label = { AppText("Nghĩa Việt / Thay thế") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )

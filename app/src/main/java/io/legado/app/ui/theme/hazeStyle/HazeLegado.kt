@@ -9,6 +9,7 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.theme.LegadoTheme.composeEngine
 import io.legado.app.ui.theme.ThemeResolver
 import top.yukonga.miuix.kmp.theme.MiuixTheme
@@ -18,7 +19,7 @@ object HazeLegado {
     @Composable
     @ReadOnlyComposable
     fun ultraThinPlus(
-        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
+        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else LegadoTheme.colorScheme.surface,
     ): HazeStyle = hazeLegado(
         containerColor = containerColor,
         lightAlpha = 0.0f,
@@ -28,7 +29,7 @@ object HazeLegado {
     @Composable
     @ReadOnlyComposable
     fun ultraThin(
-        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
+        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else LegadoTheme.colorScheme.surface,
     ): HazeStyle = hazeLegado(
         containerColor = containerColor,
         lightAlpha = ThemeConfig.topBarBlurAlpha / 100f * 0.35f / 0.73f,
@@ -38,7 +39,7 @@ object HazeLegado {
     @Composable
     @ReadOnlyComposable
     fun regular(
-        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
+        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else LegadoTheme.colorScheme.surface,
     ): HazeStyle = hazeLegado(
         containerColor = containerColor,
         lightAlpha = ThemeConfig.topBarBlurAlpha / 100f,
@@ -48,7 +49,7 @@ object HazeLegado {
     @Composable
     @ReadOnlyComposable
     fun custom(
-        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else MaterialTheme.colorScheme.surface,
+        containerColor: Color = if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface else LegadoTheme.colorScheme.surface,
         blurRadius: Int = ThemeConfig.topBarBlurRadius,
         blurAlpha: Int = ThemeConfig.topBarBlurAlpha,
     ): HazeStyle = hazeLegado(

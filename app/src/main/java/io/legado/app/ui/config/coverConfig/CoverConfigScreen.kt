@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -169,7 +169,7 @@ fun CoverConfigScreen(
                                 .size(28.dp)
                                 .clip(CircleShape)
                                 .background(Color(CoverConfig.coverTextColor))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                .border(1.dp, LegadoTheme.colorScheme.outlineVariant, CircleShape)
                         )
                     }
                 )
@@ -184,7 +184,7 @@ fun CoverConfigScreen(
                                 .size(28.dp)
                                 .clip(CircleShape)
                                 .background(Color(CoverConfig.coverShadowColor))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                .border(1.dp, LegadoTheme.colorScheme.outlineVariant, CircleShape)
                         )
                     }
                 )
@@ -228,7 +228,7 @@ fun CoverConfigScreen(
                                 .size(28.dp)
                                 .clip(CircleShape)
                                 .background(Color(CoverConfig.coverTextColorN))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                .border(1.dp, LegadoTheme.colorScheme.outlineVariant, CircleShape)
                         )
                     }
                 )
@@ -243,7 +243,7 @@ fun CoverConfigScreen(
                                 .size(28.dp)
                                 .clip(CircleShape)
                                 .background(Color(CoverConfig.coverShadowColorN))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                                .border(1.dp, LegadoTheme.colorScheme.outlineVariant, CircleShape)
                         )
                     }
                 )

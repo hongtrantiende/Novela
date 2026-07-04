@@ -26,7 +26,7 @@ fun AdaptiveTitle(
         Text(
             text = text,
             style = LegadoTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
+            color = LegadoTheme.colorScheme.primary,
             modifier = modifier
         )
     }

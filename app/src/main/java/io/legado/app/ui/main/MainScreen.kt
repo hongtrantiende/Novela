@@ -37,6 +37,7 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.material3.WideNavigationRail
 import androidx.compose.material3.WideNavigationRailItem
 import androidx.compose.material3.WideNavigationRailValue
@@ -173,7 +174,7 @@ fun MainScreen(
     val floatingBarSurfaceColor = if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryThemeColor != 0) {
         Color(ThemeConfig.secondaryThemeColor)
     } else {
-        MaterialTheme.colorScheme.surface
+        LegadoTheme.colorScheme.surface
     }
     val floatingBarBackdrop = rememberLayerBackdrop {
         drawRect(floatingBarSurfaceColor)
@@ -334,7 +335,7 @@ fun MainScreen(
                                     )
                                 },
                                 m3IndicatorColor = GlassDefaults.glassColor(
-                                    noBlurColor = MaterialTheme.colorScheme.secondaryContainer,
+                                    noBlurColor = LegadoTheme.colorScheme.secondaryContainer,
                                     blurAlpha = GlassDefaults.ThickBlurAlpha
                                 ),
                                 m3ShowLabel = showLabel && !customIconPath.isNotEmpty(),
@@ -540,7 +541,7 @@ fun MainScreen(
                                     if (!hasCustomIcon && showLabel && (alwaysShowLabel || selected)) {
                                         AppText(
                                             text = stringResource(destination.labelId),
-                                            style = MaterialTheme.typography.labelSmall,
+                                            style = LegadoTheme.typography.labelSmall,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )

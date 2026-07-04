@@ -51,7 +51,7 @@ fun SearchBar(
             contentDescription = null
         )
     },
-    backgroundColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
+    backgroundColor: Color = LegadoTheme.colorScheme.surfaceContainerLow,
     scrollState: LazyListState? = null,
     scope: CoroutineScope = rememberCoroutineScope(),
     trailingIcon: @Composable (() -> Unit)? = null,
@@ -93,7 +93,7 @@ fun SearchBar(
     val resolvedBackgroundColor = if (backgroundColor != Color.Unspecified) {
         backgroundColor
     } else {
-        if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow
+        if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else LegadoTheme.colorScheme.surfaceContainerLow
     }
     val resolvedPlaceholder = placeholder ?: stringResource(R.string.search_placeholder)
 

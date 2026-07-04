@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +38,7 @@ fun SourceIcon(
         Icon(
             Icons.Default.RssFeed,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.outlineVariant,
+            tint = LegadoTheme.colorScheme.outlineVariant,
             modifier = Modifier.fillMaxSize(0.7f)
         )
     }

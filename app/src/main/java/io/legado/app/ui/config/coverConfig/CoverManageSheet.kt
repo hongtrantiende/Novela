@@ -108,7 +108,7 @@ fun CoverManageSheet(
                         ) {
                             Surface(
                                 shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                                color = LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
@@ -137,7 +137,7 @@ fun CoverManageSheet(
                                 modifier = Modifier.size(32.dp),
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Add",
-                                tint = MaterialTheme.colorScheme.primary
+                                tint = LegadoTheme.colorScheme.primary
                             )
                         }
                     }

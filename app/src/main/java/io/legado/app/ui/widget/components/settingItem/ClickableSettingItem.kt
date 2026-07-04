@@ -45,7 +45,7 @@ fun ClickableSettingItem(
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = LegadoTheme.colorScheme.onSurfaceVariant
                 )
             },
             onClick = onClick,

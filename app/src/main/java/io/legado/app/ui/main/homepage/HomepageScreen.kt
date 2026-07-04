@@ -745,7 +745,7 @@ private fun ModuleHeader(
     ) {
         AppText(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
+            style = LegadoTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

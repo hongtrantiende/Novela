@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -114,7 +115,7 @@ fun UnderlineConfigSheet(
             // Dotted line section title
             Text(
                 text = stringResource(R.string.text_dottedline),
-                style = MaterialTheme.typography.titleSmallEmphasized,
+                style = LegadoTheme.typography.titleSmallEmphasized,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),

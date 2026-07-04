@@ -15,6 +15,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookHelp
@@ -27,6 +30,7 @@ import io.legado.app.ui.widget.components.EmptyMessage
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.progressIndicator.AppCircularProgressIndicator
 import io.legado.app.ui.widget.components.text.AppText
+import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.utils.DictManager
 import io.legado.app.utils.TranslateUtils
 import kotlinx.coroutines.Dispatchers
@@ -91,7 +95,12 @@ fun ScanNamesSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "Quét Name chương này (NER Offline)"
+        title = "Quét Name chương này (NER Offline)",
+        endAction = {
+            IconButton(onClick = onDismissRequest) {
+                Icon(Icons.Default.Close, contentDescription = "Đóng")
+            }
+        }
     ) {
         Box(
             modifier = Modifier
@@ -102,7 +111,7 @@ fun ScanNamesSheet(
             Column(modifier = Modifier.fillMaxSize()) {
                 if (!isModelDownloaded) {
                     androidx.compose.material3.Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                        color = LegadoTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
                     ) {
@@ -113,7 +122,7 @@ fun ScanNamesSheet(
                             Text(
                                 text = if (isDownloading) "Đang tải mô hình NER: $downloadProgress" else "Chưa tải mô hình NER AI. Đang quét bằng từ điển.",
                                 fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                color = LegadoTheme.colorScheme.onPrimaryContainer,
                                 modifier = Modifier.weight(1f)
                             )
                             if (!isDownloading) {
@@ -169,25 +178,25 @@ fun ScanNamesSheet(
                                         text = chinese,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = LegadoTheme.colorScheme.onSurface
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = translation,
                                         fontSize = 14.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                     )
                                 }
                                 Text(
                                     text = "Sửa",
                                     fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = LegadoTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Medium,
                                     modifier = Modifier.padding(start = 16.dp)
                                 )
                             }
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                             )
                         }
                     }
@@ -199,10 +208,11 @@ fun ScanNamesSheet(
     // Dialog chỉnh sửa nghĩa dịch của Name
     editingNamePair?.let { (chinese, currentTranslation) ->
         var editValue by remember { mutableStateOf(currentTranslation) }
-        AlertDialog(
+        AppAlertDialog(
+            show = true,
             onDismissRequest = { editingNamePair = null },
-            title = { Text(text = "Sửa Name: $chinese") },
-            text = {
+            title = "Sửa Name: $chinese",
+            content = {
                 OutlinedTextField(
                     value = editValue,
                     onValueChange = { editValue = it },
@@ -211,32 +221,24 @@ fun ScanNamesSheet(
                     modifier = Modifier.fillMaxWidth()
                 )
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val finalValue = editValue.trim()
-                        if (finalValue.isNotEmpty()) {
-                            coroutineScope.launch {
-                                DictManager.addOrUpdateCustomName(chinese, finalValue)
-                                // Cập nhật lại danh sách hiển thị
-                                nameList = nameList.map {
-                                    if (it.first == chinese) Pair(chinese, finalValue) else it
-                                }
-                                // Tải lại chương truyện để dịch lại màn hình đọc
-                                onIntent(ReadBookIntent.RefreshCurrentChapter)
-                            }
+            confirmText = "Lưu",
+            onConfirm = {
+                val finalValue = editValue.trim()
+                if (finalValue.isNotEmpty()) {
+                    coroutineScope.launch {
+                        DictManager.addOrUpdateCustomName(chinese, finalValue)
+                        // Cập nhật lại danh sách hiển thị
+                        nameList = nameList.map {
+                            if (it.first == chinese) Pair(chinese, finalValue) else it
                         }
-                        editingNamePair = null
+                        // Tải lại chương truyện để dịch lại màn hình đọc
+                        onIntent(ReadBookIntent.RefreshCurrentChapter)
                     }
-                ) {
-                    Text("Lưu")
                 }
+                editingNamePair = null
             },
-            dismissButton = {
-                TextButton(onClick = { editingNamePair = null }) {
-                    Text("Hủy")
-                }
-            }
+            dismissText = "Hủy",
+            onDismiss = { editingNamePair = null }
         )
     }
 }

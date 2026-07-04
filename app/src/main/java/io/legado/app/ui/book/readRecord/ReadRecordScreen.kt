@@ -799,11 +799,11 @@ fun LatestReadItem(
                         initialDelayMillis = 1000
                     ),
                 text = buildAnnotatedString {
-                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.outline)) {
+                    withStyle(style = SpanStyle(color = LegadoTheme.colorScheme.outline)) {
                         append(formatDuring(record.readTime))
                         append(" • ")
                     }
-                    withStyle(style = SpanStyle(color = MaterialTheme.colorScheme.primary)) {
+                    withStyle(style = SpanStyle(color = LegadoTheme.colorScheme.primary)) {
                         append("${DateUtil.format(Date(record.lastRead), "yyyy-MM-dd HH:mm")}")
                     }
                 },
@@ -838,8 +838,8 @@ fun TimelineSessionItem(
     val timelineX = 24.dp
     val contentPaddingStart = 32.dp
 
-    val lineColor = MaterialTheme.colorScheme.surfaceContainerHigh
-    val nodeColor = MaterialTheme.colorScheme.primary
+    val lineColor = LegadoTheme.colorScheme.surfaceContainerHigh
+    val nodeColor = LegadoTheme.colorScheme.primary
 
     Box(
         modifier = Modifier
@@ -900,7 +900,7 @@ fun TimelineSessionItem(
                     AppText(
                         text = session.bookAuthor.ifBlank { "Tác giả chưa rõ" },
                         style = LegadoTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -908,7 +908,7 @@ fun TimelineSessionItem(
                     AppText(
                         text = chapterTitle.orEmpty(),
                         style = LegadoTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -956,12 +956,12 @@ fun ReadRecordItem(
             AppText(
                 text = detail.bookAuthor.ifBlank { "Tác giả chưa rõ" },
                 style = LegadoTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.outline,
+                color = LegadoTheme.colorScheme.outline,
             )
             Spacer(modifier = Modifier.height(8.dp))
             AppText(
                 text = "Thời gian đọc: ${formatDuring(detail.readTime)}",
-                color = MaterialTheme.colorScheme.outline,
+                color = LegadoTheme.colorScheme.outline,
                 style = LegadoTheme.typography.labelSmall
             )
         }

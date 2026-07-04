@@ -157,8 +157,8 @@ fun GlassMediumFlexibleTopAppBar(
                                 subtitleText?.let { text ->
                                     AnimatedTextLine(
                                         text = text,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        style = LegadoTheme.typography.labelSmall,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -276,7 +276,7 @@ object GlassTopAppBarDefaults {
     @Composable
     fun controlContainerColor(): Color {
         val baseColor = GlassDefaults.glassColor(
-            noBlurColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            noBlurColor = LegadoTheme.colorScheme.surfaceContainerHighest,
             blurAlpha = GlassDefaults.DefaultBlurAlpha
         )
         return applyTopBarOpacity(baseColor)

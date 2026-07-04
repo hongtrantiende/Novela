@@ -129,8 +129,8 @@ fun FontSelectGrid(
             ) {
                 Text(
                     text = emptyText ?: stringResource(R.string.empty),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = LegadoTheme.typography.bodyMedium,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
                 )
             }
         } else {

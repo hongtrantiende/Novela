@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -162,8 +163,8 @@ fun ThemeManageScreen(
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     AppText(
                         text = stringResource(R.string.theme_manage_saved_themes),
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = LegadoTheme.typography.titleSmall,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
                 }
@@ -299,7 +300,7 @@ private fun SavedThemeItem(
         ) {
             val lightPrimary = if (theme.data.themeColor != 0) Color(theme.data.themeColor)
             else if (theme.data.cPrimary != 0) Color(theme.data.cPrimary)
-            else MaterialTheme.colorScheme.primary
+            else LegadoTheme.colorScheme.primary
 
             val darkPrimary = if (theme.data.cNPrimary != 0) Color(theme.data.cNPrimary)
             else lightPrimary
@@ -324,7 +325,7 @@ private fun SavedThemeItem(
                 ) {
                     AppText(
                         text = stringResource(R.string.theme_manage_preview_day),
-                        style = MaterialTheme.typography.labelMediumEmphasized,
+                        style = LegadoTheme.typography.labelMediumEmphasized,
                         color = if (theme.data.primaryTextColor != 0) Color(theme.data.primaryTextColor).copy(alpha = 0.6f)
                         else Color.Black.copy(alpha = 0.5f),
                         modifier = Modifier
@@ -356,7 +357,7 @@ private fun SavedThemeItem(
                 ) {
                     AppText(
                         text = stringResource(R.string.theme_manage_preview_night),
-                        style = MaterialTheme.typography.labelMediumEmphasized,
+                        style = LegadoTheme.typography.labelMediumEmphasized,
                         color = Color.White.copy(alpha = 0.5f),
                         modifier = Modifier
                             .align(Alignment.CenterStart)
@@ -384,7 +385,7 @@ private fun SavedThemeItem(
             ) {
                 AppText(
                     text = theme.name,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = LegadoTheme.typography.titleSmall,
                     maxLines = 1
                 )
 

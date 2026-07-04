@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.legado.app.ui.theme.LegadoTheme
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import android.content.SharedPreferences
@@ -152,7 +154,7 @@ fun ReplaceScanNamesSheet(
                     Text(
                         text = "Để quét Name offline bằng công cụ Baidu LAC, bạn cần tải mô hình ngôn ngữ (khoảng 3.2 MB).",
                         fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
                     if (isDownloading) {
                         Spacer(modifier = Modifier.height(16.dp))
@@ -188,23 +190,26 @@ fun ReplaceScanNamesSheet(
 
     // Nếu không có sách đang đọc
     if (book == null) {
-        if (show) {
-            AlertDialog(
-                onDismissRequest = onDismissRequest,
-                title = { Text("Không tìm thấy sách") },
-                text = { Text("Bạn cần mở một cuốn sách truyện chữ trước khi sử dụng tính năng quét name này.") },
-                confirmButton = {
-                    TextButton(onClick = onDismissRequest) { Text("OK") }
-                }
-            )
-        }
+        AppAlertDialog(
+            show = show,
+            onDismissRequest = onDismissRequest,
+            title = "Không tìm thấy sách",
+            text = "Bạn cần mở một cuốn sách truyện chữ trước khi sử dụng tính năng quét name này.",
+            confirmText = "OK",
+            onConfirm = onDismissRequest
+        )
         return
     }
 
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = "Bộ công cụ Quét Name"
+        title = "Bộ công cụ Quét Name",
+        endAction = {
+            IconButton(onClick = onDismissRequest) {
+                Icon(Icons.Default.Close, contentDescription = "Đóng")
+            }
+        }
     ) {
         Column(
             modifier = Modifier
@@ -423,7 +428,7 @@ fun ReplaceScanNamesSheet(
                                 Text(
                                     text = item.originalTranslation,
                                     fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 )
                             }
                             
@@ -442,11 +447,11 @@ fun ReplaceScanNamesSheet(
                                 modifier = Modifier
                                     .weight(0.55f)
                                     .height(52.dp),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp)
+                                textStyle = LegadoTheme.typography.bodyMedium.copy(fontSize = 13.sp)
                             )
                         }
                         HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                             modifier = Modifier.padding(vertical = 4.dp)
                         )
                     }

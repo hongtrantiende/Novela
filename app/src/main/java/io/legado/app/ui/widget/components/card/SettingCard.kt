@@ -40,8 +40,8 @@ fun SettingCard(
         )
     } else {
         val baseColors = colors ?: CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+            containerColor = LegadoTheme.colorScheme.secondaryContainer,
+            contentColor = LegadoTheme.colorScheme.onSecondaryContainer
         )
 
         val finalColors = CardDefaults.cardColors(

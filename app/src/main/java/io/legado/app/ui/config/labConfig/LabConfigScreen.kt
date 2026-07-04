@@ -6,8 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import io.legado.app.ui.widget.components.text.AppText
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -71,10 +70,10 @@ fun LabConfigScreen(
                         )
 
                         if (LabConfig.eInkDisplay) {
-                            Text(
+                            AppText(
                                 text = stringResource(R.string.lab_eink_display_hint),
                                 style = LegadoTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = LegadoTheme.colorScheme.primary,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -91,10 +90,10 @@ fun LabConfigScreen(
                         )
 
                         if (LabConfig.eyeProtection) {
-                            Text(
+                            AppText(
                                 text = stringResource(R.string.lab_eye_protection_hint),
                                 style = LegadoTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
+                                color = LegadoTheme.colorScheme.primary,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)

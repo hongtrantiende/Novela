@@ -65,7 +65,7 @@ fun SettingItem(
             .fillMaxWidth(),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = color ?: MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = color ?: LegadoTheme.colorScheme.surfaceContainerLow
         ),
     ) {
         Column {
@@ -90,13 +90,13 @@ fun SettingItem(
                             Icon(
                                 painter = painter,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = LegadoTheme.colorScheme.onSurfaceVariant
                             )
                         } else if (imageVector != null) {
                             Icon(
                                 imageVector = imageVector,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = LegadoTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -114,14 +114,14 @@ fun SettingItem(
                                 AppText(
                                     it,
                                     style = LegadoTheme.typography.bodySmallEmphasized,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
                             }
                             option?.let {
                                 AppText(
                                     it,
                                     style = LegadoTheme.typography.labelMediumEmphasized,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = LegadoTheme.colorScheme.primary
                                 )
                             }
                         }

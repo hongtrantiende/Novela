@@ -288,14 +288,14 @@ fun ExploreScreen(
                             Surface(
                                 onClick = { viewModel.setExtSubTab(index) },
                                 shape = RoundedCornerShape(20.dp),
-                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                border = if (isSelected) null else androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                color = if (isSelected) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = if (isSelected) null else androidx.compose.foundation.BorderStroke(0.5.dp, LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                             ) {
                                 AppText(
                                     text = title,
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (isSelected) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                 )
                             }
@@ -317,7 +317,7 @@ fun ExploreScreen(
                         AppText(
                             text = "Ẩn chưa cài",
                             style = LegadoTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = LegadoTheme.colorScheme.onSurface
                         )
                         Switch(
                             checked = uiState.hideUninstalled,
@@ -548,18 +548,18 @@ fun ExploreSourceHeader(
 
     val containerColor by animateColorAsState(
         targetValue = if (isExpanded)
-            if (isMiuix) MiuixTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer
+            if (isMiuix) MiuixTheme.colorScheme.secondaryContainer else LegadoTheme.colorScheme.secondaryContainer
         else
-            if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+            if (isMiuix) MiuixTheme.colorScheme.surfaceContainer else LegadoTheme.colorScheme.surfaceContainerLow,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
 
     val contentColor by animateColorAsState(
         targetValue = if (isExpanded)
-            if (isMiuix) MiuixTheme.colorScheme.primary else MaterialTheme.colorScheme.primary
+            if (isMiuix) MiuixTheme.colorScheme.primary else LegadoTheme.colorScheme.primary
         else
-            if (isMiuix) MiuixTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface,
+            if (isMiuix) MiuixTheme.colorScheme.onSurface else LegadoTheme.colorScheme.onSurface,
         animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing),
         label = "CardColor"
     )
@@ -645,7 +645,7 @@ fun ExploreSourceHeader(
                         AppText(
                             text = item.bookSourceName,
                             style = LegadoTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                         if (isLegado) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -670,7 +670,7 @@ fun ExploreSourceHeader(
                                         AppText(
                                             text = "Tác giả: $author",
                                             style = LegadoTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = LegadoTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -685,12 +685,12 @@ fun ExploreSourceHeader(
                                     AppText(
                                         text = "Tải: ${formatDownloads(downloadsVal)}",
                                         fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
                                     )
                                     AppText(
                                         text = "Cập nhật: $time",
                                         fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             } else {
@@ -723,7 +723,7 @@ fun ExploreSourceHeader(
                                         AppText(
                                             text = "Nhóm: $groupName",
                                             style = LegadoTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = LegadoTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -735,7 +735,7 @@ fun ExploreSourceHeader(
                         AppText(
                             text = displayGroup,
                             style = LegadoTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
                     }
                 }
@@ -747,8 +747,8 @@ fun ExploreSourceHeader(
                         enabled = !isInstalling,
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            containerColor = LegadoTheme.colorScheme.primaryContainer,
+                            contentColor = LegadoTheme.colorScheme.onPrimaryContainer
                         ),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         modifier = Modifier.height(36.dp)
@@ -775,7 +775,7 @@ fun ExploreSourceHeader(
                                 modifier = Modifier
                                     .rotate(rotation)
                                     .size(20.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = LegadoTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -828,7 +828,7 @@ fun ExploreSourceHeader(
                             leadingIcon = {
                                 MenuItemIcon(
                                     Icons.Default.Delete,
-                                    tint = MaterialTheme.colorScheme.error
+                                    tint = LegadoTheme.colorScheme.error
                                 )
                             },
                             text = stringResource(R.string.delete),
@@ -898,7 +898,7 @@ fun AiConfigDialog(
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = LegadoTheme.colorScheme.surface,
             tonalElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -914,7 +914,7 @@ fun AiConfigDialog(
                     text = "Cấu hình AI Model",
                     style = LegadoTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = LegadoTheme.colorScheme.primary
                 )
 
                 OutlinedTextField(
@@ -925,8 +925,8 @@ fun AiConfigDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        focusedBorderColor = LegadoTheme.colorScheme.primary,
+                        unfocusedBorderColor = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
                     )
                 )
                 
@@ -937,8 +937,8 @@ fun AiConfigDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        focusedBorderColor = LegadoTheme.colorScheme.primary,
+                        unfocusedBorderColor = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
                     )
                 )
 
@@ -962,8 +962,8 @@ fun AiConfigDialog(
                                 }
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                focusedBorderColor = LegadoTheme.colorScheme.primary,
+                                unfocusedBorderColor = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
                         )
                         
@@ -991,8 +991,8 @@ fun AiConfigDialog(
                         enabled = !isScanning,
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            containerColor = LegadoTheme.colorScheme.secondaryContainer,
+                            contentColor = LegadoTheme.colorScheme.onSecondaryContainer
                         ),
                         modifier = Modifier.height(54.dp)
                     ) {
@@ -1008,7 +1008,7 @@ fun AiConfigDialog(
                     Text(
                         text = it,
                         style = LegadoTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = LegadoTheme.colorScheme.error
                     )
                 }
 
@@ -1054,7 +1054,7 @@ fun AiExtensionWorkspaceDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
+            color = LegadoTheme.colorScheme.surface,
             tonalElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth(0.95f)
@@ -1076,7 +1076,7 @@ fun AiExtensionWorkspaceDialog(
                         text = "Bảng làm việc: Sinh Extension",
                         style = LegadoTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.secondary
+                        color = LegadoTheme.colorScheme.secondary
                     )
                     IconButton(
                         onClick = { viewModel.cancelGeneration() },
@@ -1086,7 +1086,7 @@ fun AiExtensionWorkspaceDialog(
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Đóng",
-                            tint = MaterialTheme.colorScheme.error
+                            tint = LegadoTheme.colorScheme.error
                         )
                     }
                 }
@@ -1116,8 +1116,8 @@ fun AiExtensionWorkspaceDialog(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                focusedBorderColor = LegadoTheme.colorScheme.primary,
+                                unfocusedBorderColor = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
                         )
                         
@@ -1128,8 +1128,8 @@ fun AiExtensionWorkspaceDialog(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                focusedBorderColor = LegadoTheme.colorScheme.primary,
+                                unfocusedBorderColor = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
                         )
                         
@@ -1140,8 +1140,8 @@ fun AiExtensionWorkspaceDialog(
                             modifier = Modifier.fillMaxWidth(),
                             maxLines = 3,
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                focusedBorderColor = LegadoTheme.colorScheme.primary,
+                                unfocusedBorderColor = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
                             )
                         )
                         
@@ -1149,14 +1149,14 @@ fun AiExtensionWorkspaceDialog(
                             text = "Trạng thái AI Generator:",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                         
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(110.dp)
-                                .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .border(0.5.dp, LegadoTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                                 .background(Color.Black.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
                                 .padding(8.dp)
                         ) {
@@ -1170,7 +1170,7 @@ fun AiExtensionWorkspaceDialog(
                                     text = uiState.generationStatus,
                                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                                     fontSize = 11.sp,
-                                    color = if (uiState.generationStatus.contains("Lỗi")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                                    color = if (uiState.generationStatus.contains("Lỗi")) LegadoTheme.colorScheme.error else LegadoTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -1184,7 +1184,7 @@ fun AiExtensionWorkspaceDialog(
                             // --- BƯỚC 1 ---
                             Card(
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    containerColor = LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1196,7 +1196,7 @@ fun AiExtensionWorkspaceDialog(
                                         text = "Bước 1: Cấu hình chung & Menu (config, home, gen)",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
                                     )
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1218,7 +1218,7 @@ fun AiExtensionWorkspaceDialog(
                                             modifier = Modifier.weight(1.2f).height(38.dp),
                                             shape = RoundedCornerShape(6.dp),
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (uiState.isStep1Installed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                                containerColor = if (uiState.isStep1Installed) LegadoTheme.colorScheme.secondary else LegadoTheme.colorScheme.primary
                                             ),
                                             contentPadding = PaddingValues(horizontal = 4.dp)
                                         ) {
@@ -1231,7 +1231,7 @@ fun AiExtensionWorkspaceDialog(
                                             modifier = Modifier.weight(1f).height(38.dp),
                                             shape = RoundedCornerShape(6.dp),
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.tertiary
+                                                containerColor = LegadoTheme.colorScheme.tertiary
                                             ),
                                             contentPadding = PaddingValues(horizontal = 4.dp)
                                         ) {
@@ -1244,7 +1244,7 @@ fun AiExtensionWorkspaceDialog(
                             // --- BƯỚC 2 ---
                             Card(
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    containerColor = LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1256,7 +1256,7 @@ fun AiExtensionWorkspaceDialog(
                                         text = "Bước 2: Chi tiết truyện (detail.js)",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
                                     )
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1278,7 +1278,7 @@ fun AiExtensionWorkspaceDialog(
                                             modifier = Modifier.weight(1.2f).height(38.dp),
                                             shape = RoundedCornerShape(6.dp),
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (uiState.isStep2Installed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                                containerColor = if (uiState.isStep2Installed) LegadoTheme.colorScheme.secondary else LegadoTheme.colorScheme.primary
                                             ),
                                             contentPadding = PaddingValues(horizontal = 4.dp)
                                         ) {
@@ -1291,7 +1291,7 @@ fun AiExtensionWorkspaceDialog(
                                             modifier = Modifier.weight(1f).height(38.dp),
                                             shape = RoundedCornerShape(6.dp),
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.tertiary
+                                                containerColor = LegadoTheme.colorScheme.tertiary
                                             ),
                                             contentPadding = PaddingValues(horizontal = 4.dp)
                                         ) {
@@ -1304,7 +1304,7 @@ fun AiExtensionWorkspaceDialog(
                             // --- BƯỚC 3 ---
                             Card(
                                 colors = CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                    containerColor = LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
@@ -1316,7 +1316,7 @@ fun AiExtensionWorkspaceDialog(
                                         text = "Bước 3: Mục lục & Nội dung (toc, chap, search)",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
                                     )
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1338,7 +1338,7 @@ fun AiExtensionWorkspaceDialog(
                                             modifier = Modifier.weight(1.2f).height(38.dp),
                                             shape = RoundedCornerShape(6.dp),
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = if (uiState.isStep3Installed) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                                containerColor = if (uiState.isStep3Installed) LegadoTheme.colorScheme.secondary else LegadoTheme.colorScheme.primary
                                             ),
                                             contentPadding = PaddingValues(horizontal = 4.dp)
                                         ) {
@@ -1351,7 +1351,7 @@ fun AiExtensionWorkspaceDialog(
                                             modifier = Modifier.weight(1f).height(38.dp),
                                             shape = RoundedCornerShape(6.dp),
                                             colors = ButtonDefaults.buttonColors(
-                                                containerColor = MaterialTheme.colorScheme.tertiary
+                                                containerColor = LegadoTheme.colorScheme.tertiary
                                             ),
                                             contentPadding = PaddingValues(horizontal = 4.dp)
                                         ) {
@@ -1370,8 +1370,8 @@ fun AiExtensionWorkspaceDialog(
                                     modifier = Modifier.fillMaxWidth().height(44.dp),
                                     shape = RoundedCornerShape(8.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        containerColor = LegadoTheme.colorScheme.primaryContainer,
+                                        contentColor = LegadoTheme.colorScheme.onPrimaryContainer
                                     )
                                 ) {
                                     Icon(
@@ -1403,7 +1403,7 @@ fun AiExtensionWorkspaceDialog(
                     
                     if (fileList.isEmpty()) {
                         Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
-                            Text("Chưa có mã nguồn nào được sinh ra.\nHãy tạo Bước 1, Bước 2 hoặc Bước 3 trước.", style = LegadoTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Chưa có mã nguồn nào được sinh ra.\nHãy tạo Bước 1, Bước 2 hoặc Bước 3 trước.", style = LegadoTheme.typography.bodyMedium, color = LegadoTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
                         var selectedFile by remember(fileList) { mutableStateOf(fileList.firstOrNull()) }
@@ -1428,8 +1428,8 @@ fun AiExtensionWorkspaceDialog(
                                     Button(
                                         onClick = { selectedFile = fileItem },
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                                            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                                            containerColor = if (isSelected) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.secondaryContainer,
+                                            contentColor = if (isSelected) LegadoTheme.colorScheme.onPrimary else LegadoTheme.colorScheme.onSecondaryContainer
                                         ),
                                         shape = RoundedCornerShape(8.dp),
                                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
@@ -1447,13 +1447,13 @@ fun AiExtensionWorkspaceDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .weight(1f)
-                                    .border(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
+                                    .border(0.5.dp, LegadoTheme.colorScheme.outline.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
                                 textStyle = androidx.compose.ui.text.TextStyle(
                                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                                     fontSize = 11.sp
                                 ),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                    focusedBorderColor = LegadoTheme.colorScheme.primary,
                                     unfocusedBorderColor = Color.Transparent
                                 )
                             )

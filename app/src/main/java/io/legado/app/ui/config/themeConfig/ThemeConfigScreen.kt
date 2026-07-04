@@ -770,7 +770,7 @@ fun ThemeConfigScreen(
                                             .background(Color(ThemeConfig.itemDividerColor))
                                             .border(
                                                 1.dp,
-                                                MaterialTheme.colorScheme.outlineVariant,
+                                                LegadoTheme.colorScheme.outlineVariant,
                                                 CircleShape
                                             )
                                     )
@@ -1069,7 +1069,7 @@ fun ThemeColorButton(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
+                            tint = LegadoTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(24.dp)
                         )
                     }

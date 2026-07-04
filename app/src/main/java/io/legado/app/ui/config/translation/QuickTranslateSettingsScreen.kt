@@ -19,9 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+
 import androidx.compose.ui.window.Dialog
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -199,9 +199,8 @@ fun QuickTranslateSettingsScreen(
                         ) {
                             AppText(
                                 text = "Từ điển chung",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                style = LegadoTheme.typography.titleMediumEmphasized,
+                                color = LegadoTheme.colorScheme.primary
                             )
                             if (io.legado.app.help.MemberManager.isVip) {
                                 Button(
@@ -238,7 +237,7 @@ fun QuickTranslateSettingsScreen(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    AppText("Tải từ điển mặc định", fontSize = 12.sp)
+                                    AppText("Tải từ điển mặc định", style = LegadoTheme.typography.labelSmall)
                                 }
                             }
                         }
@@ -251,9 +250,8 @@ fun QuickTranslateSettingsScreen(
                                 Column(modifier = Modifier.padding(16.dp)) {
                                     AppText(
                                         text = "🔒 Tính năng tải từ điển chung yêu cầu kích hoạt Thành viên nội bộ.",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.error
+                                        style = LegadoTheme.typography.bodyMediumEmphasized,
+                                        color = LegadoTheme.colorScheme.error
                                     )
                                 }
                             }
@@ -285,15 +283,14 @@ fun QuickTranslateSettingsScreen(
                                             Column(modifier = Modifier.padding(12.dp)) {
                                                 AppText(
                                                     text = dicts[i].first,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.SemiBold,
+                                                    style = LegadoTheme.typography.bodyMediumEmphasized,
                                                     maxLines = 1
                                                 )
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 AppText(
                                                     text = dicts[i].second,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.primary,
+                                                    style = LegadoTheme.typography.bodySmall,
+                                                    color = LegadoTheme.colorScheme.primary,
                                                     maxLines = 1
                                                 )
                                             }
@@ -304,14 +301,14 @@ fun QuickTranslateSettingsScreen(
                                             onDismissRequest = { expandedMenuIndex = -1 }
                                         ) {
                                             DropdownMenuItem(
-                                                text = { Text("Sửa") },
+                                                text = { AppText("Sửa") },
                                                 onClick = {
                                                     expandedMenuIndex = -1
                                                     editingDictFile = dicts[i].first
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text("Nhập") },
+                                                text = { AppText("Nhập") },
                                                 onClick = {
                                                     expandedMenuIndex = -1
                                                     importingDictFile = dicts[i].first
@@ -358,15 +355,14 @@ fun QuickTranslateSettingsScreen(
                                             Column(modifier = Modifier.padding(12.dp)) {
                                                 AppText(
                                                     text = dicts[i].first,
-                                                    style = MaterialTheme.typography.bodyMedium,
-                                                    fontWeight = FontWeight.SemiBold,
+                                                    style = LegadoTheme.typography.bodyMediumEmphasized,
                                                     maxLines = 1
                                                 )
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 AppText(
                                                     text = dicts[i].second,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.primary,
+                                                    style = LegadoTheme.typography.bodySmall,
+                                                    color = LegadoTheme.colorScheme.primary,
                                                     maxLines = 1
                                                 )
                                             }
@@ -377,14 +373,14 @@ fun QuickTranslateSettingsScreen(
                                             onDismissRequest = { expandedMenuIndex = -1 }
                                         ) {
                                             DropdownMenuItem(
-                                                text = { Text("Sửa") },
+                                                text = { AppText("Sửa") },
                                                 onClick = {
                                                     expandedMenuIndex = -1
                                                     editingDictFile = dicts[i].first
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text("Nhập") },
+                                                text = { AppText("Nhập") },
                                                 onClick = {
                                                     expandedMenuIndex = -1
                                                     importingDictFile = dicts[i].first
@@ -392,7 +388,7 @@ fun QuickTranslateSettingsScreen(
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text("Xuất") },
+                                                text = { AppText("Xuất") },
                                                 onClick = {
                                                     expandedMenuIndex = -1
                                                     exportingDictFile = dicts[i].first
@@ -400,7 +396,7 @@ fun QuickTranslateSettingsScreen(
                                                 }
                                             )
                                             DropdownMenuItem(
-                                                text = { Text("Xóa") },
+                                                text = { AppText("Xóa") },
                                                 onClick = {
                                                     expandedMenuIndex = -1
                                                     showDeleteConfirmDialog = dicts[i].first
@@ -542,7 +538,7 @@ fun QuickTranslateSettingsScreen(
             title = "Nhập từ điển: $importingDictFile",
             content = {
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                    Text(text = "Chọn chế độ nhập từ điển:", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    AppText(text = "Chọn chế độ nhập từ điển:", style = LegadoTheme.typography.bodyMediumEmphasized)
                     Spacer(modifier = Modifier.height(12.dp))
                     
                     Row(
@@ -555,8 +551,8 @@ fun QuickTranslateSettingsScreen(
                         RadioButton(selected = importMode == 0, onClick = { importMode = 0 })
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("Thay thế toàn bộ", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                            Text("Xóa từ điển hiện tại và thay bằng từ điển mới", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            AppText("Thay thế toàn bộ", style = LegadoTheme.typography.bodyMediumEmphasized)
+                            AppText("Xóa từ điển hiện tại và thay bằng từ điển mới", style = LegadoTheme.typography.bodySmall, color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -571,8 +567,8 @@ fun QuickTranslateSettingsScreen(
                         RadioButton(selected = importMode == 1, onClick = { importMode = 1 })
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("Gộp từ điển", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                            Text("Thêm từ mới, ghi đè bản dịch khi trùng từ", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            AppText("Gộp từ điển", style = LegadoTheme.typography.bodyMediumEmphasized)
+                            AppText("Thêm từ mới, ghi đè bản dịch khi trùng từ", style = LegadoTheme.typography.bodySmall, color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -587,8 +583,8 @@ fun QuickTranslateSettingsScreen(
                         RadioButton(selected = importMode == 2, onClick = { importMode = 2 })
                         Spacer(modifier = Modifier.width(8.dp))
                         Column {
-                            Text("Chỉ thêm từ thiếu", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                            Text("Chỉ thêm từ chưa có, giữ nguyên bản dịch hiện tại", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            AppText("Chỉ thêm từ thiếu", style = LegadoTheme.typography.bodyMediumEmphasized)
+                            AppText("Chỉ thêm từ chưa có, giữ nguyên bản dịch hiện tại", style = LegadoTheme.typography.bodySmall, color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                         }
                     }
                 }
@@ -663,14 +659,14 @@ fun QuickTranslateSettingsScreen(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .background(LegadoTheme.colorScheme.surfaceContainer)
                     .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     AppCircularProgressIndicator()
                     Spacer(modifier = Modifier.height(16.dp))
-                    AppText(text = downloadProgressText, fontSize = 15.sp)
+                    AppText(text = downloadProgressText, style = LegadoTheme.typography.bodyMedium)
                 }
             }
         }

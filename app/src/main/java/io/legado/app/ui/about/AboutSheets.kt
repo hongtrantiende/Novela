@@ -106,7 +106,7 @@ fun UpdateSheet(
                     AppText(
                         text = BuildConfig.VERSION_NAME,
                         style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                     )
                 }
                 Row(
@@ -121,7 +121,7 @@ fun UpdateSheet(
                     AppText(
                         text = updateInfo.tagName,
                         style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = LegadoTheme.colorScheme.primary,
                     )
                 }
                 Row(
@@ -136,7 +136,7 @@ fun UpdateSheet(
                     AppText(
                         text = Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown",
                         style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                     )
                 }
                 Row(
@@ -151,7 +151,7 @@ fun UpdateSheet(
                     AppText(
                         text = AppConfig.updateToVariant ?: appInfo.appVariant.toString(),
                         style = LegadoTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.outline,
+                        color = LegadoTheme.colorScheme.outline,
                     )
                 }
             } else {

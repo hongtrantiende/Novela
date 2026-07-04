@@ -16,7 +16,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,7 +34,6 @@ import io.legado.app.R
 import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 import io.legado.app.ui.config.themeConfig.LabelColorManageSheet
 import io.legado.app.ui.config.themeConfig.ThemeConfig
-import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.dialog.ColorPickerSheet
 import io.legado.app.ui.widget.components.divider.PillDivider
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
@@ -294,7 +293,7 @@ fun BookshelfConfigSheet(
                                         .background(Color(BookshelfConfig.bookshelfCardColor))
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
+                                            LegadoTheme.colorScheme.outlineVariant,
                                             CircleShape
                                         )
                                 )
@@ -315,7 +314,7 @@ fun BookshelfConfigSheet(
                                         .background(Color(BookshelfConfig.bookshelfCardColorDark))
                                         .border(
                                             1.dp,
-                                            MaterialTheme.colorScheme.outlineVariant,
+                                            LegadoTheme.colorScheme.outlineVariant,
                                             CircleShape
                                         )
                                 )

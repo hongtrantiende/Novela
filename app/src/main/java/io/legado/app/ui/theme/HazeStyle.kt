@@ -34,7 +34,7 @@ fun Modifier.responsiveHazeEffect(
     val composeEngine = LegadoTheme.composeEngine
     val containerColor = GlassDefaults.secondaryColorOr {
         if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface
-        else MaterialTheme.colorScheme.surface
+        else LegadoTheme.colorScheme.surface
     }
 
     if (!enableBlur) return this
@@ -69,7 +69,7 @@ fun Modifier.responsiveHazeEffectFixedStyle(
     val composeEngine = LegadoTheme.composeEngine
     val containerColor = GlassDefaults.secondaryColorOr {
         if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface
-        else MaterialTheme.colorScheme.surface
+        else LegadoTheme.colorScheme.surface
     }
 
     if (!enableBlur) return this
@@ -98,7 +98,7 @@ fun Modifier.regularHazeEffect(state: HazeState): Modifier {
     val composeEngine = LegadoTheme.composeEngine
     val containerColor = GlassDefaults.secondaryColorOr {
         if (ThemeResolver.isMiuixEngine(composeEngine)) MiuixTheme.colorScheme.surface
-        else MaterialTheme.colorScheme.surface
+        else LegadoTheme.colorScheme.surface
     }
 
     if (!enableBlur) return this

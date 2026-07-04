@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookHelp
@@ -91,7 +92,13 @@ fun NerAnalyzeSheet(
 
     AppModalBottomSheet(
         show = show,
-        onDismissRequest = onDismissRequest
+        onDismissRequest = onDismissRequest,
+        title = "Phân tích NER",
+        endAction = {
+            IconButton(onClick = onDismissRequest) {
+                Icon(Icons.Default.Close, contentDescription = "Đóng")
+            }
+        }
     ) {
         Column(
             modifier = Modifier
@@ -99,24 +106,6 @@ fun NerAnalyzeSheet(
                 .fillMaxHeight(0.9f)
                 .navigationBarsPadding()
         ) {
-            // Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AppText(
-                    text = "Phân tích NER",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                IconButton(onClick = onDismissRequest) {
-                    Icon(Icons.Default.Close, contentDescription = "Đóng")
-                }
-            }
-
             // Body content area (LazyColumn list of items or status message)
             Box(
                 modifier = Modifier
@@ -136,7 +125,7 @@ fun NerAnalyzeSheet(
                             text = scanStatus,
                             fontSize = 14.sp,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                            color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                         )
                     }
                 } else if (scanResult.isEmpty()) {
@@ -151,7 +140,7 @@ fun NerAnalyzeSheet(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                            tint = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.3f),
                             modifier = Modifier.size(64.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
@@ -165,7 +154,7 @@ fun NerAnalyzeSheet(
                         AppText(
                             text = "Chọn phạm vi chương, số từ và công cụ rồi bắt đầu phân tích.",
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                             textAlign = TextAlign.Center
                         )
                     }
@@ -199,18 +188,18 @@ fun NerAnalyzeSheet(
                                         AppText(
                                             text = "${item.tag} - Hán Việt: ${item.trans}",
                                             fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
                                     }
                                     AppText(
                                         text = "${item.count} lần",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = MaterialTheme.colorScheme.primary
+                                        color = LegadoTheme.colorScheme.primary
                                     )
                                 }
                                 HorizontalDivider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                                 )
                             }
                         }
@@ -225,7 +214,7 @@ fun NerAnalyzeSheet(
                     .padding(12.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    containerColor = LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                 )
             ) {
                 Column(
@@ -374,7 +363,7 @@ fun NerAnalyzeSheet(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
+                            containerColor = LegadoTheme.colorScheme.primary
                         )
                     ) {
                         Icon(Icons.Default.Search, contentDescription = null)
@@ -410,7 +399,7 @@ fun NerAnalyzeSheet(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    AppText(text = "Lưu vào từ điển:", fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                    AppText(text = "Lưu vào từ điển:", fontSize = 12.sp, color = LegadoTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(4.dp))
                     
                     // Simple Dropdown-like Selector
@@ -479,13 +468,13 @@ fun SelectableTagButton(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        color = if (isSelected) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surface,
+        border = if (isSelected) null else BorderStroke(1.dp, LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         AppText(
             text = text,
             fontSize = 12.sp,
-            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+            color = if (isSelected) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         )
     }

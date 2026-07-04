@@ -59,7 +59,7 @@ fun GlassTopAppBar(
                         text = title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleLarge
+                        style = LegadoTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = navigationIcon,

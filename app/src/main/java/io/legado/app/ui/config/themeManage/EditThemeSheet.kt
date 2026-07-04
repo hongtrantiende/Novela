@@ -17,6 +17,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.MaterialTheme
+import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -336,8 +337,8 @@ fun EditThemeSheet(
 private fun SectionTitle(text: String) {
     AppText(
         text = text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = LegadoTheme.typography.titleSmall,
+        color = LegadoTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
     )
 }
@@ -361,7 +362,7 @@ private fun ColorItem(title: String, colorValue: Int, onClick: () -> Unit) {
                         .background(Color(colorValue))
                         .border(
                             1.dp,
-                            MaterialTheme.colorScheme.outlineVariant,
+                            LegadoTheme.colorScheme.outlineVariant,
                             CircleShape
                         )
                 )

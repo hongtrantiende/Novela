@@ -123,7 +123,7 @@ fun NoEarlierDataIndicator(
     cellSpacing: Dp,
     modifier: Modifier = Modifier
 ) {
-    val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    val outlineColor = LegadoTheme.colorScheme.outlineVariant
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -197,7 +197,7 @@ fun HeatmapCalendarCell(
             .background(cellColor)
             .border(
                 width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) MaterialTheme.colorScheme.onSurface else Color.Transparent,
+                color = if (isSelected) LegadoTheme.colorScheme.onSurface else Color.Transparent,
                 shape = RoundedCornerShape(config.cornerRadius)
             )
             .clickable { onDateSelected(day) }

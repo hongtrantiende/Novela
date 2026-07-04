@@ -264,7 +264,7 @@ fun ReadAloudContent(
             ) {
                 Text(
                     text = state.book?.name ?: state.bookName,
-                    style = MaterialTheme.typography.titleLarge,
+                    style = LegadoTheme.typography.titleLarge,
                     color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -273,7 +273,7 @@ fun ReadAloudContent(
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = author,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = LegadoTheme.typography.bodyMedium,
                         color = Color.White.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -282,7 +282,7 @@ fun ReadAloudContent(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = state.chapterName,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = LegadoTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.5f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -335,7 +335,7 @@ fun ReadAloudContent(
                         }
                         Text(
                             text = statusText,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = LegadoTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.5f)
                         )
                         Text(
@@ -344,7 +344,7 @@ fun ReadAloudContent(
                                 append(" • ")
                                 append(if (state.isReadAloudPaused) "Tạm dừng" else "Đang phát")
                             },
-                            style = MaterialTheme.typography.labelSmall,
+                            style = LegadoTheme.typography.labelSmall,
                             color = if (state.isReadAloudPaused) Color.White.copy(alpha = 0.5f) else playButtonColor
                         )
                     }
@@ -786,7 +786,7 @@ private fun SegmentedProgressBar(
     )
 
     val primaryColor = LegadoTheme.colorScheme.primary
-    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    val tertiaryColor = LegadoTheme.colorScheme.tertiary
     val secondaryColor = LegadoTheme.colorScheme.secondary
     val outlineColor = LegadoTheme.colorScheme.outline
 
@@ -839,13 +839,13 @@ private fun SegmentedProgressBar(
             }
             Text(
                 text = statusText,
-                style = MaterialTheme.typography.labelSmall,
+                style = LegadoTheme.typography.labelSmall,
                 color = Color.White.copy(alpha = 0.5f)
             )
             if (nowSpeak >= 0 && nowSpeak < total) {
                 Text(
                     text = "Đoạn ${nowSpeak + 1}",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = LegadoTheme.typography.labelSmall,
                     color = LegadoTheme.colorScheme.primary
                 )
             }
@@ -928,14 +928,14 @@ private fun AudioChapterListOverlay(
                 ) {
                     Text(
                         text = "${index + 1}",
-                        style = MaterialTheme.typography.labelMedium,
+                        style = LegadoTheme.typography.labelMedium,
                         color = if (isCurrent) LegadoTheme.colorScheme.primary
                             else LegadoTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                         modifier = Modifier.width(36.dp)
                     )
                     Text(
                         text = chapter.getDisplayTitle(),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = LegadoTheme.typography.bodyMedium,
                         color = if (isCurrent) LegadoTheme.colorScheme.primary
                             else LegadoTheme.colorScheme.onSurface,
                         maxLines = 1,
@@ -946,7 +946,7 @@ private fun AudioChapterListOverlay(
                         Spacer(Modifier.width(8.dp))
                         Text(
                             text = "Đang phát",
-                            style = MaterialTheme.typography.labelSmall,
+                            style = LegadoTheme.typography.labelSmall,
                             color = LegadoTheme.colorScheme.primary
                         )
                     }

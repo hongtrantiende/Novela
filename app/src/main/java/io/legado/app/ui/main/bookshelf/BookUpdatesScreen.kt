@@ -122,8 +122,7 @@ fun DateHeaderItem(title: String) {
         titleContent = {
             Text(
                 text = title,
-                style = LegadoTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
+                style = LegadoTheme.typography.bodyMediumEmphasized,
                 color = LegadoTheme.colorScheme.primary
             )
         }

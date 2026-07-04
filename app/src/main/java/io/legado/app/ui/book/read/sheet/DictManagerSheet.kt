@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -132,7 +133,7 @@ fun DictManagerSheet(
                         text = "Từ điển riêng",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = LegadoTheme.colorScheme.primary,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
 
@@ -163,7 +164,7 @@ fun DictManagerSheet(
                         text = "Từ điển chung",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = LegadoTheme.colorScheme.primary,
                         modifier = Modifier.padding(vertical = 8.dp)
                     )
 
@@ -230,13 +231,13 @@ fun DictCard(
                 AppText(
                     text = wordCount,
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
             }
             Icon(
                 imageVector = Icons.Default.Edit,
                 contentDescription = "Chỉnh sửa",
-                tint = MaterialTheme.colorScheme.primary,
+                tint = LegadoTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -364,19 +365,19 @@ fun DictEditorContent(
                                 AppText(
                                     text = entry.second,
                                     fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
                             }
                             IconButton(onClick = { entryToDelete = entry }) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = "Xóa",
-                                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                    tint = LegadoTheme.colorScheme.error.copy(alpha = 0.8f)
                                 )
                             }
                         }
                         HorizontalDivider(
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                         )
                     }
                 }
@@ -386,7 +387,7 @@ fun DictEditorContent(
                         Text(
                             text = "Hiển thị tối đa 200 kết quả đầu tiên. Hãy gõ tìm kiếm để thu hẹp phạm vi.",
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 16.dp),
@@ -408,7 +409,7 @@ fun DictEditorContent(
                 .align(Alignment.BottomEnd)
                 .padding(24.dp),
             shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+            containerColor = LegadoTheme.colorScheme.primaryContainer
         ) {
             Icon(Icons.Default.Add, contentDescription = "Thêm từ")
         }
