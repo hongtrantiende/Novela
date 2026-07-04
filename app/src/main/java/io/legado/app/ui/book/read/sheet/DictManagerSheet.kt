@@ -80,9 +80,12 @@ fun DictManagerSheet(
     var fetchedModels by remember { mutableStateOf<List<String>>(emptyList()) }
     var isFetchingModels by remember { mutableStateOf(false) }
     
-    var isScanningAi by remember { mutableStateOf(false) }
-    var scanProgressText by remember { mutableStateOf("") }
-    var scanJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    val isScanningFlowState = io.legado.app.service.AiScanService.isScanningFlow.collectAsState()
+    val scanProgressFlowState = io.legado.app.service.AiScanService.scanProgressFlow.collectAsState()
+    val scanBookUrlFlowState = io.legado.app.service.AiScanService.scanBookUrlFlow.collectAsState()
+
+    val isScanningAi = isScanningFlowState.value && scanBookUrlFlowState.value == state.book?.bookUrl
+    val scanProgressText = if (isScanningAi) scanProgressFlowState.value else ""
     
     var showResumeDialog by remember { mutableStateOf(false) }
     var resumeSavedIndex by remember { mutableStateOf(-1) }
@@ -101,7 +104,7 @@ fun DictManagerSheet(
     var inputValue by remember { mutableStateOf("") }
 
     // Load data from file
-    LaunchedEffect(refreshListTrigger, state.book) {
+    LaunchedEffect(refreshListTrigger, state.book, isScanningAi, scanProgressText) {
         withContext(Dispatchers.IO) {
             rawEntries = QuickTranslateDictHelper.loadDictEntries(context, privateNameFile)
         }
@@ -239,9 +242,7 @@ fun DictManagerSheet(
                     }
                     Button(
                         onClick = {
-                            scanJob?.cancel()
-                            isScanningAi = false
-                            scanProgressText = "Đang dừng..."
+                            io.legado.app.service.AiScanService.stop(context)
                             Toast.makeText(context, "Đã gửi yêu cầu dừng quét AI", Toast.LENGTH_SHORT).show()
                         },
                         colors = ButtonDefaults.buttonColors(
@@ -271,72 +272,7 @@ fun DictManagerSheet(
                             }
                             
                             val startAiScan: (Int) -> Unit = { fromIndex ->
-                                isScanningAi = true
-                                val newJob = scope.launch(Dispatchers.IO) {
-                                    try {
-                                        val allChapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
-                                        val downloadedChapters = allChapters.filter { io.legado.app.help.book.BookHelp.hasContent(book, it) }
-                                        
-                                        val chaptersToScan = downloadedChapters.filter { it.index > fromIndex }
-                                        if (chaptersToScan.isEmpty()) {
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "Không có chương mới nào cần quét", Toast.LENGTH_SHORT).show()
-                                            }
-                                            return@launch
-                                        }
-                                        
-                                        chaptersToScan.forEachIndexed { index, chapter ->
-                                            if (scanJob?.isCancelled == true) return@launch
-                                            
-                                            withContext(Dispatchers.Main) {
-                                                scanProgressText = "Đang quét: ${index + 1}/${chaptersToScan.size} (${chapter.title})"
-                                            }
-                                            
-                                            try {
-                                                // Gọi hàm quét AI
-                                                io.legado.app.model.translation.TranslationManager.scanAndSaveNamesWithAi(book, chapter)
-                                                // Nạp lại từ điển vào RAM gộp
-                                                io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(context, bookKey)
-                                                // Xóa cache dịch chương này
-                                                io.legado.app.model.translation.TranslationManager.deleteTranslationCache(book, chapter)
-                                                
-                                                // Lưu tiến độ quét thành công chương này
-                                                context.putPrefInt("ai_scan_last_index_${bookKey}", chapter.index)
-                                                
-                                                // Nạp lại danh sách từ điển để cập nhật UI ngay lập tức
-                                                val updatedEntries = QuickTranslateDictHelper.loadDictEntries(context, privateNameFile)
-                                                withContext(Dispatchers.Main) {
-                                                    rawEntries = updatedEntries
-                                                    io.legado.app.utils.TranslateUtils.clearCache()
-                                                    // Nếu là chương đang đọc, tải lại để cập nhật bản dịch
-                                                    if (chapter.index == io.legado.app.model.ReadBook.durChapterIndex) {
-                                                        io.legado.app.model.ReadBook.loadContent(false)
-                                                    }
-                                                }
-                                            } catch (e: Exception) {
-                                                // Bỏ qua lỗi của chương cụ thể để tiếp tục quét
-                                            }
-                                        }
-                                        
-                                        // Xóa bản dịch cũ của cả truyện nếu dùng STV/QT sau khi hoàn thành quét toàn bộ
-                                        io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(context, "Đã quét AI hoàn tất toàn bộ chương đã chọn!", Toast.LENGTH_LONG).show()
-                                        }
-                                    } catch (e: Exception) {
-                                        withContext(Dispatchers.Main) {
-                                            Toast.makeText(context, "Lỗi quét AI: ${e.message}", Toast.LENGTH_SHORT).show()
-                                        }
-                                    } finally {
-                                        withContext(Dispatchers.Main) {
-                                            isScanningAi = false
-                                            scanProgressText = ""
-                                            scanJob = null
-                                            refreshListTrigger++
-                                        }
-                                    }
-                                }
-                                scanJob = newJob
+                                io.legado.app.service.AiScanService.start(context, book.bookUrl, fromIndex)
                             }
 
                             val savedIndex = context.getPrefInt("ai_scan_last_index_${bookKey}", -1)
@@ -767,58 +703,7 @@ fun DictManagerSheet(
                 onConfirm = {
                     showResumeDialog = false
                     if (book != null) {
-                        isScanningAi = true
-                        val newJob = scope.launch(Dispatchers.IO) {
-                            try {
-                                val allChapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
-                                val downloadedChapters = allChapters.filter { io.legado.app.help.book.BookHelp.hasContent(book, it) }
-                                val chaptersToScan = downloadedChapters.filter { it.index > resumeSavedIndex }
-                                
-                                if (chaptersToScan.isEmpty()) {
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Không có chương mới nào cần quét", Toast.LENGTH_SHORT).show()
-                                    }
-                                    return@launch
-                                }
-                                
-                                chaptersToScan.forEachIndexed { index, chapter ->
-                                    if (scanJob?.isCancelled == true) return@launch
-                                    withContext(Dispatchers.Main) {
-                                        scanProgressText = "Đang quét: ${index + 1}/${chaptersToScan.size} (${chapter.title})"
-                                    }
-                                    try {
-                                        io.legado.app.model.translation.TranslationManager.scanAndSaveNamesWithAi(book, chapter)
-                                        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(context, bookKeyStr)
-                                        io.legado.app.model.translation.TranslationManager.deleteTranslationCache(book, chapter)
-                                        context.putPrefInt("ai_scan_last_index_${bookKeyStr}", chapter.index)
-                                        val updatedEntries = QuickTranslateDictHelper.loadDictEntries(context, privateNameFile)
-                                        withContext(Dispatchers.Main) {
-                                            rawEntries = updatedEntries
-                                            io.legado.app.utils.TranslateUtils.clearCache()
-                                            if (chapter.index == io.legado.app.model.ReadBook.durChapterIndex) {
-                                                io.legado.app.model.ReadBook.loadContent(false)
-                                            }
-                                        }
-                                    } catch (e: Exception) {}
-                                }
-                                io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Đã quét AI hoàn tất toàn bộ chương đã chọn!", Toast.LENGTH_LONG).show()
-                                }
-                            } catch (e: Exception) {
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Lỗi quét AI: ${e.message}", Toast.LENGTH_SHORT).show()
-                                }
-                            } finally {
-                                withContext(Dispatchers.Main) {
-                                    isScanningAi = false
-                                    scanProgressText = ""
-                                    scanJob = null
-                                    refreshListTrigger++
-                                }
-                            }
-                        }
-                        scanJob = newJob
+                        io.legado.app.service.AiScanService.start(context, book.bookUrl, resumeSavedIndex)
                     }
                 },
                 dismissText = "Quét lại từ đầu",
@@ -826,57 +711,7 @@ fun DictManagerSheet(
                     showResumeDialog = false
                     context.putPrefInt("ai_scan_last_index_${bookKeyStr}", -1)
                     if (book != null) {
-                        isScanningAi = true
-                        val newJob = scope.launch(Dispatchers.IO) {
-                            try {
-                                val allChapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
-                                val downloadedChapters = allChapters.filter { io.legado.app.help.book.BookHelp.hasContent(book, it) }
-                                
-                                if (downloadedChapters.isEmpty()) {
-                                    withContext(Dispatchers.Main) {
-                                        Toast.makeText(context, "Không tìm thấy chương nào đã tải xuống", Toast.LENGTH_SHORT).show()
-                                    }
-                                    return@launch
-                                }
-                                
-                                downloadedChapters.forEachIndexed { index, chapter ->
-                                    if (scanJob?.isCancelled == true) return@launch
-                                    withContext(Dispatchers.Main) {
-                                        scanProgressText = "Đang quét: ${index + 1}/${downloadedChapters.size} (${chapter.title})"
-                                    }
-                                    try {
-                                        io.legado.app.model.translation.TranslationManager.scanAndSaveNamesWithAi(book, chapter)
-                                        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(context, bookKeyStr)
-                                        io.legado.app.model.translation.TranslationManager.deleteTranslationCache(book, chapter)
-                                        context.putPrefInt("ai_scan_last_index_${bookKeyStr}", chapter.index)
-                                        val updatedEntries = QuickTranslateDictHelper.loadDictEntries(context, privateNameFile)
-                                        withContext(Dispatchers.Main) {
-                                            rawEntries = updatedEntries
-                                            io.legado.app.utils.TranslateUtils.clearCache()
-                                            if (chapter.index == io.legado.app.model.ReadBook.durChapterIndex) {
-                                                io.legado.app.model.ReadBook.loadContent(false)
-                                            }
-                                        }
-                                    } catch (e: Exception) {}
-                                }
-                                io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Đã quét AI hoàn tất toàn bộ chương đã tải!", Toast.LENGTH_LONG).show()
-                                }
-                            } catch (e: Exception) {
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(context, "Lỗi quét AI: ${e.message}", Toast.LENGTH_SHORT).show()
-                                }
-                            } finally {
-                                withContext(Dispatchers.Main) {
-                                    isScanningAi = false
-                                    scanProgressText = ""
-                                    scanJob = null
-                                    refreshListTrigger++
-                                }
-                            }
-                        }
-                        scanJob = newJob
+                        io.legado.app.service.AiScanService.start(context, book.bookUrl, -1)
                     }
                 }
             )
