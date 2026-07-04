@@ -253,14 +253,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun clearTextChapter() {
         clearExpiredChapterLoadingJob(true)
-        clearTranslationObserverJobs()
+        clearTranslationObserverJobs(true)
         prevTextChapter = null
         curTextChapter = null
         nextTextChapter = null
     }
 
-    private fun clearTranslationObserverJobs() {
-        translationObserverJobs.entries.filter { it.key !in durChapterIndex - 1..durChapterIndex + 1 }
+    private fun clearTranslationObserverJobs(forceAll: Boolean = false) {
+        translationObserverJobs.entries.filter { forceAll || it.key !in durChapterIndex - 1..durChapterIndex + 1 }
             .forEach { (index, job) ->
                 job.cancel()
                 translationObserverJobs.remove(index)

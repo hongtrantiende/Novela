@@ -366,8 +366,23 @@ object TranslateUtils {
             return@withContext text
         }
         
+        // 1. Tiền dịch bằng từ điển riêng của truyện
+        var processedText = text
+        val bookKey = io.legado.app.vbookextension.util.QuickTranslateEngine.currentBookKey
+        if (!bookKey.isNullOrBlank()) {
+            val privateDict = io.legado.app.vbookextension.util.QuickTranslateEngine.privateDict
+            if (privateDict.isNotEmpty()) {
+                val sortedKeys = privateDict.keys.sortedByDescending { it.length }
+                for (key in sortedKeys) {
+                    val valPart = privateDict[key] ?: continue
+                    val cleanTrans = valPart.substringBefore('/')
+                    processedText = processedText.replace(key, cleanTrans)
+                }
+            }
+        }
+
         // Step 1: Convert Punctuation
-        val convertedText = convertPunctuation(text)
+        val convertedText = convertPunctuation(processedText)
 
         // Step 2: Tokenize and Filter
         val tokens = tokenize(convertedText, data)
@@ -624,12 +639,28 @@ object TranslateUtils {
      */
     suspend fun translateWithEngine(text: String?, engine: String, mode: String): String = withContext(Dispatchers.IO) {
         if (text.isNullOrBlank()) return@withContext ""
+
+        // 1. Tiền dịch bằng từ điển riêng của truyện
+        var processedText = text ?: ""
+        val bookKey = io.legado.app.vbookextension.util.QuickTranslateEngine.currentBookKey
+        if (!bookKey.isNullOrBlank()) {
+            val privateDict = io.legado.app.vbookextension.util.QuickTranslateEngine.privateDict
+            if (privateDict.isNotEmpty()) {
+                val sortedKeys = privateDict.keys.sortedByDescending { it.length }
+                for (key in sortedKeys) {
+                    val valPart = privateDict[key] ?: continue
+                    val cleanTrans = valPart.substringBefore('/')
+                    processedText = processedText.replace(key, cleanTrans)
+                }
+            }
+        }
+
         return@withContext when (engine) {
             "STV", "Sáng Tác Việt" -> {
                 try {
                     val formBody = okhttp3.FormBody.Builder()
                         .add("sajax", "trans")
-                        .add("content", text)
+                        .add("content", processedText)
                         .build()
                     val request = okhttp3.Request.Builder()
                         .url("https://comic.sangtacvietcdn.xyz/tsm.php?cdn=/")
@@ -642,10 +673,10 @@ object TranslateUtils {
                             if (!bodyStr.isNullOrEmpty()) {
                                 bodyStr
                             } else {
-                                text
+                                processedText
                             }
                         } else {
-                            text
+                            processedText
                         }
                     }
                 } catch (e: Exception) {

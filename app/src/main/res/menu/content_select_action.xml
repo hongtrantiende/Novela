@@ -18,9 +18,7 @@
         android:id="@+id/menu_aloud"
         android:title="@string/read_aloud" />
 
-    <item
-        android:id="@+id/menu_ner"
-        android:title="Quét Name" />
+
 
     <item
         android:id="@+id/menu_dict"

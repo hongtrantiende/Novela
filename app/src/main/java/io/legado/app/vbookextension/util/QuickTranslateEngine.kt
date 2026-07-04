@@ -54,7 +54,7 @@ object QuickTranslateEngine {
     var currentBookKey: String? = null
 
     @Volatile
-    private var privateDict = HashMap<String, String>()
+    var privateDict = HashMap<String, String>()
 
     fun isDictLoaded(): Boolean = isLoaded
     fun isDictLoading(): Boolean = isLoading
@@ -239,42 +239,42 @@ object QuickTranslateEngine {
 
     fun initBookPrivateDict(context: Context, bookKey: String?) {
         currentBookKey = bookKey
-        privateDict.clear()
-        if (bookKey.isNullOrBlank()) return
+        if (bookKey.isNullOrBlank()) {
+            privateDict = HashMap()
+            return
+        }
 
-        Thread {
-            try {
-                val dictDir = File(context.filesDir, "dict/book")
-                if (!dictDir.exists()) dictDir.mkdirs()
+        try {
+            val dictDir = File(context.filesDir, "dict/book")
+            if (!dictDir.exists()) dictDir.mkdirs()
 
-                val nameFile = File(dictDir, "book_${bookKey}_name.txt")
-                val vpFile = File(dictDir, "book_${bookKey}_vp.txt")
+            val nameFile = File(dictDir, "book_${bookKey}_name.txt")
+            val vpFile = File(dictDir, "book_${bookKey}_vp.txt")
 
-                val tempPrivateDict = HashMap<String, String>()
-                fun loadFile(file: File) {
-                    if (file.exists()) {
-                        file.bufferedReader().useLines { lines ->
-                            lines.forEach { line ->
-                                val parts = line.split('=', limit = 2)
-                                if (parts.size == 2) {
-                                    val key = parts[0].trim()
-                                    val valPart = parts[1].split('/', limit = 2)[0].trim()
-                                    if (key.isNotEmpty() && valPart.isNotEmpty()) {
-                                        tempPrivateDict[key] = valPart
-                                    }
+            val tempPrivateDict = HashMap<String, String>()
+            fun loadFile(file: File) {
+                if (file.exists()) {
+                    file.bufferedReader().useLines { lines ->
+                        lines.forEach { line ->
+                            val parts = line.split('=', limit = 2)
+                            if (parts.size == 2) {
+                                val key = parts[0].trim()
+                                val valPart = parts[1].split('/', limit = 2)[0].trim()
+                                if (key.isNotEmpty() && valPart.isNotEmpty()) {
+                                    tempPrivateDict[key] = valPart
                                 }
                             }
                         }
                     }
                 }
-                loadFile(vpFile)
-                loadFile(nameFile)
-                privateDict = tempPrivateDict
-                Log.d(TAG, "Loaded private dict for book $bookKey: ${privateDict.size} entries")
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-        }.start()
+            loadFile(vpFile)
+            loadFile(nameFile)
+            privateDict = tempPrivateDict
+            Log.d(TAG, "Loaded private dict for book $bookKey: ${privateDict.size} entries")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     /**

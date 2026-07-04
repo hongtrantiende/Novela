@@ -13,16 +13,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -31,17 +28,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.book.read.ReadBookUiState
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Bolt
+import io.legado.app.ui.config.translation.TranslationConfig
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
-import io.legado.app.ui.widget.components.card.GlassCard
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.utils.QuickTranslateDictHelper
 import io.legado.app.vbookextension.util.QuickTranslateEngine
 import io.legado.app.utils.MD5Utils
+import io.legado.app.utils.getPrefInt
+import io.legado.app.utils.putPrefInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
+import kotlinx.coroutines.isActive
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -58,206 +59,37 @@ fun DictManagerSheet(
     val bookKey = remember(state.book) {
         state.book?.let { MD5Utils.md5Encode16(it.bookUrl) } ?: "default"
     }
+    val bookName = remember(state.book) {
+        state.book?.name ?: "Không rõ tên"
+    }
 
-    // Tên file của từ điển riêng và chung
     val privateNameFile = "book/book_${bookKey}_name.txt"
-    val privateVpFile = "book/book_${bookKey}_vp.txt"
-    val publicNameFile = "Name.txt"
-    val publicVpFile = "VietPhrase.txt"
 
-    // Đếm số từ
-    var privateNameWordCount by remember { mutableStateOf("0 từ") }
-    var privateVpWordCount by remember { mutableStateOf("0 từ") }
-    var publicNameWordCount by remember { mutableStateOf("0 từ") }
-    var publicVpWordCount by remember { mutableStateOf("0 từ") }
-
-    var refreshTrigger by remember { mutableStateOf(0) }
-
-    // Load số từ động
-    LaunchedEffect(refreshTrigger, state.book) {
-        withContext(Dispatchers.IO) {
-            privateNameWordCount = "${QuickTranslateEngine.getWordCount(context, privateNameFile)} từ"
-            privateVpWordCount = "${QuickTranslateEngine.getWordCount(context, privateVpFile)} từ"
-            publicNameWordCount = "${QuickTranslateEngine.getWordCount(context, publicNameFile)} từ"
-            publicVpWordCount = "${QuickTranslateEngine.getWordCount(context, publicVpFile)} từ"
-        }
-    }
-
-    // Quản lý trạng thái đang sửa từ điển nào
-    var editingDictFile by remember { mutableStateOf<String?>(null) }
-    var editingDictTitle by remember { mutableStateOf("") }
-
-    AppModalBottomSheet(
-        show = show,
-        onDismissRequest = {
-            if (editingDictFile != null) {
-                editingDictFile = null
-            } else {
-                onDismissRequest()
-            }
-        }
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(0.9f)
-                .navigationBarsPadding()
-        ) {
-            if (editingDictFile == null) {
-                // Màn hình chính: Danh sách 4 từ điển (giống ảnh 1)
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    // Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AppText(
-                            text = "Quản lý từ điển",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f)
-                        )
-                        IconButton(onClick = onDismissRequest) {
-                            Icon(Icons.Default.Close, contentDescription = "Đóng")
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Phần 1: Từ điển riêng
-                    AppText(
-                        text = "Từ điển riêng",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = LegadoTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-
-                    DictCard(
-                        title = "Name",
-                        wordCount = privateNameWordCount,
-                        onClick = {
-                            editingDictFile = privateNameFile
-                            editingDictTitle = "Từ điển riêng - Name"
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    DictCard(
-                        title = "VietPhrase",
-                        wordCount = privateVpWordCount,
-                        onClick = {
-                            editingDictFile = privateVpFile
-                            editingDictTitle = "Từ điển riêng - VietPhrase"
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Phần 2: Từ điển chung
-                    AppText(
-                        text = "Từ điển chung",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = LegadoTheme.colorScheme.primary,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
-
-                    DictCard(
-                        title = "Name",
-                        wordCount = publicNameWordCount,
-                        onClick = {
-                            editingDictFile = publicNameFile
-                            editingDictTitle = "Từ điển chung - Name"
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    DictCard(
-                        title = "VietPhrase",
-                        wordCount = publicVpWordCount,
-                        onClick = {
-                            editingDictFile = publicVpFile
-                            editingDictTitle = "Từ điển chung - VietPhrase"
-                        }
-                    )
-                }
-            } else {
-                // Màn hình chỉnh sửa từ điển lồng trực tiếp bên trong (giống QuickTranslateEditScreen)
-                DictEditorContent(
-                    title = editingDictTitle,
-                    fileName = editingDictFile!!,
-                    onBack = {
-                        editingDictFile = null
-                        refreshTrigger++
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun DictCard(
-    title: String,
-    wordCount: String,
-    onClick: () -> Unit
-) {
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        cornerRadius = 12.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                AppText(
-                    text = title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                AppText(
-                    text = wordCount,
-                    fontSize = 12.sp,
-                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
-            }
-            Icon(
-                imageVector = Icons.Default.Edit,
-                contentDescription = "Chỉnh sửa",
-                tint = LegadoTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-@Composable
-fun DictEditorContent(
-    title: String,
-    fileName: String,
-    onBack: () -> Unit
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
     var searchQuery by remember { mutableStateOf("") }
+    
     var rawEntries by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
-    var filteredEntries by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
-
     var refreshListTrigger by remember { mutableStateOf(0) }
+
+    // AI settings state
+    var showAiSettingsDialog by remember { mutableStateOf(false) }
+    var tempLlmBaseUrl by remember { mutableStateOf(TranslationConfig.llmBaseUrl) }
+    var tempLlmApiKey by remember { mutableStateOf(TranslationConfig.llmApiKey) }
+    var tempLlmModel by remember { mutableStateOf(TranslationConfig.llmModel) }
+    var modelMenuExpanded by remember { mutableStateOf(false) }
+    var fetchedModels by remember { mutableStateOf<List<String>>(emptyList()) }
+    var isFetchingModels by remember { mutableStateOf(false) }
+    
+    var isScanningAi by remember { mutableStateOf(false) }
+    var scanProgressText by remember { mutableStateOf("") }
+    var scanJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    
+    var showResumeDialog by remember { mutableStateOf(false) }
+    var resumeSavedIndex by remember { mutableStateOf(-1) }
+
+    val downloadedChapters = remember(state.book) {
+        state.book?.let { io.legado.app.help.book.BookHelp.getChapterFiles(it).size } ?: 0
+    }
 
     // Dialog state
     var showAddWordDialog by remember { mutableStateOf(false) }
@@ -269,44 +101,98 @@ fun DictEditorContent(
     var inputValue by remember { mutableStateOf("") }
 
     // Load data from file
-    LaunchedEffect(refreshListTrigger) {
+    LaunchedEffect(refreshListTrigger, state.book) {
         withContext(Dispatchers.IO) {
-            rawEntries = QuickTranslateDictHelper.loadDictEntries(context, fileName)
+            rawEntries = QuickTranslateDictHelper.loadDictEntries(context, privateNameFile)
         }
     }
 
-    // Filter list ngầm mượt mà
-    LaunchedEffect(searchQuery, rawEntries) {
-        withContext(Dispatchers.Default) {
-            filteredEntries = if (searchQuery.isBlank()) {
-                rawEntries
-            } else {
-                rawEntries.filter {
-                    it.first.contains(searchQuery, ignoreCase = true) ||
-                            it.second.contains(searchQuery, ignoreCase = true)
-                }
+    // Filter and categorize entries
+    val categorizedEntries = remember(searchQuery, rawEntries, selectedTabIndex) {
+        val filtered = if (searchQuery.isBlank()) {
+            rawEntries
+        } else {
+            rawEntries.filter {
+                it.first.contains(searchQuery, ignoreCase = true) ||
+                        it.second.contains(searchQuery, ignoreCase = true)
             }
         }
+        
+        val targetTag = when (selectedTabIndex) {
+            0 -> "PER"
+            1 -> "LOC"
+            2 -> "ORG"
+            3 -> "PRON"
+            else -> "PER"
+        }
+        
+        filtered.filter { entry ->
+            val tag = entry.second.substringAfter('/', "PER").trim()
+            tag.equals(targetTag, ignoreCase = true)
+        }.map { entry ->
+            val trans = entry.second.substringBefore('/')
+            Pair(entry.first, trans)
+        }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    AppModalBottomSheet(
+        show = show,
+        onDismissRequest = onDismissRequest
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.9f)
+                .navigationBarsPadding()
+        ) {
             // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Quay lại")
+                Column(modifier = Modifier.weight(1f)) {
+                    AppText(
+                        text = "Từ điển truyện",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    AppText(
+                        text = "$bookName | Đã tải: $downloadedChapters chương",
+                        fontSize = 13.sp,
+                        color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 }
-                AppText(
-                    text = title,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
+                IconButton(onClick = {
+                    tempLlmBaseUrl = TranslationConfig.llmBaseUrl
+                    tempLlmApiKey = TranslationConfig.llmApiKey
+                    tempLlmModel = TranslationConfig.llmModel
+                    showAiSettingsDialog = true
+                }) {
+                    Icon(Icons.Default.Settings, contentDescription = "Cấu hình AI")
+                }
+                IconButton(onClick = onDismissRequest) {
+                    Icon(Icons.Default.Close, contentDescription = "Đóng")
+                }
+            }
+
+            // Tab Row
+            TabRow(
+                selectedTabIndex = selectedTabIndex,
+                containerColor = Color.Transparent,
+                contentColor = LegadoTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            ) {
+                val tabs = listOf("Tên nhân vật", "Tên địa danh", "Tên tổ chức", "Xưng hô")
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = selectedTabIndex == index,
+                        onClick = { selectedTabIndex = index },
+                        text = { Text(title, fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal) }
+                    )
+                }
             }
 
             // Search Bar
@@ -329,89 +215,248 @@ fun DictEditorContent(
                 shape = RoundedCornerShape(12.dp)
             )
 
-            // Danh sách từ
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 16.dp)
-            ) {
-                // Show maximum 200 items to avoid lag
-                val displayList = filteredEntries.take(200)
-
-                items(displayList) { entry ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                wordToEdit = entry
-                                inputKey = entry.first
-                                inputValue = entry.second
-                            }
+            // Auto Scan with AI
+            if (isScanningAi) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                AppText(
-                                    text = entry.first,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                AppText(
-                                    text = entry.second,
-                                    fontSize = 14.sp,
-                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            }
-                            IconButton(onClick = { entryToDelete = entry }) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Xóa",
-                                    tint = LegadoTheme.colorScheme.error.copy(alpha = 0.8f)
-                                )
-                            }
-                        }
-                        HorizontalDivider(
-                            color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = scanProgressText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = LegadoTheme.colorScheme.onSurface
                         )
                     }
+                    Button(
+                        onClick = {
+                            scanJob?.cancel()
+                            isScanningAi = false
+                            scanProgressText = "Đang dừng..."
+                            Toast.makeText(context, "Đã gửi yêu cầu dừng quét AI", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LegadoTheme.colorScheme.error,
+                            contentColor = LegadoTheme.colorScheme.onError
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("Dừng", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val book = state.book ?: return@OutlinedButton
+                            if (TranslationConfig.llmBaseUrl.isBlank() || TranslationConfig.llmApiKey.isBlank()) {
+                                Toast.makeText(context, "Vui lòng cấu hình API AI trước", Toast.LENGTH_SHORT).show()
+                                return@OutlinedButton
+                            }
+                            
+                            val startAiScan: (Int) -> Unit = { fromIndex ->
+                                isScanningAi = true
+                                val newJob = scope.launch(Dispatchers.IO) {
+                                    try {
+                                        val allChapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
+                                        val downloadedChapters = allChapters.filter { io.legado.app.help.book.BookHelp.hasContent(book, it) }
+                                        
+                                        val chaptersToScan = downloadedChapters.filter { it.index > fromIndex }
+                                        if (chaptersToScan.isEmpty()) {
+                                            withContext(Dispatchers.Main) {
+                                                Toast.makeText(context, "Không có chương mới nào cần quét", Toast.LENGTH_SHORT).show()
+                                            }
+                                            return@launch
+                                        }
+                                        
+                                        chaptersToScan.forEachIndexed { index, chapter ->
+                                            if (scanJob?.isCancelled == true) return@launch
+                                            
+                                            withContext(Dispatchers.Main) {
+                                                scanProgressText = "Đang quét: ${index + 1}/${chaptersToScan.size} (${chapter.title})"
+                                            }
+                                            
+                                            try {
+                                                // Gọi hàm quét AI
+                                                io.legado.app.model.translation.TranslationManager.scanAndSaveNamesWithAi(book, chapter)
+                                                // Nạp lại từ điển vào RAM gộp
+                                                io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(context, bookKey)
+                                                // Xóa cache dịch chương này
+                                                io.legado.app.model.translation.TranslationManager.deleteTranslationCache(book, chapter)
+                                                
+                                                // Lưu tiến độ quét thành công chương này
+                                                context.putPrefInt("ai_scan_last_index_${bookKey}", chapter.index)
+                                                
+                                                // Nạp lại danh sách từ điển để cập nhật UI ngay lập tức
+                                                val updatedEntries = QuickTranslateDictHelper.loadDictEntries(context, privateNameFile)
+                                                withContext(Dispatchers.Main) {
+                                                    rawEntries = updatedEntries
+                                                    io.legado.app.utils.TranslateUtils.clearCache()
+                                                    // Nếu là chương đang đọc, tải lại để cập nhật bản dịch
+                                                    if (chapter.index == io.legado.app.model.ReadBook.durChapterIndex) {
+                                                        io.legado.app.model.ReadBook.loadContent(false)
+                                                    }
+                                                }
+                                            } catch (e: Exception) {
+                                                // Bỏ qua lỗi của chương cụ thể để tiếp tục quét
+                                            }
+                                        }
+                                        
+                                        // Xóa bản dịch cũ của cả truyện nếu dùng STV/QT sau khi hoàn thành quét toàn bộ
+                                        io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Đã quét AI hoàn tất toàn bộ chương đã chọn!", Toast.LENGTH_LONG).show()
+                                        }
+                                    } catch (e: Exception) {
+                                        withContext(Dispatchers.Main) {
+                                            Toast.makeText(context, "Lỗi quét AI: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } finally {
+                                        withContext(Dispatchers.Main) {
+                                            isScanningAi = false
+                                            scanProgressText = ""
+                                            scanJob = null
+                                            refreshListTrigger++
+                                        }
+                                    }
+                                }
+                                scanJob = newJob
+                            }
 
-                if (filteredEntries.size >= 200) {
-                    item {
-                        Text(
-                            text = "Hiển thị tối đa 200 kết quả đầu tiên. Hãy gõ tìm kiếm để thu hẹp phạm vi.",
-                            fontSize = 12.sp,
-                            color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 16.dp),
-                            textAlign = TextAlign.Center
+                            val savedIndex = context.getPrefInt("ai_scan_last_index_${bookKey}", -1)
+                            if (savedIndex >= 0) {
+                                resumeSavedIndex = savedIndex
+                                showResumeDialog = true
+                            } else {
+                                startAiScan(-1)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Tự động quét bằng AI (Tất cả chương đã tải)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
-        }
 
-        // Floating Action Button
-        FloatingActionButton(
-            onClick = {
-                inputKey = ""
-                inputValue = ""
-                showAddWordDialog = true
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(24.dp),
-            shape = CircleShape,
-            containerColor = LegadoTheme.colorScheme.primaryContainer
-        ) {
-            Icon(Icons.Default.Add, contentDescription = "Thêm từ")
+            // Word List
+            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+                if (categorizedEntries.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AppText(
+                            text = "Không có từ khóa nào",
+                            color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            fontSize = 14.sp
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight()
+                            .padding(horizontal = 16.dp)
+                    ) {
+                        val displayList = categorizedEntries.take(200)
+                        items(displayList) { entry ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        wordToEdit = entry
+                                        inputKey = entry.first
+                                        inputValue = entry.second
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        AppText(
+                                            text = entry.first,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        AppText(
+                                            text = entry.second,
+                                            fontSize = 14.sp,
+                                            color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        )
+                                    }
+                                    IconButton(onClick = { entryToDelete = entry }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Xóa",
+                                            tint = LegadoTheme.colorScheme.error.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                }
+                                HorizontalDivider(
+                                    color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                )
+                            }
+                        }
+
+                        if (categorizedEntries.size >= 200) {
+                            item {
+                                Text(
+                                    text = "Hiển thị tối đa 200 kết quả đầu tiên. Hãy gõ tìm kiếm để thu hẹp phạm vi.",
+                                    fontSize = 12.sp,
+                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // FAB
+                FloatingActionButton(
+                    onClick = {
+                        inputKey = ""
+                        inputValue = ""
+                        showAddWordDialog = true
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(24.dp),
+                    shape = CircleShape,
+                    containerColor = LegadoTheme.colorScheme.primaryContainer
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Thêm từ")
+                }
+            }
         }
 
         // Dialogs
@@ -442,15 +487,28 @@ fun DictEditorContent(
                 confirmText = "Xác nhận",
                 onConfirm = {
                     if (inputKey.isNotBlank() && inputValue.isNotBlank()) {
+                        val targetTag = when (selectedTabIndex) {
+                            0 -> "PER"
+                            1 -> "LOC"
+                            2 -> "ORG"
+                            3 -> "PRON"
+                            else -> "PER"
+                        }
                         scope.launch(Dispatchers.IO) {
                             QuickTranslateDictHelper.addOrUpdateEntry(
                                 context,
-                                fileName,
+                                privateNameFile,
                                 inputKey.trim(),
-                                inputValue.trim()
+                                "${inputValue.trim()}/$targetTag"
                             )
+                            val book = state.book
+                            if (book != null) {
+                                io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                            }
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(context, "Đã thêm từ thành công", Toast.LENGTH_SHORT).show()
+                                io.legado.app.utils.TranslateUtils.clearCache()
+                                io.legado.app.model.ReadBook.loadContent(false)
                                 showAddWordDialog = false
                                 refreshListTrigger++
                             }
@@ -474,7 +532,7 @@ fun DictEditorContent(
                             onValueChange = { inputKey = it },
                             label = { Text("Từ gốc (tiếng Trung)") },
                             singleLine = true,
-                            enabled = false, // Không cho sửa key gốc
+                            enabled = false,
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -490,15 +548,28 @@ fun DictEditorContent(
                 confirmText = "Cập nhật",
                 onConfirm = {
                     if (inputValue.isNotBlank()) {
+                        val targetTag = when (selectedTabIndex) {
+                            0 -> "PER"
+                            1 -> "LOC"
+                            2 -> "ORG"
+                            3 -> "PRON"
+                            else -> "PER"
+                        }
                         scope.launch(Dispatchers.IO) {
                             QuickTranslateDictHelper.addOrUpdateEntry(
                                 context,
-                                fileName,
+                                privateNameFile,
                                 inputKey.trim(),
-                                inputValue.trim()
+                                "${inputValue.trim()}/$targetTag"
                             )
+                            val book = state.book
+                            if (book != null) {
+                                io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                            }
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(context, "Cập nhật thành công", Toast.LENGTH_SHORT).show()
+                                io.legado.app.utils.TranslateUtils.clearCache()
+                                io.legado.app.model.ReadBook.loadContent(false)
                                 wordToEdit = null
                                 refreshListTrigger++
                             }
@@ -507,6 +578,148 @@ fun DictEditorContent(
                 },
                 dismissText = "Hủy",
                 onDismiss = { wordToEdit = null }
+            )
+        }
+
+        if (showAiSettingsDialog) {
+            AppAlertDialog(
+                show = true,
+                onDismissRequest = { showAiSettingsDialog = false },
+                title = "Cấu hình AI Quét Từ Điển",
+                content = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = tempLlmBaseUrl,
+                            onValueChange = { tempLlmBaseUrl = it },
+                            label = { Text("Base URL") },
+                            placeholder = { Text("https://api.openai.com/v1") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        OutlinedTextField(
+                            value = tempLlmApiKey,
+                            onValueChange = { tempLlmApiKey = it },
+                            label = { Text("API Key") },
+                            placeholder = { Text("sk-...") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(8.dp)
+                        )
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = tempLlmModel,
+                                onValueChange = { tempLlmModel = it },
+                                label = { Text("Model") },
+                                placeholder = { Text("gpt-3.5-turbo") },
+                                trailingIcon = {
+                                    if (isFetchingModels) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    } else {
+                                        Text(
+                                            text = "Quét",
+                                            color = LegadoTheme.colorScheme.primary,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier
+                                                .clickable {
+                                                    if (tempLlmBaseUrl.isBlank()) {
+                                                        Toast.makeText(context, "Vui lòng nhập Base URL", Toast.LENGTH_SHORT).show()
+                                                        return@clickable
+                                                    }
+                                                    scope.launch(Dispatchers.IO) {
+                                                        isFetchingModels = true
+                                                        try {
+                                                            val url = if (tempLlmBaseUrl.endsWith("/")) {
+                                                                tempLlmBaseUrl + "models"
+                                                            } else {
+                                                                tempLlmBaseUrl + "/models"
+                                                            }
+                                                            val requestBuilder = okhttp3.Request.Builder().url(url)
+                                                            if (tempLlmApiKey.isNotBlank()) {
+                                                                requestBuilder.addHeader("Authorization", "Bearer $tempLlmApiKey")
+                                                            }
+                                                            val request = requestBuilder.build()
+                                                            val response = io.legado.app.help.http.okHttpClient.newCall(request).execute()
+                                                            try {
+                                                                if (response.isSuccessful) {
+                                                                    val bodyStr = response.body?.string() ?: ""
+                                                                    val json = org.json.JSONObject(bodyStr)
+                                                                    val dataArr = json.optJSONArray("data")
+                                                                    val modelsList = ArrayList<String>()
+                                                                    if (dataArr != null) {
+                                                                        for (i in 0 until dataArr.length()) {
+                                                                            val modelObj = dataArr.getJSONObject(i)
+                                                                            val id = modelObj.optString("id")
+                                                                            if (!id.isNullOrBlank()) {
+                                                                                modelsList.add(id)
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    withContext(Dispatchers.Main) {
+                                                                        if (modelsList.isNotEmpty()) {
+                                                                            fetchedModels = modelsList.sorted()
+                                                                            modelMenuExpanded = true
+                                                                        } else {
+                                                                            Toast.makeText(context, "Không tìm thấy model nào", Toast.LENGTH_SHORT).show()
+                                                                        }
+                                                                    }
+                                                                } else {
+                                                                    withContext(Dispatchers.Main) {
+                                                                        Toast.makeText(context, "Lỗi HTTP: ${response.code}", Toast.LENGTH_SHORT).show()
+                                                                    }
+                                                                }
+                                                            } finally {
+                                                                response.close()
+                                                            }
+                                                        } catch (e: Exception) {
+                                                            withContext(Dispatchers.Main) {
+                                                                Toast.makeText(context, "Lỗi kết nối: ${e.message}", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                        } finally {
+                                                            isFetchingModels = false
+                                                        }
+                                                    }
+                                                }
+                                                .padding(8.dp)
+                                        )
+                                    }
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            DropdownMenu(
+                                expanded = modelMenuExpanded,
+                                onDismissRequest = { modelMenuExpanded = false },
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp)
+                            ) {
+                                fetchedModels.forEach { modelName ->
+                                    DropdownMenuItem(
+                                        text = { Text(modelName, fontSize = 13.sp) },
+                                        onClick = {
+                                            tempLlmModel = modelName
+                                            modelMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmText = "Lưu",
+                onConfirm = {
+                    TranslationConfig.llmBaseUrl = tempLlmBaseUrl
+                    TranslationConfig.llmApiKey = tempLlmApiKey
+                    TranslationConfig.llmModel = tempLlmModel
+                    Toast.makeText(context, "Đã lưu cấu hình AI", Toast.LENGTH_SHORT).show()
+                    showAiSettingsDialog = false
+                },
+                dismissText = "Hủy",
+                onDismiss = { showAiSettingsDialog = false }
             )
         }
 
@@ -521,11 +734,17 @@ fun DictEditorContent(
                     scope.launch(Dispatchers.IO) {
                         QuickTranslateDictHelper.deleteEntry(
                             context,
-                            fileName,
+                            privateNameFile,
                             entryToDelete!!.first
                         )
+                        val book = state.book
+                        if (book != null) {
+                            io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                        }
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, "Đã xóa từ thành công", Toast.LENGTH_SHORT).show()
+                            io.legado.app.utils.TranslateUtils.clearCache()
+                            io.legado.app.model.ReadBook.loadContent(false)
                             entryToDelete = null
                             refreshListTrigger++
                         }
@@ -533,6 +752,133 @@ fun DictEditorContent(
                 },
                 dismissText = "Hủy",
                 onDismiss = { entryToDelete = null }
+            )
+        }
+
+        if (showResumeDialog) {
+            val book = state.book
+            val bookKeyStr = bookKey
+            AppAlertDialog(
+                show = true,
+                onDismissRequest = { showResumeDialog = false },
+                title = "Tiếp tục quét từ điển",
+                text = "Đã tìm thấy tiến độ quét trước đó. Bạn có muốn tiếp tục quét từ chương tiếp theo hay quét lại từ đầu?",
+                confirmText = "Tiếp tục",
+                onConfirm = {
+                    showResumeDialog = false
+                    if (book != null) {
+                        isScanningAi = true
+                        val newJob = scope.launch(Dispatchers.IO) {
+                            try {
+                                val allChapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
+                                val downloadedChapters = allChapters.filter { io.legado.app.help.book.BookHelp.hasContent(book, it) }
+                                val chaptersToScan = downloadedChapters.filter { it.index > resumeSavedIndex }
+                                
+                                if (chaptersToScan.isEmpty()) {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Không có chương mới nào cần quét", Toast.LENGTH_SHORT).show()
+                                    }
+                                    return@launch
+                                }
+                                
+                                chaptersToScan.forEachIndexed { index, chapter ->
+                                    if (scanJob?.isCancelled == true) return@launch
+                                    withContext(Dispatchers.Main) {
+                                        scanProgressText = "Đang quét: ${index + 1}/${chaptersToScan.size} (${chapter.title})"
+                                    }
+                                    try {
+                                        io.legado.app.model.translation.TranslationManager.scanAndSaveNamesWithAi(book, chapter)
+                                        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(context, bookKeyStr)
+                                        io.legado.app.model.translation.TranslationManager.deleteTranslationCache(book, chapter)
+                                        context.putPrefInt("ai_scan_last_index_${bookKeyStr}", chapter.index)
+                                        val updatedEntries = QuickTranslateDictHelper.loadDictEntries(context, privateNameFile)
+                                        withContext(Dispatchers.Main) {
+                                            rawEntries = updatedEntries
+                                            io.legado.app.utils.TranslateUtils.clearCache()
+                                            if (chapter.index == io.legado.app.model.ReadBook.durChapterIndex) {
+                                                io.legado.app.model.ReadBook.loadContent(false)
+                                            }
+                                        }
+                                    } catch (e: Exception) {}
+                                }
+                                io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Đã quét AI hoàn tất toàn bộ chương đã chọn!", Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Lỗi quét AI: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            } finally {
+                                withContext(Dispatchers.Main) {
+                                    isScanningAi = false
+                                    scanProgressText = ""
+                                    scanJob = null
+                                    refreshListTrigger++
+                                }
+                            }
+                        }
+                        scanJob = newJob
+                    }
+                },
+                dismissText = "Quét lại từ đầu",
+                onDismiss = {
+                    showResumeDialog = false
+                    context.putPrefInt("ai_scan_last_index_${bookKeyStr}", -1)
+                    if (book != null) {
+                        isScanningAi = true
+                        val newJob = scope.launch(Dispatchers.IO) {
+                            try {
+                                val allChapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(book.bookUrl)
+                                val downloadedChapters = allChapters.filter { io.legado.app.help.book.BookHelp.hasContent(book, it) }
+                                
+                                if (downloadedChapters.isEmpty()) {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Không tìm thấy chương nào đã tải xuống", Toast.LENGTH_SHORT).show()
+                                    }
+                                    return@launch
+                                }
+                                
+                                downloadedChapters.forEachIndexed { index, chapter ->
+                                    if (scanJob?.isCancelled == true) return@launch
+                                    withContext(Dispatchers.Main) {
+                                        scanProgressText = "Đang quét: ${index + 1}/${downloadedChapters.size} (${chapter.title})"
+                                    }
+                                    try {
+                                        io.legado.app.model.translation.TranslationManager.scanAndSaveNamesWithAi(book, chapter)
+                                        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(context, bookKeyStr)
+                                        io.legado.app.model.translation.TranslationManager.deleteTranslationCache(book, chapter)
+                                        context.putPrefInt("ai_scan_last_index_${bookKeyStr}", chapter.index)
+                                        val updatedEntries = QuickTranslateDictHelper.loadDictEntries(context, privateNameFile)
+                                        withContext(Dispatchers.Main) {
+                                            rawEntries = updatedEntries
+                                            io.legado.app.utils.TranslateUtils.clearCache()
+                                            if (chapter.index == io.legado.app.model.ReadBook.durChapterIndex) {
+                                                io.legado.app.model.ReadBook.loadContent(false)
+                                            }
+                                        }
+                                    } catch (e: Exception) {}
+                                }
+                                io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Đã quét AI hoàn tất toàn bộ chương đã tải!", Toast.LENGTH_LONG).show()
+                                }
+                            } catch (e: Exception) {
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Lỗi quét AI: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            } finally {
+                                withContext(Dispatchers.Main) {
+                                    isScanningAi = false
+                                    scanProgressText = ""
+                                    scanJob = null
+                                    refreshListTrigger++
+                                }
+                            }
+                        }
+                        scanJob = newJob
+                    }
+                }
             )
         }
     }

@@ -60,8 +60,7 @@ import io.legado.app.ui.book.read.sheet.PageKeyConfigSheet
 import io.legado.app.ui.book.read.sheet.PhotoSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudConfigSheet
 import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
-import io.legado.app.ui.book.read.sheet.ScanNamesSheet
-import io.legado.app.ui.book.read.sheet.NerAnalyzeSheet
+
 import io.legado.app.ui.book.read.sheet.DictManagerSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
@@ -199,19 +198,7 @@ fun ReadBookScreen(
     // for proper enter/exit animations
     val dismissSheet = { onIntent(ReadBookIntent.DismissSheet) }
 
-    ScanNamesSheet(
-        show = state.activeSheet is ReadBookSheet.ScanNames,
-        selectedText = (state.activeSheet as? ReadBookSheet.ScanNames)?.selectedText,
-        state = state,
-        onIntent = onIntent,
-        onDismissRequest = dismissSheet
-    )
 
-    NerAnalyzeSheet(
-        show = state.activeSheet is ReadBookSheet.NerAnalyze,
-        state = state,
-        onDismissRequest = dismissSheet
-    )
 
     DictManagerSheet(
         show = state.activeSheet is ReadBookSheet.DictManager,

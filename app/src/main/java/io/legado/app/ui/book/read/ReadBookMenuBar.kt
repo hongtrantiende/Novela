@@ -1628,25 +1628,7 @@ private fun OverflowDropdownMenu(
             )
         }
 
-        // Quét Name
-        RoundDropdownMenuItem(
-            text = "Quét Name chương này",
-            leadingIcon = menuIcon(Icons.Default.Search),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ScanNames()))
-            }
-        )
 
-        // Phân tích NER
-        RoundDropdownMenuItem(
-            text = "Phân tích NER",
-            leadingIcon = menuIcon(Icons.Default.Search),
-            onClick = {
-                dismiss()
-                onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.NerAnalyze))
-            }
-        )
 
         // Quản lý từ điển
         RoundDropdownMenuItem(

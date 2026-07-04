@@ -545,9 +545,8 @@ private suspend fun scanNamesFromChapters(
     }
 
     if (!hasChinese) {
-        // Quét tên viết hoa tiếng Việt
+        // Quét tên tiếng Việt hỗ trợ cả chữ hoa và chữ thường
         val nameSet = mutableSetOf<String>()
-        val nameRegex = Regex("""(?U)\b\p{Lu}\p{Ll}*(?:\s+\p{Lu}\p{Ll}*){1,3}\b""")
         
         chapters.forEachIndexed { index, chapter ->
             val content = withContext(Dispatchers.IO) {
@@ -559,22 +558,87 @@ private suspend fun scanNamesFromChapters(
                     val trimmed = sentence.trim()
                     if (trimmed.isEmpty()) return@forEach
                     
-                    val matches = nameRegex.findAll(trimmed).toList()
-                    matches.forEachIndexed { i, match ->
-                        if (i == 0 && match.range.first == 0) {
-                            return@forEachIndexed
+                    // Làm sạch dấu câu, chỉ giữ lại chữ cái và khoảng trắng
+                    val cleanSentence = trimmed.replace(Regex("[^\\p{L}\\s]"), " ")
+                    val words = cleanSentence.split(Regex("\\s+")).filter { it.isNotBlank() }
+                    
+                    var i = 0
+                    while (i < words.size) {
+                        var matchedSurname: String? = null
+                        var isCompound = false
+                        
+                        // 1. Kiểm tra họ kép trước
+                        if (i + 1 < words.size) {
+                            val twoWords = "${words[i]} ${words[i+1]}"
+                            if (COMPOUND_SURNAMES.any { it.equals(twoWords, ignoreCase = true) }) {
+                                matchedSurname = twoWords
+                                isCompound = true
+                            }
                         }
-                        val word = match.value.trim()
-                        val wordCount = word.split(Regex("\\s+")).size
-                        if (wordCount in 2..4) {
-                            nameSet.add(word)
+                        
+                        // 2. Kiểm tra họ đơn
+                        if (matchedSurname == null) {
+                            val oneWord = words[i]
+                            if (COMMON_SURNAMES.any { it.equals(oneWord, ignoreCase = true) }) {
+                                matchedSurname = oneWord
+                                isCompound = false
+                            }
+                        }
+                        
+                        if (matchedSurname != null) {
+                            // Trích xuất ứng cử viên tên từ 2 đến 4 từ
+                            for (len in 2..4) {
+                                if (i + len <= words.size) {
+                                    val nameWords = words.subList(i, i + len)
+                                    val nameCandidate = nameWords.joinToString(" ")
+                                    // Loại bỏ các từ kết thúc bằng địa danh hoặc tổ chức để lọc bớt
+                                    val isLocOrOrg = nameCandidate.endsWith("Thành", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Thôn", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Trấn", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Sơn", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Động", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Giang", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Hải", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Cốc", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Điện", ignoreCase = true) ||
+                                                     nameCandidate.endsWith("Quốc", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Khư", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Mộ", ignoreCase = true) ||
+                                                     nameCandidate.endsWith("Tinh", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Tinh Cầu", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Đại Lục", ignoreCase = true) ||
+                                                     nameCandidate.endsWith("Môn", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Phái", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Tông", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Hội", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Gia", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Viện", ignoreCase = true) ||
+                                                     nameCandidate.endsWith("Đường", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Các", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Cung", ignoreCase = true) ||
+                                                     nameCandidate.endsWith("Lâu", ignoreCase = true) || 
+                                                     nameCandidate.endsWith("Liên Minh", ignoreCase = true)
+                                                     
+                                    if (!isLocOrOrg) {
+                                        nameSet.add(nameCandidate)
+                                    }
+                                }
+                            }
+                            i += if (isCompound) 2 else 1
+                        } else {
+                            i++
                         }
                     }
                 }
             }
             onProgress(index + 1, chapters.size)
         }
-        return@withContext nameSet.map { Pair(it, it) }.sortedBy { it.first }
+        return@withContext nameSet.map {
+            val capitalized = it.split(" ").joinToString(" ") { word -> 
+                word.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase() else char.toString() } 
+            }
+            Pair(capitalized, capitalized)
+        }.sortedBy { it.first }
     }
 
     // Nếu là tiếng Trung, kiểm tra xem model LAC đã tải và khởi tạo được chưa
@@ -608,11 +672,18 @@ private suspend fun scanNamesFromChapters(
             val displayTranslation = if (name.any { it.code in 0x4E00..0x9FFF }) {
                 io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, name, targetMode)
             } else {
-                name
+                name.split(" ").joinToString(" ") { it.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase() else char.toString() } }
             }
             nameList.add(Pair(name, displayTranslation))
         }
-        nameList.sortedBy { it.second }
+        nameList.filter { item ->
+            val nameToCheck = item.second.trim()
+            val startsWithCompound = COMPOUND_SURNAMES.any { nameToCheck.startsWith(it, ignoreCase = true) }
+            val startsWithSingle = COMMON_SURNAMES.any { surname ->
+                nameToCheck.startsWith(surname + " ", ignoreCase = true) || nameToCheck.equals(surname, ignoreCase = true)
+            }
+            startsWithCompound || startsWithSingle
+        }.sortedBy { it.second }
     } else {
         // Fallback quét bằng từ điển có sẵn
         scanNamesByDict(context, book, chapters, onProgress)
@@ -666,13 +737,48 @@ private suspend fun scanNamesByDict(
         val displayTranslation = if (name.any { it.code in 0x4E00..0x9FFF }) {
             io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, name, targetMode)
         } else {
-            name
+            name.split(" ").joinToString(" ") { it.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase() else char.toString() } }
         }
         nameList.add(Pair(name, displayTranslation))
     }
     
-    nameList.sortedBy { it.second }
+    nameList.filter { item ->
+        val nameToCheck = item.second.trim()
+        val startsWithCompound = COMPOUND_SURNAMES.any { nameToCheck.startsWith(it, ignoreCase = true) }
+        val startsWithSingle = COMMON_SURNAMES.any { surname ->
+            nameToCheck.startsWith(surname + " ", ignoreCase = true) || nameToCheck.equals(surname, ignoreCase = true)
+        }
+        startsWithCompound || startsWithSingle
+    }.sortedBy { it.second }
 }
+
+private val COMMON_SURNAMES = setOf(
+    "An", "Anh", "Ao", "Ân", "Ẩn", "Âu", "Ất",
+    "Ba", "Bạc", "Bạch", "Bàn", "Bao", "Báo", "Bạt", "Băng", "Bì", "Bỉ", "Bính", "Bình", "Bí", "Biện", "Bồ", "Bùi",
+    "Ca", "Cáp", "Cát", "Cao", "Càn", "Cầm", "Chử", "Chúc", "Chung", "Chương", "Cố", "Cổ", "Cung", "Cự", "Cơ", "Cảnh", "Cấn", "Cù",
+    "Danh", "Diêm", "Diệp", "Doãn", "Dư", "Dương", "Dịch", "Dã",
+    "Đàm", "Đào", "Đắc", "Đặc", "Đăng", "Đặng", "Địch", "Đinh", "Điền", "Đoàn", "Đỗ", "Đồng", "Đổng", "Đới", "Đường",
+    "Giả", "Giang", "Giao", "Giáp",
+    "Hà", "Hạ", "Hác", "Hải", "Hàn", "Hằng", "Hầu", "Hình", "Hy", "Hoa", "Hoài", "Hoàn", "Hoàng", "Huỳnh", "Hồng", "Hộ", "Hứa", "Hùng", "Hướng",
+    "Kha", "Khang", "Khâu", "Khương", "Khổng", "Khuất", "Khúc", "Khôi", "Kiều", "Kim", "Kỷ",
+    "La", "Lã", "Lại", "Lạc", "Lâm", "Lăng", "Lãnh", "Lê", "Liên", "Liễu", "Lô", "Lộ", "Lục", "Lôi", "Long", "Lư", "Lương", "Lưu", "Lý",
+    "Ma", "Mai", "Man", "Mạc", "Mạnh", "Mao", "Mễ", "Miêu", "Minh", "Mông", "Mộ", "Mục", "Mặc",
+    "Nam", "Nha", "Nhạc", "Nhan", "Nhâm", "Nhượng", "Niết", "Ninh", "Nông",
+    "Ô", "Ôn", "Uất",
+    "Phá", "Phán", "Phạm", "Phan", "Phó", "Phù", "Phùng", "Phương", "Phượng",
+    "Quản", "Quang", "Quách", "Quân",
+    "Sài", "Sách", "Sầm",
+    "Tạ", "Tào", "Tăng", "Tân", "Tấn", "Tất", "Tề", "Tiết", "Tiêu", "Tiên", "Tông", "Tần", "Tổ", "Tô", "Tống", "Tơ", "Tư", "Tuyên",
+    "Thạch", "Thái", "Thang", "Thanh", "Thành", "Thảo", "Thầm", "Thẩm", "Thân", "Thần", "Thập", "Thế", "Thị", "Thích", "Thiên", "Thiện", "Thiệu", "Thủ", "Thục", "Thương", "Thư", "Thừa", "Thôi", "Thường", "Trang", "Trình", "Trác", "Trì", "Triệu", "Trương", "Trịnh", "Trầm",
+    "Uông", "Ung", "Uất", "Uyển",
+    "Vạn", "Văn", "Vân", "Vĩ", "Vi", "Vệ", "Viên", "Vưu", "Vũ", "Võ", "Vương",
+    "Xa", "Xà", "Xương",
+    "Y", "Yên"
+)
+
+private val COMPOUND_SURNAMES = setOf(
+    "Nam Cung", "Đông Phương", "Độc Cô", "Mộ Dung", "Hoàng Phủ", "Thượng Quan", "Gia Cát", "Tư Mã", "Âu Dương", "Uất Trì", "Tư Đồ"
+)
 
 private suspend fun scanNamesWithAi(
     book: Book,
