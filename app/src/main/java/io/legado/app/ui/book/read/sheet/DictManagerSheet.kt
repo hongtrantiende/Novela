@@ -2,6 +2,8 @@ package io.legado.app.ui.book.read.sheet
 
 import android.content.Context
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,6 +32,8 @@ import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.book.read.ReadBookUiState
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
 import io.legado.app.ui.config.translation.TranslationConfig
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.text.AppText
@@ -89,6 +93,49 @@ fun DictManagerSheet(
     
     var showResumeDialog by remember { mutableStateOf(false) }
     var resumeSavedIndex by remember { mutableStateOf(-1) }
+
+    var showImportBookModeDialog by remember { mutableStateOf(false) }
+    var importedUriBook by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    val bookImportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            importedUriBook = uri
+            showImportBookModeDialog = true
+        }
+    }
+
+    val bookExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/plain")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    context.contentResolver.openOutputStream(uri)?.use { output ->
+                        val file = QuickTranslateDictHelper.getDictFile(context, privateNameFile)
+                        if (file.exists()) {
+                            file.inputStream().use { input ->
+                                input.copyTo(output)
+                            }
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Xuất từ điển thành công!", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, "Từ điển trống, không có gì để xuất!", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(context, "Lỗi xuất từ điển: ${e.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+        }
+    }
 
     val downloadedChapters = remember(state.book) {
         state.book?.let { io.legado.app.help.book.BookHelp.getChapterFiles(it).size } ?: 0
@@ -167,6 +214,19 @@ fun DictManagerSheet(
                         fontSize = 13.sp,
                         color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
+                }
+                IconButton(onClick = {
+                    val book = state.book
+                    if (book != null) {
+                        bookExportLauncher.launch("book_${bookKey}_name.txt")
+                    }
+                }) {
+                    Icon(Icons.Default.CloudDownload, contentDescription = "Xuất file TXT")
+                }
+                IconButton(onClick = {
+                    bookImportLauncher.launch("*/*")
+                }) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = "Nhập file TXT")
                 }
                 IconButton(onClick = {
                     tempLlmBaseUrl = TranslationConfig.llmBaseUrl
@@ -713,6 +773,105 @@ fun DictManagerSheet(
                     if (book != null) {
                         io.legado.app.service.AiScanService.start(context, book.bookUrl, -1)
                     }
+                }
+            )
+        }
+
+        if (showImportBookModeDialog && importedUriBook != null) {
+            val book = state.book
+            var importMode by remember { mutableIntStateOf(1) } // 0: Thay thế, 1: Gộp, 2: Chỉ thêm thiếu
+            AppAlertDialog(
+                show = true,
+                onDismissRequest = {
+                    showImportBookModeDialog = false
+                    importedUriBook = null
+                },
+                title = "Chọn chế độ nhập từ điển",
+                content = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { importMode = 0 }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = importMode == 0, onClick = { importMode = 0 })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Thay thế toàn bộ từ điển hiện tại")
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { importMode = 1 }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = importMode == 1, onClick = { importMode = 1 })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Gộp (ghi đè các từ trùng lặp)")
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { importMode = 2 }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = importMode == 2, onClick = { importMode = 2 })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Chỉ thêm từ mới (giữ nguyên từ trùng)")
+                        }
+                    }
+                },
+                confirmText = "Nhập",
+                onConfirm = {
+                    showImportBookModeDialog = false
+                    val uri = importedUriBook
+                    if (uri != null) {
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                context.contentResolver.openInputStream(uri)?.use { stream ->
+                                    val success = QuickTranslateDictHelper.importDict(
+                                        context,
+                                        privateNameFile,
+                                        stream,
+                                        importMode
+                                    )
+                                    withContext(Dispatchers.Main) {
+                                        if (success) {
+                                            Toast.makeText(context, "Nhập từ điển thành công!", Toast.LENGTH_SHORT).show()
+                                            // Reload dict in RAM
+                                            QuickTranslateEngine.initBookPrivateDict(context, bookKey)
+                                            // Clear translate cache
+                                            if (book != null) {
+                                                io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                                            }
+                                            // Reload list
+                                            refreshListTrigger++
+                                            // Reload content if current chapter is active
+                                            io.legado.app.utils.TranslateUtils.clearCache()
+                                            io.legado.app.model.ReadBook.loadContent(false)
+                                        } else {
+                                            Toast.makeText(context, "Lỗi phân tích cú pháp từ điển!", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(context, "Lỗi nhập file: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            } finally {
+                                importedUriBook = null
+                            }
+                        }
+                    }
+                },
+                dismissText = "Hủy",
+                onDismiss = {
+                    showImportBookModeDialog = false
+                    importedUriBook = null
                 }
             )
         }
