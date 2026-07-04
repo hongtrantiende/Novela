@@ -115,6 +115,7 @@ class ExportBookService : BaseService(), KoinComponent {
     }
 
     private val translationCacheRepository: TranslationCacheGateway by inject()
+    private val translateChapterUseCase: io.legado.app.domain.usecase.TranslateChapterUseCase by inject()
 
     private val groupKey = "${appCtx.packageName}.exportBook"
     private val waitExportBooks = linkedMapOf<String, ExportConfig>()
@@ -217,19 +218,55 @@ class ExportBookService : BaseService(), KoinComponent {
                 try {
                     book ?: throw NoStackTraceException("Lỗi khi tải sách ${bookUrl}")
                     refreshChapterList(book)
+
+                    val isTranslateEnabled = io.legado.app.utils.TranslateUtils.isTranslateEnabled()
+                    val translationEngine = TranslationConfig.translationEngine
+
+                    if (isTranslateEnabled && translationEngine == "STV") {
+                        val chapters = appDb.bookChapterDao.getChapterList(book.bookUrl)
+                        val scopeSet = exportConfig.epubScope?.takeIf { it.isNotBlank() }?.let { parseScope(it) }
+                        val targetChapters = chapters.filterIndexed { index, _ -> scopeSet == null || scopeSet.contains(index) }
+                        val totalToTranslate = targetChapters.size
+                        
+                        targetChapters.forEachIndexed { index, chapter ->
+                            ensureActive()
+                            if (!translationCacheRepository.getCacheFile(book, chapter, TranslationConfig.llmTargetLanguage).exists()) {
+                                val chProgressText = "Đang dịch: ${chapter.title} (${index + 1}/$totalToTranslate)"
+                                notificationContentText = chProgressText
+                                exportMsg[book.bookUrl] = chProgressText
+                                upExportNotification()
+                                notifyExportBookChanged(book.bookUrl)
+                                
+                                try {
+                                    translateChapterUseCase.execute(
+                                        book = book,
+                                        bookChapter = chapter,
+                                        targetLanguage = TranslationConfig.llmTargetLanguage,
+                                        onProgress = {},
+                                        onTranslateStarted = {}
+                                    )
+                                } catch (e: Throwable) {
+                                    AppLog.put("Lỗi dịch chương <${chapter.title}> khi xuất", e)
+                                }
+                            }
+                        }
+                    }
+
                     notificationContentText = getString(
                         R.string.export_book_notification_content,
                         book.name,
                         waitExportBooks.size
                     )
                     upExportNotification()
+
                     when (exportConfig.type) {
                         "epub" -> {
                             if (exportConfig.epubScope.isNullOrBlank()) {
-                                exportEpub(exportConfig.path, book)
-                                // Also export translation if cache exists (VIP only)
-                                if (io.legado.app.help.MemberManager.isVip && hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
-                                    exportEpub(exportConfig.path, book, ContentSource.Translation)
+                                if (isTranslateEnabled) {
+                                    val source = if (translationEngine == "STV") ContentSource.Translation else ContentSource.Original
+                                    exportEpub(exportConfig.path, book, source)
+                                } else {
+                                    exportEpub(exportConfig.path, book, ContentSource.Original)
                                 }
                             } else {
                                 CustomExporter(
@@ -248,11 +285,12 @@ class ExportBookService : BaseService(), KoinComponent {
                             exportCbz(exportConfig.path, book, exportConfig.epubScope, true)
                         }
                         else -> {
-                            exportTxt(exportConfig.path, book, exportConfig.epubScope)
-                            // Also export translation if cache exists (VIP only)
-                            if (io.legado.app.help.MemberManager.isVip && hasAnyTranslatedChapter(book, TranslationConfig.llmTargetLanguage)) {
+                            if (isTranslateEnabled) {
+                                val source = if (translationEngine == "STV") ContentSource.Translation else ContentSource.Original
                                 val fileDoc = FileDoc.fromDir(exportConfig.path)
-                                exportTxt(fileDoc, book, ContentSource.Translation, exportConfig.epubScope)
+                                exportTxt(fileDoc, book, source, exportConfig.epubScope)
+                            } else {
+                                exportTxt(exportConfig.path, book, exportConfig.epubScope)
                             }
                         }
                     }
@@ -304,9 +342,11 @@ class ExportBookService : BaseService(), KoinComponent {
 
     private suspend fun exportTxt(fileDoc: FileDoc, book: Book, source: ContentSource, scopeStr: String? = null) {
         val targetLanguage = TranslationConfig.llmTargetLanguage
-        val filename = when (source) {
-            ContentSource.Original -> book.getExportFileName("txt")
-            ContentSource.Translation -> getTranslatedFileName(book.getExportFileName("txt"), targetLanguage)
+        val isTranslateEnabled = io.legado.app.utils.TranslateUtils.isTranslateEnabled()
+        val filename = if (isTranslateEnabled) {
+            getTranslatedFileName(book.getExportFileName("txt"), targetLanguage)
+        } else {
+            book.getExportFileName("txt")
         }
         fileDoc.find(filename)?.delete()
 
@@ -652,9 +692,11 @@ class ExportBookService : BaseService(), KoinComponent {
 
     private suspend fun exportEpub(fileDoc: FileDoc, book: Book, source: ContentSource) {
         val targetLanguage = TranslationConfig.llmTargetLanguage
-        val filename = when (source) {
-            ContentSource.Original -> book.getExportFileName("epub")
-            ContentSource.Translation -> getTranslatedFileName(book.getExportFileName("epub"), targetLanguage)
+        val isTranslateEnabled = io.legado.app.utils.TranslateUtils.isTranslateEnabled()
+        val filename = if (isTranslateEnabled) {
+            getTranslatedFileName(book.getExportFileName("epub"), targetLanguage)
+        } else {
+            book.getExportFileName("epub")
         }
         fileDoc.find(filename)?.delete()
 
@@ -874,7 +916,8 @@ class ExportBookService : BaseService(), KoinComponent {
                     includeTitle = false,
                     useReplace = useReplace,
                     chineseConvert = false,
-                    reSegment = false
+                    reSegment = false,
+                    translate = if (source == ContentSource.Translation) false else io.legado.app.utils.TranslateUtils.isTranslateEnabled()
                 ).toString()
             val title = chapter.run {
                 // 不导出vip标识
@@ -986,7 +1029,11 @@ class ExportBookService : BaseService(), KoinComponent {
 
             val fileDoc = FileDoc.fromDir(path)
 
-            val (contentModel, epubList) = createEpubs(book, fileDoc)
+            val isTranslateEnabled = io.legado.app.utils.TranslateUtils.isTranslateEnabled()
+            val translationEngine = TranslationConfig.translationEngine
+            val source = if (isTranslateEnabled && translationEngine == "STV") ContentSource.Translation else ContentSource.Original
+
+            val (contentModel, epubList) = createEpubs(book, fileDoc, source)
             var progressBar = 0.0
             epubList.forEachIndexed { index, ep ->
                 val (filename, epubBook) = ep
@@ -995,7 +1042,8 @@ class ExportBookService : BaseService(), KoinComponent {
                     contentModel,
                     book,
                     epubBook,
-                    index
+                    index,
+                    source
                 ) { _, _ ->
                     // 将章节写入内存时更新进度条
                     postEvent(EventBus.EXPORT_BOOK, book.bookUrl)
@@ -1028,6 +1076,7 @@ class ExportBookService : BaseService(), KoinComponent {
             book: Book,
             epubBook: EpubBook,
             epubBookIndex: Int,
+            source: ContentSource,
             updateProgress: (chapterList: MutableList<BookChapter>, index: Int) -> Unit
         ) {
             //正文
@@ -1055,23 +1104,31 @@ class ExportBookService : BaseService(), KoinComponent {
             chapterList.forEachIndexed { index, chapter ->
                 coroutineContext.ensureActive()
                 updateProgress(chapterList, index)
-                BookHelp.getContent(book, chapter).let { content ->
-                    val (contentFix, resources) = fixPic(
+                val content = when (source) {
+                    ContentSource.Original -> BookHelp.getContent(book, chapter)
+                    ContentSource.Translation -> translationCacheRepository.readTranslation(book, chapter, TranslationConfig.llmTargetLanguage)
+                }
+                val (contentFix, resources) = if (source == ContentSource.Translation) {
+                    Pair(content ?: if (chapter.isVolume) "" else "null", arrayListOf())
+                } else {
+                    fixPic(
                         book,
                         content ?: if (chapter.isVolume) "" else "null",
                         chapter
                     )
-                    epubBook.resources.addAll(resources)
-                    val content1 = contentProcessor
-                        .getContent(
-                            book,
-                            chapter,
-                            contentFix,
-                            includeTitle = false,
-                            useReplace = useReplace,
-                            chineseConvert = false,
-                            reSegment = false
-                        ).toString()
+                }
+                epubBook.resources.addAll(resources)
+                val content1 = contentProcessor
+                    .getContent(
+                        book,
+                        chapter,
+                        contentFix,
+                        includeTitle = false,
+                        useReplace = useReplace,
+                        chineseConvert = false,
+                        reSegment = false,
+                        translate = if (source == ContentSource.Translation) false else io.legado.app.utils.TranslateUtils.isTranslateEnabled()
+                    ).toString()
                     val title = chapter.run {
                         // 不导出vip标识
                         isVip = false
@@ -1089,7 +1146,6 @@ class ExportBookService : BaseService(), KoinComponent {
                             "Text/chapter_${index}.html"
                         )
                     )
-                }
             }
         }
 
@@ -1104,13 +1160,15 @@ class ExportBookService : BaseService(), KoinComponent {
          */
         private fun createEpubs(
             book: Book,
-            fileDoc: FileDoc
+            fileDoc: FileDoc,
+            source: ContentSource
         ): Pair<String, List<Pair<String, EpubBook>>> {
             val paresNumOfEpub = paresNumOfEpub(scope.size, size)
             val result: MutableList<Pair<String, EpubBook>> = ArrayList(paresNumOfEpub)
             var contentModel = ""
             for (i in 1..paresNumOfEpub) {
-                val filename = book.getExportFileName("epub", i)
+                val baseFilename = book.getExportFileName("epub", i)
+                val filename = if (io.legado.app.utils.TranslateUtils.isTranslateEnabled()) getTranslatedFileName(baseFilename, TranslationConfig.llmTargetLanguage) else baseFilename
                 fileDoc.find(filename)?.delete()
 
                 val epubBook = EpubBook()
