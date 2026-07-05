@@ -632,15 +632,6 @@ fun ReadAloudContent(
                     modifier = Modifier.weight(1f)
                 )
                 BottomBarItem(
-                    icon = Icons.Default.VolumeUp,
-                    label = "Công cụ đọc",
-                    selected = false,
-                    onClick = {
-                        onIntent(ReadBookIntent.SelectSpeakEngine)
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-                BottomBarItem(
                     icon = Icons.Default.Settings,
                     label = "Cài đặt",
                     selected = false,

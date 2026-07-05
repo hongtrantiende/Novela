@@ -20,6 +20,12 @@ object ReadTtsConfig {
         null
     )
 
+    /** Tên voice cụ thể của Android TTS (ví dụ: "vi-VN (vif)"), null = để hệ thống tự chọn */
+    var ttsVoiceName by prefDelegate<String?>(
+        PreferKey.ttsVoiceName,
+        null
+    )
+
     var ttsFollowSys by prefDelegate(
         PreferKey.ttsFollowSys,
         true

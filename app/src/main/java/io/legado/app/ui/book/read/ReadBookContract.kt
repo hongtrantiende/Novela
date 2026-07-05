@@ -140,6 +140,10 @@ data class ReadBookUiState(
     val contentEditSaveToSource: Boolean = false,
     val ttsEngineItems: ImmutableList<ReadBookTtsEngineItem> = persistentListOf(),
     val selectedTtsEngine: String? = null,
+    val ttsVoiceItems: ImmutableList<ReadBookTtsVoiceItem> = persistentListOf(),
+    val systemTtsVoiceItems: ImmutableList<ReadBookTtsVoiceItem> = persistentListOf(),
+    val aiTtsVoiceItems: ImmutableList<ReadBookTtsVoiceItem> = persistentListOf(),
+    val selectedTtsVoiceName: String? = null,
     val speakEngineName: String = "",
     val editingHttpTts: HttpTTS? = null,
     val httpTtsImportState: BaseImportUiState<HttpTTS> = BaseImportUiState.Idle,
@@ -217,6 +221,13 @@ data class ReadBookTtsEngineItem(
     val title: String,
     val value: String?,
     val loginUrl: String? = null,
+)
+
+@Immutable
+data class ReadBookTtsVoiceItem(
+    val title: String,
+    val name: String,
+    val isNetwork: Boolean,
 )
 
 @Immutable
@@ -464,6 +475,7 @@ sealed interface ReadBookIntent {
     data object OpenCacheCleanTimePicker : ReadBookIntent
     data object OpenParagraphIntervalPicker : ReadBookIntent
     data class ApplySpeakEngine(val value: String?) : ReadBookIntent
+    data class ApplyTtsVoice(val voiceName: String?) : ReadBookIntent
     data class ApplyPreDownloadNum(val value: Int) : ReadBookIntent
     data class ApplyAudioCacheCleanTime(val value: Int) : ReadBookIntent
     data class ApplyParagraphInterval(val value: Int) : ReadBookIntent

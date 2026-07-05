@@ -1,0 +1,9 @@
+package defpackage;
+/* compiled from: r8-map-id-f559a6c9210f67746bd9ce87931ee85b676f3bda66e04dc5e85cb7e8eec71de1 */
+/* renamed from: v6e  reason: default package */
+/* loaded from: classes.dex */
+public abstract class v6e extends s6e {
+    public v6e() {
+        this.a = 0;
+    }
+}

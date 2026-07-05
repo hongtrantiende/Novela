@@ -1,0 +1,37 @@
+package defpackage;
+/* compiled from: r8-map-id-f559a6c9210f67746bd9ce87931ee85b676f3bda66e04dc5e85cb7e8eec71de1 */
+/* renamed from: ava  reason: default package */
+/* loaded from: classes.dex */
+public final class ava {
+    public final int a;
+    public final int b;
+    public final boolean c;
+
+    public ava(int i, int i2, boolean z) {
+        this.a = i;
+        this.b = i2;
+        this.c = z;
+    }
+
+    public final boolean equals(Object obj) {
+        if (this != obj) {
+            if (obj instanceof ava) {
+                ava avaVar = (ava) obj;
+                if (this.a != avaVar.a || this.b != avaVar.b || this.c != avaVar.c) {
+                    return false;
+                }
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    public final int hashCode() {
+        return Boolean.hashCode(this.c) + hl5.a(this.b, Integer.hashCode(this.a) * 31, 31);
+    }
+
+    public final String toString() {
+        return rs8.m(")", hl5.r(this.a, this.b, "LinkEvent(position=", ", spanIndex=", ", isStart="), this.c);
+    }
+}

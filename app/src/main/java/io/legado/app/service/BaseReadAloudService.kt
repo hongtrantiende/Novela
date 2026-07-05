@@ -161,6 +161,7 @@ abstract class BaseReadAloudService : BaseService(),
         if (ReadConfig.ttsTimer > 0) {
             toastOnUi("Bộ đếm thời gian đọc ${ReadConfig.ttsTimer} phút")
         }
+        upReadAloudNotification()
         execute {
             ImageLoader
                 .loadBitmap(this@BaseReadAloudService, ReadBook.book?.getDisplayCover())
@@ -772,15 +773,13 @@ abstract class BaseReadAloudService : BaseService(),
      * 更新通知
      */
     override fun startForegroundNotification() {
-        execute {
-            try {
-                val notification = createNotification()
-                startForeground(NotificationId.ReadAloudService, notification.build())
-            } catch (e: Exception) {
-                AppLog.put("Lỗi tạo thông báo đọc to, ${e.localizedMessage}", e, true)
-                //创建通知出错不结束服务就会崩溃,服务必须绑定通知
-                stopSelf()
-            }
+        try {
+            val notification = createNotification()
+            startForeground(NotificationId.ReadAloudService, notification.build())
+        } catch (e: Exception) {
+            AppLog.put("Lỗi tạo thông báo đọc to, ${e.localizedMessage}", e, true)
+            //创建通知出错不结束服务就会崩溃,服务必须绑定通知
+            stopSelf()
         }
     }
 

@@ -74,12 +74,44 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                 val isViAvailable = tts.isLanguageAvailable(viLocale)
                 if (isViAvailable != TextToSpeech.LANG_MISSING_DATA && isViAvailable != TextToSpeech.LANG_NOT_SUPPORTED) {
                     tts.language = viLocale
+                    applyVoicePreference(tts, viLocale)
                 }
             } else {
                 tts.language = java.util.Locale.getDefault()
             }
         } catch (e: Exception) {
             LogUtils.e(TAG, "Error in setupLanguageAndVoice: ${e.localizedMessage}")
+        }
+    }
+
+    /**
+     * Áp dụng voice preference vào TTS engine.
+     * - Nếu người dùng đã chọn voice cụ thể → dùng voice đó
+     * - Nếu chưa chọn → ưu tiên network voice (chất lượng cao hơn offline)
+     */
+    private fun applyVoicePreference(tts: TextToSpeech, locale: java.util.Locale) {
+        try {
+            val voices = tts.voices ?: return
+            val preferredVoiceName = io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsVoiceName
+            if (!preferredVoiceName.isNullOrBlank()) {
+                // Tìm đúng voice theo tên người dùng chọn
+                val selected = voices.firstOrNull { it.name == preferredVoiceName }
+                if (selected != null) {
+                    tts.voice = selected
+                    LogUtils.d(TAG, "Applied preferred voice: ${selected.name}")
+                    return
+                }
+            }
+            // Không có preference → ưu tiên network voice (chất lượng cao hơn)
+            val networkVoice = voices
+                .filter { it.locale.language == locale.language && it.isNetworkConnectionRequired }
+                .minByOrNull { it.quality }
+            if (networkVoice != null) {
+                tts.voice = networkVoice
+                LogUtils.d(TAG, "Auto-selected network voice: ${networkVoice.name}")
+            }
+        } catch (e: Exception) {
+            LogUtils.e(TAG, "applyVoicePreference error: ${e.localizedMessage}")
         }
     }
 

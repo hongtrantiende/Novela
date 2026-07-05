@@ -19,10 +19,13 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
@@ -31,6 +34,7 @@ import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.data.entities.HttpTTS
 import io.legado.app.ui.book.read.ReadBookIntent
+import io.legado.app.ui.book.read.ReadBookTtsVoiceItem
 import io.legado.app.ui.book.read.ReadBookUiState
 import io.legado.app.ui.widget.components.AppTextField
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
@@ -48,8 +52,194 @@ import io.legado.app.utils.GSON
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
-
 import io.legado.app.ui.config.readConfig.ReadConfig
+
+@Composable
+fun SpeakEnginePickerSheet(
+    show: Boolean,
+    onDismissRequest: () -> Unit,
+    onSelectEngine: (String) -> Unit,
+) {
+    AppAlertDialog(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = "Chọn công cụ đọc",
+        dismissText = "Đóng",
+        onDismiss = onDismissRequest,
+        content = {
+        val engines = listOf(
+            Pair("TTS hệ thống", "system_tts"),
+            Pair("Google V1 (Wavenet)", "google_v1"),
+            Pair("Google V2 (Neural2)", "google_v2"),
+            Pair("AI (ONNX)", "ai_tts_onnx"),
+        )
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+        ) {
+            items(engines) { (title, key) ->
+                TinyClickableSettingItem(
+                    title = title,
+                    onClick = {
+                        onSelectEngine(key)
+                        onDismissRequest()
+                    }
+                )
+            }
+        }
+        }
+    )
+}
+
+@Composable
+fun VoicePickerSheet(
+    show: Boolean,
+    engineKey: String,
+    state: ReadBookUiState,
+    onDismissRequest: () -> Unit,
+    onIntent: (ReadBookIntent) -> Unit,
+    onDownloadAiTtsModel: ((String, (Int) -> Unit, (Boolean) -> Unit) -> Unit)? = null,
+) {
+    val coroutineScope = rememberCoroutineScope()
+    AppAlertDialog(
+        show = show,
+        onDismissRequest = onDismissRequest,
+        title = "Chọn giọng đọc",
+        dismissText = "Đóng",
+        onDismiss = onDismissRequest,
+        content = {
+        val items = state.ttsEngineItems
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+        ) {
+            when (engineKey) {
+                "system_tts" -> {
+                    items(state.systemTtsVoiceItems) { voice ->
+                        val isSelected = state.selectedTtsEngine.isNullOrBlank() && state.selectedTtsVoiceName == voice.name
+                        TinyClickableSettingItem(
+                            title = voice.title,
+                            description = if (voice.isNetwork) "Cần kết nối mạng" else "Offline",
+                            trailingContent = if (isSelected) {
+                                {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = "Đã chọn",
+                                        tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.height(18.dp)
+                                    )
+                                }
+                            } else null,
+                            onClick = {
+                                onIntent(ReadBookIntent.ApplySpeakEngine(null))
+                                onIntent(ReadBookIntent.ApplyTtsVoice(voice.name))
+                                onDismissRequest()
+                            }
+                        )
+                    }
+                }
+                "google_v1" -> {
+                    val filtered = items.filter { it.value?.toLongOrNull()?.let { id -> id in -106L..-101L } == true }
+                    items(filtered) { item ->
+                        val isSelected = state.selectedTtsEngine == item.value
+                        TinyClickableSettingItem(
+                            title = item.title,
+                            description = if (isSelected) "Đang chọn" else null,
+                            onClick = {
+                                onIntent(ReadBookIntent.ApplySpeakEngine(item.value))
+                                onDismissRequest()
+                            }
+                        )
+                    }
+                }
+                "google_v2" -> {
+                    val filtered = items.filter { it.value?.toLongOrNull()?.let { id -> id in -108L..-107L } == true }
+                    items(filtered) { item ->
+                        val isSelected = state.selectedTtsEngine == item.value
+                        TinyClickableSettingItem(
+                            title = item.title,
+                            description = if (isSelected) "Đang chọn" else null,
+                            onClick = {
+                                onIntent(ReadBookIntent.ApplySpeakEngine(item.value))
+                                onDismissRequest()
+                            }
+                        )
+                    }
+                }
+                "google_v3" -> {
+                    val filtered = items.filter { it.value?.toLongOrNull()?.let { id -> id in -138L..-109L } == true }
+                    items(filtered) { item ->
+                        val isSelected = state.selectedTtsEngine == item.value
+                        TinyClickableSettingItem(
+                            title = item.title,
+                            description = if (isSelected) "Đang chọn" else null,
+                            onClick = {
+                                onIntent(ReadBookIntent.ApplySpeakEngine(item.value))
+                                onDismissRequest()
+                            }
+                        )
+                    }
+                }
+                "edge_tts" -> {
+                    val filtered = items.filter { 
+                        it.title.contains("edge", ignoreCase = true) || 
+                        it.value?.toLongOrNull()?.let { id -> id <= -200 } == true 
+                    }
+                    items(filtered) { item ->
+                        val isSelected = state.selectedTtsEngine == item.value
+                        TinyClickableSettingItem(
+                            title = item.title,
+                            description = if (isSelected) "Đang chọn" else null,
+                            onClick = {
+                                onIntent(ReadBookIntent.ApplySpeakEngine(item.value))
+                                onDismissRequest()
+                            }
+                        )
+                    }
+                }
+                "ai_tts_onnx" -> {
+                    items(state.aiTtsVoiceItems) { voice ->
+                        val isSelected = state.selectedTtsEngine == "ai_tts_onnx" && state.selectedTtsVoiceName == voice.name
+                        var downloadProgress by remember(voice.name) { mutableStateOf<Int?>(null) }
+                        
+                        TinyClickableSettingItem(
+                            title = voice.title + (if (downloadProgress != null) " (Đang tải ${downloadProgress}%)" else ""),
+                            description = if (voice.isNetwork) {
+                                if (downloadProgress != null) "Đang tải xuống..." else "Chưa tải về · Nhấp để tải ngoại tuyến"
+                            } else "Offline (Sẵn sàng)",
+                            trailingContent = if (isSelected) {
+                                {
+                                    androidx.compose.material3.Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = "Đã chọn",
+                                        tint = androidx.compose.material3.MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.height(18.dp)
+                                    )
+                                }
+                            } else null,
+                            onClick = {
+                                if (voice.isNetwork) {
+                                    if (downloadProgress == null && onDownloadAiTtsModel != null) {
+                                        val modelId = voice.name.split(":").firstOrNull() ?: ""
+                                        coroutineScope.launch {
+                                            onDownloadAiTtsModel(modelId,
+                                                { progress -> downloadProgress = progress },
+                                                { success -> downloadProgress = null }
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    onIntent(ReadBookIntent.ApplySpeakEngine("ai_tts_onnx"))
+                                    onIntent(ReadBookIntent.ApplyTtsVoice(voice.name))
+                                    onDismissRequest()
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        }
+    )
+}
 
 @Composable
 fun ReadAloudConfigSheet(
@@ -57,11 +247,90 @@ fun ReadAloudConfigSheet(
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
+    onDownloadAiTtsModel: ((String, (Int) -> Unit, (Boolean) -> Unit) -> Unit)? = null,
 ) {
+    if (!show) return
+
+    val coroutineScope = rememberCoroutineScope()
+    var showEnginePicker by remember { mutableStateOf(false) }
+    var showVoicePicker by remember { mutableStateOf(false) }
+
+    val currentEngine = state.selectedTtsEngine
+    val engineKey = remember(currentEngine) {
+        when {
+            currentEngine == "ai_tts_onnx" -> "ai_tts_onnx"
+            currentEngine != null && currentEngine.toLongOrNull() != null -> {
+                val id = currentEngine.toLongOrNull() ?: 0L
+                when {
+                    id in -108L..-107L -> "google_v2"
+                    id in -106L..-101L -> "google_v1"
+                    else -> "system_tts"
+                }
+            }
+            else -> "system_tts"
+        }
+    }
+    val engineDisplayName = when (engineKey) {
+        "system_tts" -> "TTS hệ thống"
+        "google_v1" -> "Google V1 (Wavenet)"
+        "google_v2" -> "Google V2 (Neural2)"
+        "ai_tts_onnx" -> "AI (ONNX)"
+        else -> "TTS hệ thống"
+    }
+
+    val voiceDisplayName = if (currentEngine == "ai_tts_onnx" || currentEngine.isNullOrBlank() || currentEngine.toLongOrNull() == null) {
+        state.selectedTtsVoiceName?.takeIf { it.isNotBlank() } ?: "Mặc định (tự động)"
+    } else {
+        state.speakEngineName.ifEmpty { "Mặc định" }
+    }
+
+    val currentHttpTtsId = currentEngine?.toLongOrNull()
+    val showEditTts = engineKey != "system_tts" && engineKey != "ai_tts_onnx" && currentHttpTtsId != null
+
+    SpeakEnginePickerSheet(
+        show = showEnginePicker,
+        onDismissRequest = { showEnginePicker = false },
+        onSelectEngine = { key ->
+            when (key) {
+                "system_tts" -> {
+                    onIntent(ReadBookIntent.ApplySpeakEngine(null))
+                    onIntent(ReadBookIntent.ApplyTtsVoice(""))
+                }
+                "ai_tts_onnx" -> {
+                    onIntent(ReadBookIntent.ApplySpeakEngine("ai_tts_onnx"))
+                    val firstVoice = state.aiTtsVoiceItems.firstOrNull { !it.isNetwork }
+                    if (firstVoice != null) {
+                        onIntent(ReadBookIntent.ApplyTtsVoice(firstVoice.name))
+                    }
+                }
+                else -> {
+                    val items = state.ttsEngineItems
+                    val targetValue = when (key) {
+                        "google_v1" -> items.firstOrNull { it.value?.toLongOrNull()?.let { id -> id in -106L..-101L } == true }?.value ?: "-101"
+                        "google_v2" -> items.firstOrNull { it.value?.toLongOrNull()?.let { id -> id in -108L..-107L } == true }?.value ?: "-107"
+                        else -> null
+                    }
+                    if (targetValue != null) {
+                        onIntent(ReadBookIntent.ApplySpeakEngine(targetValue))
+                    }
+                }
+            }
+        }
+    )
+
+    VoicePickerSheet(
+        show = showVoicePicker,
+        engineKey = engineKey,
+        state = state,
+        onDismissRequest = { showVoicePicker = false },
+        onIntent = onIntent,
+        onDownloadAiTtsModel = onDownloadAiTtsModel,
+    )
+
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.aloud_config),
+        title = "Điều chỉnh giọng đọc",
     ) {
         Column(
             modifier = Modifier
@@ -69,266 +338,81 @@ fun ReadAloudConfigSheet(
                 .padding(bottom = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
+            TinyClickableSettingItem(
+                title = "Chọn công cụ đọc",
+                description = engineDisplayName,
+                onClick = { showEnginePicker = true }
+            )
 
             TinyClickableSettingItem(
-                title = stringResource(R.string.speak_engine),
-                description = state.speakEngineName.ifEmpty {
-                    stringResource(R.string.system_tts)
-                },
-                onClick = { onIntent(ReadBookIntent.SelectSpeakEngine) },
+                title = "Chọn giọng đọc",
+                description = voiceDisplayName,
+                onClick = { showVoicePicker = true }
             )
-            TinyClickableSettingItem(
-                title = stringResource(R.string.sys_tts_config),
-                onClick = { onIntent(ReadBookIntent.OpenSystemTtsSettings) },
-            )
-            TinyClickableSettingItem(
-                title = stringResource(R.string.read_aloud_preload),
-                onClick = { onIntent(ReadBookIntent.OpenPreDownloadNumPicker) },
-            )
-            TinyClickableSettingItem(
-                title = stringResource(R.string.audio_cache_clean_time),
-                onClick = { onIntent(ReadBookIntent.OpenCacheCleanTimePicker) },
-            )
+
+            if (showEditTts) {
+                TinyClickableSettingItem(
+                    title = "Điều chỉnh giọng đọc",
+                    onClick = {
+                        onIntent(ReadBookIntent.EditHttpTts(currentHttpTtsId))
+                    }
+                )
+            }
+
+            if (engineKey == "system_tts") {
+                TinyClickableSettingItem(
+                    title = stringResource(R.string.sys_tts_config),
+                    onClick = { onIntent(ReadBookIntent.OpenSystemTtsSettings) },
+                )
+            }
+
             TinyClickableSettingItem(
                 title = stringResource(R.string.read_aloud_paragraph_interval),
                 description = stringResource(R.string.read_aloud_paragraph_interval_summary, ReadConfig.readAloudParagraphInterval),
                 onClick = { onIntent(ReadBookIntent.OpenParagraphIntervalPicker) },
             )
+
             TinyClickableSettingItem(
                 title = stringResource(R.string.clear_cache),
                 onClick = { onIntent(ReadBookIntent.ClearTtsCache) },
             )
-        }
-    }
-}
 
-@Composable
-fun SpeakEngineConfigSheet(
-    show: Boolean,
-    state: ReadBookUiState,
-    onIntent: (ReadBookIntent) -> Unit,
-    onDismissRequest: () -> Unit,
-) {
-    val items = state.ttsEngineItems
-    val selectedValue = state.selectedTtsEngine
-    var pendingEngineSelection by remember { mutableStateOf<PendingSpeakEngineSelection?>(null) }
-    var showImportSheet by remember { mutableStateOf(false) }
-    var showUrlInput by remember { mutableStateOf(false) }
-    var selectedTabIndex by remember { mutableStateOf(0) }
+            Spacer(Modifier.height(16.dp))
 
-    // Split items into 4 tabs:
-    // Tab 0 "Thế hệ 1": System TTS + custom (id >= 0 or null) + Wavenet (id -101 to -106)
-    // Tab 1 "Thế hệ 2": Neural2 (id -107 to -108)
-    // Tab 2 "Thế hệ 3": Chirp3-HD (id -109 to -138)
-    // Tab 3 "Edge TTS": Edge TTS (id <= -200)
-    val gen1Items = remember(items) {
-        items.filter { item ->
-            val id = item.value?.toLongOrNull()
-            id == null || id >= 0 || (id in -106L..-101L)
-        }
-    }
-    val gen2Items = remember(items) {
-        items.filter { item ->
-            val id = item.value?.toLongOrNull()
-            id != null && id in -108L..-107L
-        }
-    }
-    val gen3Items = remember(items) {
-        items.filter { item ->
-            val id = item.value?.toLongOrNull()
-            id != null && id in -138L..-109L
-        }
-    }
-    val edgeItems = remember(items) {
-        items.filter { item ->
-            val id = item.value?.toLongOrNull()
-            id != null && id <= -200
-        }
-    }
-
-    AppAlertDialog(
-        show = pendingEngineSelection != null,
-        onDismissRequest = { pendingEngineSelection = null },
-        title = stringResource(R.string.speak_engine),
-        text = stringResource(R.string.speak_engine_apply_scope),
-        confirmText = stringResource(R.string.general),
-        onConfirm = {
-            onIntent(ReadBookIntent.ApplySpeakEngine(pendingEngineSelection?.value))
-            pendingEngineSelection = null
-        },
-        dismissText = stringResource(R.string.book),
-        onDismiss = {
-            onIntent(ReadBookIntent.ApplySpeakEnginePerBook(pendingEngineSelection?.value))
-            pendingEngineSelection = null
-        },
-    )
-    SourceInputDialog(
-        show = showUrlInput,
-        title = stringResource(R.string.import_on_line),
-        onDismissRequest = { showUrlInput = false },
-        onConfirm = {
-            showUrlInput = false
-            onIntent(ReadBookIntent.ImportHttpTtsSource(it))
-        },
-    )
-    FilePickerSheet(
-        show = showImportSheet,
-        onDismissRequest = { showImportSheet = false },
-        title = stringResource(R.string.import_tts),
-        onSelectSysFile = {
-            showImportSheet = false
-            onIntent(ReadBookIntent.ImportHttpTtsFile)
-        },
-        onManualInput = {
-            showImportSheet = false
-            showUrlInput = true
-        },
-        allowExtensions = arrayOf("json", "txt"),
-    )
-    BatchImportDialog(
-        title = stringResource(R.string.import_tts),
-        importState = state.httpTtsImportState,
-        onDismissRequest = { onIntent(ReadBookIntent.CancelHttpTtsImport) },
-        onToggleItem = { onIntent(ReadBookIntent.ToggleHttpTtsImportSelection(it)) },
-        onToggleAll = { onIntent(ReadBookIntent.ToggleHttpTtsImportAll(it)) },
-        onUpdateItem = { index, httpTTS ->
-            onIntent(ReadBookIntent.UpdateHttpTtsImportItem(index, httpTTS))
-        },
-        onConfirm = { onIntent(ReadBookIntent.SaveImportedHttpTts) },
-        itemTitle = { it.name },
-        itemSubtitle = { it.url },
-    )
-
-    AppModalBottomSheet(
-        show = show,
-        onDismissRequest = onDismissRequest,
-        title = stringResource(R.string.speak_engine),
-        startAction = {
-            if (selectedTabIndex == 0) {
-                SmallTonalButton(
-                    onClick = { onIntent(ReadBookIntent.EditHttpTts()) },
-                    icon = Icons.Default.Add
-                )
-            }
-        },
-        endAction = {
-            if (selectedTabIndex == 0) {
-                var expanded by remember { mutableStateOf(false) }
-                val selectedId = selectedValue?.toLongOrNull()
-                val isPremiumSelected = selectedId != null && selectedId <= -108 && selectedId >= -138
-                Box {
-                    SmallTonalButton(
-                        onClick = { expanded = true },
-                        icon = Icons.Default.MoreVert
-                    )
-                    RoundDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.import_tts),
-                            onClick = {
-                                expanded = false
-                                showImportSheet = true
-                            },
-                        )
-                        if (!isPremiumSelected) {
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.export),
-                                onClick = {
-                                    expanded = false
-                                    onIntent(ReadBookIntent.ExportAllHttpTts)
-                                },
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.copy_url),
-                                onClick = {
-                                    expanded = false
-                                    onIntent(ReadBookIntent.ExportAllHttpTtsAsUrl)
-                                },
-                            )
-                        }
-                        RoundDropdownMenuItem(
-                            text = stringResource(R.string.clear_cache),
-                            onClick = {
-                                expanded = false
-                                onIntent(ReadBookIntent.ClearTtsCache)
-                            },
-                        )
-                    }
-                }
-            }
-        },
-    ) {
-        // 4 tabs: Gen1 (Wavenet), Gen2 (Neural2), Gen3 (Chirp3-HD), Edge TTS
-        val tabTitles = listOf("Thế hệ 1", "Thế hệ 2", "Thế hệ 3", "Edge TTS")
-        androidx.compose.material3.ScrollableTabRow(
-            selectedTabIndex = selectedTabIndex,
-            modifier = Modifier.fillMaxWidth(),
-            edgePadding = 8.dp,
-        ) {
-            tabTitles.forEachIndexed { index, title ->
-                androidx.compose.material3.Tab(
-                    selected = selectedTabIndex == index,
-                    onClick = { selectedTabIndex = index },
-                    text = {
-                        androidx.compose.material3.Text(
-                            text = title,
-                            maxLines = 1,
-                        )
-                    },
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-
-        val displayItems = when (selectedTabIndex) {
-            0 -> gen1Items
-            1 -> gen2Items
-            2 -> gen3Items
-            3 -> edgeItems
-            else -> gen1Items
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f, fill = false)
-                .padding(bottom = 8.dp),
-        ) {
-            items(displayItems) { item ->
-                val httpTtsId = item.value?.toLongOrNull()
-                val isSelected = item.value == selectedValue
-                TinyClickableSettingItem(
-                    title = item.title,
-                    description = if (isSelected) {
-                        stringResource(R.string.default_version)
-                    } else {
-                        null
-                    },
-                    onClick = { pendingEngineSelection = PendingSpeakEngineSelection(item.value) },
-                    onLongClick = if (httpTtsId != null) {
-                        { onIntent(ReadBookIntent.EditHttpTts(httpTtsId)) }
-                    } else null,
-                    trailingContent = if (httpTtsId != null && httpTtsId >= 0) {
-                        {
-                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                SmallTonalButton(
-                                    onClick = { onIntent(ReadBookIntent.EditHttpTts(httpTtsId)) },
-                                    icon = Icons.Default.Edit,
-                                )
-                                SmallTonalButton(
-                                    onClick = { onIntent(ReadBookIntent.DeleteHttpTts(httpTtsId)) },
-                                    icon = Icons.Default.Delete,
-                                )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                io.legado.app.ui.widget.components.button.series.MediumTonalButton(
+                    onClick = {
+                        coroutineScope.launch {
+                            if (io.legado.app.service.BaseReadAloudService.isRun) {
+                                io.legado.app.model.ReadAloud.stop(splitties.init.appCtx)
+                                for (i in 1..20) {
+                                    if (!io.legado.app.service.BaseReadAloudService.isRun) break
+                                    delay(50)
+                                }
                             }
+                            ReadConfig.ttsEngine = currentEngine
+                            io.legado.app.model.ReadBook.book?.setTtsEngine(currentEngine)
+                            io.legado.app.model.ReadAloud.upReadAloudClass()
+                            io.legado.app.model.ReadBook.readAloud(play = true)
                         }
-                    } else null,
+                    },
+                    modifier = Modifier.weight(1f),
+                    text = "Nghe thử"
+                )
+                io.legado.app.ui.widget.components.button.series.MediumOutlinedButton(
+                    onClick = {
+                        io.legado.app.model.ReadAloud.stop(splitties.init.appCtx)
+                    },
+                    modifier = Modifier.weight(1f),
+                    text = "Dừng nghe"
                 )
             }
         }
     }
 }
-
-private data class PendingSpeakEngineSelection(val value: String?)
 
 @Composable
 fun HttpTtsEditSheet(
@@ -365,7 +449,27 @@ fun HttpTtsEditSheet(
         mutableStateOf(configObj?.optString("audioEncoding", "MP3") ?: "MP3")
     }
     var sampleRate by remember(configJson) {
-        mutableStateOf(configObj?.optString("sampleRate", "") ?: "")
+        mutableStateOf(configObj?.optString("sampleRate", "16000") ?: "16000")
+    }
+
+    LaunchedEffect(pitch, volumeGain, effectsProfile, audioEncoding, sampleRate) {
+        kotlinx.coroutines.delay(500)
+        val tempMap = org.json.JSONObject()
+        pitch.replace(",", ".").toDoubleOrNull()?.let { tempMap.put("pitch", it) }
+        volumeGain.replace(",", ".").toDoubleOrNull()?.let { tempMap.put("volumeGain", it) }
+        if (effectsProfile.isNotBlank()) tempMap.put("effectsProfile", effectsProfile)
+        if (audioEncoding.isNotBlank()) tempMap.put("audioEncoding", audioEncoding)
+        if (sampleRate.isNotBlank()) tempMap.put("sampleRate", sampleRate)
+        val serializedLoginUi = tempMap.toString()
+        val tempTts = tts.copy(
+            loginUi = serializedLoginUi.ifBlank { null }
+        )
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            io.legado.app.data.appDb.httpTTSDao.update(tempTts)
+        }
+        if (ReadConfig.ttsEngine == tempTts.id.toString()) {
+            io.legado.app.model.ReadAloud.httpTTS = tempTts
+        }
     }
     var ttsSpeechRate by remember(httpTTS) {
         mutableStateOf(ReadConfig.ttsSpeechRate.toFloat())
@@ -629,7 +733,7 @@ fun HttpTtsEditSheet(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    androidx.compose.material3.Button(
+                    io.legado.app.ui.widget.components.button.series.MediumTonalButton(
                         onClick = {
                             coroutineScope.launch {
                                 // Save reading speed globally so it is picked up by player
@@ -675,6 +779,9 @@ fun HttpTtsEditSheet(
                                     e.printStackTrace()
                                 }
                                 
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    io.legado.app.data.appDb.httpTTSDao.update(tempTts)
+                                }
                                 ReadConfig.ttsEngine = tempTts.id.toString()
                                 io.legado.app.model.ReadBook.book?.setTtsEngine(tempTts.id.toString())
                                 io.legado.app.model.ReadAloud.upReadAloudClass()
@@ -683,18 +790,16 @@ fun HttpTtsEditSheet(
                                 io.legado.app.model.ReadBook.readAloud(play = true)
                             }
                         },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        androidx.compose.material3.Text("Nghe thử")
-                    }
-                    androidx.compose.material3.OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        text = "Nghe thử"
+                    )
+                    io.legado.app.ui.widget.components.button.series.MediumOutlinedButton(
                         onClick = {
                             io.legado.app.model.ReadAloud.stop(splitties.init.appCtx)
                         },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        androidx.compose.material3.Text("Dừng nghe")
-                    }
+                        modifier = Modifier.weight(1f),
+                        text = "Dừng nghe"
+                    )
                 }
             }
             item { Spacer(Modifier.height(16.dp)) }

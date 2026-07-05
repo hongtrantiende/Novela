@@ -29,6 +29,9 @@ object ReadAloud {
         if (ttsEngine.isNullOrBlank()) {
             return TTSReadAloudService::class.java
         }
+        if (ttsEngine.startsWith("ai_tts_onnx")) {
+            return HttpReadAloudService::class.java
+        }
         if (StringUtils.isNumeric(ttsEngine)) {
             httpTTS = appDb.httpTTSDao.get(ttsEngine.toLong())
             if (httpTTS != null) {

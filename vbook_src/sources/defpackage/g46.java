@@ -1,0 +1,9 @@
+package defpackage;
+/* compiled from: r8-map-id-f559a6c9210f67746bd9ce87931ee85b676f3bda66e04dc5e85cb7e8eec71de1 */
+/* renamed from: g46  reason: default package */
+/* loaded from: classes3.dex */
+public interface g46 extends yq2, fx1 {
+    k46 i();
+
+    r36 y();
+}

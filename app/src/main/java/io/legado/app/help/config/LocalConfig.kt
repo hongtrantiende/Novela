@@ -88,7 +88,7 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         get() = isLastVersion(1, "ruleHelpVersion")
 
     val needUpHttpTTS: Boolean
-        get() = !isLastVersion(21, "httpTtsVersion")
+        get() = !isLastVersion(24, "httpTtsVersion")
 
     val needUpTxtTocRule: Boolean
         get() = !isLastVersion(3, "txtTocRuleVersion")

@@ -128,6 +128,7 @@ class AudioPlayService : BaseService(),
         initBroadcastReceiver()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         doDs()
+        upAudioPlayNotification()
         execute {
             ImageLoader
                 .loadBitmap(this@AudioPlayService, AudioPlay.book?.getDisplayCover())
@@ -653,15 +654,13 @@ class AudioPlayService : BaseService(),
      * 更新通知
      */
     override fun startForegroundNotification() {
-        execute {
-            try {
-                val notification = createNotification()
-                startForeground(NotificationId.AudioPlayService, notification.build())
-            } catch (e: Exception) {
-                AppLog.put("Lỗi tạo thông báo phát lại âm thanh, ${e.localizedMessage}", e, true)
-                //创建通知出错不结束服务就会崩溃,服务必须绑定通知
-                stopSelf()
-            }
+        try {
+            val notification = createNotification()
+            startForeground(NotificationId.AudioPlayService, notification.build())
+        } catch (e: Exception) {
+            AppLog.put("Lỗi tạo thông báo phát lại âm thanh, ${e.localizedMessage}", e, true)
+            //创建通知出错不结束服务就会崩溃,服务必须绑定通知
+            stopSelf()
         }
     }
 

@@ -1,0 +1,17 @@
+package defpackage;
+/* compiled from: r8-map-id-f559a6c9210f67746bd9ce87931ee85b676f3bda66e04dc5e85cb7e8eec71de1 */
+/* renamed from: o34  reason: default package */
+/* loaded from: classes3.dex */
+public final class o34 extends fdd {
+    public final String c;
+    public final n64 d;
+    public final cza e = dza.a(new n34("", ks3.a));
+
+    public o34(String str, n64 n64Var) {
+        this.c = str;
+        this.d = n64Var;
+        hk1 a = jdd.a(this);
+        sw2 sw2Var = ab3.a;
+        f(a, ru2.c, new oi(this, (m42) null, 29));
+    }
+}

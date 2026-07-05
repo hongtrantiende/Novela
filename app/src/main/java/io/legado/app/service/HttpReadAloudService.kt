@@ -209,7 +209,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         downloadTask = execute {
             downloadTaskActiveLock.withLock {
                 ensureActive()
-                val httpTts = ReadAloud.httpTTS ?: throw NoStackTraceException("tts is null")
+                val httpTts = ReadAloud.httpTTS
+                if (ReadAloud.ttsEngine != "ai_tts_onnx" && httpTts == null) throw NoStackTraceException("tts is null")
                 
                 val preloadCount = maxOf(1, minOf(ReadConfig.audioPreDownloadNum, contentList.size - nowSpeak))
                 var preloadedNum = 0
@@ -255,7 +256,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private suspend fun downloadSpeakFile(
-        httpTts: HttpTTS,
+        httpTts: HttpTTS?,
         fileName: String,
         speakText: String,
         waitIfDownloading: Boolean = true
@@ -301,7 +302,8 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     private fun startPreDownloadWindow() {
         preDownloadWindowJob?.cancel()
-        val httpTts = ReadAloud.httpTTS ?: return
+        val httpTts = ReadAloud.httpTTS
+        if (ReadAloud.ttsEngine != "ai_tts_onnx" && httpTts == null) return
         preDownloadWindowJob = lifecycleScope.launch(Dispatchers.IO) {
             runCatching {
                 val book = ReadBook.book ?: return@launch
@@ -341,7 +343,13 @@ class HttpReadAloudService : BaseReadAloudService(),
                                 if (nextChapterOffset in nextContentList.indices) {
                                     val content = nextContentList[nextChapterOffset]
                                     val titleMd5 = MD5Utils.md5Encode16(nextChapter.title)
-                                    val contentMd5 = MD5Utils.md5Encode16("${httpTts.url}-|-${httpTts.loginUrl ?: "1.0"}-|-$content")
+                                    val prefix = if (ReadAloud.ttsEngine == "ai_tts_onnx") {
+                                        val voiceName = io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsVoiceName ?: ""
+                                        "ai_tts_onnx-|-voice=$voiceName-|-speed=${ReadConfig.ttsSpeechRate}"
+                                    } else {
+                                        "${httpTts?.url}-|-${httpTts?.loginUrl ?: "1.0"}"
+                                    }
+                                    val contentMd5 = MD5Utils.md5Encode16("$prefix-|-$content")
                                     val fileName = "${titleMd5}_${contentMd5}"
                                     val speakText = content.replace(AppPattern.notReadAloudRegex, "")
                                     
@@ -365,7 +373,7 @@ class HttpReadAloudService : BaseReadAloudService(),
         }
     }
 
-    private suspend fun preDownloadAudios(httpTts: HttpTTS) {
+    private suspend fun preDownloadAudios(httpTts: HttpTTS?) {
         val book = ReadBook.book ?: return
         val currentIdx = ReadBook.durChapterIndex
         
@@ -384,7 +392,13 @@ class HttpReadAloudService : BaseReadAloudService(),
                 currentCoroutineContext().ensureActive()
                 
                 val titleMd5 = MD5Utils.md5Encode16(chapter.title)
-                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-${ReadAloud.httpTTS?.loginUrl ?: "1.0"}-|-$content")
+                val prefix = if (ReadAloud.ttsEngine == "ai_tts_onnx") {
+                    val voiceName = io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsVoiceName ?: ""
+                    "ai_tts_onnx-|-voice=$voiceName-|-speed=${ReadConfig.ttsSpeechRate}"
+                } else {
+                    "${ReadAloud.httpTTS?.url}-|-${ReadAloud.httpTTS?.loginUrl ?: "1.0"}"
+                }
+                val contentMd5 = MD5Utils.md5Encode16("$prefix-|-$content")
                 val fileName = "${titleMd5}_${contentMd5}"
                 
                 val speakText = content.replace(AppPattern.notReadAloudRegex, "")
@@ -404,7 +418,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         downloadTask = execute {
             downloadTaskActiveLock.withLock {
                 ensureActive()
-                val httpTts = ReadAloud.httpTTS ?: throw NoStackTraceException("tts is null")
+                val httpTts = ReadAloud.httpTTS
+                if (ReadAloud.ttsEngine != "ai_tts_onnx" && httpTts == null) throw NoStackTraceException("tts is null")
                 val downloaderChannel = Channel<Downloader>()
                 launch {
                     for (downloader in downloaderChannel) {
@@ -452,7 +467,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private suspend fun preDownloadAudiosStream(
-        httpTts: HttpTTS,
+        httpTts: HttpTTS?,
         downloaderChannel: Channel<Downloader>
     ) {
         val book = ReadBook.book ?: return
@@ -471,7 +486,13 @@ class HttpReadAloudService : BaseReadAloudService(),
             contentList.forEach { content ->
                 currentCoroutineContext().ensureActive()
                 val titleMd5 = MD5Utils.md5Encode16(chapter.title)
-                val contentMd5 = MD5Utils.md5Encode16("${ReadAloud.httpTTS?.url}-|-${ReadAloud.httpTTS?.loginUrl ?: "1.0"}-|-$content")
+                val prefix = if (ReadAloud.ttsEngine == "ai_tts_onnx") {
+                    val voiceName = io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsVoiceName ?: ""
+                    "ai_tts_onnx-|-voice=$voiceName-|-speed=${ReadConfig.ttsSpeechRate}"
+                } else {
+                    "${ReadAloud.httpTTS?.url}-|-${ReadAloud.httpTTS?.loginUrl ?: "1.0"}"
+                }
+                val contentMd5 = MD5Utils.md5Encode16("$prefix-|-$content")
                 val fileName = "${titleMd5}_${contentMd5}"
                 
                 val speakText = content.replace(AppPattern.notReadAloudRegex, "")
@@ -485,7 +506,7 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun createDataSourceFactory(
-        httpTts: HttpTTS,
+        httpTts: HttpTTS?,
         speakText: String
     ): CacheDataSource.Factory {
         val upstreamFactory = DataSource.Factory {
@@ -531,12 +552,21 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private suspend fun getSpeakStream(
-        httpTts: HttpTTS,
+        httpTts: HttpTTS?,
         speakText: String
     ): InputStream? {
+        if (ReadAloud.ttsEngine == "ai_tts_onnx") {
+            val voiceName = io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsVoiceName ?: ""
+            val parts = voiceName.split(":")
+            val modelId = parts.getOrNull(0) ?: "vi_south"
+            val speakerId = parts.getOrNull(1)?.toIntOrNull() ?: 0
+            val speed = (ReadConfig.ttsSpeechRate + 5) / 10.0
+            return io.legado.app.help.tts.AiTtsEngine.synthesizeText(this, modelId, speakerId, speakText, speed)
+        }
+        val tts = httpTts ?: return null
         // Edge TTS: route to WebSocket client
-        if (io.legado.app.help.tts.EdgeTtsClient.isEdgeTtsUrl(httpTts.url)) {
-            return getEdgeTtsSpeakStream(httpTts, speakText)
+        if (io.legado.app.help.tts.EdgeTtsClient.isEdgeTtsUrl(tts.url)) {
+            return getEdgeTtsSpeakStream(tts, speakText)
         }
         while (true) {
             try {
@@ -679,6 +709,11 @@ class HttpReadAloudService : BaseReadAloudService(),
      */
     private fun md5SpeakFileName(content: String, textChapter: TextChapter? = this.textChapter): String {
         val titleToUse = textChapter?.chapter?.title ?: ""
+        if (ReadAloud.ttsEngine == "ai_tts_onnx") {
+            val voiceName = io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsVoiceName ?: ""
+            return MD5Utils.md5Encode16(titleToUse) + "_" +
+                    MD5Utils.md5Encode16("ai_tts_onnx-|-voice=$voiceName-|-speed=${ReadConfig.ttsSpeechRate}-|-$content")
+        }
         val httpTts = ReadAloud.httpTTS
         return MD5Utils.md5Encode16(titleToUse) + "_" +
                 MD5Utils.md5Encode16("${httpTts?.url}-|-${httpTts?.loginUrl ?: "1.0"}-|-$content")
@@ -888,7 +923,8 @@ class HttpReadAloudService : BaseReadAloudService(),
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
         
-        val httpTts = ReadAloud.httpTTS ?: return
+        val httpTts = ReadAloud.httpTTS
+        if (ReadAloud.ttsEngine != "ai_tts_onnx" && httpTts == null) return
         val index = nowSpeak
         if (index !in contentList.indices) return
         
@@ -963,6 +999,7 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     private fun getPitchMultiplier(): Float {
         val httpTts = ReadAloud.httpTTS ?: return 1.0f
+        if (ReadAloud.ttsEngine == "ai_tts_onnx") return 1.0f
         val isChirp3Voice = httpTts.name.contains("Chirp3-HD", ignoreCase = true) || (httpTts.id in -138..-109)
         return if (isChirp3Voice) 0.92f else 1.0f
     }

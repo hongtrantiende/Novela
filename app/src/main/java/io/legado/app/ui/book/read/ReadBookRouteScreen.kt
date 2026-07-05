@@ -600,6 +600,7 @@ fun ReadBookRouteScreen(
                     onIntent = viewModel::onIntent,
                     onBack = { controller.closeReadBook() },
                     onNavigateToTranslationSettings = onNavigateToTranslationSettings,
+                    onDownloadAiTtsModel = viewModel::downloadAiTtsModel,
                 )
             }
         }

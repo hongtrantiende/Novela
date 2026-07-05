@@ -64,7 +64,6 @@ import io.legado.app.ui.book.read.sheet.ReadAloudNumberConfigSheet
 import io.legado.app.ui.book.read.sheet.DictManagerSheet
 import io.legado.app.ui.book.read.sheet.ShadowSetSheet
 import io.legado.app.ui.book.read.sheet.SimulatedReadingSheet
-import io.legado.app.ui.book.read.sheet.SpeakEngineConfigSheet
 import io.legado.app.ui.book.read.sheet.TitleBarIconSheet
 import io.legado.app.ui.book.read.sheet.ToolButtonConfigSheet
 import io.legado.app.ui.book.read.sheet.UnderlineConfigSheet
@@ -86,6 +85,7 @@ fun ReadBookScreen(
     onIntent: (ReadBookIntent) -> Unit,
     onBack: () -> Unit,
     onNavigateToTranslationSettings: () -> Unit = {},
+    onDownloadAiTtsModel: ((String, (Int) -> Unit, (Boolean) -> Unit) -> Unit)? = null,
 ) {
     BackHandler {
         when {
@@ -307,21 +307,14 @@ fun ReadBookScreen(
         state = state,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
-    )
-    SpeakEngineConfigSheet(
-        show = state.activeSheet is ReadBookSheet.SpeakEngineConfig,
-        state = state,
-        onIntent = onIntent,
-        onDismissRequest = {
-            onIntent(ReadBookIntent.DismissSheet)
-        },
+        onDownloadAiTtsModel = onDownloadAiTtsModel,
     )
     HttpTtsEditSheet(
         show = state.activeSheet is ReadBookSheet.HttpTtsEdit,
         httpTTS = state.editingHttpTts,
         onIntent = onIntent,
         onDismissRequest = {
-            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.SpeakEngineConfig))
+            onIntent(ReadBookIntent.ShowSheet(ReadBookSheet.ReadAloudConfig))
         },
     )
     ReadAloudNumberConfigSheet(

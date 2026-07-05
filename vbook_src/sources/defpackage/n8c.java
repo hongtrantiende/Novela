@@ -1,0 +1,9 @@
+package defpackage;
+/* compiled from: r8-map-id-f559a6c9210f67746bd9ce87931ee85b676f3bda66e04dc5e85cb7e8eec71de1 */
+/* renamed from: n8c  reason: default package */
+/* loaded from: classes3.dex */
+public interface n8c {
+    l8c a(String str, tl0 tl0Var, String str2, wn5 wn5Var);
+
+    l8c b(String str);
+}

@@ -1,0 +1,14 @@
+package defpackage;
+/* compiled from: r8-map-id-f559a6c9210f67746bd9ce87931ee85b676f3bda66e04dc5e85cb7e8eec71de1 */
+/* renamed from: kc2  reason: default package */
+/* loaded from: classes3.dex */
+public final class kc2 {
+    public long a;
+    public int b;
+    public int c;
+    public lc2 d;
+    public Boolean e;
+    public mc2 f;
+    public mc2 g;
+    public int h;
+}

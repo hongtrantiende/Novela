@@ -390,6 +390,10 @@ class ReadBookViewModel(
                 } else if (intent.sheet is ReadBookSheet.HighlightRuleConfig) {
                     loadHighlightRules()
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
+                } else if (intent.sheet is ReadBookSheet.ReadAloudConfig) {
+                    loadTtsEngineItems {
+                        _uiState.update { it.copy(activeSheet = intent.sheet) }
+                    }
                 } else {
                     _uiState.update { it.copy(activeSheet = intent.sheet) }
                 }
@@ -714,6 +718,7 @@ class ReadBookViewModel(
                     )
                 }
                 loadTtsEngineItems()
+                loadTtsVoiceItems()
             }
 
             is ReadBookIntent.SelectSpeakEngine -> {
@@ -748,15 +753,39 @@ class ReadBookViewModel(
             }
 
             is ReadBookIntent.ApplySpeakEngine -> {
-                ReadBook.book?.setTtsEngine(null)
-                ReadConfig.ttsEngine = intent.value
-                ReadAloud.upReadAloudClass()
+                execute {
+                    val id = intent.value?.toLongOrNull()
+                    if (id != null && id < 0) {
+                        val tts = appDb.httpTTSDao.get(id)
+                        if (tts == null) {
+                            io.legado.app.help.DefaultData.importDefaultHttpTTS()
+                        }
+                    }
+                }.onSuccess {
+                    ReadBook.book?.setTtsEngine(null)
+                    ReadConfig.ttsEngine = intent.value
+                    ReadAloud.upReadAloudClass()
+                    _uiState.update {
+                        it.copy(
+                            selectedTtsEngine = ReadAloud.ttsEngine,
+                            speakEngineName = computeSpeakEngineName(),
+                            activeSheet = ReadBookSheet.ReadAloudConfig,
+                        )
+                    }
+                    loadTtsEngineItems()
+                    loadTtsVoiceItems()
+                }
+            }
+
+            is ReadBookIntent.ApplyTtsVoice -> {
+                io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsVoiceName =
+                    intent.voiceName?.takeIf { it.isNotBlank() }
                 _uiState.update {
-                    it.copy(
-                        selectedTtsEngine = ReadAloud.ttsEngine,
-                        speakEngineName = computeSpeakEngineName(),
-                        activeSheet = ReadBookSheet.ReadAloudConfig,
-                    )
+                    it.copy(selectedTtsVoiceName = intent.voiceName ?: "")
+                }
+                // Khởi động lại TTS service để áp dụng voice mới
+                if (ReadAloud.ttsEngine.isNullOrBlank() || !android.text.TextUtils.isDigitsOnly(ReadAloud.ttsEngine)) {
+                    ReadAloud.upReadAloudClass()
                 }
             }
 
@@ -832,9 +861,15 @@ class ReadBookViewModel(
                 }.onSuccess {
                     loadTtsEngineItems()
                     _uiState.update {
+                        val currentActive = it.activeSheet
+                        val nextActive = if (currentActive is ReadBookSheet.HttpTtsEdit) {
+                            ReadBookSheet.ReadAloudConfig
+                        } else {
+                            currentActive
+                        }
                         it.copy(
                             editingHttpTts = null,
-                            activeSheet = ReadBookSheet.SpeakEngineConfig,
+                            activeSheet = nextActive,
                         )
                     }
                 }
@@ -1222,7 +1257,7 @@ class ReadBookViewModel(
 
     private fun showSpeakEngineConfig() {
         loadTtsEngineItems {
-            _uiState.update { it.copy(activeSheet = ReadBookSheet.SpeakEngineConfig) }
+            _uiState.update { it.copy(activeSheet = ReadBookSheet.ReadAloudConfig) }
         }
     }
 
@@ -1230,6 +1265,7 @@ class ReadBookViewModel(
         execute {
             buildList {
                 add(ReadBookTtsEngineItem(context.getString(R.string.system_tts), null))
+                add(ReadBookTtsEngineItem("AI (ONNX)", "ai_tts_onnx"))
                 sysEngines.forEach { engine ->
                     add(
                         ReadBookTtsEngineItem(
@@ -1256,6 +1292,97 @@ class ReadBookViewModel(
                 )
             }
             onSuccess?.invoke()
+        }
+    }
+
+    /** Load danh sách voice vi-VN từ Android TTS engine hoặc AI engine để hiển thị trong picker */
+    private fun loadTtsVoiceItems() {
+        execute {
+            // Tải danh sách AI voices trước
+            val dictInstalled = io.legado.app.help.tts.AiTtsEngine.isDictInstalled(context)
+            val aiVoices = buildList {
+                io.legado.app.help.tts.AI_TTS_MODELS.forEach { model ->
+                    val isInstalled = io.legado.app.help.tts.AiTtsEngine.isModelInstalled(context, model.id)
+                    if (model.numSpeakers > 1) {
+                        for (s in 0 until model.numSpeakers) {
+                            add(ReadBookTtsVoiceItem(
+                                title = "${model.name} - Giọng đọc $s" + (if (isInstalled && dictInstalled) "" else " [Chưa tải]"),
+                                name = "${model.id}:$s",
+                                isNetwork = !isInstalled || !dictInstalled
+                            ))
+                        }
+                    } else {
+                        add(ReadBookTtsVoiceItem(
+                            title = model.name + (if (isInstalled && dictInstalled) "" else " [Chưa tải]"),
+                            name = "${model.id}:0",
+                            isNetwork = !isInstalled || !dictInstalled
+                        ))
+                    }
+                }
+            }
+
+            // Tải danh sách System TTS voices
+            val latch = java.util.concurrent.CountDownLatch(1)
+            var ttsRef: TextToSpeech? = null
+            val rawEngine = ReadAloud.ttsEngine
+            val engine = if (rawEngine.isNullOrBlank() || android.text.TextUtils.isDigitsOnly(rawEngine) || rawEngine == "ai_tts_onnx") {
+                "com.google.android.tts"
+            } else {
+                rawEngine
+            }
+            ttsRef = TextToSpeech(context, { status ->
+                latch.countDown()
+            }, engine)
+            // Chờ callback init xong, tối đa 3 giây
+            latch.await(3, java.util.concurrent.TimeUnit.SECONDS)
+            val voices = try {
+                ttsRef.voices ?: emptySet()
+            } catch (e: Exception) {
+                emptySet()
+            }
+            val sysVoices = buildList {
+                add(ReadBookTtsVoiceItem(
+                    title = context.getString(R.string.system_tts) + " (Mặc định)",
+                    name = "",
+                    isNetwork = false,
+                ))
+                voices
+                    .filter { it.locale.language == "vi" }
+                    .sortedWith(compareByDescending<android.speech.tts.Voice> { it.isNetworkConnectionRequired }
+                        .thenBy { it.name })
+                    .forEach { voice ->
+                        val cleanTitle = when {
+                            voice.name.contains("gft-network") -> "vi-VN (gft)"
+                            voice.name.contains("vic-network") -> "vi-VN (vic)"
+                            voice.name.contains("vid-network") -> "vi-VN (vid)"
+                            voice.name.contains("vie-network") -> "vi-VN (vie)"
+                            voice.name.contains("vif-network") -> "vi-VN (vif)"
+                            voice.name.contains("gft-local") -> "vi-VN (gft) [Offline]"
+                            voice.name.contains("vic-local") -> "vi-VN (vic) [Offline]"
+                            voice.name.contains("vid-local") -> "vi-VN (vid) [Offline]"
+                            voice.name.contains("vie-local") -> "vi-VN (vie) [Offline]"
+                            voice.name.contains("vif-local") -> "vi-VN (vif) [Offline]"
+                            voice.name == "vi-VN-language" -> "vi-VN (Mặc định)"
+                            else -> voice.name
+                        }
+                        add(ReadBookTtsVoiceItem(
+                            title = cleanTitle,
+                            name = voice.name,
+                            isNetwork = voice.isNetworkConnectionRequired,
+                        ))
+                    }
+            }
+            ttsRef.runCatching { shutdown() }
+            Pair(aiVoices, sysVoices)
+        }.onSuccess { (aiVoices, sysVoices) ->
+            _uiState.update {
+                it.copy(
+                    aiTtsVoiceItems = aiVoices.toImmutableList(),
+                    systemTtsVoiceItems = sysVoices.toImmutableList(),
+                    ttsVoiceItems = if (ReadAloud.ttsEngine == "ai_tts_onnx") aiVoices.toImmutableList() else sysVoices.toImmutableList(),
+                    selectedTtsVoiceName = io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsVoiceName ?: "",
+                )
+            }
         }
     }
 
@@ -1336,7 +1463,7 @@ class ReadBookViewModel(
         _uiState.update {
             it.copy(
                 httpTtsImportState = BaseImportUiState.Idle,
-                activeSheet = ReadBookSheet.SpeakEngineConfig,
+                activeSheet = ReadBookSheet.ReadAloudConfig,
             )
         }
     }
@@ -1397,7 +1524,7 @@ class ReadBookViewModel(
             _uiState.update {
                 it.copy(
                     httpTtsImportState = BaseImportUiState.Idle,
-                    activeSheet = ReadBookSheet.SpeakEngineConfig,
+                    activeSheet = ReadBookSheet.ReadAloudConfig,
                 )
             }
             _effects.tryEmit(ReadBookEffect.ShowToast(context.getString(R.string.success)))
@@ -1420,6 +1547,9 @@ class ReadBookViewModel(
     private fun computeSpeakEngineName(): String {
         val ttsEngine = ReadAloud.ttsEngine
             ?: return context.getString(R.string.system_tts)
+        if (ttsEngine == "ai_tts_onnx") {
+            return "AI (ONNX)"
+        }
         if (StringUtils.isNumeric(ttsEngine)) {
             return appDb.httpTTSDao.getName(ttsEngine.toLong())
                 ?: context.getString(R.string.system_tts)
@@ -4083,13 +4213,52 @@ class ReadBookViewModel(
             context.toastOnUi("Không thể thêm sách")
         }
     }
+
+    fun downloadAiTtsModel(modelId: String, onProgress: (Int) -> Unit, onFinish: (Boolean) -> Unit) {
+        execute {
+            // 1. Đảm bảo thư mục từ điển đã được tải về và cài đặt
+            val dictInstalled = io.legado.app.help.tts.AiTtsEngine.isDictInstalled(context)
+            if (!dictInstalled) {
+                val dictDest = java.io.File(context.filesDir, "ai-tts")
+                dictDest.mkdirs()
+                AppLog.put("Đang tải xuống bộ từ điển tiếng Việt...")
+                io.legado.app.help.tts.AiTtsEngine.downloadAndUnzip(
+                    context,
+                    "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/tts-data.zip",
+                    dictDest,
+                    { }
+                )
+            }
+            
+            // 2. Tải về mô hình giọng đọc tương ứng
+            val model = io.legado.app.help.tts.AI_TTS_MODELS.find { it.id == modelId } ?: throw Exception("Mô hình không tồn tại")
+            val modelDest = java.io.File(context.filesDir, "ai-tts/models/$modelId")
+            modelDest.mkdirs()
+            
+            AppLog.put("Đang tải xuống giọng đọc ${model.name}...")
+            io.legado.app.help.tts.AiTtsEngine.downloadAndUnzip(
+                context,
+                model.downloadUrl,
+                modelDest,
+                onProgress
+            )
+            true
+        }.onSuccess {
+            AppLog.put("Tải xuống và cài đặt giọng đọc thành công!")
+            loadTtsVoiceItems()
+            onFinish(true)
+        }.onError {
+            AppLog.put("Lỗi khi tải giọng đọc AI: ${it.localizedMessage}", it, true)
+            onFinish(false)
+        }
+    }
 }
 
 private const val TITLE_BAR_ICON_PREFS = "title_bar_icons"
 private const val TITLE_BAR_ICON_KEY = "icons"
 private const val TOOL_BUTTON_PREFS = "tool_button_config"
 private const val TOOL_BUTTON_KEY = "tool_buttons"
-private const val DEFAULT_ENABLED_BUTTON_COUNT = 6
+private const val DEFAULT_ENABLED_BUTTON_COUNT = 4
 
 private data class SearchTextPoint(
     val pageIndex: Int,

@@ -1,0 +1,32 @@
+package defpackage;
+
+import java.util.Arrays;
+/* compiled from: r8-map-id-f559a6c9210f67746bd9ce87931ee85b676f3bda66e04dc5e85cb7e8eec71de1 */
+/* renamed from: utc  reason: default package */
+/* loaded from: classes3.dex */
+public final class utc extends t59 {
+    public long[] a;
+    public int b;
+
+    @Override // defpackage.t59
+    public final Object a() {
+        return new ttc(Arrays.copyOf(this.a, this.b));
+    }
+
+    @Override // defpackage.t59
+    public final void b(int i) {
+        long[] jArr = this.a;
+        if (jArr.length < i) {
+            int length = jArr.length * 2;
+            if (i < length) {
+                i = length;
+            }
+            this.a = Arrays.copyOf(jArr, i);
+        }
+    }
+
+    @Override // defpackage.t59
+    public final int d() {
+        return this.b;
+    }
+}

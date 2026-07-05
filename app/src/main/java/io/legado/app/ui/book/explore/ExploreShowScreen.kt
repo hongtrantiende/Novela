@@ -632,7 +632,7 @@ fun ExploreShowScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(Color(0xFF121212)),
+                            .background(LegadoTheme.colorScheme.background),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -640,7 +640,7 @@ fun ExploreShowScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             AppText(
                                 text = "Đang tải dữ liệu...",
-                                color = Color.White.copy(alpha = 0.8f),
+                                color = LegadoTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                                 style = LegadoTheme.typography.bodyMedium
                             )
                         }
