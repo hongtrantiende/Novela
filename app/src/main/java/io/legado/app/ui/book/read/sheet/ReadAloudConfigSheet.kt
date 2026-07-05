@@ -73,10 +73,10 @@ fun SpeakEnginePickerSheet(
             Pair("Google V2 (Neural2)", "google_v2"),
             Pair("AI (ONNX)", "ai_tts_onnx"),
         )
-        LazyColumn(
+        Column(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
         ) {
-            items(engines) { (title, key) ->
+            engines.forEach { (title, key) ->
                 TinyClickableSettingItem(
                     title = title,
                     onClick = {
@@ -108,12 +108,12 @@ fun VoicePickerSheet(
         onDismiss = onDismissRequest,
         content = {
         val items = state.ttsEngineItems
-        LazyColumn(
+        Column(
             modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
         ) {
             when (engineKey) {
                 "system_tts" -> {
-                    items(state.systemTtsVoiceItems) { voice ->
+                    state.systemTtsVoiceItems.forEach { voice ->
                         val isSelected = state.selectedTtsEngine.isNullOrBlank() && state.selectedTtsVoiceName == voice.name
                         TinyClickableSettingItem(
                             title = voice.title,
@@ -138,7 +138,7 @@ fun VoicePickerSheet(
                 }
                 "google_v1" -> {
                     val filtered = items.filter { it.value?.toLongOrNull()?.let { id -> id in -106L..-101L } == true }
-                    items(filtered) { item ->
+                    filtered.forEach { item ->
                         val isSelected = state.selectedTtsEngine == item.value
                         TinyClickableSettingItem(
                             title = item.title,
@@ -152,7 +152,7 @@ fun VoicePickerSheet(
                 }
                 "google_v2" -> {
                     val filtered = items.filter { it.value?.toLongOrNull()?.let { id -> id in -108L..-107L } == true }
-                    items(filtered) { item ->
+                    filtered.forEach { item ->
                         val isSelected = state.selectedTtsEngine == item.value
                         TinyClickableSettingItem(
                             title = item.title,
@@ -166,7 +166,7 @@ fun VoicePickerSheet(
                 }
                 "google_v3" -> {
                     val filtered = items.filter { it.value?.toLongOrNull()?.let { id -> id in -138L..-109L } == true }
-                    items(filtered) { item ->
+                    filtered.forEach { item ->
                         val isSelected = state.selectedTtsEngine == item.value
                         TinyClickableSettingItem(
                             title = item.title,
@@ -183,7 +183,7 @@ fun VoicePickerSheet(
                         it.title.contains("edge", ignoreCase = true) || 
                         it.value?.toLongOrNull()?.let { id -> id <= -200 } == true 
                     }
-                    items(filtered) { item ->
+                    filtered.forEach { item ->
                         val isSelected = state.selectedTtsEngine == item.value
                         TinyClickableSettingItem(
                             title = item.title,
@@ -196,7 +196,7 @@ fun VoicePickerSheet(
                     }
                 }
                 "ai_tts_onnx" -> {
-                    items(state.aiTtsVoiceItems) { voice ->
+                    state.aiTtsVoiceItems.forEach { voice ->
                         val isSelected = state.selectedTtsEngine == "ai_tts_onnx" && state.selectedTtsVoiceName == voice.name
                         var downloadProgress by remember(voice.name) { mutableStateOf<Int?>(null) }
                         
