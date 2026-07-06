@@ -17,6 +17,14 @@ class ExampleUnitTest {
     }
 
     @Test
+    fun testG2PMac() {
+        val method = io.legado.app.help.tts.AiTtsDict::class.java.getDeclaredMethod("wordToPhonemes", String::class.java)
+        method.isAccessible = true
+        val result = method.invoke(io.legado.app.help.tts.AiTtsDict, "mắc") as List<*>
+        println("Phonemes for mắc: $result")
+    }
+
+    @Test
     fun parseHttpTtsJson() {
         val file = java.io.File("src/main/assets/defaultData/httpTTS.json")
         println("File path: ${file.absolutePath}")

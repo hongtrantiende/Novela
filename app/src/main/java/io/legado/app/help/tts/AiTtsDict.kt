@@ -328,15 +328,19 @@ object AiTtsDict {
      * Follows VBook's yv8 decomposition logic.
      */
     private fun wordToPhonemes(word: String): List<String> {
-        if (word == "mắc") {
-            return listOf("m", "a", "k", "T3")
-        }
         if (word.isEmpty()) return emptyList()
 
         val phonemes = ArrayList<String>()
 
         // 1. Extract tone
         val (tone, detoned) = extractTone(word)
+        AppLog.put("TTS word='$word' detoned='$detoned' tone='$tone'")
+
+        // Match mắc using multiple normalization forms and unicode escape sequences
+        if (word == "mắc" || word == "m\u1EAFc" || word == "m\u006Da\u0306\u0301c" || detoned == "m\u0103c") {
+            AppLog.put("TTS matched mắc override -> mapping to mác with tone $tone")
+            return listOf("m", "a", "k", tone)
+        }
 
         // Special override for "chieu" to avoid "chiu" pronunciation bug in the model
         if (detoned == "chieu") {
