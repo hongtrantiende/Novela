@@ -328,6 +328,9 @@ object AiTtsDict {
      * Follows VBook's yv8 decomposition logic.
      */
     private fun wordToPhonemes(word: String): List<String> {
+        if (word == "mắc") {
+            return listOf("m", "ɐ", "t", "T3")
+        }
         if (word.isEmpty()) return emptyList()
 
         val phonemes = ArrayList<String>()
@@ -436,7 +439,6 @@ object AiTtsDict {
 
         // Convert numbers to words first
         val textWithWords = convertNumbersToWordsInText(text)
-            .replace(Regex("\\bmắc\\b", RegexOption.IGNORE_CASE), "mấc")
 
         // Normalize text: NFC form, lowercase
         val normalizedText = Normalizer.normalize(textWithWords.lowercase(), Normalizer.Form.NFC)
