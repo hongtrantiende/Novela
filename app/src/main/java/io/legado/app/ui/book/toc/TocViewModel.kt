@@ -316,7 +316,7 @@ class TocViewModel(
     val visibleCount = MutableStateFlow(50)
 
     fun loadMoreChapters() {
-        visibleCount.value += 50
+        visibleCount.value = Int.MAX_VALUE
     }
 
     override val uiState: StateFlow<TocActionState> by lazy {
