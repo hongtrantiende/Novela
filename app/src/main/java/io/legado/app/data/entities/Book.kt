@@ -8,6 +8,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookType
 import io.legado.app.constant.PageAnim
@@ -278,7 +279,7 @@ data class Book(
         return try {
             LocalDate.parse(config.startDate)
         } catch (e: Exception) {
-            println("Không phân tích được ngày: ${config.startDate}, lỗi: ${e.message}")
+            AppLog.put("Không phân tích được ngày: ${config.startDate}, lỗi: ${e.message}")
             LocalDate.now()
         }
     }

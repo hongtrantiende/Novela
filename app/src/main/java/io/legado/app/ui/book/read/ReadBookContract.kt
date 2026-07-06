@@ -237,12 +237,12 @@ data class ReadBookButtonConfigItem(
 )
 
 internal val ReadBookButtonIds = listOf(
-    "search",
-    "auto_page",
     "catalog",
     "read_aloud",
     "setting",
     "translate",
+    "search",
+    "auto_page",
     "addBookmark",
     "theme",
     "prev_chapter",

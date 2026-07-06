@@ -4257,7 +4257,7 @@ class ReadBookViewModel(
 private const val TITLE_BAR_ICON_PREFS = "title_bar_icons"
 private const val TITLE_BAR_ICON_KEY = "icons"
 private const val TOOL_BUTTON_PREFS = "tool_button_config"
-private const val TOOL_BUTTON_KEY = "tool_buttons"
+private const val TOOL_BUTTON_KEY = "tool_buttons_v2"
 private const val DEFAULT_ENABLED_BUTTON_COUNT = 4
 
 private data class SearchTextPoint(

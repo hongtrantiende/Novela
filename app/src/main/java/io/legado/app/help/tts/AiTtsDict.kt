@@ -436,6 +436,7 @@ object AiTtsDict {
 
         // Convert numbers to words first
         val textWithWords = convertNumbersToWordsInText(text)
+            .replace(Regex("\\bmắc\\b", RegexOption.IGNORE_CASE), "mấc")
 
         // Normalize text: NFC form, lowercase
         val normalizedText = Normalizer.normalize(textWithWords.lowercase(), Normalizer.Form.NFC)

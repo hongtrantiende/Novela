@@ -513,7 +513,7 @@ fun Book.simulatedTotalChapterNum(): Int {
                 val startDate = LocalDate.parse(config.startDate)
                 ChronoUnit.DAYS.between(startDate, currentDate).toInt() + 1
             } catch (e: Exception) {
-                println("Không phân tích được ngày bắt đầu: ${config.startDate}, lỗi: ${e.message}")
+                AppLog.put("Không phân tích được ngày bắt đầu: ${config.startDate}, lỗi: ${e.message}")
                 1 // 解析失败时返回默认值1
             }
         } else {

@@ -1,7 +1,0 @@
-package defpackage;
-/* compiled from: r8-map-id-f559a6c9210f67746bd9ce87931ee85b676f3bda66e04dc5e85cb7e8eec71de1 */
-/* renamed from: kn2  reason: default package */
-/* loaded from: classes3.dex */
-public final /* synthetic */ class kn2 extends xu4 implements zt4 {
-    public static final kn2 a = new xu4(12, en2.class, "<init>", "<init>(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IIIIIIJ)V", 0);
-}
