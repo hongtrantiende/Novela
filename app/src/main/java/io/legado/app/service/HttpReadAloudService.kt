@@ -998,8 +998,11 @@ class HttpReadAloudService : BaseReadAloudService(),
     }
 
     private fun getPitchMultiplier(): Float {
+        if (ReadAloud.ttsEngine == "ai_tts_onnx") {
+            val pitchVal = io.legado.app.ui.config.readConfig.ReadTtsConfig.ttsPitch
+            return 1.0f + pitchVal * 0.05f
+        }
         val httpTts = ReadAloud.httpTTS ?: return 1.0f
-        if (ReadAloud.ttsEngine == "ai_tts_onnx") return 1.0f
         val isChirp3Voice = httpTts.name.contains("Chirp3-HD", ignoreCase = true) || (httpTts.id in -138..-109)
         return if (isChirp3Voice) 0.92f else 1.0f
     }

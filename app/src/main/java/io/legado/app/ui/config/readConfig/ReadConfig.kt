@@ -164,6 +164,9 @@ object ReadConfig {
     var ttsSpeechRate
         get() = ReadTtsConfig.ttsSpeechRate
         set(value) { ReadTtsConfig.ttsSpeechRate = value }
+    var ttsPitch
+        get() = ReadTtsConfig.ttsPitch
+        set(value) { ReadTtsConfig.ttsPitch = value }
     var ttsTimer
         get() = ReadTtsConfig.ttsTimer
         set(value) { ReadTtsConfig.ttsTimer = value }

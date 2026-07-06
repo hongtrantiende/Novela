@@ -332,6 +332,9 @@ fun ReadAloudConfigSheet(
         var onnxSpeechRate by remember {
             mutableStateOf(ReadConfig.ttsSpeechRate.toFloat())
         }
+        var onnxPitch by remember {
+            mutableStateOf(ReadConfig.ttsPitch.toFloat())
+        }
 
         AppModalBottomSheet(
             show = showOnnxEdit,
@@ -342,6 +345,7 @@ fun ReadAloudConfigSheet(
                     icon = Icons.Default.Save,
                     onClick = {
                         ReadConfig.ttsSpeechRate = Math.round(onnxSpeechRate)
+                        ReadConfig.ttsPitch = Math.round(onnxPitch)
                         io.legado.app.model.ReadAloud.upTtsSpeechRate(splitties.init.appCtx)
                         
                         // Clear TTS cache to force reload with the new speed
@@ -383,6 +387,15 @@ fun ReadAloudConfigSheet(
                     defaultValue = 5.0f,
                     valueRange = 0.0f..25.0f,
                     onValueChange = { onnxSpeechRate = it }
+                )
+                Spacer(Modifier.height(16.dp))
+                SliderSettingItem(
+                    title = "Độ cao giọng (Pitch)",
+                    description = "Trầm (-10) đến Cao (+10) (Hiện tại: ${String.format(java.util.Locale.US, "%.1f", onnxPitch)})",
+                    value = onnxPitch,
+                    defaultValue = 0.0f,
+                    valueRange = -10.0f..10.0f,
+                    onValueChange = { onnxPitch = it }
                 )
                 Spacer(Modifier.height(16.dp))
             }

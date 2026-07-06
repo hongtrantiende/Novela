@@ -44,6 +44,11 @@ object ReadTtsConfig {
         5
     )
 
+    var ttsPitch by prefDelegate(
+        "ttsPitch",
+        0
+    )
+
     var ttsTimer by prefDelegate(
         PreferKey.ttsTimer,
         0
