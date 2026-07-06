@@ -320,7 +320,7 @@ fun MainActivity.mainEntryProvider(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFF121212)),
+                    .background(io.legado.app.ui.theme.LegadoTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) {
                 AppContainedLoadingIndicator()

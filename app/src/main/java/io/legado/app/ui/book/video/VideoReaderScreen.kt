@@ -954,7 +954,7 @@ private fun VideoContent(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black),
+                    .background(io.legado.app.ui.theme.LegadoTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -964,7 +964,7 @@ private fun VideoContent(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Đang tải...",
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = io.legado.app.ui.theme.LegadoTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                         fontSize = 14.sp
                     )
                 }

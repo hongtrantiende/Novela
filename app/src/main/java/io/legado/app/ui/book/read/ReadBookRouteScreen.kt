@@ -609,7 +609,7 @@ fun ReadBookRouteScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFF121212)),
+                    .background(io.legado.app.ui.theme.LegadoTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -619,7 +619,7 @@ fun ReadBookRouteScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = if (!state.msg.isNullOrBlank()) state.msg!! else "Đang tải...",
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = io.legado.app.ui.theme.LegadoTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                         fontSize = 14.sp
                     )
                 }
