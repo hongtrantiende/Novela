@@ -92,6 +92,8 @@ fun BackupConfigScreen(
     var confirmDialogText by remember { mutableStateOf("") }
     var onConfirmAction by remember { mutableStateOf<(() -> Unit)?>(null) }
 
+    var googleSignInErrorText by remember { mutableStateOf<String?>(null) }
+
     var tempAccount by remember { mutableStateOf("") }
     var tempPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -244,8 +246,26 @@ fun BackupConfigScreen(
                             }
                         }
                     } catch (e: Exception) {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("Đăng nhập thất bại: ${e.localizedMessage}")
+                        val statusCode = if (e is com.google.android.gms.common.api.ApiException) e.statusCode else -1
+                        val errorDetail = when (statusCode) {
+                            10 -> "DEVELOPER_ERROR (Lỗi chữ ký SHA-1 hoặc Client ID)"
+                            7 -> "NETWORK_ERROR (Lỗi kết nối mạng)"
+                            12500 -> "SIGN_IN_FAILED (Đăng nhập thất bại)"
+                            else -> e.localizedMessage ?: "Lỗi không xác định"
+                        }
+                        
+                        if (statusCode == 10) {
+                            googleSignInErrorText = "Đăng nhập Google Drive thất bại.\n\n" +
+                                    "Mã lỗi: 10 (DEVELOPER_ERROR).\n" +
+                                    "Nguyên nhân: Chữ ký SHA-1 chưa được đăng ký trong Firebase/Google Console.\n\n" +
+                                    "Thông tin đăng ký bắt buộc:\n" +
+                                    "- Package Name: ${context.packageName}\n" +
+                                    "- SHA-1: ${getAppSHA1(context)}\n\n" +
+                                    "Vui lòng thêm SHA-1 trên vào phần cài đặt ứng dụng Android của dự án Firebase, tải lại file google-services.json mới và build lại app."
+                        } else {
+                            scope.launch {
+                                snackbarHostState.showSnackbar("Đăng nhập thất bại: $errorDetail")
+                            }
                         }
                     }
                 }
@@ -271,6 +291,32 @@ fun BackupConfigScreen(
                 }
             }
         }
+    }
+
+    if (googleSignInErrorText != null) {
+        val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+        AppAlertDialog(
+            show = googleSignInErrorText != null,
+            onDismissRequest = { googleSignInErrorText = null },
+            title = "Lỗi đăng nhập Google Drive",
+            content = {
+                Column {
+                    androidx.compose.material3.Text(
+                        text = googleSignInErrorText ?: "",
+                        color = LegadoTheme.colorScheme.onSurface,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                    )
+                }
+            },
+            confirmText = "Sao chép SHA-1",
+            onConfirm = {
+                clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(getAppSHA1(context)))
+                android.widget.Toast.makeText(context, "Đã sao chép SHA-1 vào bộ nhớ tạm", android.widget.Toast.LENGTH_SHORT).show()
+                googleSignInErrorText = null
+            },
+            dismissText = "Đóng",
+            onDismiss = { googleSignInErrorText = null }
+        )
     }
 
     AppAlertDialog(
@@ -622,4 +668,43 @@ private fun executeBackup(
             }
         })
     }
+}
+
+private fun getAppSHA1(context: Context): String {
+    try {
+        val packageInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNATURES)
+        }
+        
+        val signatures = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            packageInfo.signingInfo?.apkContentsSigners
+        } else {
+            @Suppress("DEPRECATION")
+            packageInfo.signatures
+        }
+
+        if (!signatures.isNullOrEmpty()) {
+            val md = java.security.MessageDigest.getInstance("SHA-1")
+            val publicKey = md.digest(signatures[0].toByteArray())
+            val hexString = StringBuilder()
+            for (i in publicKey.indices) {
+                val appendString = Integer.toHexString(0xFF and publicKey[i].toInt())
+                    .uppercase(java.util.Locale.US)
+                if (appendString.length == 1) {
+                    hexString.append("0")
+                }
+                hexString.append(appendString)
+                if (i < publicKey.size - 1) {
+                    hexString.append(":")
+                }
+            }
+            return hexString.toString()
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+    }
+    return "Không tìm thấy SHA-1"
 }

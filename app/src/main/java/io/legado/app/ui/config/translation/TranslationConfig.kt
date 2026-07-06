@@ -56,6 +56,11 @@ object TranslationConfig {
         2
     )
 
+    var llmScanAdvanced by prefDelegate(
+        "llmScanAdvanced",
+        false
+    )
+
     private var storedLlmTemperature by prefDelegate(
         PreferKey.llmTemperature,
         TranslationConstants.DEFAULT_TEMPERATURE

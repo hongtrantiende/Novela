@@ -1,6 +1,7 @@
 package io.legado.app.model.translation
 
 import io.legado.app.data.entities.Book
+import io.legado.app.utils.TranslateUtils
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.usecase.TranslateChapterUseCase
@@ -226,7 +227,59 @@ object TranslationManager : KoinComponent {
         val genre = book.kind?.takeIf { it.isNotBlank() } ?: "Không rõ"
         
         try {
-            val prompt = """
+            val isAdvanced = TranslationConfig.llmScanAdvanced
+            val prompt = if (isAdvanced) {
+                val translatedContent = TranslateUtils.forceTranslateContent(rawContent)
+                """
+                Bạn là một trợ lý dịch thuật Trung-Việt chuyên nghiệp, nhiệm vụ của bạn là đối chiếu bản gốc tiếng Trung và bản dịch thô từ từ điển để tìm ra và sửa các lỗi dịch sai, dịch kém chất lượng, từ đó xây dựng/cập nhật từ điển thuật ngữ cho bộ truyện.
+
+                ⚠️ NHIỆM VỤ BẮT BUỘC — PHẢI THỰC HIỆN NGHIÊM TÚC:
+                Đọc kỹ và đối chiếu TOÀN BỘ văn bản bản gốc tiếng Trung và bản dịch thô tiếng Việt dưới đây từ đầu đến cuối. Trích xuất, phân loại và SỬA LẠI các từ dịch sai/chưa tối ưu thuộc đúng 6 nhóm sau:
+
+                1. Tên nhân vật (TAG: PER): TẤT CẢ tên người, nhân vật xuất hiện bị dịch sai hoặc dịch không mượt trong bản dịch thô.
+                2. Địa danh (TAG: LOC): TẤT CẢ địa điểm, thành trì, núi, sông, thế giới bị dịch sai hoặc chưa tối ưu.
+                3. Tổ chức (TAG: ORG): TẤT CẢ tông môn, gia tộc, bang hội, tổ chức bị dịch sai hoặc chưa tối ưu.
+                4. Xưng hô (TAG: PRON): TẤT CẢ đại từ xưng hô, cách gọi đặc trưng bị dịch sai hoặc chưa tối ưu.
+                5. Từ vựng khác (TAG: USER): TẤT CẢ các danh từ, thuật ngữ, từ vựng chung trong truyện bị dịch sai hoặc dịch vô nghĩa trong bản dịch thô.
+                6. Lỗi dịch từ điển (TAG: ERR): Cụ thể các từ/cụm từ bị dịch sai nghĩa nghiêm trọng do từ điển (VietPhrase/Name) dịch sai, dịch ngớ ngẩn (Ví dụ: Từ gốc chỉ hành động/sự vật nhưng từ điển dịch ra nghĩa khác hoàn toàn hoặc dịch ra một từ vô nghĩa).
+
+                Thông tin ngữ cảnh:
+                - Thể loại truyện: $genre
+
+                Quy tắc dịch thuật bắt buộc:
+                - Truyện tiên hiệp/kiếm hiệp/huyền huyễn cổ đại Trung Quốc → dịch âm Hán-Việt chuẩn (萧炎→Tiêu Viêm/PER, 云岚宗→Vân Lam Tông/ORG).
+                - Truyện Võng Du/Khoa Huyễn/Tây Phương → phiên âm Latin/Anh (杰克→Jack/PER).
+                - Light Novel Nhật/Hàn → Romaji hoặc phiên âm gốc (桐人→Kirito/PER).
+                - TUYỆT ĐỐI KHÔNG dịch nghĩa đen tên riêng (萧炎 KHÔNG được dịch thành "Lửa Tiêu").
+
+                ⚠️ CÁC RÀNG BUỘC BẮT BUỘC:
+                - Đối chiếu kỹ lưỡng cả bản gốc tiếng Trung và bản dịch thô tiếng Việt.
+                - Quét TOÀN BỘ văn bản, KHÔNG bỏ qua đoạn nào.
+                - Liệt kê TẤT CẢ thực thể/từ vựng bị dịch sai hoặc chưa tối ưu, kể cả từ chỉ xuất hiện 1 lần.
+                - Mỗi thực thể chỉ xuất hiện 1 lần trong kết quả (không trùng lặp).
+                - Chỉ trả về danh sách thô, KHÔNG có markdown, KHÔNG có tiêu đề, KHÔNG giải thích.
+
+                Định dạng mỗi dòng (bắt buộc):
+                TừGốcTiếngTrung=BảnDịchChínhXác/TAG
+
+                Ví dụ:
+                萧炎=Tiêu Viêm/PER
+                云岚宗=Vân Lam Tông/ORG
+                迦南学院=Ca Nam Học Viện/LOC
+                师父=Sư phụ/PRON
+                斗帝=Đấu Đế/USER
+                白面=mặt trắng/ERR
+
+                ---
+                BẢN GỐC TIẾNG TRUNG:
+                $rawContent
+                
+                ---
+                BẢN DỊCH THÔ TỪ TỪ ĐIỂN:
+                $translatedContent
+                """.trimIndent()
+            } else {
+                """
                 Bạn là một trợ lý dịch thuật Trung-Việt chuyên nghiệp, nhiệm vụ của bạn là xây dựng từ điển thuật ngữ cho bộ truyện.
 
                 ⚠️ NHIỆM VỤ BẮT BUỘC — PHẢI THỰC HIỆN NGHIÊM TÚC:
@@ -264,7 +317,8 @@ object TranslationManager : KoinComponent {
 
                 Nội dung chương truyện:
                 $rawContent
-            """.trimIndent()
+                """.trimIndent()
+            }
 
             val jsonBody = org.json.JSONObject().apply {
                 put("model", TranslationConfig.llmModel.ifBlank { "gpt-3.5-turbo" })

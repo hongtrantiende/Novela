@@ -45,7 +45,16 @@ object QuickTranslateDictHelper {
                     writer.write("$key=$value\n")
                 }
             }
-            QuickTranslateEngine.init(context, force = true)
+            if (fileName.contains("book_")) {
+                val start = fileName.indexOf("book_") + 5
+                val end = fileName.indexOf('_', start)
+                if (end != -1) {
+                    val bookKey = fileName.substring(start, end)
+                    QuickTranslateEngine.initBookPrivateDict(context, bookKey)
+                }
+            } else {
+                QuickTranslateEngine.init(context, force = true)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }

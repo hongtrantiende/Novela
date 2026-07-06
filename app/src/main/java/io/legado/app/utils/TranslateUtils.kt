@@ -721,6 +721,16 @@ object TranslateUtils {
         }
         return sb.toString()
     }
+
+    suspend fun forceTranslateContent(text: String?): String {
+        if (text.isNullOrBlank()) return ""
+        return try {
+            performTranslation(text)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            text
+        }
+    }
 }
 
 private val translateStateCache = android.util.LruCache<String, String>(500)

@@ -709,12 +709,12 @@ private suspend fun scanNamesByDict(
                 val cleanSentence = sentence.trim()
                 if (cleanSentence.isEmpty()) return@forEach
                 
-                val chars = cleanSentence.filter { it.code in 0x4E00..0x9FFF }.map { it.toString() }
-                if (chars.size < 2) return@forEach
+                val chars = cleanSentence.filter { it.code in 0x4E00..0x9FFF }
+                if (chars.length < 2) return@forEach
                 
                 for (len in 2..4) {
-                    for (start in 0..chars.size - len) {
-                        val word = chars.subList(start, start + len).joinToString("")
+                    for (start in 0..chars.length - len) {
+                        val word = chars.substring(start, start + len)
                         var isCommon = false
                         data.vietPhrase.findLongestMatch(word, 0)?.let { (matchLen, value) ->
                             if (matchLen == word.length && value.isNotEmpty() && value.first().isLowerCase()) {

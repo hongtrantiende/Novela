@@ -115,22 +115,34 @@ object QuickTranslateEngine {
                 val phienAmCapacity = (totalPhienAmLines / 0.75f).toInt() + 1
                 val tempPhienAmDict = HashMap<String, String>(phienAmCapacity)
 
+                val stringCache = HashMap<String, String>(totalTranslationLines / 5)
                 fun dedup(str: String): String {
-                    return str.intern()
+                    val cached = stringCache[str]
+                    if (cached != null) return cached
+                    stringCache[str] = str
+                    return str
+                }
+
+                fun parseLineAndPut(line: String, map: HashMap<String, String>) {
+                    val eqIdx = line.indexOf('=')
+                    if (eqIdx != -1) {
+                        val key = line.substring(0, eqIdx).trim()
+                        if (key.isNotEmpty()) {
+                            val rawValue = line.substring(eqIdx + 1)
+                            val slashIdx = rawValue.indexOf('/')
+                            val valPart = (if (slashIdx != -1) rawValue.substring(0, slashIdx) else rawValue).trim()
+                            if (valPart.isNotEmpty()) {
+                                map[key] = dedup(valPart)
+                            }
+                        }
+                    }
                 }
 
                 // 1. Nạp PhienAm.txt (Hán Việt)
                 if (phienAmFile.exists()) {
                     phienAmFile.bufferedReader().useLines { lines ->
                         lines.forEach { line ->
-                            val parts = line.split('=', limit = 2)
-                            if (parts.size == 2) {
-                                val key = parts[0].trim()
-                                val valPart = parts[1].split('/', limit = 2)[0].trim()
-                                if (key.isNotEmpty() && valPart.isNotEmpty()) {
-                                    tempPhienAmDict[key] = dedup(valPart)
-                                }
-                            }
+                            parseLineAndPut(line, tempPhienAmDict)
                         }
                     }
                 }
@@ -140,20 +152,11 @@ object QuickTranslateEngine {
                 val priorityNameVp = prefs.getString("qt_dict_priority_name_vp", "Name > VP") ?: "Name > VP"
                 val luatNhanSetting = prefs.getString("qt_luat_nhan", "Không nhân") ?: "Không nhân"
 
-
-
                 fun loadVpFile() {
                     if (vpFile.exists()) {
                         vpFile.bufferedReader().useLines { lines ->
                             lines.forEach { line ->
-                                val parts = line.split('=', limit = 2)
-                                if (parts.size == 2) {
-                                    val key = parts[0].trim()
-                                    val valPart = parts[1].split('/', limit = 2)[0].trim()
-                                    if (key.isNotEmpty() && valPart.isNotEmpty()) {
-                                        tempTranslationDict[key] = dedup(valPart)
-                                    }
-                                }
+                                parseLineAndPut(line, tempTranslationDict)
                             }
                         }
                     }
@@ -163,14 +166,7 @@ object QuickTranslateEngine {
                     if (nameFile.exists()) {
                         nameFile.bufferedReader().useLines { lines ->
                             lines.forEach { line ->
-                                val parts = line.split('=', limit = 2)
-                                if (parts.size == 2) {
-                                    val key = parts[0].trim()
-                                    val valPart = parts[1].split('/', limit = 2)[0].trim()
-                                    if (key.isNotEmpty() && valPart.isNotEmpty()) {
-                                        tempTranslationDict[key] = dedup(valPart)
-                                    }
-                                }
+                                parseLineAndPut(line, tempTranslationDict)
                             }
                         }
                     }
@@ -190,14 +186,7 @@ object QuickTranslateEngine {
                 if (pronounsFile.exists()) {
                     pronounsFile.bufferedReader().useLines { lines ->
                         lines.forEach { line ->
-                            val parts = line.split('=', limit = 2)
-                            if (parts.size == 2) {
-                                val key = parts[0].trim()
-                                val valPart = parts[1].split('/', limit = 2)[0].trim()
-                                if (key.isNotEmpty() && valPart.isNotEmpty()) {
-                                    tempTranslationDict[key] = dedup(valPart)
-                                }
-                            }
+                            parseLineAndPut(line, tempTranslationDict)
                         }
                     }
                 }
@@ -208,14 +197,7 @@ object QuickTranslateEngine {
                     if (luatNhanFile.exists()) {
                         luatNhanFile.bufferedReader().useLines { lines ->
                             lines.forEach { line ->
-                                val parts = line.split('=', limit = 2)
-                                if (parts.size == 2) {
-                                    val key = parts[0].trim()
-                                    val valPart = parts[1].split('/', limit = 2)[0].trim()
-                                    if (key.isNotEmpty() && valPart.isNotEmpty()) {
-                                        tempTranslationDict[key] = dedup(valPart)
-                                    }
-                                }
+                                parseLineAndPut(line, tempTranslationDict)
                             }
                         }
                         Log.d(TAG, "Loaded LuatNhan.txt successfully.")
@@ -256,12 +238,16 @@ object QuickTranslateEngine {
                 if (file.exists()) {
                     file.bufferedReader().useLines { lines ->
                         lines.forEach { line ->
-                            val parts = line.split('=', limit = 2)
-                            if (parts.size == 2) {
-                                val key = parts[0].trim()
-                                val valPart = parts[1].split('/', limit = 2)[0].trim()
-                                if (key.isNotEmpty() && valPart.isNotEmpty()) {
-                                    tempPrivateDict[key] = valPart
+                            val eqIdx = line.indexOf('=')
+                            if (eqIdx != -1) {
+                                val key = line.substring(0, eqIdx).trim()
+                                if (key.isNotEmpty()) {
+                                    val rawValue = line.substring(eqIdx + 1)
+                                    val slashIdx = rawValue.indexOf('/')
+                                    val valPart = (if (slashIdx != -1) rawValue.substring(0, slashIdx) else rawValue).trim()
+                                    if (valPart.isNotEmpty()) {
+                                        tempPrivateDict[key] = valPart
+                                    }
                                 }
                             }
                         }

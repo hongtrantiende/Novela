@@ -434,27 +434,29 @@ object AiTtsDict {
         // Start with BOS token (^)
         ids.add(BOS_ID)
 
+        // Convert numbers to words first
+        val textWithWords = convertNumbersToWordsInText(text)
+
         // Normalize text: NFC form, lowercase
-        val normalizedText = Normalizer.normalize(text.lowercase(), Normalizer.Form.NFC)
+        val normalizedText = Normalizer.normalize(textWithWords.lowercase(), Normalizer.Form.NFC)
 
         // Split by whitespace into tokens
         val tokens = normalizedText.trim().split(Regex("\\s+"))
 
-        val puncts = ".,!?;:\"-“”‘’'()"
         for (token in tokens) {
             if (token.isEmpty()) continue
 
             var word = token
             // Strip leading punctuation from the word
             val leadingPuncts = StringBuilder()
-            while (word.isNotEmpty() && word.first() in puncts) {
+            while (word.isNotEmpty() && !word.first().isLetterOrDigit()) {
                 leadingPuncts.append(word.first())
                 word = word.substring(1)
             }
 
             // Strip trailing punctuation from the word
             val trailingPuncts = StringBuilder()
-            while (word.isNotEmpty() && word.last() in puncts) {
+            while (word.isNotEmpty() && !word.last().isLetterOrDigit()) {
                 trailingPuncts.insert(0, word.last())
                 word = word.substring(0, word.length - 1)
             }
@@ -467,7 +469,7 @@ object AiTtsDict {
             // Process the word (if non-empty)
             if (word.isNotEmpty()) {
                 // Check if it's a single punctuation character
-                if (word.length == 1 && word[0] in puncts) {
+                if (word.length == 1 && !word[0].isLetterOrDigit()) {
                     addPunctuation(ids, word[0])
                 } else {
                     // Vietnamese G2P decomposition
@@ -507,5 +509,101 @@ object AiTtsDict {
             ids.add(pid)
             ids.add(SEP_ID)
         }
+    }
+
+    private fun convertNumbersToWordsInText(text: String): String {
+        val regex = Regex("\\d+")
+        return regex.replace(text) { matchResult ->
+            numberToVietnameseWords(matchResult.value)
+        }
+    }
+
+    private fun numberToVietnameseWords(numStr: String): String {
+        val number = numStr.toLongOrNull()
+        if (number == null) {
+            return numStr.map { digitToWord(it - '0') }.joinToString(" ")
+        }
+        if (number == 0L) return "không"
+        return convertLongToWords(number)
+    }
+
+    private fun digitToWord(digit: Int): String {
+        return when (digit) {
+            0 -> "không"
+            1 -> "một"
+            2 -> "hai"
+            3 -> "ba"
+            4 -> "bốn"
+            5 -> "năm"
+            6 -> "sáu"
+            7 -> "bảy"
+            8 -> "tám"
+            9 -> "chín"
+            else -> ""
+        }
+    }
+
+    private val UNITS = arrayOf("", " nghìn", " triệu", " tỷ")
+
+    private fun convertLongToWords(n: Long): String {
+        var number = n
+        if (number == 0L) return ""
+        var result = ""
+        var unitIndex = 0
+        
+        while (number > 0) {
+            val triplet = (number % 1000).toInt()
+            if (triplet > 0) {
+                val tripletStr = convertTripletToWords(triplet, number >= 1000)
+                val unit = if (unitIndex < UNITS.size) UNITS[unitIndex] else " tỷ".repeat(unitIndex / 3 + 1)
+                result = tripletStr + unit + (if (result.isNotEmpty()) " " else "") + result
+            } else if (unitIndex == 3) {
+                result = "tỷ " + result
+            }
+            number /= 1000
+            unitIndex++
+        }
+        return result.trim().replace(Regex("\\s+"), " ")
+    }
+
+    private fun convertTripletToWords(n: Int, hasHigher: Boolean): String {
+        val hundreds = n / 100
+        val tens = (n % 100) / 10
+        val ones = n % 10
+        
+        val sb = StringBuilder()
+        
+        if (hundreds > 0) {
+            sb.append(digitToWord(hundreds)).append(" trăm")
+        } else if (hasHigher) {
+            sb.append("không trăm")
+        }
+        
+        if (tens > 0) {
+            if (sb.isNotEmpty()) sb.append(" ")
+            if (tens == 1) {
+                sb.append("mười")
+            } else {
+                sb.append(digitToWord(tens)).append(" mươi")
+            }
+        } else if (ones > 0 && (hundreds > 0 || hasHigher)) {
+            if (sb.isNotEmpty()) sb.append(" ")
+            sb.append("linh")
+        }
+        
+        if (ones > 0) {
+            if (sb.isNotEmpty()) sb.append(" ")
+            if (ones == 1 && tens > 1) {
+                sb.append("mốt")
+            } else if (ones == 5 && tens > 0) {
+                sb.append("lăm")
+            } else if (ones == 4 && tens > 1) {
+                sb.append("tư")
+            } else {
+                sb.append(digitToWord(ones))
+            }
+        }
+        
+        return sb.toString()
     }
 }

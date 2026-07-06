@@ -80,6 +80,7 @@ fun DictManagerSheet(
     var tempLlmBaseUrl by remember { mutableStateOf(TranslationConfig.llmBaseUrl) }
     var tempLlmApiKey by remember { mutableStateOf(TranslationConfig.llmApiKey) }
     var tempLlmModel by remember { mutableStateOf(TranslationConfig.llmModel) }
+    var tempLlmScanAdvanced by remember { mutableStateOf(TranslationConfig.llmScanAdvanced) }
     var modelMenuExpanded by remember { mutableStateOf(false) }
     var fetchedModels by remember { mutableStateOf<List<String>>(emptyList()) }
     var isFetchingModels by remember { mutableStateOf(false) }
@@ -175,6 +176,7 @@ fun DictManagerSheet(
             2 -> "ORG"
             3 -> "PRON"
             4 -> "USER"
+            5 -> "ERR"
             else -> "PER"
         }
         
@@ -238,6 +240,7 @@ fun DictManagerSheet(
                     tempLlmBaseUrl = TranslationConfig.llmBaseUrl
                     tempLlmApiKey = TranslationConfig.llmApiKey
                     tempLlmModel = TranslationConfig.llmModel
+                    tempLlmScanAdvanced = TranslationConfig.llmScanAdvanced
                     showAiSettingsDialog = true
                 }) {
                     Icon(Icons.Default.Settings, contentDescription = "Cấu hình AI")
@@ -257,6 +260,21 @@ fun DictManagerSheet(
             }
 
             // Tab Row
+            val showAdvanced = TranslationConfig.llmScanAdvanced
+            val tabs = remember(showAdvanced) {
+                val list = mutableListOf("Tên nhân vật", "Tên địa danh", "Tên tổ chức", "Xưng hô", "Từ điển riêng")
+                if (showAdvanced) {
+                    list.add("Lỗi dịch từ điển")
+                }
+                list
+            }
+            
+            LaunchedEffect(tabs.size) {
+                if (selectedTabIndex >= tabs.size) {
+                    selectedTabIndex = tabs.size - 1
+                }
+            }
+
             ScrollableTabRow(
                 selectedTabIndex = selectedTabIndex,
                 containerColor = Color.Transparent,
@@ -264,7 +282,6 @@ fun DictManagerSheet(
                 edgePadding = 0.dp,
                 modifier = Modifier.padding(horizontal = 8.dp)
             ) {
-                val tabs = listOf("Tên nhân vật", "Tên địa danh", "Tên tổ chức", "Xưng hô", "Từ điển riêng")
                 tabs.forEachIndexed { index, title ->
                     Tab(
                         selected = selectedTabIndex == index,
@@ -505,6 +522,7 @@ fun DictManagerSheet(
                             2 -> "ORG"
                             3 -> "PRON"
                             4 -> "USER"
+                            5 -> "ERR"
                             else -> "PER"
                         }
                         scope.launch(Dispatchers.IO) {
@@ -567,6 +585,7 @@ fun DictManagerSheet(
                             2 -> "ORG"
                             3 -> "PRON"
                             4 -> "USER"
+                            5 -> "ERR"
                             else -> "PER"
                         }
                         scope.launch(Dispatchers.IO) {
@@ -722,6 +741,28 @@ fun DictManagerSheet(
                                 }
                             }
                         }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Quét nâng cao (đối chiếu sửa sai)",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Gửi cả bản dịch thô và bản gốc để AI sửa lỗi dịch sai trong từ điển",
+                                    fontSize = 11.sp,
+                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                            }
+                            io.legado.app.ui.widget.components.AdaptiveSwitch(
+                                checked = tempLlmScanAdvanced,
+                                onCheckedChange = { tempLlmScanAdvanced = it }
+                            )
+                        }
                     }
                 },
                 confirmText = "Lưu",
@@ -729,6 +770,7 @@ fun DictManagerSheet(
                     TranslationConfig.llmBaseUrl = tempLlmBaseUrl
                     TranslationConfig.llmApiKey = tempLlmApiKey
                     TranslationConfig.llmModel = tempLlmModel
+                    TranslationConfig.llmScanAdvanced = tempLlmScanAdvanced
                     Toast.makeText(context, "Đã lưu cấu hình AI", Toast.LENGTH_SHORT).show()
                     showAiSettingsDialog = false
                 },
