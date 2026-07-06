@@ -329,7 +329,7 @@ object AiTtsDict {
      */
     private fun wordToPhonemes(word: String): List<String> {
         if (word == "mắc") {
-            return listOf("m", "ɐ", "t", "T3")
+            return listOf("m", "a", "k", "T3")
         }
         if (word.isEmpty()) return emptyList()
 
