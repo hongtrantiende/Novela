@@ -12,8 +12,16 @@ object ReadTtsConfig {
 
     private const val defaultSpeechRate = 5
 
-    val speechRatePlay: Int
-        get() = if (ttsFollowSys) defaultSpeechRate else ttsSpeechRate
+    var ttsPlaySpeed by prefDelegate(
+        PreferKey.ttsPlaySpeed,
+        5
+    )
+
+    var speechRatePlay: Int
+        get() = if (ttsFollowSys) defaultSpeechRate else ttsPlaySpeed
+        set(value) {
+            ttsPlaySpeed = value
+        }
 
     var ttsEngine by prefDelegate<String?>(
         PreferKey.ttsEngine,

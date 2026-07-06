@@ -17,8 +17,9 @@ object AiTtsEngine {
     private var isModelLoaded = false
 
     fun isDictInstalled(context: Context): Boolean {
-        val baseDir = File(context.filesDir, "ai-tts")
-        return File(baseDir, "vi-word_id.bin").exists() && File(baseDir, "en-word_id.bin").exists()
+        // For piper-type models, the phoneme_id_map comes from config.json inside the model dir.
+        // No separate dictionary files needed.
+        return true
     }
 
     fun isModelInstalled(context: Context, modelId: String): Boolean {
@@ -90,12 +91,16 @@ object AiTtsEngine {
             // Đảm bảo mô hình được nạp sẵn sàng
             if (!loadModel(context, modelId)) return null
 
-            // Chuyển văn bản sang chuỗi Phoneme ID
-            val ids = AiTtsDict.textToPhonemeIds(context, text)
+            // Chuyển văn bản sang chuỗi Phoneme ID bằng Vietnamese G2P engine
+            val ids = AiTtsDict.textToPhonemeIds(context, text, modelId)
             if (ids.isEmpty()) return null
 
             // Gọi hàm JNI Piper NCNN suy luận tạo dữ liệu âm thanh PCM
-            val pcmData = com.reader.piper.PiperNcnn.synthesizeFromIds(ids, speakerId, speed) ?: return null
+            // Convert Legado speed to Piper length_scale (duration multiplier)
+            // Legado speed > 1.0 means faster, but Piper length_scale < 1.0 means faster.
+            val piperSpeed = if (speed > 0) 1.0 / speed else 1.0
+            
+            val pcmData = com.reader.piper.PiperNcnn.synthesizeFromIds(ids, speakerId, piperSpeed) ?: return null
 
             // Đóng gói mảng PCM sang dữ liệu tệp WAV
             val wavBytes = pcmToWav(pcmData, 22050)
@@ -252,13 +257,5 @@ data class AiTtsModelInfo(
 )
 
 val AI_TTS_MODELS = listOf(
-    AiTtsModelInfo("vi_south", "Tiếng Việt - Miền Nam", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/vi_south.zip", 38210837L, 12, "multi"),
-    AiTtsModelInfo("vi_north", "Tiếng Việt - Miền Bắc", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/vi_north.zip", 38210834L, 12, "multi"),
-    AiTtsModelInfo("banmai", "Ban Mai", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/banmai.zip", 31472573L, 1, "female"),
-    AiTtsModelInfo("ngochuyen", "Ngọc Huyền", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/ngochuyen.zip", 31472586L, 1, "female"),
-    AiTtsModelInfo("minhquang", "Minh Quang", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/minhquang.zip", 31472581L, 1, "male"),
-    AiTtsModelInfo("phuongtrang", "Phương Trang", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/phuongtrang.zip", 31472590L, 1, "female"),
-    AiTtsModelInfo("manhdung", "Mạnh Dũng", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/manhdung.zip", 31472582L, 1, "male"),
-    AiTtsModelInfo("ngocngan", "Ngọc Ngạn", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/ngocngan.zip", 31472528L, 1, "male"),
-    AiTtsModelInfo("adam", "Adam", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/adam.zip", 31472513L, 1, "male")
+    AiTtsModelInfo("vi_north", "Tiếng Việt - Miền Bắc", "https://raw.githubusercontent.com/Darkrai9x/vbook-settings/main/ai-tts/models/vi_north.zip", 38210834L, 12, "multi")
 )

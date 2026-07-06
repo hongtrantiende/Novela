@@ -274,6 +274,7 @@ fun ReadBookMenuBar(
         val brightnessIsLeft = brightnessVwPos == "0"
         val brightnessShape = RoundedCornerShape(40.dp)
         val useBrightnessHaze = readMenuBottomBarHazeEnabled(
+            context = context,
             hazeState = hazeState,
             menuConfig = state.menuConfig,
             isFloating = false,
@@ -438,16 +439,19 @@ private fun ReadBookMenuSurface(
         ?: LegadoTheme.colorScheme.outlineVariant.hashCode()
     val extendSurfaceToNavigationBar = !isFloating && !dialogLikeRoute
     val useLiquidGlass = readMenuBottomBarLiquidGlassEnabled(
+        context = context,
         backdrop = backdrop,
         menuConfig = state.menuConfig,
         isFloating = isFloating,
     )
     val useHaze = readMenuBottomBarHazeEnabled(
+        context = context,
         hazeState = hazeState,
         menuConfig = state.menuConfig,
         isFloating = isFloating,
     )
     val useBottomBarButtonGlass = readMenuBottomBarButtonLiquidGlassEnabled(
+        context = context,
         backdrop = backdrop,
         menuConfig = state.menuConfig,
     )
@@ -808,6 +812,7 @@ private fun MenuTitleBar(
     backdrop: Backdrop?,
     hazeState: HazeState?,
 ) {
+    val context = LocalContext.current
     val titleBarMode = ReadConfig.titleBarMode
 
     var expanded by remember { mutableStateOf(false) }
@@ -820,7 +825,7 @@ private fun MenuTitleBar(
     }).takeIf { it != 0 }
         ?: LegadoTheme.colorScheme.outlineVariant.hashCode()
     val topBarAlpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
-    val useTopBarBlur = readMenuTopBarHazeEnabled(hazeState, state.menuConfig)
+    val useTopBarBlur = readMenuTopBarHazeEnabled(context, hazeState, state.menuConfig)
     val topBarProgressiveBlur = state.menuConfig.readMenuTopBarBlurStyle ==
             ReadMenuBlurStyle.Progressive
     val progressiveBlurActive = useTopBarBlur && topBarProgressiveBlur
@@ -886,7 +891,7 @@ private fun MenuTitleBar(
                 )
             )
     ) {
-        val useTitleCapsule = readMenuTopBarTitleCapsuleEnabled(backdrop, state.menuConfig)
+        val useTitleCapsule = readMenuTopBarTitleCapsuleEnabled(context, backdrop, state.menuConfig)
                 && progressiveBlurActive
         val capsuleIconColor = LegadoTheme.colorScheme.onSurfaceVariant
 
@@ -942,7 +947,7 @@ private fun MenuTitleBar(
             }
 
             // Right group: actions
-            if (readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig)) {
+            if (readMenuTopBarButtonLiquidGlassEnabled(context, backdrop, state.menuConfig)) {
                 MenuTitleBarMergedGlassButton(
                     state = state,
                     colors = colors,
@@ -1117,7 +1122,7 @@ private fun MenuTitleGlassButton(
         colors = colors,
         backdrop = backdrop,
         menuConfig = state.menuConfig,
-        glassEnabled = readMenuTopBarButtonLiquidGlassEnabled(backdrop, state.menuConfig),
+        glassEnabled = readMenuTopBarButtonLiquidGlassEnabled(LocalContext.current, backdrop, state.menuConfig),
         modifier = modifier,
         onLongClick = onLongClick,
         contentDescription = contentDescription,
@@ -1559,6 +1564,7 @@ private fun FloatingIconRow(
                 backdrop = backdrop,
                 menuConfig = state.menuConfig,
                 glassEnabled = !isCustom && readMenuTopBarButtonLiquidGlassEnabled(
+                    context,
                     backdrop,
                     state.menuConfig
                 ),
@@ -2604,41 +2610,57 @@ private data class ReadMenuColors(
     val content: Color,
 )
 
-private fun readMenuLiquidGlassAvailable(backdrop: Backdrop?): Boolean {
-    return backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+private fun isBlurSupported(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return false
+    return try {
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as? android.view.WindowManager
+        wm?.isCrossWindowBlurEnabled == true
+    } catch (e: Throwable) {
+        true
+    }
+}
+
+private fun readMenuLiquidGlassAvailable(context: Context, backdrop: Backdrop?): Boolean {
+    return backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && isBlurSupported(context)
 }
 
 private fun readMenuTopBarButtonLiquidGlassEnabled(
+    context: Context,
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
 ): Boolean {
     return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
             menuConfig.readMenuTopBarLiquidGlassButtons &&
-            readMenuLiquidGlassAvailable(backdrop)
+            readMenuLiquidGlassAvailable(context, backdrop)
 }
 
 private fun readMenuTopBarTitleCapsuleEnabled(
+    context: Context,
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
 ): Boolean {
     return menuConfig.readMenuTopBarBlurMode != ReadMenuBlurMode.None &&
             menuConfig.readMenuTopBarTitleCapsule &&
-            readMenuLiquidGlassAvailable(backdrop)
+            readMenuLiquidGlassAvailable(context, backdrop)
 }
 
 private fun readMenuBottomBarButtonLiquidGlassEnabled(
+    context: Context,
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
 ): Boolean {
     return menuConfig.readMenuBottomBarLiquidGlassButtons &&
-            readMenuLiquidGlassAvailable(backdrop)
+            readMenuLiquidGlassAvailable(context, backdrop)
 }
 
 private fun readMenuTopBarHazeEnabled(
+    context: Context,
     hazeState: HazeState?,
     menuConfig: ReadMenuConfig,
 ): Boolean {
-    return hazeState != null && menuConfig.readMenuTopBarBlurMode == ReadMenuBlurMode.Haze
+    return hazeState != null && 
+            menuConfig.readMenuTopBarBlurMode == ReadMenuBlurMode.Haze &&
+            isBlurSupported(context)
 }
 
 private fun readMenuBottomBarEffectiveBlurMode(
@@ -2654,6 +2676,7 @@ private fun readMenuBottomBarEffectiveBlurMode(
 }
 
 private fun readMenuBottomBarLiquidGlassEnabled(
+    context: Context,
     backdrop: Backdrop?,
     menuConfig: ReadMenuConfig,
     isFloating: Boolean,
@@ -2663,16 +2686,18 @@ private fun readMenuBottomBarLiquidGlassEnabled(
                 menuConfig,
                 isFloating
             ) == ReadMenuBlurMode.LiquidGlass &&
-            readMenuLiquidGlassAvailable(backdrop)
+            readMenuLiquidGlassAvailable(context, backdrop)
 }
 
 private fun readMenuBottomBarHazeEnabled(
+    context: Context,
     hazeState: HazeState?,
     menuConfig: ReadMenuConfig,
     isFloating: Boolean,
 ): Boolean {
     return hazeState != null &&
-            readMenuBottomBarEffectiveBlurMode(menuConfig, isFloating) == ReadMenuBlurMode.Haze
+            readMenuBottomBarEffectiveBlurMode(menuConfig, isFloating) == ReadMenuBlurMode.Haze &&
+            isBlurSupported(context)
 }
 
 @Composable
@@ -2686,7 +2711,7 @@ private fun Modifier.readMenuLiquidGlass(
     interactive: Boolean = false,
     menuConfig: ReadMenuConfig,
 ): Modifier {
-    if (!readMenuLiquidGlassAvailable(backdrop)) return this
+    if (!readMenuLiquidGlassAvailable(LocalContext.current, backdrop)) return this
     val animationScope = rememberCoroutineScope()
     val interactiveHighlight = if (interactive) {
         remember(animationScope) { InteractiveHighlight(animationScope = animationScope) }

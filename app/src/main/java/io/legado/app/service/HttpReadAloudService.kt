@@ -212,7 +212,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                 val httpTts = ReadAloud.httpTTS
                 if (ReadAloud.ttsEngine != "ai_tts_onnx" && httpTts == null) throw NoStackTraceException("tts is null")
                 
-                val preloadCount = maxOf(1, minOf(ReadConfig.audioPreDownloadNum, contentList.size - nowSpeak))
+                val preloadCount = if (ReadAloud.ttsEngine == "ai_tts_onnx") 1 else maxOf(1, minOf(ReadConfig.audioPreDownloadNum, contentList.size - nowSpeak))
                 var preloadedNum = 0
 
                 for (index in nowSpeak until contentList.size) {
@@ -427,7 +427,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     }
                 }
 
-                val preloadCount = maxOf(1, minOf(ReadConfig.audioPreDownloadNum, contentList.size - nowSpeak))
+                val preloadCount = if (ReadAloud.ttsEngine == "ai_tts_onnx") 1 else maxOf(1, minOf(ReadConfig.audioPreDownloadNum, contentList.size - nowSpeak))
                 var preloadedNum = 0
 
                 for (index in nowSpeak until contentList.size) {

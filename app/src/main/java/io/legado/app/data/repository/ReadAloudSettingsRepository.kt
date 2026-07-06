@@ -24,6 +24,7 @@ data class ReadAloudPreferences(
     val ttsTimer: Int = 0,
     val ttsFollowSys: Boolean = true,
     val ttsSpeechRate: Int = 5,
+    val ttsPlaySpeed: Int = 5,
 )
 
 class ReadAloudSettingsRepository(
@@ -93,7 +94,7 @@ class ReadAloudSettingsRepository(
     }
 
     suspend fun setTtsSpeechRate(value: Int) {
-        ReadConfig.ttsSpeechRate = value.coerceIn(0, 80)
+        ReadConfig.speechRatePlay = value.coerceIn(0, 80)
     }
 
     private fun Preferences.toReadAloudPreferences(): ReadAloudPreferences {
@@ -110,7 +111,8 @@ class ReadAloudSettingsRepository(
             streamReadAloudAudio = this[Keys.StreamReadAloudAudio] ?: false,
             ttsTimer = this[Keys.TtsTimer] ?: 0,
             ttsFollowSys = this[Keys.TtsFollowSys] ?: true,
-            ttsSpeechRate = this[Keys.TtsSpeechRate] ?: 5,
+            ttsSpeechRate = this[Keys.TtsPlaySpeed] ?: 5,
+            ttsPlaySpeed = this[Keys.TtsPlaySpeed] ?: 5,
         )
     }
 
@@ -130,6 +132,9 @@ class ReadAloudSettingsRepository(
         val TtsFollowSys = booleanPreferencesKey(PreferKey.ttsFollowSys)
         val TtsSpeechRate = androidx.datastore.preferences.core.intPreferencesKey(
             PreferKey.ttsSpeechRate
+        )
+        val TtsPlaySpeed = androidx.datastore.preferences.core.intPreferencesKey(
+            PreferKey.ttsPlaySpeed
         )
     }
 

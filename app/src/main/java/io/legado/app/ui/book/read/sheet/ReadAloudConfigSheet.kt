@@ -254,6 +254,7 @@ fun ReadAloudConfigSheet(
     val coroutineScope = rememberCoroutineScope()
     var showEnginePicker by remember { mutableStateOf(false) }
     var showVoicePicker by remember { mutableStateOf(false) }
+    var showOnnxEdit by remember { mutableStateOf(false) }
 
     val currentEngine = state.selectedTtsEngine
     val engineKey = remember(currentEngine) {
@@ -327,6 +328,67 @@ fun ReadAloudConfigSheet(
         onDownloadAiTtsModel = onDownloadAiTtsModel,
     )
 
+    if (showOnnxEdit) {
+        var onnxSpeechRate by remember {
+            mutableStateOf(ReadConfig.ttsSpeechRate.toFloat())
+        }
+
+        AppModalBottomSheet(
+            show = showOnnxEdit,
+            onDismissRequest = { showOnnxEdit = false },
+            title = "Cấu hình AI (ONNX)",
+            endAction = {
+                SmallTonalButton(
+                    icon = Icons.Default.Save,
+                    onClick = {
+                        ReadConfig.ttsSpeechRate = Math.round(onnxSpeechRate)
+                        io.legado.app.model.ReadAloud.upTtsSpeechRate(splitties.init.appCtx)
+                        
+                        // Clear TTS cache to force reload with the new speed
+                        try {
+                            val baseDir = splitties.init.appCtx.externalCacheDir ?: splitties.init.appCtx.cacheDir
+                            val ttsFolder = java.io.File(baseDir, "httpTTS")
+                            val cacheFolder = java.io.File(baseDir, "httpTTS_cache")
+                            io.legado.app.utils.FileUtils.delete(ttsFolder.absolutePath)
+                            io.legado.app.utils.FileUtils.delete(cacheFolder.absolutePath)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                        
+                        // Restart reading service if it's running
+                        coroutineScope.launch {
+                            if (io.legado.app.service.BaseReadAloudService.isRun) {
+                                io.legado.app.model.ReadAloud.stop(splitties.init.appCtx)
+                                for (i in 1..20) {
+                                    if (!io.legado.app.service.BaseReadAloudService.isRun) break
+                                    delay(50)
+                                }
+                                io.legado.app.model.ReadBook.readAloud(play = true)
+                            }
+                        }
+                        showOnnxEdit = false
+                    }
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                SliderSettingItem(
+                    title = "Tốc độ đọc tải",
+                    description = "Tốc độ phát âm của mô hình AI khi tổng hợp (Hiện tại: ${String.format(java.util.Locale.US, "%.1fx", (onnxSpeechRate.toInt() + 5) / 10f)})",
+                    value = onnxSpeechRate,
+                    defaultValue = 5.0f,
+                    valueRange = 0.0f..25.0f,
+                    onValueChange = { onnxSpeechRate = it }
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+        }
+    }
+
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
@@ -350,11 +412,15 @@ fun ReadAloudConfigSheet(
                 onClick = { showVoicePicker = true }
             )
 
-            if (showEditTts) {
+            if (showEditTts || engineKey == "ai_tts_onnx") {
                 TinyClickableSettingItem(
                     title = "Điều chỉnh giọng đọc",
                     onClick = {
-                        onIntent(ReadBookIntent.EditHttpTts(currentHttpTtsId))
+                        if (engineKey == "ai_tts_onnx") {
+                            showOnnxEdit = true
+                        } else {
+                            onIntent(ReadBookIntent.EditHttpTts(currentHttpTtsId))
+                        }
                     }
                 )
             }

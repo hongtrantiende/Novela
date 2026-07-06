@@ -115,12 +115,7 @@ fun ReadAloudContent(
 
     val timerMinute = state.readAloudTtsTimer
     val httpTts = io.legado.app.model.ReadAloud.httpTTS
-    val ttsSpeechRate = if (httpTts != null) {
-        val currentSpeedValue = httpTts.loginUrl?.toFloatOrNull() ?: 1.0f
-        (currentSpeedValue * 10f - 5f).toInt().coerceIn(5, 15)
-    } else {
-        state.readAloudTtsSpeechRate
-    }
+    val ttsSpeechRate = state.readAloudTtsSpeechRate
 
     var serviceState by remember { mutableStateOf(getServiceState()) }
     LaunchedEffect(Unit) {

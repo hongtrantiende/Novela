@@ -152,7 +152,9 @@ object ReadConfig {
 
     // ── TTS ──
 
-    val speechRatePlay get() = ReadTtsConfig.speechRatePlay
+    var speechRatePlay
+        get() = ReadTtsConfig.speechRatePlay
+        set(value) { ReadTtsConfig.speechRatePlay = value }
     var ttsEngine
         get() = ReadTtsConfig.ttsEngine
         set(value) { ReadTtsConfig.ttsEngine = value }

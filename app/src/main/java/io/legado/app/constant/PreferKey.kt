@@ -44,6 +44,7 @@ object PreferKey {
     const val ttsVoiceName = "appTtsVoiceName"
     const val ttsFollowSys = "ttsFollowSys"
     const val ttsSpeechRate = "ttsSpeechRate"
+    const val ttsPlaySpeed = "ttsPlaySpeed"
     const val prevKeys = "prevKeyCodes"
     const val nextKeys = "nextKeyCodes"
     const val showDiscovery = "showDiscovery"
