@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.heatmap.HEATMAP_CALENDAR_TITLE
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
@@ -306,6 +307,10 @@ fun BookUpdatesScreen(
     }
     var showCalendar by remember { mutableStateOf(false) }
 
+    LaunchedEffect(Unit) {
+        viewModel.refresh(force = false)
+    }
+
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         contentWindowInsets = WindowInsets.systemBars
@@ -317,7 +322,7 @@ fun BookUpdatesScreen(
                 subtitle = subTitle,
                 actions = {
                     TopBarActionButton(
-                        onClick = { viewModel.refresh() },
+                        onClick = { viewModel.refresh(force = true) },
                         imageVector = Icons.Default.Refresh,
                         contentDescription = stringResource(R.string.refresh)
                     )
@@ -359,7 +364,7 @@ fun BookUpdatesScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             AppPullToRefresh(
                 isRefreshing = isRefreshing,
-                onRefresh = { viewModel.refresh() },
+                onRefresh = { viewModel.refresh(force = true) },
                 enabled = true,
                 topPadding = paddingValues.calculateTopPadding()
             ) {

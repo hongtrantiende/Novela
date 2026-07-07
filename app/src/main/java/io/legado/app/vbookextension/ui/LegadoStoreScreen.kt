@@ -44,7 +44,7 @@ fun LegadoStoreScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(LegadoTheme.colorScheme.background)
     ) {
         // Toolbar controls
         Row(
@@ -63,8 +63,8 @@ fun LegadoStoreScreen(
                     .height(52.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    focusedBorderColor = LegadoTheme.colorScheme.primary,
+                    unfocusedBorderColor = LegadoTheme.colorScheme.outlineVariant
                 )
             )
 
@@ -72,7 +72,7 @@ fun LegadoStoreScreen(
 
             IconButton(
                 onClick = { viewModel.fetchSources(force = true) },
-                modifier = Modifier.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
+                modifier = Modifier.background(LegadoTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -87,12 +87,12 @@ fun LegadoStoreScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
+                    .background(LegadoTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
                     .padding(12.dp)
             ) {
                 Text(
                     text = "Lỗi: $error",
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    color = LegadoTheme.colorScheme.onErrorContainer,
                     fontSize = 13.sp
                 )
             }
@@ -124,7 +124,7 @@ fun LegadoStoreScreen(
                     ) {
                         AppText(
                             text = "Không tìm thấy nguồn sách nào",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -148,7 +148,7 @@ fun LegadoStoreScreen(
                                     AppText(
                                         text = domain,
                                         style = LegadoTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = LegadoTheme.colorScheme.onSurface,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f, fill = false)
@@ -157,14 +157,14 @@ fun LegadoStoreScreen(
                                     if (item.version.isNotBlank()) {
                                         Surface(
                                             shape = RoundedCornerShape(4.dp),
-                                            color = MaterialTheme.colorScheme.secondaryContainer,
+                                            color = LegadoTheme.colorScheme.secondaryContainer,
                                             modifier = Modifier.padding(vertical = 2.dp)
                                         ) {
                                             AppText(
                                                 text = item.version,
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                color = LegadoTheme.colorScheme.onSecondaryContainer,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
                                         }
@@ -176,7 +176,7 @@ fun LegadoStoreScreen(
                                     AppText(
                                         text = item.name,
                                         style = LegadoTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -200,7 +200,7 @@ fun LegadoStoreScreen(
                                     AppText(
                                         text = "Tác giả: ${item.author.ifBlank { "Ẩn danh" }}",
                                         style = LegadoTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -215,12 +215,12 @@ fun LegadoStoreScreen(
                                     AppText(
                                         text = "Tải: ${formatDownloads(item.downloads)}",
                                         fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
                                     )
                                     AppText(
                                         text = "Cập nhật: ${item.time}",
                                         fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
                                     )
                                 }
                             }
@@ -234,8 +234,8 @@ fun LegadoStoreScreen(
                                 },
                                 shape = RoundedCornerShape(8.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (isInstalled) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = if (isInstalled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onPrimaryContainer
+                                    containerColor = if (isInstalled) LegadoTheme.colorScheme.secondaryContainer else LegadoTheme.colorScheme.primaryContainer,
+                                    contentColor = if (isInstalled) LegadoTheme.colorScheme.onSecondaryContainer else LegadoTheme.colorScheme.onPrimaryContainer
                                 ),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                                 modifier = Modifier.height(36.dp)

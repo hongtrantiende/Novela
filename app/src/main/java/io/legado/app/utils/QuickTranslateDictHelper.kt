@@ -60,7 +60,54 @@ object QuickTranslateDictHelper {
         }
     }
 
+    fun getBlacklistFile(context: Context, fileName: String): File {
+        val blacklistName = fileName.replace("_name.txt", "_blacklist.txt").replace("_vp.txt", "_blacklist.txt")
+        return getDictFile(context, blacklistName)
+    }
+
+    suspend fun addWordToBlacklist(context: Context, fileName: String, key: String) = withContext(Dispatchers.IO) {
+        if (!fileName.contains("book_")) return@withContext
+        val file = getBlacklistFile(context, fileName)
+        val blacklisted = loadBlacklist(context, fileName).toMutableSet()
+        if (blacklisted.add(key)) {
+            file.bufferedWriter().use { writer ->
+                blacklisted.forEach { writer.write("$it\n") }
+            }
+        }
+    }
+
+    suspend fun removeWordFromBlacklist(context: Context, fileName: String, key: String) = withContext(Dispatchers.IO) {
+        if (!fileName.contains("book_")) return@withContext
+        val file = getBlacklistFile(context, fileName)
+        val blacklisted = loadBlacklist(context, fileName).toMutableSet()
+        if (blacklisted.remove(key)) {
+            file.bufferedWriter().use { writer ->
+                blacklisted.forEach { writer.write("$it\n") }
+            }
+        }
+    }
+
+    suspend fun loadBlacklist(context: Context, fileName: String): Set<String> = withContext(Dispatchers.IO) {
+        if (!fileName.contains("book_")) return@withContext emptySet()
+        val file = getBlacklistFile(context, fileName)
+        if (!file.exists()) return@withContext emptySet()
+        val result = HashSet<String>()
+        try {
+            file.bufferedReader().useLines { lines ->
+                lines.forEach { line ->
+                    if (line.isNotBlank()) {
+                        result.add(line.trim())
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        result
+    }
+
     suspend fun addOrUpdateEntry(context: Context, fileName: String, key: String, value: String) = withContext(Dispatchers.IO) {
+        removeWordFromBlacklist(context, fileName, key)
         val entries = loadDictEntries(context, fileName).toMutableList()
         val index = entries.indexOfFirst { it.first == key }
         if (index != -1) {
@@ -72,6 +119,7 @@ object QuickTranslateDictHelper {
     }
 
     suspend fun deleteEntry(context: Context, fileName: String, key: String) = withContext(Dispatchers.IO) {
+        addWordToBlacklist(context, fileName, key)
         val entries = loadDictEntries(context, fileName).toMutableList()
         val removed = entries.removeAll { it.first == key }
         if (removed) {
@@ -155,10 +203,23 @@ object QuickTranslateDictHelper {
 
     suspend fun deleteDictFile(context: Context, fileName: String): Boolean = withContext(Dispatchers.IO) {
         val file = getDictFile(context, fileName)
+        val blacklistFile = getBlacklistFile(context, fileName)
+        if (blacklistFile.exists()) {
+            blacklistFile.delete()
+        }
         if (file.exists()) {
             val success = file.delete()
             if (success) {
-                QuickTranslateEngine.init(context, force = true)
+                if (fileName.contains("book_")) {
+                    val start = fileName.indexOf("book_") + 5
+                    val end = fileName.indexOf('_', start)
+                    if (end != -1) {
+                        val bookKey = fileName.substring(start, end)
+                        QuickTranslateEngine.initBookPrivateDict(context, bookKey)
+                    }
+                } else {
+                    QuickTranslateEngine.init(context, force = true)
+                }
             }
             success
         } else {

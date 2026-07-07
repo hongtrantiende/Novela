@@ -229,8 +229,17 @@ class BookUpdatesViewModel(application: Application) : BaseViewModel(application
         }
     }
 
-    fun refresh() {
+    companion object {
+        private var lastRefreshTime = 0L
+    }
+
+    fun refresh(force: Boolean = true) {
         if (_isRefreshing.value) return
+        val now = System.currentTimeMillis()
+        if (!force && now - lastRefreshTime < 10 * 60 * 1000) {
+            return
+        }
+        lastRefreshTime = now
         viewModelScope.launch {
             _isRefreshing.value = true
             FlowEventBus.post(EventBus.UP_ALL_BOOK_TOC, Unit)

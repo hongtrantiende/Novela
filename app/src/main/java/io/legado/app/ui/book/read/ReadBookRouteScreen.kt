@@ -83,6 +83,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
@@ -122,16 +123,25 @@ interface ReadBookRouteHost :
  */
 @Composable
 private fun ReadBookChapterListOverlay(
-    bookUrl: String,
+    book: io.legado.app.data.entities.Book?,
     currentChapterIndex: Int,
     onChapterClick: (Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val bookUrl = book?.bookUrl ?: ""
     BackHandler { onDismiss() }
 
     val chapters = remember(bookUrl) {
         if (bookUrl.isNotEmpty()) appDb.bookChapterDao.getChapterList(bookUrl)
         else emptyList()
+    }
+
+    val cachedFiles = remember(chapters, book) {
+        if (book != null) {
+            io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
+        } else {
+            emptySet()
+        }
     }
 
     val listState = rememberLazyListState(
@@ -145,19 +155,39 @@ private fun ReadBookChapterListOverlay(
             .windowInsetsPadding(WindowInsets.statusBars)
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
-        // Header row
+        // Header row with Book Cover and Title
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Danh sách chương (" + chapters.size + ")",
-                style = LegadoTheme.typography.titleMedium,
-                color = LegadoTheme.colorScheme.onSurface
+            io.legado.app.ui.widget.components.image.cover.BookCoverImage(
+                name = book?.name,
+                author = book?.author,
+                path = book?.getDisplayCover(),
+                modifier = Modifier
+                    .size(width = 44.dp, height = 60.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
             )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book?.name ?: "",
+                    style = LegadoTheme.typography.titleMedium,
+                    color = LegadoTheme.colorScheme.onSurface,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Danh sách chương (${chapters.size})",
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Close button
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -187,6 +217,9 @@ private fun ReadBookChapterListOverlay(
                 key = { it.index }
             ) { chapter ->
                 val isCurrent = chapter.index == currentChapterIndex
+                val isDownloaded = remember(chapter.index, cachedFiles) {
+                    chapter.getFileName() in cachedFiles
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -199,13 +232,6 @@ private fun ReadBookChapterListOverlay(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = (chapter.index + 1).toString(),
-                        style = LegadoTheme.typography.labelMedium,
-                        color = if (isCurrent) LegadoTheme.colorScheme.primary
-                                else LegadoTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                        modifier = Modifier.width(40.dp)
-                    )
                     Text(
                         text = chapter.getDisplayTitle(),
                         style = LegadoTheme.typography.bodyMedium,
@@ -221,6 +247,14 @@ private fun ReadBookChapterListOverlay(
                             text = "Đang đọc",
                             style = LegadoTheme.typography.labelSmall,
                             color = LegadoTheme.colorScheme.primary
+                        )
+                    } else if (isDownloaded) {
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Đã tải",
+                            tint = LegadoTheme.colorScheme.secondary,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -633,7 +667,7 @@ fun ReadBookRouteScreen(
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
         ) {
             ReadBookChapterListOverlay(
-                bookUrl = state.book?.bookUrl ?: "",
+                book = state.book,
                 currentChapterIndex = state.durChapterIndex,
                 onChapterClick = { index ->
                     showChapterListOverlay = false

@@ -369,9 +369,23 @@ $terms
     }
 
     private suspend fun translateWithSangTacViet(text: String): Result<String> {
+        var processedText = text
+        val bookKey = io.legado.app.vbookextension.util.QuickTranslateEngine.currentBookKey
+        if (!bookKey.isNullOrBlank()) {
+            val privateDict = io.legado.app.vbookextension.util.QuickTranslateEngine.privateDict
+            if (privateDict.isNotEmpty()) {
+                val sortedKeys = privateDict.keys.sortedByDescending { it.length }
+                for (key in sortedKeys) {
+                    val valPart = privateDict[key] ?: continue
+                    val cleanTrans = valPart.substringBefore('/')
+                    processedText = safeReplace(processedText, key, cleanTrans)
+                }
+            }
+        }
+
         val formBody = okhttp3.FormBody.Builder()
             .add("sajax", "trans")
-            .add("content", text)
+            .add("content", processedText)
             .build()
         val response = okHttpClient.newCallStrResponse {
             url("https://comic.sangtacvietcdn.xyz/tsm.php?cdn=/")
@@ -388,6 +402,37 @@ $terms
         } else {
             Result.failure(Exception("HTTP ${response.code()}: ${response.message()}"))
         }
+    }
+
+    private fun safeReplace(text: String, target: String, replacement: String): String {
+        if (target.isEmpty() || !text.contains(target)) return text
+        val sb = java.lang.StringBuilder()
+        var i = 0
+        val len = text.length
+        val targetLen = target.length
+        while (i < len) {
+            if (i <= len - targetLen && text.startsWith(target, i)) {
+                val hasLetterBefore = i > 0 && isLatinLetterOrDigit(text[i - 1])
+                val hasLetterAfter = i + targetLen < len && isLatinLetterOrDigit(text[i + targetLen])
+                
+                if (hasLetterBefore) {
+                    sb.append(' ')
+                }
+                sb.append(replacement)
+                if (hasLetterAfter) {
+                    sb.append(' ')
+                }
+                i += targetLen
+            } else {
+                sb.append(text[i])
+                i++
+            }
+        }
+        return sb.toString()
+    }
+
+    private fun isLatinLetterOrDigit(c: Char): Boolean {
+        return c.isDigit() || java.lang.Character.UnicodeScript.of(c.code) == java.lang.Character.UnicodeScript.LATIN
     }
 }
 

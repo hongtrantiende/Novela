@@ -68,7 +68,7 @@ fun ExtensionScreens(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(LegadoTheme.colorScheme.background)
     ) {
         AppTabRow(
             tabTitles = tabTitles,
@@ -112,7 +112,7 @@ fun InstalledExtensionsTab(viewModel: ExtensionViewModel) {
             AppText(
                 text = "Chưa cài đặt tiện ích nào",
                 style = LegadoTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = LegadoTheme.colorScheme.onSurfaceVariant
             )
         }
         return
@@ -152,7 +152,7 @@ fun InstalledExtensionsTab(viewModel: ExtensionViewModel) {
                             AppText(
                                 text = ext.name,
                                 style = LegadoTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = LegadoTheme.colorScheme.onSurface,
                                 modifier = Modifier.weight(1f, fill = false)
                             )
                             if (isPinned) {
@@ -160,21 +160,21 @@ fun InstalledExtensionsTab(viewModel: ExtensionViewModel) {
                                 Icon(
                                     Icons.Filled.PushPin,
                                     contentDescription = "Đã ghim",
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = LegadoTheme.colorScheme.primary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                color = LegadoTheme.colorScheme.secondaryContainer,
                                 modifier = Modifier.padding(vertical = 2.dp)
                             ) {
                                 AppText(
                                     text = "v${ext.version}",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    color = LegadoTheme.colorScheme.onSecondaryContainer,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
                             }
@@ -183,7 +183,7 @@ fun InstalledExtensionsTab(viewModel: ExtensionViewModel) {
                         AppText(
                             text = "Tác giả: ${ext.author}",
                             style = LegadoTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                         if (ext.description.isNotBlank()) {
                             Spacer(modifier = Modifier.height(4.dp))
@@ -192,7 +192,7 @@ fun InstalledExtensionsTab(viewModel: ExtensionViewModel) {
                                 style = LegadoTheme.typography.bodySmall,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = LegadoTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -283,8 +283,8 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                     .height(52.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                    focusedBorderColor = LegadoTheme.colorScheme.primary,
+                    unfocusedBorderColor = LegadoTheme.colorScheme.outlineVariant
                 )
             )
 
@@ -292,7 +292,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
 
             IconButton(
                 onClick = { viewModel.fetchAllExtensions(force = true) },
-                modifier = Modifier.background(MaterialTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
+                modifier = Modifier.background(LegadoTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
             ) {
                 if (isLoading) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -305,12 +305,12 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
 
             IconButton(
                 onClick = { showAddRepoDialog = true },
-                modifier = Modifier.background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
+                modifier = Modifier.background(LegadoTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
             ) {
                 Icon(
                     Icons.Default.Add,
                     contentDescription = "Thêm kho",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    tint = LegadoTheme.colorScheme.onPrimaryContainer
                 )
             }
         }
@@ -320,12 +320,12 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
-                    .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
+                    .background(LegadoTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
                     .padding(12.dp)
             ) {
                 Text(
                     text = "Lỗi: ${error}",
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    color = LegadoTheme.colorScheme.onErrorContainer,
                     fontSize = 13.sp
                 )
             }
@@ -344,14 +344,14 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                             .padding(12.dp)
                     ) {
                         AppText(
                             text = "Danh sách Kho nguồn",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.primary
+                            color = LegadoTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         repos.forEach { repo ->
@@ -372,7 +372,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                         AppText(
                                             text = repo.url,
                                             fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            color = LegadoTheme.colorScheme.onSurfaceVariant,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -386,7 +386,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                         Icon(
                                             Icons.Default.Delete,
                                             contentDescription = "Xóa kho",
-                                            tint = MaterialTheme.colorScheme.error,
+                                            tint = LegadoTheme.colorScheme.error,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -417,7 +417,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                     ) {
                         AppText(
                             text = "Không tìm thấy tiện ích nào",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -456,19 +456,19 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                     AppText(
                                         text = info.name,
                                         style = LegadoTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurface,
+                                        color = LegadoTheme.colorScheme.onSurface,
                                         modifier = Modifier.weight(1f, fill = false)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Surface(
                                         shape = RoundedCornerShape(4.dp),
-                                        color = MaterialTheme.colorScheme.secondaryContainer
+                                        color = LegadoTheme.colorScheme.secondaryContainer
                                     ) {
                                         AppText(
                                             text = "v${info.version}",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            color = LegadoTheme.colorScheme.onSecondaryContainer,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
@@ -477,14 +477,14 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                 AppText(
                                     text = "Tác giả: ${info.author}",
                                     style = LegadoTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant
                                 )
                                 if (info.description.isNotBlank()) {
                                     Spacer(modifier = Modifier.height(4.dp))
                                     AppText(
                                         text = info.description,
                                         style = LegadoTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis
                                     )
@@ -505,7 +505,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                     onClick = { viewModel.installExtension(info) },
                                     enabled = buttonEnabled,
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (installed != null) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+                                        containerColor = if (installed != null) LegadoTheme.colorScheme.secondary else LegadoTheme.colorScheme.primary
                                     ),
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
@@ -514,7 +514,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                     AppText(
                                         text = buttonText,
                                         fontSize = 12.sp,
-                                        color = if (buttonEnabled) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                        color = if (buttonEnabled) LegadoTheme.colorScheme.onPrimary else LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                     )
                                 }
                                 
@@ -525,8 +525,8 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                         onClick = { showConfirmDialog = true },
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.errorContainer,
-                                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                            containerColor = LegadoTheme.colorScheme.errorContainer,
+                                            contentColor = LegadoTheme.colorScheme.onErrorContainer
                                         ),
                                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                                         modifier = Modifier.height(36.dp)
@@ -558,7 +558,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                                                         )
                                                     }
                                                 ) {
-                                                    Text("Xóa", color = MaterialTheme.colorScheme.error)
+                                                    Text("Xóa", color = LegadoTheme.colorScheme.error)
                                                 }
                                             },
                                             dismissButton = {
@@ -685,7 +685,7 @@ fun ExtensionDetailDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(LegadoTheme.colorScheme.background)
         ) {
             AppScaffold(
                 topBar = {
@@ -702,7 +702,7 @@ fun ExtensionDetailDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background)
+                        .background(LegadoTheme.colorScheme.background)
                         .padding(contentPadding)
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState()),
@@ -723,10 +723,10 @@ fun ExtensionDetailDialog(
                                 modifier = Modifier
                                     .size(96.dp)
                                     .clip(RoundedCornerShape(24.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                     .border(
                                         width = 1.dp,
-                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                        color = LegadoTheme.colorScheme.outline.copy(alpha = 0.2f),
                                         shape = RoundedCornerShape(24.dp)
                                     ),
                                 contentAlignment = Alignment.Center
@@ -741,14 +741,14 @@ fun ExtensionDetailDialog(
                             AppText(
                                 text = extension.name,
                                 style = LegadoTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = LegadoTheme.colorScheme.onSurface,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             AppText(
                                 text = "Phiên bản ${extension.version}",
                                 style = LegadoTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
 
@@ -757,7 +757,7 @@ fun ExtensionDetailDialog(
                                 AppText(
                                     text = extension.source,
                                     style = LegadoTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = LegadoTheme.colorScheme.primary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier
@@ -807,13 +807,13 @@ fun ExtensionDetailDialog(
                                 DetailQuickAction(
                                     icon = Icons.Outlined.Delete,
                                     label = "Gỡ",
-                                    tint = MaterialTheme.colorScheme.error,
+                                    tint = LegadoTheme.colorScheme.error,
                                     onClick = onUninstallClick
                                 )
                                 DetailQuickAction(
                                     icon = Icons.Outlined.PushPin,
                                     label = if (isPinned) "Gỡ ghim" else "Ghim",
-                                    tint = if (isPinned) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    tint = if (isPinned) LegadoTheme.colorScheme.primary else LegadoTheme.colorScheme.onSurface,
                                     onClick = { viewModel.togglePinnedState(extension.id) }
                                 )
                             }
@@ -834,14 +834,14 @@ fun ExtensionDetailDialog(
                                 AppText(
                                     text = "Chưa có lịch sử cookie",
                                     style = LegadoTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         } else {
                             AppText(
                                 text = cookie,
                                 style = LegadoTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
+                                color = LegadoTheme.colorScheme.onSurface,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 4.dp, vertical = 6.dp)
@@ -863,7 +863,7 @@ fun ExtensionDetailDialog(
                                 AppText(
                                     text = "Không có dữ liệu cục bộ",
                                     style = LegadoTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         } else {
@@ -875,7 +875,7 @@ fun ExtensionDetailDialog(
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+                                            .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
                                             .padding(horizontal = 10.dp, vertical = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
@@ -884,12 +884,12 @@ fun ExtensionDetailDialog(
                                                 text = k,
                                                 fontWeight = FontWeight.Bold,
                                                 style = LegadoTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.primary
+                                                color = LegadoTheme.colorScheme.primary
                                             )
                                             AppText(
                                                 text = v,
                                                 style = LegadoTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurface
+                                                color = LegadoTheme.colorScheme.onSurface
                                             )
                                         }
                                         IconButton(
@@ -899,7 +899,7 @@ fun ExtensionDetailDialog(
                                             Icon(
                                                 Icons.Default.Delete,
                                                 contentDescription = "Xóa",
-                                                tint = MaterialTheme.colorScheme.error,
+                                                tint = LegadoTheme.colorScheme.error,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                         }
@@ -989,14 +989,14 @@ fun ExtensionDetailDialog(
 fun Badge(text: String) {
     Surface(
         shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = LegadoTheme.colorScheme.surfaceVariant,
         modifier = Modifier.padding(vertical = 2.dp)
     ) {
         AppText(
             text = text,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = LegadoTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
         )
     }
@@ -1006,7 +1006,7 @@ fun Badge(text: String) {
 fun DetailQuickAction(
     icon: ImageVector,
     label: String,
-    tint: Color = MaterialTheme.colorScheme.onSurface,
+    tint: Color = LegadoTheme.colorScheme.onSurface,
     onClick: () -> Unit
 ) {
     Column(
@@ -1039,7 +1039,7 @@ fun SectionCard(
                 text = title,
                 style = LegadoTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = LegadoTheme.colorScheme.primary
             )
             if (showAddButton) {
                 TextButton(
@@ -1056,7 +1056,7 @@ fun SectionCard(
         GlassCard(
             modifier = Modifier.fillMaxWidth(),
             cornerRadius = 12.dp,
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+            containerColor = LegadoTheme.colorScheme.surfaceContainerLow
         ) {
             Column(
                 modifier = Modifier

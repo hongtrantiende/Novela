@@ -41,7 +41,9 @@ object ThemeConfig {
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
 
     //m3 or miuix
-    var composeEngine by prefDelegate(PreferKey.composeEngine, "material")
+    var composeEngine by prefDelegate(PreferKey.composeEngine, "material") {
+        postEvent(EventBus.RECREATE, "")
+    }
 
     var useMiuixMonet by prefDelegate(PreferKey.useMiuixMonet, false) {
         postEvent(EventBus.RECREATE, "")
@@ -49,7 +51,9 @@ object ThemeConfig {
 
     var materialVersion by prefDelegate(PreferKey.materialVersion, "material3")
 
-    var appTheme by prefDelegate(PreferKey.appTheme, "0")
+    var appTheme by prefDelegate(PreferKey.appTheme, "0") {
+        postEvent(EventBus.RECREATE, "")
+    }
 
     var themeMode by prefDelegate(PreferKey.themeMode, "0") {
         Handler(Looper.getMainLooper()).post { initNightMode() }
@@ -89,21 +93,37 @@ object ThemeConfig {
         postEvent(EventBus.RECREATE, "")
     }
 
-    var cPrimary by prefDelegate(PreferKey.cPrimary, 0)
+    var cPrimary by prefDelegate(PreferKey.cPrimary, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
-    var enableDeepPersonalization by prefDelegate(PreferKey.enableDeepPersonalization, false)
+    var enableDeepPersonalization by prefDelegate(PreferKey.enableDeepPersonalization, false) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
-    var themeColor by prefDelegate(PreferKey.themeColor, 0)
+    var themeColor by prefDelegate(PreferKey.themeColor, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
-    var secondaryThemeColor by prefDelegate(PreferKey.secondaryThemeColor, 0)
+    var secondaryThemeColor by prefDelegate(PreferKey.secondaryThemeColor, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
-    var primaryTextColor by prefDelegate(PreferKey.primaryTextColor, 0)
+    var primaryTextColor by prefDelegate(PreferKey.primaryTextColor, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
-    var secondaryTextColor by prefDelegate(PreferKey.secondaryTextColor, 0)
+    var secondaryTextColor by prefDelegate(PreferKey.secondaryTextColor, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
-    var themeBackgroundColor by prefDelegate(PreferKey.themeBackgroundColor, 0)
+    var themeBackgroundColor by prefDelegate(PreferKey.themeBackgroundColor, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
-    var labelContainerColor by prefDelegate(PreferKey.labelContainerColor, 0)
+    var labelContainerColor by prefDelegate(PreferKey.labelContainerColor, 0) {
+        postEvent(EventBus.RECREATE, "")
+    }
 
     var enableItemDivider by prefDelegate(PreferKey.enableItemDivider, false)
 

@@ -99,15 +99,20 @@ object TranslationManager : KoinComponent {
         _runningJobs[key]?.cancel()
         _runningJobs.remove(key)
 
+        val isCurrentChapter = (book.bookUrl == io.legado.app.model.ReadBook.book?.bookUrl && chapter.index == io.legado.app.model.ReadBook.durChapterIndex)
+        if (isCurrentChapter) {
+            _runningJobs.keys.filter { it.bookUrl == book.bookUrl && it.chapterIndex != chapter.index }.forEach { otherKey ->
+                _runningJobs[otherKey]?.cancel()
+                _runningJobs.remove(otherKey)
+                _taskStateFlows.remove(otherKey)
+            }
+        }
+
         // Create new task flow
         val taskFlow = MutableStateFlow(TranslationChapterState(key, status = TranslationChapterStatus.Idle))
         _taskStateFlows[key] = taskFlow
 
-        // Start translation in background
         val job = Coroutine.async {
-            if (TranslationConfig.llmBaseUrl.isNotBlank() && TranslationConfig.llmApiKey.isNotBlank()) {
-                scanAndSaveNamesWithAi(book, chapter)
-            }
             translateChapter(book, chapter, onTranslateStarted)
         }
         job.invokeOnCompletion {
@@ -375,12 +380,12 @@ object TranslationManager : KoinComponent {
                         }
 
                         if (newEntries.isNotEmpty()) {
-                            // Gộp vào từ điển hiện tại của truyện
                             val currentEntries = io.legado.app.utils.QuickTranslateDictHelper.loadDictEntries(context, privateNameFile).toMutableList()
                             val currentKeys = currentEntries.map { it.first }.toSet()
+                            val blacklist = io.legado.app.utils.QuickTranslateDictHelper.loadBlacklist(context, privateNameFile)
                             
                             newEntries.forEach { (key, value) ->
-                                if (!currentKeys.contains(key)) {
+                                if (!currentKeys.contains(key) && !blacklist.contains(key)) {
                                     currentEntries.add(Pair(key, value))
                                 }
                             }

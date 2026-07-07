@@ -89,6 +89,8 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.ui.text.font.FontWeight
 import io.legado.app.service.BaseReadAloudService
 import kotlinx.coroutines.delay
 
@@ -643,6 +645,7 @@ fun ReadAloudContent(
             exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut(),
         ) {
             AudioChapterListOverlay(
+                book = state.book,
                 chapters = chapters,
                 currentChapterIndex = state.durChapterIndex,
                 onChapterClick = { index ->
@@ -844,12 +847,21 @@ private fun SegmentedProgressBar(
  */
 @Composable
 private fun AudioChapterListOverlay(
+    book: io.legado.app.data.entities.Book?,
     chapters: List<io.legado.app.data.entities.BookChapter>,
     currentChapterIndex: Int,
     onChapterClick: (Int) -> Unit,
     onDismiss: () -> Unit,
     bgColor: Color,
 ) {
+    val cachedFiles = remember(chapters, book) {
+        if (book != null) {
+            io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
+        } else {
+            emptySet()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -857,19 +869,39 @@ private fun AudioChapterListOverlay(
             .windowInsetsPadding(WindowInsets.statusBars)
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
-        // Header
+        // Premium Book Header with Cover and Title
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Danh sách chương (${chapters.size})",
-                style = LegadoTheme.typography.titleMedium,
-                color = LegadoTheme.colorScheme.onSurface
+            io.legado.app.ui.widget.components.image.cover.BookCoverImage(
+                name = book?.name,
+                author = book?.author,
+                path = book?.getDisplayCover(),
+                modifier = Modifier
+                    .size(width = 44.dp, height = 60.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
             )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book?.name ?: "",
+                    style = LegadoTheme.typography.titleMedium,
+                    color = LegadoTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Danh sách chương (${chapters.size})",
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Close button
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -900,6 +932,9 @@ private fun AudioChapterListOverlay(
             items(chapters.size) { index ->
                 val chapter = chapters[index]
                 val isCurrent = index == currentChapterIndex
+                val isDownloaded = remember(chapter.index, cachedFiles) {
+                    chapter.getFileName() in cachedFiles
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -912,13 +947,6 @@ private fun AudioChapterListOverlay(
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "${index + 1}",
-                        style = LegadoTheme.typography.labelMedium,
-                        color = if (isCurrent) LegadoTheme.colorScheme.primary
-                            else LegadoTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                        modifier = Modifier.width(36.dp)
-                    )
                     Text(
                         text = chapter.getDisplayTitle(),
                         style = LegadoTheme.typography.bodyMedium,
@@ -934,6 +962,14 @@ private fun AudioChapterListOverlay(
                             text = "Đang phát",
                             style = LegadoTheme.typography.labelSmall,
                             color = LegadoTheme.colorScheme.primary
+                        )
+                    } else if (isDownloaded) {
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Đã tải",
+                            tint = LegadoTheme.colorScheme.secondary,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }

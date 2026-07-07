@@ -176,7 +176,6 @@ fun DictManagerSheet(
             2 -> "ORG"
             3 -> "PRON"
             4 -> "USER"
-            5 -> "ERR"
             else -> "PER"
         }
         
@@ -240,7 +239,7 @@ fun DictManagerSheet(
                     tempLlmBaseUrl = TranslationConfig.llmBaseUrl
                     tempLlmApiKey = TranslationConfig.llmApiKey
                     tempLlmModel = TranslationConfig.llmModel
-                    tempLlmScanAdvanced = TranslationConfig.llmScanAdvanced
+                    tempLlmScanAdvanced = false
                     showAiSettingsDialog = true
                 }) {
                     Icon(Icons.Default.Settings, contentDescription = "Cấu hình AI")
@@ -260,13 +259,8 @@ fun DictManagerSheet(
             }
 
             // Tab Row
-            val showAdvanced = TranslationConfig.llmScanAdvanced
-            val tabs = remember(showAdvanced) {
-                val list = mutableListOf("Tên nhân vật", "Tên địa danh", "Tên tổ chức", "Xưng hô", "Từ điển riêng")
-                if (showAdvanced) {
-                    list.add("Lỗi dịch từ điển")
-                }
-                list
+            val tabs = remember {
+                listOf("Tên nhân vật", "Tên địa danh", "Tên tổ chức", "Xưng hô", "Từ điển riêng")
             }
             
             LaunchedEffect(tabs.size) {
@@ -522,7 +516,6 @@ fun DictManagerSheet(
                             2 -> "ORG"
                             3 -> "PRON"
                             4 -> "USER"
-                            5 -> "ERR"
                             else -> "PER"
                         }
                         scope.launch(Dispatchers.IO) {
@@ -585,7 +578,6 @@ fun DictManagerSheet(
                             2 -> "ORG"
                             3 -> "PRON"
                             4 -> "USER"
-                            5 -> "ERR"
                             else -> "PER"
                         }
                         scope.launch(Dispatchers.IO) {
@@ -741,28 +733,6 @@ fun DictManagerSheet(
                                 }
                             }
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Quét nâng cao (đối chiếu sửa sai)",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Gửi cả bản dịch thô và bản gốc để AI sửa lỗi dịch sai trong từ điển",
-                                    fontSize = 11.sp,
-                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                            }
-                            io.legado.app.ui.widget.components.AdaptiveSwitch(
-                                checked = tempLlmScanAdvanced,
-                                onCheckedChange = { tempLlmScanAdvanced = it }
-                            )
-                        }
                     }
                 },
                 confirmText = "Lưu",
@@ -770,7 +740,7 @@ fun DictManagerSheet(
                     TranslationConfig.llmBaseUrl = tempLlmBaseUrl
                     TranslationConfig.llmApiKey = tempLlmApiKey
                     TranslationConfig.llmModel = tempLlmModel
-                    TranslationConfig.llmScanAdvanced = tempLlmScanAdvanced
+                    TranslationConfig.llmScanAdvanced = false
                     Toast.makeText(context, "Đã lưu cấu hình AI", Toast.LENGTH_SHORT).show()
                     showAiSettingsDialog = false
                 },

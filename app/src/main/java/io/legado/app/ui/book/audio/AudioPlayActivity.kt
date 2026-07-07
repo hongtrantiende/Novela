@@ -28,8 +28,7 @@ import com.google.android.material.color.DynamicColorsOptions
 import androidx.constraintlayout.widget.ConstraintLayout
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.slider.Slider
-import com.google.android.material.transition.platform.MaterialContainerTransform
-import com.google.android.material.transition.platform.MaterialContainerTransformSharedElementCallback
+
 import android.graphics.Typeface
 import com.dirror.lyricviewx.OnPlayClickListener
 import io.legado.app.R
@@ -129,16 +128,9 @@ class AudioPlayActivity :
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        setEnterSharedElementCallback(MaterialContainerTransformSharedElementCallback())
-        setExitSharedElementCallback(MaterialContainerTransformSharedElementCallback())
-        val transform = MaterialContainerTransform().apply {
-            addTarget(binding.root)
-            scrimColor = Color.TRANSPARENT
-        }
-        window.sharedElementEnterTransition = transform
-        window.sharedElementReturnTransition = transform
         super.onCreate(savedInstanceState)
-        binding.root.transitionName = intent.getStringExtra("transitionName")
+        @Suppress("DEPRECATION")
+        overridePendingTransition(R.anim.anim_readbook_bottom_in, R.anim.anim_none)
         primaryFinalColor =
             MaterialColors.getColor(this, androidx.appcompat.R.attr.colorPrimary, -1)
         surfaceFinalColor =
@@ -860,6 +852,15 @@ class AudioPlayActivity :
         }
     }
 
+    override fun finish() {
+        super.finish()
+        @Suppress("DEPRECATION")
+        overridePendingTransition(R.anim.anim_none, R.anim.anim_readbook_bottom_out)
+    }
+
+    override fun supportFinishAfterTransition() {
+        finish()
+    }
 }
 
 private fun Int.copy(alpha: Float): Int {
