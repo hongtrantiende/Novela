@@ -13,7 +13,12 @@ object QuickTranslateDictHelper {
         if (!dictDir.exists()) {
             dictDir.mkdirs()
         }
-        return File(dictDir, fileName)
+        val file = File(dictDir, fileName)
+        val parent = file.parentFile
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs()
+        }
+        return file
     }
 
     suspend fun loadDictEntries(context: Context, fileName: String): List<Pair<String, String>> = withContext(Dispatchers.IO) {

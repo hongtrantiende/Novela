@@ -152,6 +152,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyThemeColors()
         initRecyclerView()
         initSearchView()
         upBookSource()
@@ -227,6 +228,44 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         if (!LocalConfig.bookSourcesHelpVersionIsLast) {
             showHelp("SourceMBookHelp")
         }
+    }
+
+    private fun applyThemeColors() {
+        val isNight = io.legado.app.help.config.AppConfig.isNightTheme
+        
+        // 1. Get primary color
+        val primary = if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.themeColor != 0) {
+            io.legado.app.ui.config.themeConfig.ThemeConfig.themeColor
+        } else {
+            val seed = if (isNight) io.legado.app.ui.config.themeConfig.ThemeConfig.cNPrimary else io.legado.app.ui.config.themeConfig.ThemeConfig.cPrimary
+            if (seed != 0) seed else primaryColor
+        }
+        
+        // 2. Get background color
+        val background = if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.themeBackgroundColor != 0) {
+            io.legado.app.ui.config.themeConfig.ThemeConfig.themeBackgroundColor
+        } else {
+            if (isNight) 0xFF121212.toInt() else 0xFFFEF7FF.toInt()
+        }
+        
+        // 3. Get text color
+        val textColor = if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.primaryTextColor != 0) {
+            io.legado.app.ui.config.themeConfig.ThemeConfig.primaryTextColor
+        } else {
+            if (isNight) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
+        }
+
+        // Apply colors programmatically
+        binding.root.setBackgroundColor(background)
+        binding.titleBar.setBackgroundColor(background)
+        
+        binding.tabLayout.setBackgroundColor(background)
+        val normalTabColor = (textColor and 0x00FFFFFF) or (0x99 shl 24)
+        binding.tabLayout.setTabTextColors(normalTabColor, primary)
+        binding.tabLayout.setSelectedTabIndicatorColor(primary)
+        
+        binding.recyclerView.setBackgroundColor(background)
+        binding.selectActionBar.setBackgroundColor(background)
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {

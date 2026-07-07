@@ -235,11 +235,6 @@ fun ExploreScreen(
                 imageVector = androidx.compose.material.icons.Icons.Default.Translate,
                 contentDescription = "Dịch"
             )
-            io.legado.app.ui.widget.components.topbar.TopBarActionButton(
-                onClick = { showAiConfigDialog = true },
-                imageVector = androidx.compose.material.icons.Icons.Default.Settings,
-                contentDescription = "Setup Model"
-            )
         },
         dropDownMenuContent = { dismiss ->
             RoundDropdownMenuItem(
@@ -817,13 +812,6 @@ fun ExploreSourceHeader(
                             text = stringResource(R.string.refresh),
                             onClick = { onRefresh(); showMenu = false }
                         )
-                        if (isLegado && isInstalled) {
-                            RoundDropdownMenuItem(
-                                leadingIcon = { MenuItemIcon(Icons.Default.Translate) },
-                                text = "Tạo Extension AI",
-                                onClick = { onGenerateExtension(); showMenu = false }
-                            )
-                        }
                         RoundDropdownMenuItem(
                             leadingIcon = {
                                 MenuItemIcon(
@@ -922,18 +910,6 @@ fun AiConfigDialog(
                     onValueChange = { baseUrlInput = it },
                     label = { Text("Base URL", fontSize = 12.sp) },
                     placeholder = { Text("https://api.openai.com/v1") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = LegadoTheme.colorScheme.primary,
-                        unfocusedBorderColor = LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)
-                    )
-                )
-                
-                OutlinedTextField(
-                    value = apiKeyInput,
-                    onValueChange = { apiKeyInput = it },
-                    label = { Text("API Key", fontSize = 12.sp) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
