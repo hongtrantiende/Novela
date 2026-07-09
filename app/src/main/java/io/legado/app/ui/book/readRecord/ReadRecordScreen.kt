@@ -249,99 +249,100 @@ fun ReadRecordScreen(
             }
         }
     ) { padding ->
-        val contentState = when {
-            state.isLoading -> "LOADING"
-            (displayMode == DisplayMode.AGGREGATE && state.groupedRecords.isEmpty()) ||
-                (displayMode == DisplayMode.TIMELINE && state.timelineRecords.isEmpty()) ||
-                (displayMode == DisplayMode.LATEST && state.latestRecords.isEmpty()) -> "EMPTY"
-            else -> "CONTENT"
-        }
-        AnimatedContent(
-            targetState = contentState,
-            label = "MainContentAnimation"
-        ) { targetState ->
-            when (targetState) {
-                "LOADING" -> {
-                    EmptyMessage(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                top = padding.calculateTopPadding(),
-                                bottom = padding.calculateBottomPadding()
-                            ),
-                        message = "Đang tải",
-                        isLoading = true
-                    )
-                }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = padding.calculateTopPadding())
+        ) {
+            val contentState = when {
+                state.isLoading -> "LOADING"
+                (displayMode == DisplayMode.AGGREGATE && state.groupedRecords.isEmpty()) ||
+                    (displayMode == DisplayMode.TIMELINE && state.timelineRecords.isEmpty()) ||
+                    (displayMode == DisplayMode.LATEST && state.latestRecords.isEmpty()) -> "EMPTY"
+                else -> "CONTENT"
+            }
+            AnimatedContent(
+                targetState = contentState,
+                label = "MainContentAnimation",
+                modifier = Modifier.weight(1f)
+            ) { targetState ->
+                when (targetState) {
+                    "LOADING" -> {
+                        EmptyMessage(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = padding.calculateBottomPadding()),
+                            message = "Đang tải",
+                            isLoading = true
+                        )
+                    }
 
-                "EMPTY" -> {
-                    EmptyMessage(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                top = padding.calculateTopPadding(),
-                                bottom = padding.calculateBottomPadding()
-                            ),
-                        message = "Không có lịch sử"
-                    )
-                }
+                    "EMPTY" -> {
+                        EmptyMessage(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = padding.calculateBottomPadding()),
+                            message = "Không có lịch sử"
+                        )
+                    }
 
-                "CONTENT" -> {
-                    Box(modifier = Modifier.fillMaxSize()) {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = adaptiveContentPaddingOnlyVertical(
-                                top = padding.calculateTopPadding(),
-                                bottom = padding.calculateBottomPadding() + 16.dp
-                            )
-                        ) {
-                            item(key = "summary_card") {
-                                SummarySection(state, viewModel, onSummaryClick)
-                            }
-                            renderListByMode(
-                                displayMode = displayMode,
-                                state = state,
-                                viewModel = viewModel,
-                                onBookClick = onBookClick,
-                                onConfirmDelete = onConfirmDelete,
-                                onMergeClick = { record ->
-                                    scope.launch {
-                                        val candidates = viewModel.getMergeCandidates(record)
-                                        if (candidates.isEmpty()) {
-                                            snackbarHostState.showSnackbar("Không có lịch sử cùng tên truyện để gộp")
-                                        } else {
-                                            mergeDialogData = record to candidates
+                    "CONTENT" -> {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = adaptiveContentPaddingOnlyVertical(
+                                    top = 0.dp,
+                                    bottom = padding.calculateBottomPadding() + 16.dp
+                                )
+                            ) {
+                                item(key = "summary_card") {
+                                    SummarySection(state, viewModel, onSummaryClick)
+                                }
+                                renderListByMode(
+                                    displayMode = displayMode,
+                                    state = state,
+                                    viewModel = viewModel,
+                                    onBookClick = onBookClick,
+                                    onConfirmDelete = onConfirmDelete,
+                                    onMergeClick = { record ->
+                                        scope.launch {
+                                            val candidates = viewModel.getMergeCandidates(record)
+                                            if (candidates.isEmpty()) {
+                                                snackbarHostState.showSnackbar("Không có lịch sử cùng tên truyện để gộp")
+                                            } else {
+                                                mergeDialogData = record to candidates
+                                            }
                                         }
                                     }
-                                }
-                            )
-                        }
-
-                        TopFloatingStickyItem(
-                            item = floatingDate,
-                            modifier = Modifier.padding(
-                                top = padding.calculateTopPadding() + 4.dp,
-                                start = 8.dp
-                            )
-                        ) { date ->
-                            val text = buildString {
-                                append(formatFriendlyDate(date))
-                                if (displayMode == DisplayMode.AGGREGATE) {
-                                    val dailyTotal = state.groupedRecords[date]?.sumOf { it.readTime } ?: 0L
-                                    append(" · ")
-                                    append(formatDuring(dailyTotal))
-                                }
+                                )
                             }
-                            TextCard(
-                                text = text,
-                                textStyle = LegadoTheme.typography.labelLarge,
-                                backgroundColor = LegadoTheme.colorScheme.cardContainer,
-                                contentColor = LegadoTheme.colorScheme.onCardContainer,
-                                cornerRadius = 8.dp,
-                                horizontalPadding = 8.dp,
-                                verticalPadding = 8.dp
-                            )
+
+                            TopFloatingStickyItem(
+                                item = floatingDate,
+                                modifier = Modifier.padding(
+                                    top = 4.dp,
+                                    start = 8.dp
+                                )
+                            ) { date ->
+                                val text = buildString {
+                                    append(formatFriendlyDate(date))
+                                    if (displayMode == DisplayMode.AGGREGATE) {
+                                        val dailyTotal = state.groupedRecords[date]?.sumOf { it.readTime } ?: 0L
+                                        append(" · ")
+                                        append(formatDuring(dailyTotal))
+                                    }
+                                }
+                                TextCard(
+                                    text = text,
+                                    textStyle = LegadoTheme.typography.labelLarge,
+                                    backgroundColor = LegadoTheme.colorScheme.cardContainer,
+                                    contentColor = LegadoTheme.colorScheme.onCardContainer,
+                                    cornerRadius = 8.dp,
+                                    horizontalPadding = 8.dp,
+                                    verticalPadding = 8.dp
+                                )
+                            }
                         }
                     }
                 }

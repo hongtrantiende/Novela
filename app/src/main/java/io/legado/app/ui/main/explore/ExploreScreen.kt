@@ -50,7 +50,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -103,6 +105,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Surface
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.OutlinedTextField
@@ -237,6 +240,27 @@ fun ExploreScreen(
             )
         },
         dropDownMenuContent = { dismiss ->
+            if (isVip) {
+                RoundDropdownMenuItem(
+                    leadingIcon = { MenuItemIcon(Icons.Default.VisibilityOff) },
+                    trailingIcon = {
+                        Checkbox(
+                            checked = uiState.hideUninstalled,
+                            onCheckedChange = {
+                                viewModel.hideUninstalled = it
+                                dismiss()
+                            },
+                            modifier = Modifier.scale(0.8f)
+                        )
+                    },
+                    text = "Ẩn chưa cài",
+                    onClick = {
+                        viewModel.hideUninstalled = !uiState.hideUninstalled
+                        dismiss()
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            }
             RoundDropdownMenuItem(
                 leadingIcon = { MenuItemIcon(Icons.Default.Group) },
                 text = stringResource(R.string.all),
@@ -300,26 +324,6 @@ fun ExploreScreen(
 
 
 
-                if (io.legado.app.help.MemberManager.isVip) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.hideUninstalled = !uiState.hideUninstalled }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AppText(
-                            text = "Ẩn chưa cài",
-                            style = LegadoTheme.typography.bodyMedium,
-                            color = LegadoTheme.colorScheme.onSurface
-                        )
-                        Switch(
-                            checked = uiState.hideUninstalled,
-                            onCheckedChange = { viewModel.hideUninstalled = it }
-                        )
-                    }
-                }
 
                 Box(modifier = Modifier.weight(1f)) {
                     if (uiState.items.isEmpty()) {

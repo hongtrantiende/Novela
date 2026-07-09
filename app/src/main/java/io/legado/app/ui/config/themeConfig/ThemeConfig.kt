@@ -8,6 +8,8 @@ import io.legado.app.constant.PreferKey
 import io.legado.app.ui.config.prefDelegate
 import io.legado.app.utils.GSON
 import io.legado.app.utils.postEvent
+import io.legado.app.utils.themeColor
+import splitties.init.appCtx
 
 data class TagColorPair(
     val textColor: Int = 0,
@@ -226,7 +228,56 @@ object ThemeConfig {
         postEvent(PreferKey.eyeProtectionEndTime, it)
     }
 
+    // Skin Pack
+    var activeSkinPack by prefDelegate(PreferKey.activeSkinPack, "") {
+        postEvent(EventBus.RECREATE, "")
+    }
+
     fun hasImageBg(isDark: Boolean): Boolean =
         !(if (isDark) bgImageDark else bgImageLight).isNullOrBlank()
+
+    fun getActiveThemeBackgroundColor(isNight: Boolean): Int {
+        val activeSkinName = activeSkinPack
+        val activePack = if (activeSkinName.isNotBlank()) io.legado.app.help.skin.SkinPackManager.getPack(activeSkinName) else null
+        val skinColorScheme = activePack?.manifest?.colorScheme
+        
+        if (skinColorScheme?.background != null) {
+            return try {
+                android.graphics.Color.parseColor(skinColorScheme.background)
+            } catch (e: Exception) {
+                if (isNight) 0xFF121212.toInt() else 0xFFFEF7FF.toInt()
+            }
+        }
+        if (enableDeepPersonalization && themeBackgroundColor != 0) {
+            return themeBackgroundColor
+        }
+        return try {
+            appCtx.themeColor(android.R.attr.colorBackground)
+        } catch (e: Exception) {
+            if (isNight) 0xFF121212.toInt() else 0xFFFEF7FF.toInt()
+        }
+    }
+
+    fun getActiveThemeTextColor(isNight: Boolean): Int {
+        val activeSkinName = activeSkinPack
+        val activePack = if (activeSkinName.isNotBlank()) io.legado.app.help.skin.SkinPackManager.getPack(activeSkinName) else null
+        val skinColorScheme = activePack?.manifest?.colorScheme
+        
+        if (skinColorScheme?.onSurface != null) {
+            return try {
+                android.graphics.Color.parseColor(skinColorScheme.onSurface)
+            } catch (e: Exception) {
+                if (isNight) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
+            }
+        }
+        if (enableDeepPersonalization && primaryTextColor != 0) {
+            return primaryTextColor
+        }
+        return try {
+            appCtx.themeColor(android.R.attr.textColorPrimary)
+        } catch (e: Exception) {
+            if (isNight) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
+        }
+    }
 
 }

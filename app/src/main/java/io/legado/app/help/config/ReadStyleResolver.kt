@@ -63,11 +63,18 @@ object ReadStyleResolver {
     }
 
     fun currentBackground(config: ReadBookConfig.Config): ReadBackground {
-        return when (currentMode()) {
+        val mode = currentMode()
+        val bg = when (mode) {
             ReadStyleMode.EInk -> ReadBackground(config.bgTypeEInk, config.bgStrEInk)
             ReadStyleMode.Night -> ReadBackground(config.bgTypeNight, config.bgStrNight)
             ReadStyleMode.Day -> ReadBackground(config.bgType, config.bgStr)
         }
+        if (bg.type == 0) {
+            val isNight = mode == ReadStyleMode.Night
+            val themeBgColor = io.legado.app.ui.config.themeConfig.ThemeConfig.getActiveThemeBackgroundColor(isNight)
+            return ReadBackground(0, String.format("#%06X", 0xFFFFFF and themeBgColor))
+        }
+        return bg
     }
 
     fun backgroundPath(config: ReadBookConfig.Config, bgIndex: Int): String? {

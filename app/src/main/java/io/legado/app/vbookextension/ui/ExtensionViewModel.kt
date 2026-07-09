@@ -31,6 +31,27 @@ class ExtensionViewModel(
     }
 
     // Selected extension details state
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
+
+    fun updateSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
+    private val _showAddRepoDialog = MutableStateFlow(false)
+    val showAddRepoDialog = _showAddRepoDialog.asStateFlow()
+
+    fun showAddRepoDialog(show: Boolean) {
+        _showAddRepoDialog.value = show
+    }
+
+    private val _showManageReposDialog = MutableStateFlow(false)
+    val showManageReposDialog = _showManageReposDialog.asStateFlow()
+
+    fun showManageReposDialog(show: Boolean) {
+        _showManageReposDialog.value = show
+    }
+
     private val _selectedCookie = MutableStateFlow("")
     val selectedCookie = _selectedCookie.asStateFlow()
 

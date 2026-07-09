@@ -85,6 +85,7 @@ class ExploreShowViewModel(
     private var initialized = false
     private var page = 1
     private var autoPageCount = 0
+    private var loadJob: kotlinx.coroutines.Job? = null
 
     companion object {
         private const val MAX_AUTO_PAGES = 3
@@ -332,11 +333,29 @@ class ExploreShowViewModel(
     }
 
     private fun switchKind(kind: ExploreKind) {
+        loadJob?.cancel()
         _kindState.update { it.copy(selectedKindTitle = kind.title) }
         exploreUrl = kind.url
-        _loadState.update { it.copy(isEnd = false) }
         autoPageCount = 0
-        loadMore(isRefresh = true)
+        
+        val source = sourceUrl
+        val url = kind.url
+        if (source != null) {
+            val cacheKey = "$source##$url"
+            val cachedBooks = ExploreShowCache.getBooks(cacheKey)
+            if (cachedBooks != null) {
+                _rawBooks.value = cachedBooks
+                preloadBookCovers(cachedBooks)
+                page = ExploreShowCache.getPage(cacheKey) ?: 1
+                val cachedIsEnd = ExploreShowCache.getIsEnd(cacheKey) ?: false
+                _loadState.update { it.copy(isLoading = false, isEnd = cachedIsEnd, errorMsg = null) }
+            } else {
+                page = 1
+                _rawBooks.value = emptyList()
+                _loadState.update { it.copy(isLoading = false, isEnd = false, errorMsg = null) }
+                loadMore(isRefresh = false, forceLoad = true)
+            }
+        }
     }
 
     private fun toggleLayout() {
@@ -398,7 +417,8 @@ class ExploreShowViewModel(
             )
         }
 
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             if (isRefresh) {
                 page = 1
                 autoPageCount = 0
@@ -424,6 +444,9 @@ class ExploreShowViewModel(
         kotlin.runCatching {
             exploreBooksUseCase.execute(sourceUrl, url, args = null, page, key = _searchQuery.value)
         }.onSuccess { result ->
+            if (url != exploreUrl) {
+                return
+            }
             val currentList = _rawBooks.value
             val existingUrls = currentList.map { it.bookUrl }.toSet()
             val uniqueNewBooks = result.books
@@ -458,12 +481,15 @@ class ExploreShowViewModel(
                 finishLoading()
             }
         }.onFailure { throwable ->
-            _loadState.update { it.copy(errorMsg = throwable.stackTraceStr) }
-            finishLoading()
+            if (throwable !is kotlinx.coroutines.CancellationException) {
+                _loadState.update { it.copy(errorMsg = throwable.stackTraceStr) }
+                finishLoading()
+            }
         }
     }
 
     private suspend fun fetchNextAutoPageOrFinish(sourceUrl: String, url: String?) {
+        if (url != exploreUrl) return
         page++
         autoPageCount++
         if (autoPageCount >= MAX_AUTO_PAGES) {
@@ -498,7 +524,7 @@ class ExploreShowViewModel(
 
     private fun preloadBookCovers(books: List<SearchBook>) {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            books.take(30).forEach { book ->
+            books.take(12).forEach { book ->
                 val coverUrl = book.coverUrl
                 if (!coverUrl.isNullOrBlank()) {
                     val request = io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest(
@@ -509,6 +535,30 @@ class ExploreShowViewModel(
                         memoryCacheKey = coverUrl
                     )
                     imageLoader.enqueue(request)
+                }
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        val source = sourceUrl
+        if (source != null) {
+            val url = exploreUrl
+            val query = _searchQuery.value
+            val kindsList = _kindState.value.kinds
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                ExploreShowCache.remove(source)
+                if (url != null) {
+                    ExploreShowCache.remove("$source##$url")
+                }
+                if (query != null) {
+                    ExploreShowCache.remove("$source##search##$query")
+                }
+                kindsList.forEach { kind ->
+                    kind.url?.let { kUrl ->
+                        ExploreShowCache.remove("$source##$kUrl")
+                    }
                 }
             }
         }

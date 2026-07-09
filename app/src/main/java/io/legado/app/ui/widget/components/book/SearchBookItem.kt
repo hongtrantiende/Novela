@@ -59,6 +59,7 @@ fun SearchBookListItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
     sourceCount: Int? = null,
+    shouldLoadCover: Boolean = true,
 ) {
     val extId = remember(book.origin) { if (book.origin.startsWith("ext_")) book.origin.substringAfter("ext_") else null }
     Row(
@@ -78,7 +79,7 @@ fun SearchBookListItem(
             CoilBookCover(
                 name = book.name,
                 author = book.author,
-                path = book.coverUrl,
+                path = if (shouldLoadCover) book.coverUrl else null,
                 modifier = Modifier.fillMaxSize(),
                 sourceOrigin = book.origin,
                 sharedTransitionScope = sharedTransitionScope,
@@ -251,6 +252,7 @@ fun SearchBookGridItem(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
+    shouldLoadCover: Boolean = true,
 ) {
     val extId = remember(book.origin) { if (book.origin.startsWith("ext_")) book.origin.substringAfter("ext_") else null }
     Column(
@@ -270,7 +272,7 @@ fun SearchBookGridItem(
             CoilBookCover(
                 name = book.name,
                 author = book.author,
-                path = book.coverUrl,
+                path = if (shouldLoadCover) book.coverUrl else null,
                 modifier = Modifier.fillMaxSize(),
                 sourceOrigin = book.origin,
                 sharedTransitionScope = sharedTransitionScope,

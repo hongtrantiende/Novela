@@ -258,7 +258,7 @@ class ReadBookController(
         val state = viewModel.uiState.value
         when {
             BaseReadAloudService.isRun -> viewModel.onIntent(
-                ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)
+                ReadBookIntent.OpenReadAloud
             )
 
             isAutoPage -> viewModel.onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.AutoRead))
@@ -639,6 +639,10 @@ class ReadBookController(
                 val lp = activity.window.attributes
                 lp.screenBrightness = effect.value / 100f
                 activity.window.attributes = lp
+            }
+
+            is ReadBookEffect.OpenReadAloud -> {
+                // Handled by route layer
             }
 
             // ── Launcher-dependent effects — now handled by route layer ──

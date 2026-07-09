@@ -112,6 +112,26 @@ class HttpReadAloudService : BaseReadAloudService(),
     /** True while transitioning between paragraphs/chapters; prevents stale callbacks from pausing. */
     @Volatile private var isTransitioningPlayback = false
 
+    private var md5CacheList: List<String> = emptyList()
+    private var md5CacheKey: String = ""
+
+    private fun getCachedFileName(index: Int): String? {
+        if (index !in contentList.indices) return null
+        val textChapter = this.textChapter
+        val titleToUse = textChapter?.chapter?.title ?: ""
+        val currentKey = "${ReadBook.book?.bookUrl}_${titleToUse}_${contentList.size}"
+        
+        if (currentKey != md5CacheKey || md5CacheList.size != contentList.size) {
+            val list = ArrayList<String>(contentList.size)
+            for (content in contentList) {
+                list.add(md5SpeakFileName(content, textChapter))
+            }
+            md5CacheList = list
+            md5CacheKey = currentKey
+        }
+        return md5CacheList.getOrNull(index)
+    }
+
     private fun initCachedFiles() {
         Coroutine.async {
             val files = FileUtils.listDirsAndFiles(ttsFolderPath)
@@ -134,21 +154,25 @@ class HttpReadAloudService : BaseReadAloudService(),
 
     override fun isParagraphCached(index: Int): Boolean {
         if (index !in contentList.indices) return false
-        var text = contentList[index]
-        if (paragraphStartPos > 0 && index == nowSpeak) {
+        val fileName = if (paragraphStartPos > 0 && index == nowSpeak) {
+            var text = contentList[index]
             text = text.substring(paragraphStartPos)
+            md5SpeakFileName(text)
+        } else {
+            getCachedFileName(index) ?: return false
         }
-        val fileName = md5SpeakFileName(text)
-        return cachedFiles.contains(fileName) || hasSpeakFile(fileName)
+        return cachedFiles.contains(fileName)
     }
 
     override fun isParagraphDownloading(index: Int): Boolean {
         if (index !in contentList.indices) return false
-        var text = contentList[index]
-        if (paragraphStartPos > 0 && index == nowSpeak) {
+        val fileName = if (paragraphStartPos > 0 && index == nowSpeak) {
+            var text = contentList[index]
             text = text.substring(paragraphStartPos)
+            md5SpeakFileName(text)
+        } else {
+            getCachedFileName(index) ?: return false
         }
-        val fileName = md5SpeakFileName(text)
         return downloadingFiles.contains(fileName)
     }
 

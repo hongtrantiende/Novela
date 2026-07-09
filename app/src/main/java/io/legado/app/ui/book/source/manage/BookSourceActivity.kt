@@ -10,10 +10,19 @@ import android.view.WindowManager
 import com.google.android.material.tabs.TabLayout
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.legado.app.ui.theme.AppTheme
 import io.legado.app.vbookextension.ui.ExtensionScreens
 import io.legado.app.vbookextension.ui.LegadoStoreScreen
 import androidx.activity.viewModels
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.appcompat.widget.SearchView
@@ -56,6 +65,7 @@ import io.legado.app.utils.ACache
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.dpToPx
+import io.legado.app.utils.themeColor
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChange
 import io.legado.app.utils.flowWithLifecycleAndDatabaseChangeFirst
 import io.legado.app.utils.isAbsUrl
@@ -91,7 +101,11 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
     SelectActionBar.CallBack,
     SearchView.OnQueryTextListener {
     override val binding by viewBinding(ActivityBookSourceBinding::inflate)
-    override val viewModel by viewModels<BookSourceViewModel>()
+    override val viewModel by viewModel<BookSourceViewModel>()
+    private val storeViewModel by viewModel<io.legado.app.vbookextension.ui.LegadoStoreViewModel>()
+    private val extensionViewModel by viewModel<io.legado.app.vbookextension.ui.ExtensionViewModel>()
+    private val installedCountState = androidx.compose.runtime.mutableStateOf(0)
+    private var bookSourceQuery = ""
     private var currentTab = 0
     private val importRecordKey = "bookSourceRecordKey"
     private val adapter by lazy { BookSourceAdapter(this, this, binding.recyclerView) }
@@ -161,17 +175,21 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         resumeCheckSource()
 
         val composeTabIndex = androidx.compose.runtime.mutableStateOf(0)
+        
+        lifecycleScope.launch {
+            appDb.bookSourceDao.flowAll().collect {
+                installedCountState.value = it.size
+            }
+        }
 
         // Setup TabLayout
         val tabLayout = binding.tabLayout
         val tabSources = tabLayout.newTab().setText("Nguồn sách")
         tabLayout.addTab(tabSources)
-
+ 
         if (io.legado.app.help.MemberManager.isVip) {
             val tabExtensions = tabLayout.newTab().setText("Nguồn Extension")
-            val tabLegado = tabLayout.newTab().setText("Kho nguồn Legado")
             tabLayout.addTab(tabExtensions)
-            tabLayout.addTab(tabLegado)
         }
 
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -187,6 +205,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
                         binding.titleBar.visibility = View.VISIBLE
                         binding.titleBar.title = getString(R.string.book_source)
                         searchView.visibility = View.VISIBLE
+                        searchView.setQuery(bookSourceQuery, false)
                         invalidateOptionsMenu()
                     }
                     1 -> {
@@ -196,17 +215,8 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
                         binding.selectActionBar.visibility = View.GONE
                         binding.composeView.visibility = View.VISIBLE
                         binding.titleBar.title = "Nguồn Extension"
-                        searchView.visibility = View.GONE
-                        invalidateOptionsMenu()
-                    }
-                    2 -> {
-                        currentTab = 2
-                        composeTabIndex.value = 1
-                        binding.recyclerView.visibility = View.GONE
-                        binding.selectActionBar.visibility = View.GONE
-                        binding.composeView.visibility = View.VISIBLE
-                        binding.titleBar.title = "Kho nguồn Legado"
-                        searchView.visibility = View.GONE
+                        searchView.visibility = View.VISIBLE
+                        searchView.setQuery(extensionViewModel.searchQuery.value, false)
                         invalidateOptionsMenu()
                     }
                 }
@@ -233,8 +243,24 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
     private fun applyThemeColors() {
         val isNight = io.legado.app.help.config.AppConfig.isNightTheme
         
+        // Load Skin Pack colors if active
+        val activeSkinName = io.legado.app.ui.config.themeConfig.ThemeConfig.activeSkinPack
+        val activePack = if (activeSkinName.isNotBlank()) io.legado.app.help.skin.SkinPackManager.getPack(activeSkinName) else null
+        val skinColorScheme = activePack?.manifest?.colorScheme
+
+        fun parseColor(colorStr: String?, defaultColor: Int): Int {
+            if (colorStr.isNullOrBlank()) return defaultColor
+            return try {
+                android.graphics.Color.parseColor(colorStr)
+            } catch (e: Exception) {
+                defaultColor
+            }
+        }
+        
         // 1. Get primary color
-        val primary = if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.themeColor != 0) {
+        val primary = if (skinColorScheme?.primary != null) {
+            parseColor(skinColorScheme.primary, primaryColor)
+        } else if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.themeColor != 0) {
             io.legado.app.ui.config.themeConfig.ThemeConfig.themeColor
         } else {
             val seed = if (isNight) io.legado.app.ui.config.themeConfig.ThemeConfig.cNPrimary else io.legado.app.ui.config.themeConfig.ThemeConfig.cPrimary
@@ -242,29 +268,30 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         }
         
         // 2. Get background color
-        val background = if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.themeBackgroundColor != 0) {
+        val background = if (skinColorScheme?.background != null) {
+            parseColor(skinColorScheme.background, themeColor(android.R.attr.colorBackground))
+        } else if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.themeBackgroundColor != 0) {
             io.legado.app.ui.config.themeConfig.ThemeConfig.themeBackgroundColor
         } else {
-            if (isNight) 0xFF121212.toInt() else 0xFFFEF7FF.toInt()
+            themeColor(android.R.attr.colorBackground)
         }
         
         // 3. Get text color
-        val textColor = if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.primaryTextColor != 0) {
+        val textColor = if (skinColorScheme?.onSurface != null) {
+            parseColor(skinColorScheme.onSurface, themeColor(android.R.attr.textColorPrimary))
+        } else if (io.legado.app.ui.config.themeConfig.ThemeConfig.enableDeepPersonalization && io.legado.app.ui.config.themeConfig.ThemeConfig.primaryTextColor != 0) {
             io.legado.app.ui.config.themeConfig.ThemeConfig.primaryTextColor
         } else {
-            if (isNight) 0xFFE6E1E5.toInt() else 0xFF1C1B1F.toInt()
+            themeColor(android.R.attr.textColorPrimary)
         }
 
         // Apply colors programmatically
         binding.root.setBackgroundColor(background)
-        binding.titleBar.setBackgroundColor(background)
+        binding.titleBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         
-        binding.tabLayout.setBackgroundColor(background)
-        val normalTabColor = (textColor and 0x00FFFFFF) or (0x99 shl 24)
-        binding.tabLayout.setTabTextColors(normalTabColor, primary)
-        binding.tabLayout.setSelectedTabIndicatorColor(primary)
+        binding.tabLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         
-        binding.recyclerView.setBackgroundColor(background)
+        binding.recyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         binding.selectActionBar.setBackgroundColor(background)
     }
 
@@ -275,7 +302,12 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
     override fun onPrepareOptionsMenu(menu: Menu): Boolean {
         for (i in 0 until menu.size()) {
-            menu.getItem(i).isVisible = currentTab == 0
+            val item = menu.getItem(i)
+            if (item.itemId == R.id.menu_manage_extension_repos) {
+                item.isVisible = currentTab == 1
+            } else {
+                item.isVisible = currentTab == 0
+            }
         }
         if (currentTab == 0) {
             groupMenu = menu.findItem(R.id.menu_group)?.subMenu
@@ -291,6 +323,10 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.menu_manage_extension_repos -> {
+                extensionViewModel.showManageReposDialog(true)
+                return true
+            }
             R.id.menu_add_book_source -> startActivity<BookSourceEditActivity>()
             R.id.menu_import_qr -> qrResult.launch()
             R.id.menu_group_manage -> showDialogFragment<GroupManageDialog>()
@@ -390,9 +426,59 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
     private fun initRecyclerView() {
         binding.recyclerView.setEdgeEffectColor(primaryColor)
-        binding.recyclerView.addItemDecoration(VerticalDivider(this))
+        // binding.recyclerView.addItemDecoration(VerticalDivider(this))
         binding.recyclerView.adapter = adapter
         binding.recyclerView.recycledViewPool.setMaxRecycledViews(0, 15)
+
+        // 1. Add Installed List Header
+        val headerBinding = io.legado.app.databinding.ItemComposeHeaderBinding.inflate(layoutInflater, binding.recyclerView, false)
+        headerBinding.composeView.apply {
+            setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                io.legado.app.ui.theme.AppTheme {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        io.legado.app.ui.widget.components.text.AppText(
+                            text = "Cài đặt",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = io.legado.app.ui.theme.LegadoTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = io.legado.app.ui.theme.LegadoTheme.colorScheme.secondaryContainer
+                        ) {
+                            io.legado.app.ui.widget.components.text.AppText(
+                                text = "${installedCountState.value}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = io.legado.app.ui.theme.LegadoTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        adapter.addHeaderView { headerBinding }
+
+        // 2. Add Legado Store List Footer
+        val footerBinding = io.legado.app.databinding.ItemComposeFooterBinding.inflate(layoutInflater, binding.recyclerView, false)
+        footerBinding.composeView.apply {
+            setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                io.legado.app.ui.theme.AppTheme {
+                    io.legado.app.vbookextension.ui.LegadoStoreFooterSection(storeViewModel)
+                }
+            }
+        }
+        adapter.addFooterView { footerBinding }
+
         // When this page is opened, it is in selection mode
         val dragSelectTouchHelper =
             DragSelectTouchHelper(adapter.dragSelectCallback).setSlideArea(16, 50)
@@ -502,6 +588,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
             ).catch {
                 AppLog.put("Xảy ra lỗi khi cập nhật nguồn sách trên giao diện nguồn sách.", it)
             }.flowOn(IO).conflate().collect { data ->
+                installedCountState.value = data.size
                 adapter.setItems(data, adapter.diffItemCallback, !Debug.isChecking)
                 itemTouchCallback.isCanDrag =
                     sort == BookSourceSort.Default && !groupSourcesByDomain
@@ -825,7 +912,13 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
     override fun onQueryTextChange(newText: String?): Boolean {
         newText?.let {
-            upBookSource(it)
+            if (currentTab == 0) {
+                bookSourceQuery = it
+                upBookSource(it)
+                storeViewModel.updateSearchQuery(it)
+            } else if (currentTab == 1) {
+                extensionViewModel.updateSearchQuery(it)
+            }
         }
         return false
     }
@@ -912,8 +1005,5 @@ fun BookSourceComposeWrapper(tabIndex: Int) {
     if (!io.legado.app.help.MemberManager.isVip) {
         return
     }
-    when (tabIndex) {
-        0 -> ExtensionScreens()
-        1 -> LegadoStoreScreen()
-    }
+    ExtensionScreens()
 }

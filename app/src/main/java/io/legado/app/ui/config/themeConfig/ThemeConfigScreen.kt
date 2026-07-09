@@ -124,6 +124,7 @@ fun ThemeConfigScreen(
     var showBorderColorPicker by remember { mutableStateOf(false) }
     var showNavIconSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
+    var showSkinPackSheet by remember { mutableStateOf(false) }
     val showThemeRefactorTip by viewModel.showThemeRefactorTip.collectAsStateWithLifecycle()
 
     val fontFolder by viewModel.fontFolder.collectAsStateWithLifecycle()
@@ -327,6 +328,11 @@ fun ThemeConfigScreen(
                     ClickableSettingItem(
                         title = stringResource(R.string.font_setting),
                         onClick = { showFontSheet = true }
+                    )
+                    ClickableSettingItem(
+                        title = "Skin Pack",
+                        description = if (ThemeConfig.activeSkinPack.isNotBlank()) ThemeConfig.activeSkinPack else "Mặc định",
+                        onClick = { showSkinPackSheet = true }
                     )
                     if (selectedTheme == "12" && (!isMiuixEngine || useMiuixMonet)) {
                         ClickableSettingItem(
@@ -891,6 +897,12 @@ fun ThemeConfigScreen(
         folderContentDescription = stringResource(R.string.select_folder),
         emptyText = stringResource(R.string.theme_config_no_font_files),
     )
+
+    if (showSkinPackSheet) {
+        SkinPackManageSheet(
+            onDismiss = { showSkinPackSheet = false }
+        )
+    }
 
 }
 

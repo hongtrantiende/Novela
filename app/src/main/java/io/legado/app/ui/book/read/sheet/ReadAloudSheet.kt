@@ -92,7 +92,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.text.font.FontWeight
 import io.legado.app.service.BaseReadAloudService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -108,38 +111,49 @@ fun ReadAloudContent(
     val context = LocalContext.current
     var showChapterList by remember { mutableStateOf(false) }
 
-    // Load chapter list from DB
-    val chapters = remember(state.book?.bookUrl) {
-        state.book?.bookUrl?.let { bookUrl ->
-            io.legado.app.data.appDb.bookChapterDao.getChapterList(bookUrl)
-        } ?: emptyList()
+    // Load chapter list from DB asynchronously only when needed
+    var chapters by remember { mutableStateOf<List<io.legado.app.data.entities.BookChapter>>(emptyList()) }
+    LaunchedEffect(showChapterList, state.book?.bookUrl) {
+        if (showChapterList && chapters.isEmpty()) {
+            state.book?.bookUrl?.let { bookUrl ->
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    chapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(bookUrl)
+                }
+            }
+        }
     }
 
     val timerMinute = state.readAloudTtsTimer
     val httpTts = io.legado.app.model.ReadAloud.httpTTS
     val ttsSpeechRate = state.readAloudTtsSpeechRate
 
-    var serviceState by remember { mutableStateOf(getServiceState()) }
+    var serviceState by remember { mutableStateOf(AloudProgressState()) }
     LaunchedEffect(Unit) {
         while (true) {
-            serviceState = getServiceState()
-            delay(500)
+            serviceState = withContext(Dispatchers.IO) { getServiceState() }
+            delay(1000)
         }
     }
 
     var activeSlider by remember { mutableStateOf<String?>(null) }
     var localSpeechRate by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
 
-    val fallbackContentList = remember(state.curTextChapter, state.readAloudByPage) {
-        state.curTextChapter?.getNeedReadAloud(0, state.readAloudByPage, 0)
-            ?.split("\n")?.filter { it.isNotEmpty() } ?: emptyList()
+    var fallbackContentList by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(state.curTextChapter, state.readAloudByPage) {
+        fallbackContentList = withContext(Dispatchers.Default) {
+            state.curTextChapter?.getNeedReadAloud(0, state.readAloudByPage, 0)
+                ?.split("\n")?.filter { it.isNotEmpty() } ?: emptyList()
+        }
     }
 
-    val initialNowSpeak = remember(state.curTextChapter, state.durChapterPos, state.readAloudByPage) {
-        state.curTextChapter?.let { textChapter ->
-            val pNum = textChapter.getParagraphNum(state.durChapterPos + 1, state.readAloudByPage)
-            if (pNum >= 1) pNum - 1 else 0
-        } ?: 0
+    var initialNowSpeak by remember { mutableStateOf(0) }
+    LaunchedEffect(state.curTextChapter, state.durChapterPos, state.readAloudByPage) {
+        initialNowSpeak = withContext(Dispatchers.Default) {
+            state.curTextChapter?.let { textChapter ->
+                val pNum = textChapter.getParagraphNum(state.durChapterPos + 1, state.readAloudByPage)
+                if (pNum >= 1) pNum - 1 else 0
+            } ?: 0
+        }
     }
 
     val contentList = remember(serviceState.contentList, fallbackContentList) {
@@ -158,11 +172,11 @@ fun ReadAloudContent(
         }
     }
 
-    // Warm play button color (cream/tan like image 3)
-    val playButtonColor = Color(0xFFF0D9B5)
+    // Warm play button color - resolved to theme primary color
+    val playButtonColor = LegadoTheme.colorScheme.primary
 
     // Use app theme background color — fully opaque, no see-through
-    val appBgColor = LegadoTheme.colorScheme.surfaceContainerHigh
+    val appBgColor = LegadoTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f)
 
     // Full screen background
     Box(
@@ -188,14 +202,14 @@ fun ReadAloudContent(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(LegadoTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                         .clickable { onDismissRequest() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
                         contentDescription = "Hạ xuống",
-                        tint = Color.White,
+                        tint = LegadoTheme.colorScheme.onSurface,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -203,14 +217,14 @@ fun ReadAloudContent(
                 Text(
                     text = "Đọc audio",
                     style = LegadoTheme.typography.titleMedium,
-                    color = Color.White
+                    color = LegadoTheme.colorScheme.onSurface
                 )
 
                 Box(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(LegadoTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                         .clickable {
                             onIntent(ReadBookIntent.ReadAloudStop)
                             onDismissRequest()
@@ -220,7 +234,7 @@ fun ReadAloudContent(
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Đóng",
-                        tint = Color.White,
+                        tint = LegadoTheme.colorScheme.onSurface,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -262,7 +276,7 @@ fun ReadAloudContent(
                 Text(
                     text = state.book?.name ?: state.bookName,
                     style = LegadoTheme.typography.titleLarge,
-                    color = Color.White,
+                    color = LegadoTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -271,7 +285,7 @@ fun ReadAloudContent(
                     Text(
                         text = author,
                         style = LegadoTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -280,7 +294,7 @@ fun ReadAloudContent(
                 Text(
                     text = state.chapterName,
                     style = LegadoTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center
@@ -333,7 +347,7 @@ fun ReadAloudContent(
                         Text(
                             text = statusText,
                             style = LegadoTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.5f)
+                            color = LegadoTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = buildString {
@@ -342,7 +356,7 @@ fun ReadAloudContent(
                                 append(if (state.isReadAloudPaused) "Tạm dừng" else "Đang phát")
                             },
                             style = LegadoTheme.typography.labelSmall,
-                            color = if (state.isReadAloudPaused) Color.White.copy(alpha = 0.5f) else playButtonColor
+                            color = if (state.isReadAloudPaused) LegadoTheme.colorScheme.onSurfaceVariant else playButtonColor
                         )
                     }
                 }
@@ -366,7 +380,7 @@ fun ReadAloudContent(
                         painter = painterResource(R.drawable.ic_audio_previous),
                         contentDescription = stringResource(R.string.previous_chapter),
                         modifier = Modifier.size(22.dp),
-                        colorFilter = ColorFilter.tint(Color.White)
+                        colorFilter = ColorFilter.tint(LegadoTheme.colorScheme.onSurface)
                     )
                 }
 
@@ -378,7 +392,7 @@ fun ReadAloudContent(
                         painter = painterResource(R.drawable.ic_audio_backward),
                         contentDescription = stringResource(R.string.prev_sentence),
                         modifier = Modifier.size(22.dp),
-                        colorFilter = ColorFilter.tint(Color.White)
+                        colorFilter = ColorFilter.tint(LegadoTheme.colorScheme.onSurface)
                     )
                 }
 
@@ -387,7 +401,7 @@ fun ReadAloudContent(
                 val rInnerDiff = remember(density) { with(density) { 3.5.dp.toPx() } }
                 val ctrlDiff = remember(density) { with(density) { 2.dp.toPx() } }
 
-                val flowerShape = remember(rInnerDiff, ctrlDiff) {
+                val flowerShape = remember(Unit) {
                     androidx.compose.foundation.shape.GenericShape { size, _ ->
                         val center = size.width / 2f
                         val rOuter = size.width / 2f
@@ -397,9 +411,8 @@ fun ReadAloudContent(
                         
                         moveTo(center + rInner, center)
                         for (i in 0 until numPetals) {
-                            val angle = i * angleStep
                             val nextAngle = (i + 1) * angleStep
-                            val midAngle = angle + angleStep / 2f
+                            val midAngle = i * angleStep + angleStep / 2f
                             
                             val ctrlAngleRad = Math.toRadians(midAngle.toDouble())
                             val endAngleRad = Math.toRadians(nextAngle.toDouble())
@@ -465,7 +478,7 @@ fun ReadAloudContent(
                             if (renderPlayIcon) R.string.audio_play else R.string.pause
                         ),
                         modifier = Modifier.size(32.dp),
-                        tint = Color(0xFF2A2118)
+                        tint = LegadoTheme.colorScheme.onPrimary
                     )
                 }
 
@@ -477,7 +490,7 @@ fun ReadAloudContent(
                         painter = painterResource(R.drawable.ic_audio_forward),
                         contentDescription = stringResource(R.string.next_sentence),
                         modifier = Modifier.size(22.dp),
-                        colorFilter = ColorFilter.tint(Color.White)
+                        colorFilter = ColorFilter.tint(LegadoTheme.colorScheme.onSurface)
                     )
                 }
 
@@ -489,7 +502,7 @@ fun ReadAloudContent(
                         painter = painterResource(R.drawable.ic_audio_next),
                         contentDescription = stringResource(R.string.next_chapter),
                         modifier = Modifier.size(22.dp),
-                        colorFilter = ColorFilter.tint(Color.White)
+                        colorFilter = ColorFilter.tint(LegadoTheme.colorScheme.onSurface)
                     )
                 }
             }
@@ -516,7 +529,7 @@ fun ReadAloudContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 20.dp, vertical = 4.dp)
-                        .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
+                        .background(LegadoTheme.colorScheme.onSurface.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
                         .padding(12.dp)
                 ) {
                     Row(
@@ -531,7 +544,7 @@ fun ReadAloudContent(
                                 stringResource(R.string.read_aloud_speed)
                             },
                             style = LegadoTheme.typography.titleSmallEmphasized,
-                            color = Color.White,
+                            color = LegadoTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = if (activeSlider == "timer") {
@@ -597,7 +610,7 @@ fun ReadAloudContent(
                     .padding(horizontal = 16.dp)
                     .padding(bottom = 8.dp)
                     .background(
-                        Color.White.copy(alpha = 0.06f),
+                        LegadoTheme.colorScheme.onSurface.copy(alpha = 0.06f),
                         RoundedCornerShape(24.dp)
                     )
                     .padding(horizontal = 8.dp, vertical = 6.dp),
@@ -671,7 +684,7 @@ private fun PillControlButton(
         modifier = Modifier
             .size(width = 56.dp, height = 44.dp)
             .clip(RoundedCornerShape(22.dp))
-            .background(Color.White.copy(alpha = 0.10f))
+            .background(LegadoTheme.colorScheme.onSurface.copy(alpha = 0.08f))
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -690,8 +703,8 @@ private fun RowScope.BottomBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val activeColor = Color(0xFFF0D9B5)
-    val inactiveColor = Color.White.copy(alpha = 0.6f)
+    val activeColor = LegadoTheme.colorScheme.primary
+    val inactiveColor = LegadoTheme.colorScheme.onSurfaceVariant
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -705,7 +718,7 @@ private fun RowScope.BottomBarItem(
                 .size(width = 44.dp, height = 28.dp)
                 .clip(CircleShape)
                 .background(
-                    if (selected) Color.White.copy(alpha = 0.12f)
+                    if (selected) LegadoTheme.colorScheme.onSurface.copy(alpha = 0.12f)
                     else Color.Transparent
                 ),
             contentAlignment = Alignment.Center
@@ -854,11 +867,14 @@ private fun AudioChapterListOverlay(
     onDismiss: () -> Unit,
     bgColor: Color,
 ) {
-    val cachedFiles = remember(chapters, book) {
-        if (book != null) {
-            io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
-        } else {
-            emptySet()
+    var cachedFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(chapters, book) {
+        cachedFiles = withContext(Dispatchers.IO) {
+            if (book != null) {
+                io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
+            } else {
+                emptySet()
+            }
         }
     }
 
@@ -1007,6 +1023,7 @@ fun ReadAloudSlider(
     )
 
     val density = androidx.compose.ui.platform.LocalDensity.current
+    val inactiveTrackColor = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.12f)
 
     BoxWithConstraints(
         modifier = modifier
@@ -1059,7 +1076,7 @@ fun ReadAloudSlider(
 
             // 1. Inactive track (nền nâu xám rất mờ, mỏng)
             drawRoundRect(
-                color = Color.White.copy(alpha = 0.12f),
+                color = inactiveTrackColor,
                 topLeft = Offset(0f, centerY - trackHeightPx / 2f),
                 size = Size(size.width, trackHeightPx),
                 cornerRadius = CornerRadius(trackHeightPx / 2f, trackHeightPx / 2f)

@@ -654,7 +654,18 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteExploreShow> { route ->
+    entry<MainRouteExploreShow>(
+        metadata = NavDisplay.transitionSpec {
+            fadeIn(animationSpec = tween(220)) togetherWith
+                    fadeOut(animationSpec = tween(220))
+        } + NavDisplay.popTransitionSpec {
+            fadeIn(animationSpec = tween(220)) togetherWith
+                    fadeOut(animationSpec = tween(220))
+        } + NavDisplay.predictivePopTransitionSpec { _ ->
+            fadeIn(animationSpec = tween(220)) togetherWith
+                    fadeOut(animationSpec = tween(220))
+        }
+    ) { route ->
         val exploreViewModel = koinViewModel<ExploreShowViewModel>()
 
         LaunchedEffect(route.sourceUrl, route.exploreUrl, exploreViewModel) {

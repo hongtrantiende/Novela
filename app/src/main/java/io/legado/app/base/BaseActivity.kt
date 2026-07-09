@@ -250,8 +250,35 @@ abstract class BaseActivity<VB : ViewBinding>(
     open fun upBackgroundImage() {
         if (imageBg) {
             try {
+                // If a skin pack is active, try to load the skin pack's background image!
+                val activeSkinName = io.legado.app.ui.config.themeConfig.ThemeConfig.activeSkinPack
+                val activePack = if (activeSkinName.isNotBlank()) io.legado.app.help.skin.SkinPackManager.getPack(activeSkinName) else null
+                val skinBgFile = activePack?.getBackgroundFile()
+                
+                if (skinBgFile != null && skinBgFile.exists()) {
+                    val bitmap = BitmapFactory.decodeFile(skinBgFile.absolutePath)
+                    if (bitmap != null) {
+                        window.decorView.background = bitmap.toDrawable(resources)
+                        return
+                    }
+                }
+                
+                // Fallback to normal background image
                 ThemeConfigStore.getBgImage(this, windowManager.windowSize)?.let {
                     window.decorView.background = it.toDrawable(resources)
+                    return
+                }
+                
+                // If no image, but skin pack is active, set window background color to skin pack background!
+                val skinColorScheme = activePack?.manifest?.colorScheme
+                if (skinColorScheme?.background != null) {
+                    try {
+                        val color = android.graphics.Color.parseColor(skinColorScheme.background)
+                        window.decorView.setBackgroundColor(color)
+                        return
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
                 }
             } catch (e: OutOfMemoryError) {
                 toastOnUi("Hình nền quá lớn và tràn bộ nhớ")

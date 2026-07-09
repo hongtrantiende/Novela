@@ -361,49 +361,52 @@ fun BookUpdatesScreen(
                 }
             )
         }
-        Box(modifier = Modifier.fillMaxSize()) {
-            AppPullToRefresh(
-                isRefreshing = isRefreshing,
-                onRefresh = { viewModel.refresh(force = true) },
-                enabled = true,
-                topPadding = paddingValues.calculateTopPadding()
-            ) {
-                if (updatesList.isEmpty()) {
-                    EmptyMessage(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(
-                                top = paddingValues.calculateTopPadding(),
-                                bottom = 120.dp
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = paddingValues.calculateTopPadding())
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AppPullToRefresh(
+                    isRefreshing = isRefreshing,
+                    onRefresh = { viewModel.refresh(force = true) },
+                    enabled = true,
+                    topPadding = 0.dp
+                ) {
+                    if (updatesList.isEmpty()) {
+                        EmptyMessage(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = 120.dp),
+                            message = "Không có truyện nào có chương mới"
+                        )
+                    } else {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                top = 0.dp,
+                                bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp,
+                                start = 0.dp,
+                                end = 0.dp
                             ),
-                        message = "Không có truyện nào có chương mới"
-                    )
-                } else {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            top = paddingValues.calculateTopPadding(),
-                            bottom = if (ThemeConfig.useFloatingBottomBar || ThemeConfig.enableBlur) 120.dp else 8.dp,
-                            start = 0.dp,
-                            end = 0.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(0.dp)
-                    ) {
-                        val grouped = updatesList.groupBy { formatUpdateGroupHeader(it.updateTime) }
-                        
-                        grouped.forEach { (dateHeader, itemsInGroup) ->
-                            stickyHeader {
-                                DateHeaderItem(dateHeader)
-                            }
+                            verticalArrangement = Arrangement.spacedBy(0.dp)
+                        ) {
+                            val grouped = updatesList.groupBy { formatUpdateGroupHeader(it.updateTime) }
                             
-                            items(itemsInGroup, key = { "${it.book.bookUrl}_${it.chapter.index}" }) { item ->
-                                ChapterUpdateRow(
-                                    item = item,
-                                    onClick = { viewModel.openChapter(context, item.book, item.chapter.index) },
-                                    onLongClick = { onBookLongClick(item.book) },
-                                    onDownloadClick = { viewModel.downloadChapter(context, item.book, item.chapter.index) }
-                                )
+                            grouped.forEach { (dateHeader, itemsInGroup) ->
+                                stickyHeader {
+                                    DateHeaderItem(dateHeader)
+                                }
+                                
+                                items(itemsInGroup, key = { "${it.book.bookUrl}_${it.chapter.index}" }) { item ->
+                                    ChapterUpdateRow(
+                                        item = item,
+                                        onClick = { viewModel.openChapter(context, item.book, item.chapter.index) },
+                                        onLongClick = { onBookLongClick(item.book) },
+                                        onDownloadClick = { viewModel.downloadChapter(context, item.book, item.chapter.index) }
+                                    )
+                                }
                             }
                         }
                     }

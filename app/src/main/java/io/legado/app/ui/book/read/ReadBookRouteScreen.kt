@@ -66,6 +66,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import io.legado.app.ui.book.read.sheet.ReadAloudContent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -305,6 +306,7 @@ fun ReadBookRouteScreen(
 
     // Chapter list overlay state — replaces TocActivity launch
     var showChapterListOverlay by remember { mutableStateOf(false) }
+    var showReadAloudOverlay by remember { mutableStateOf(false) }
 
 
     val sourceEditLauncher = rememberLauncherForActivityResult(
@@ -433,6 +435,9 @@ fun ReadBookRouteScreen(
                             // Launcher-dependent effects — handled directly by route
                             is ReadBookEffect.OpenChapterList -> {
                                 showChapterListOverlay = true
+                            }
+                            is ReadBookEffect.OpenReadAloud -> {
+                                showReadAloudOverlay = true
                             }
                             is ReadBookEffect.OpenSourceEdit -> {
                                 sourceEditLauncher.launch { putExtra("sourceUrl", effect.sourceUrl) }
@@ -616,7 +621,9 @@ fun ReadBookRouteScreen(
             )
         }
         Box(
-            modifier = Modifier.graphicsLayer { alpha = if (showLoadingOverlay) 0f else 1f }
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = if (showLoadingOverlay) 0f else 1f }
         ) {
             ReadBookColorTheme(
                 styleConfig = state.styleConfig,
@@ -674,6 +681,31 @@ fun ReadBookRouteScreen(
                     viewModel.onIntent(ReadBookIntent.OpenChapter(index))
                 },
                 onDismiss = { showChapterListOverlay = false },
+            )
+        }
+
+        // ── Inline read aloud overlay ──
+        AnimatedVisibility(
+            visible = showReadAloudOverlay,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+        ) {
+            BackHandler { showReadAloudOverlay = false }
+            ReadAloudContent(
+                state = state,
+                onIntent = viewModel::onIntent,
+                onDismissRequest = { showReadAloudOverlay = false },
+                onOpenChapterList = {
+                    showReadAloudOverlay = false
+                    showChapterListOverlay = true
+                },
+                onGoToBackground = {
+                    viewModel.onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
+                },
+                onShowReadAloudConfig = {
+                    viewModel.onIntent(ReadBookIntent.ShowReadAloudConfig)
+                },
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }

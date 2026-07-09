@@ -53,6 +53,7 @@ import io.legado.app.ui.book.read.ReadBookInputHandler
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.config.otherConfig.OtherConfig
 import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.help.skin.SkinPackProvider
 import io.legado.app.ui.welcome.WelcomeActivity
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
@@ -266,6 +267,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 }
         }
 
+        SkinPackProvider {
         SharedTransitionLayout {
             NavDisplay(
                 backStack = backStack,
@@ -335,6 +337,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                     onRegisterVariableSetter = { setter -> bookInfoVariableSetter = setter }
                 )
             )
+        }
         }
     }
 

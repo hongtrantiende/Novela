@@ -139,4 +139,9 @@
         android:title="@string/help"
         app:showAsAction="never" />
 
+    <item
+        android:id="@+id/menu_manage_extension_repos"
+        android:title="Quản lý kho nguồn"
+        android:visible="false"
+        app:showAsAction="never" />
 </menu>

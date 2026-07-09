@@ -20,6 +20,7 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.ui.config.PrefDelegate
 import io.legado.app.ui.config.prefDelegate
 import io.legado.app.ui.config.readConfig.ReadConfig
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getMeanColor
@@ -1231,6 +1232,12 @@ object ReadBookConfig {
         }
 
         fun curTextColor(): Int {
+            val mode = ReadStyleResolver.currentMode()
+            val bg = ReadStyleResolver.currentBackground(this)
+            if (bg.type == 0 && mode != ReadStyleResolver.ReadStyleMode.EInk) {
+                val isNight = mode == ReadStyleResolver.ReadStyleMode.Night
+                return ThemeConfig.getActiveThemeTextColor(isNight)
+            }
             ensureColorInts()
             return currentModeValue(
                 eInk = { textColorIntEInk },
@@ -1256,6 +1263,13 @@ object ReadBookConfig {
         }
 
         fun curStatusIconDark(): Boolean {
+            val mode = ReadStyleResolver.currentMode()
+            val bg = ReadStyleResolver.currentBackground(this)
+            if (bg.type == 0 && mode != ReadStyleResolver.ReadStyleMode.EInk) {
+                val isNight = mode == ReadStyleResolver.ReadStyleMode.Night
+                val themeBgColor = ThemeConfig.getActiveThemeBackgroundColor(isNight)
+                return io.legado.app.utils.ColorUtils.isColorLight(themeBgColor)
+            }
             return currentModeValue(
                 eInk = { darkStatusIconEInk },
                 night = { darkStatusIconNight },

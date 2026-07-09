@@ -314,7 +314,8 @@ class ReadBookViewModel(
 
             is ReadBookIntent.ToggleReadAloud -> {
                 if (!BaseReadAloudService.isRun) {
-                    openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
+                    closeReadMenu()
+                    _effects.tryEmit(ReadBookEffect.OpenReadAloud)
                 }
                 _effects.tryEmit(ReadBookEffect.ToggleReadAloud)
             }
@@ -453,6 +454,10 @@ class ReadBookViewModel(
                     closeReadMenu()
                     _effects.tryEmit(ReadBookEffect.OpenChapterList(bookUrl))
                 }
+            }
+            is ReadBookIntent.OpenReadAloud -> {
+                closeReadMenu()
+                _effects.tryEmit(ReadBookEffect.OpenReadAloud)
             }
             is ReadBookIntent.OpenChapterUrl -> openChapterUrl()
             is ReadBookIntent.ToggleReadUrlInBrowser -> toggleReadUrlInBrowser()
@@ -705,7 +710,8 @@ class ReadBookViewModel(
 
             is ReadBookIntent.TtsProgress -> _effects.tryEmit(ReadBookEffect.UpTtsAloudSpan(intent.chapterStart))
             is ReadBookIntent.ReadAloudAction -> {
-                openReadMenuRoute(ReadBookMenuRoute.ReadAloud)
+                closeReadMenu()
+                _effects.tryEmit(ReadBookEffect.OpenReadAloud)
             }
             is ReadBookIntent.ConfirmAddCurrentBookToBookshelf -> addCurrentBookToBookshelfAndFinish()
             is ReadBookIntent.ExitWithoutAddingCurrentBookToBookshelf -> removeCurrentNotShelfBookAndFinish()

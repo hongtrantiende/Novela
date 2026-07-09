@@ -2,9 +2,14 @@ package io.legado.app.ui.book.source.manage
 
 //import io.legado.app.lib.theme.backgroundColor
 import android.content.Context
+import android.content.res.ColorStateList
+import io.legado.app.ui.config.themeConfig.ThemeConfig
+import io.legado.app.lib.theme.primaryColor
+import io.legado.app.utils.ColorUtils
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
+import io.legado.app.utils.themeColor
 import android.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
@@ -85,6 +90,157 @@ class BookSourceAdapter(
 
     }
 
+    private var isNight = false
+    private var activeSkinName = ""
+    private var skinColorScheme: io.legado.app.help.skin.SkinColorScheme? = null
+    private var itemBackground = 0
+    private var cardBackground = 0
+    private var textColor = 0
+    private var secondaryTextColor = 0
+    private var primaryColorResolved = 0
+    private var outlineColor = 0
+    private var controlNormalColor = 0
+    private var primaryColorStateList: ColorStateList? = null
+    private var textSecondaryColorStateList: ColorStateList? = null
+    private var trackColorStateList: ColorStateList? = null
+    private var thumbColorStateList: ColorStateList? = null
+    private var areColorsCached = false
+
+    private fun cacheColors(context: Context) {
+        if (areColorsCached) return
+        isNight = io.legado.app.help.config.AppConfig.isNightTheme
+        activeSkinName = ThemeConfig.activeSkinPack
+        val activePack = if (activeSkinName.isNotBlank()) io.legado.app.help.skin.SkinPackManager.getPack(activeSkinName) else null
+        skinColorScheme = activePack?.manifest?.colorScheme
+
+        fun parseColor(colorStr: String?, defaultColor: Int): Int {
+            if (colorStr.isNullOrBlank()) return defaultColor
+            return try {
+                android.graphics.Color.parseColor(colorStr)
+            } catch (e: Exception) {
+                defaultColor
+            }
+        }
+
+        itemBackground = if (skinColorScheme?.background != null) {
+            parseColor(skinColorScheme?.background, context.themeColor(android.R.attr.colorBackground))
+        } else if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeBackgroundColor != 0) {
+            ThemeConfig.themeBackgroundColor
+        } else {
+            context.themeColor(android.R.attr.colorBackground)
+        }
+
+        cardBackground = if (skinColorScheme?.surfaceContainer != null) {
+            parseColor(skinColorScheme?.surfaceContainer, context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
+        } else if (skinColorScheme?.background != null) {
+            parseColor(skinColorScheme?.background, context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer))
+        } else if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeBackgroundColor != 0) {
+            ThemeConfig.themeBackgroundColor
+        } else {
+            try {
+                context.themeColor(com.google.android.material.R.attr.colorSurfaceContainer)
+            } catch (e: Exception) {
+                context.themeColor(android.R.attr.colorBackground)
+            }
+        }
+
+        textColor = if (skinColorScheme?.onSurface != null) {
+            parseColor(skinColorScheme?.onSurface, context.themeColor(android.R.attr.textColorPrimary))
+        } else if (ThemeConfig.enableDeepPersonalization && ThemeConfig.primaryTextColor != 0) {
+            ThemeConfig.primaryTextColor
+        } else {
+            context.themeColor(android.R.attr.textColorPrimary)
+        }
+
+        secondaryTextColor = if (skinColorScheme?.onSurface != null) {
+            val parsedColor = parseColor(skinColorScheme?.onSurface, context.themeColor(android.R.attr.textColorPrimary))
+            ColorUtils.adjustAlpha(parsedColor, 0.7f)
+        } else if (ThemeConfig.enableDeepPersonalization && ThemeConfig.secondaryTextColor != 0) {
+            ThemeConfig.secondaryTextColor
+        } else {
+            try {
+                context.themeColor(com.google.android.material.R.attr.colorOutline)
+            } catch (e: Exception) {
+                if (isNight) 0xFFCAC4D0.toInt() else 0xFF49454F.toInt()
+            }
+        }
+
+        primaryColorResolved = if (skinColorScheme?.primary != null) {
+            parseColor(skinColorScheme?.primary, context.primaryColor)
+        } else if (ThemeConfig.enableDeepPersonalization && ThemeConfig.themeColor != 0) {
+            ThemeConfig.themeColor
+        } else {
+            val seed = if (isNight) ThemeConfig.cNPrimary else ThemeConfig.cPrimary
+            if (seed != 0) seed else context.primaryColor
+        }
+
+        outlineColor = try {
+            context.themeColor(com.google.android.material.R.attr.colorOutlineVariant)
+        } catch (e: Exception) {
+            ColorUtils.adjustAlpha(textColor, 0.12f)
+        }
+
+        controlNormalColor = try {
+            context.themeColor(android.R.attr.colorControlNormal)
+        } catch (e: Exception) {
+            textColor
+        }
+
+        val checkedColor = if (ColorUtils.isColorLight(primaryColorResolved)) textColor else primaryColorResolved
+
+        primaryColorStateList = ColorStateList(
+            arrayOf(
+                intArrayOf(-android.R.attr.state_enabled),
+                intArrayOf(android.R.attr.state_enabled, -android.R.attr.state_checked),
+                intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                ColorUtils.adjustAlpha(textColor, 0.38f),
+                ColorUtils.adjustAlpha(textColor, 0.54f),
+                checkedColor
+            )
+        )
+
+        textSecondaryColorStateList = ColorStateList(
+            arrayOf(
+                intArrayOf(-android.R.attr.state_enabled),
+                intArrayOf(android.R.attr.state_enabled)
+            ),
+            intArrayOf(
+                ColorUtils.adjustAlpha(secondaryTextColor, 0.38f),
+                secondaryTextColor
+            )
+        )
+
+        trackColorStateList = ColorStateList(
+            arrayOf(
+                intArrayOf(-android.R.attr.state_enabled),
+                intArrayOf(android.R.attr.state_enabled, -android.R.attr.state_checked),
+                intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                ColorUtils.adjustAlpha(textColor, 0.12f),
+                ColorUtils.adjustAlpha(textColor, 0.38f),
+                ColorUtils.adjustAlpha(checkedColor, 0.54f)
+            )
+        )
+
+        thumbColorStateList = ColorStateList(
+            arrayOf(
+                intArrayOf(-android.R.attr.state_enabled),
+                intArrayOf(android.R.attr.state_enabled, -android.R.attr.state_checked),
+                intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked)
+            ),
+            intArrayOf(
+                ColorUtils.adjustAlpha(textColor, 0.38f),
+                ColorUtils.adjustAlpha(textColor, 0.7f),
+                checkedColor
+            )
+        )
+
+        areColorsCached = true
+    }
+
     override fun getViewBinding(parent: ViewGroup): ItemBookSourceBinding {
         return ItemBookSourceBinding.inflate(inflater, parent, false)
     }
@@ -95,9 +251,20 @@ class BookSourceAdapter(
         item: BookSourcePart,
         payloads: MutableList<Any>
     ) {
+        cacheColors(context)
         binding.run {
             if (payloads.isEmpty()) {
-                //root.setBackgroundColor(ColorUtils.withAlpha(context.backgroundColor, 0.5f))
+                cardView.setCardBackgroundColor(cardBackground)
+                cardView.strokeColor = outlineColor
+                cbBookSource.setTextColor(textColor)
+                tvHostText.setTextColor(secondaryTextColor)
+                ivDebugText.setTextColor(secondaryTextColor)
+                ivEdit.setColorFilter(controlNormalColor)
+                ivMenuMore.setColorFilter(controlNormalColor)
+                cbBookSource.buttonTintList = primaryColorStateList
+                swtEnabled.thumbTintList = thumbColorStateList
+                swtEnabled.trackTintList = trackColorStateList
+
                 cbBookSource.text = item.getDisPlayNameGroup()
                 swtEnabled.isChecked = item.enabled
                 cbBookSource.isChecked = selected.contains(item)

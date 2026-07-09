@@ -21,6 +21,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -56,208 +57,38 @@ import io.legado.app.vbookextension.model.ExtensionInfo
 import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
 import org.koin.androidx.compose.koinViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun ExtensionScreens(
     viewModel: ExtensionViewModel = koinViewModel()
 ) {
     val context = LocalContext.current
-    var selectedTabIndex by remember { mutableStateOf(0) }
-    val tabTitles = listOf("Đã cài đặt", "Kho tiện ích")
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(LegadoTheme.colorScheme.background)
-    ) {
-        AppTabRow(
-            tabTitles = tabTitles,
-            selectedTabIndex = selectedTabIndex,
-            onTabSelected = { selectedTabIndex = it },
-            isScrollable = false,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .weight(1f)
-        ) {
-            when (selectedTabIndex) {
-                0 -> InstalledExtensionsTab(viewModel)
-                1 -> ExtensionStoreTab(viewModel)
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun InstalledExtensionsTab(viewModel: ExtensionViewModel) {
     val installed by viewModel.installedExtensions.collectAsStateWithLifecycle(initialValue = emptyList())
-    val context = LocalContext.current
-
-    val sortedInstalled = remember(installed) {
-        val prefs = context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
-        installed.sortedWith(compareByDescending<ExtensionEntity> {
-            prefs.getBoolean("ext_pinned_${it.id}", false)
-        }.thenBy { it.name })
-    }
-
-    var activeDetailExtension by remember { mutableStateOf<ExtensionEntity?>(null) }
-    var showDeleteDialogFor by remember { mutableStateOf<ExtensionEntity?>(null) }
-
-    if (sortedInstalled.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            AppText(
-                text = "Chưa cài đặt tiện ích nào",
-                style = LegadoTheme.typography.bodyLarge,
-                color = LegadoTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        return
-    }
-
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        items(sortedInstalled, key = { it.id }) { ext ->
-            val isPinned = remember(ext.id, installed) {
-                context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
-                    .getBoolean("ext_pinned_${ext.id}", false)
-            }
-
-            GlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 12.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .combinedClickable(
-                            onClick = { activeDetailExtension = ext },
-                            onLongClick = { activeDetailExtension = ext }
-                        )
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SourceIcon(
-                        path = ext.iconPath,
-                        modifier = Modifier.size(40.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            AppText(
-                                text = ext.name,
-                                style = LegadoTheme.typography.titleMedium,
-                                color = LegadoTheme.colorScheme.onSurface,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            if (isPinned) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Icon(
-                                    Icons.Filled.PushPin,
-                                    contentDescription = "Đã ghim",
-                                    tint = LegadoTheme.colorScheme.primary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = LegadoTheme.colorScheme.secondaryContainer,
-                                modifier = Modifier.padding(vertical = 2.dp)
-                            ) {
-                                AppText(
-                                    text = "v${ext.version}",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = LegadoTheme.colorScheme.onSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        AppText(
-                            text = "Tác giả: ${ext.author}",
-                            style = LegadoTheme.typography.bodySmall,
-                            color = LegadoTheme.colorScheme.onSurfaceVariant
-                        )
-                        if (ext.description.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            AppText(
-                                text = ext.description,
-                                style = LegadoTheme.typography.bodySmall,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                color = LegadoTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Switch(
-                        checked = ext.isEnabled,
-                        onCheckedChange = { viewModel.toggleExtensionEnabled(ext.id, it) }
-                    )
-                }
-            }
-        }
-    }
-
-    activeDetailExtension?.let { ext ->
-        val currentExt = installed.find { it.id == ext.id } ?: ext
-        ExtensionDetailDialog(
-            extension = currentExt,
-            viewModel = viewModel,
-            onDismissRequest = { activeDetailExtension = null },
-            onUninstallClick = {
-                showDeleteDialogFor = currentExt
-                activeDetailExtension = null
-            }
-        )
-    }
-
-    showDeleteDialogFor?.let { ext ->
-        AppAlertDialog(
-            data = ext,
-            onDismissRequest = { showDeleteDialogFor = null },
-            title = "Gỡ cài đặt tiện ích?",
-            text = "Bạn có chắc chắn muốn gỡ cài đặt tiện ích \"${ext.name}\" không?",
-            confirmText = "Xác nhận",
-            onConfirm = {
-                viewModel.uninstallExtension(ext.id)
-                showDeleteDialogFor = null
-            },
-            dismissText = "Hủy",
-            onDismiss = { showDeleteDialogFor = null }
-        )
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
-    val context = LocalContext.current
     val available by viewModel.availableExtensions.collectAsStateWithLifecycle()
-    val installedList by viewModel.installedExtensions.collectAsStateWithLifecycle(initialValue = emptyList())
     val repos by viewModel.repositories.collectAsStateWithLifecycle(initialValue = emptyList())
     val installingIds by viewModel.installingIds.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
 
-    val installedMap = remember(installedList) { installedList.associateBy { it.id } }
+    val installedMap = remember(installed) { installed.associateBy { it.id } }
 
-    var showAddRepoDialog by remember { mutableStateOf(false) }
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val showAddRepoDialog by viewModel.showAddRepoDialog.collectAsStateWithLifecycle()
+    val showManageReposDialog by viewModel.showManageReposDialog.collectAsStateWithLifecycle()
+    var activeDetailExtension by remember { mutableStateOf<ExtensionEntity?>(null) }
+    var showDeleteDialogFor by remember { mutableStateOf<ExtensionEntity?>(null) }
     var repoToDelete by remember { mutableStateOf<RepositoryEntity?>(null) }
-    var searchQuery by remember { mutableStateOf("") }
 
-    val filteredExtensions = remember(available, searchQuery) {
-        if (searchQuery.isBlank()) available else {
-            available.filter {
+    // Pre-calculate slugs for available extensions to avoid executing normalizer/regex inside item binder loop
+    val availableSlugs = remember(available) {
+        available.associateWith { it.name.toSlug() }
+    }
+
+    // Filter available extensions to get only those that are NOT installed
+    val uninstalledExtensions = remember(available, installedMap, searchQuery, availableSlugs) {
+        val list = available.filter { !installedMap.containsKey(availableSlugs[it]) }
+        if (searchQuery.isBlank()) list else {
+            list.filter {
                 it.name.contains(searchQuery, ignoreCase = true) ||
                 it.description.contains(searchQuery, ignoreCase = true) ||
                 it.author.contains(searchQuery, ignoreCase = true)
@@ -265,55 +96,29 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Toolbar controls for repository
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Tìm tiện ích...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier
-                    .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = LegadoTheme.colorScheme.primary,
-                    unfocusedBorderColor = LegadoTheme.colorScheme.outlineVariant
-                )
-            )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = { viewModel.fetchAllExtensions(force = true) },
-                modifier = Modifier.background(LegadoTheme.colorScheme.secondaryContainer, RoundedCornerShape(12.dp))
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Default.Refresh, contentDescription = "Làm mới")
-                }
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = { showAddRepoDialog = true },
-                modifier = Modifier.background(LegadoTheme.colorScheme.primaryContainer, RoundedCornerShape(12.dp))
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Thêm kho",
-                    tint = LegadoTheme.colorScheme.onPrimaryContainer
-                )
+    // Pre-query pinned states to completely avoid calling getSharedPreferences during visible list binding
+    val (filteredInstalled, pinnedExtIds) = remember(installed, searchQuery) {
+        val prefs = context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+        val pinnedIds = installed.filter { prefs.getBoolean("ext_pinned_${it.id}", false) }.map { it.id }.toSet()
+        val sortedList = installed.sortedWith(compareByDescending<ExtensionEntity> {
+            pinnedIds.contains(it.id)
+        }.thenBy { it.name })
+        
+        val filteredList = if (searchQuery.isBlank()) sortedList else {
+            sortedList.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                it.description.contains(searchQuery, ignoreCase = true) ||
+                it.author.contains(searchQuery, ignoreCase = true)
             }
         }
+        filteredList to pinnedIds
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(LegadoTheme.colorScheme.background)
+    ) {
 
         if (error != null) {
             Box(
@@ -330,7 +135,6 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                 )
             }
         }
-
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
@@ -338,103 +142,162 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Repos list (collapsible header or inline)
-            if (repos.isNotEmpty()) {
+            // Section 1: Cài đặt (Installed)
+            if (filteredInstalled.isNotEmpty()) {
                 item {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                            .padding(12.dp)
+                            .padding(top = 12.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         AppText(
-                            text = "Danh sách Kho nguồn",
+                            text = "Cài đặt",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
-                            color = LegadoTheme.colorScheme.primary
+                            color = LegadoTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        repos.forEach { repo ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = LegadoTheme.colorScheme.secondaryContainer
+                        ) {
+                            AppText(
+                                text = "${filteredInstalled.size}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = LegadoTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
+ 
+                items(filteredInstalled, key = { "inst_" + it.id }) { ext ->
+                    val isPinned = pinnedExtIds.contains(ext.id)
+
+                    GlassCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        cornerRadius = 12.dp
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .combinedClickable(
+                                    onClick = { activeDetailExtension = ext },
+                                    onLongClick = { activeDetailExtension = ext }
+                                )
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SourceIcon(
+                                path = ext.iconPath,
+                                modifier = Modifier.size(40.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
                                     AppText(
-                                        text = repo.name.ifBlank { "Kho nguồn" },
-                                        fontWeight = FontWeight.Medium,
-                                        fontSize = 13.sp
+                                        text = ext.name,
+                                        style = LegadoTheme.typography.titleMedium,
+                                        color = LegadoTheme.colorScheme.onSurface,
+                                        modifier = Modifier.weight(1f, fill = false)
                                     )
-                                    val isDefaultRepo = repo.url.contains("Extransion-TTC", ignoreCase = true)
-                                    if (!isDefaultRepo) {
-                                        AppText(
-                                            text = repo.url,
-                                            fontSize = 11.sp,
-                                            color = LegadoTheme.colorScheme.onSurfaceVariant,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                                if (repo.url != "file:///android_asset/plugin.json") {
-                                    IconButton(
-                                        onClick = { repoToDelete = repo },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
+                                    if (isPinned) {
+                                        Spacer(modifier = Modifier.width(6.dp))
                                         Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Xóa kho",
-                                            tint = LegadoTheme.colorScheme.error,
-                                            modifier = Modifier.size(18.dp)
+                                            Icons.Filled.PushPin,
+                                            contentDescription = "Đã ghim",
+                                            tint = LegadoTheme.colorScheme.primary,
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Surface(
+                                        shape = RoundedCornerShape(4.dp),
+                                        color = LegadoTheme.colorScheme.secondaryContainer,
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    ) {
+                                        AppText(
+                                            text = "v${ext.version}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = LegadoTheme.colorScheme.onSecondaryContainer,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
                                 }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                AppText(
+                                    text = "Tác giả: ${ext.author}",
+                                    style = LegadoTheme.typography.bodySmall,
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (ext.description.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    AppText(
+                                        text = ext.description,
+                                        style = LegadoTheme.typography.bodySmall,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(16.dp))
+
+                            IconButton(
+                                onClick = { showDeleteDialogFor = ext },
+                                modifier = Modifier
+                                    .background(LegadoTheme.colorScheme.errorContainer.copy(alpha = 0.2f), CircleShape)
+                                    .size(36.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Gỡ cài đặt",
+                                    tint = LegadoTheme.colorScheme.error,
+                                    modifier = Modifier.size(20.dp)
+                                )
                             }
                         }
                     }
                 }
             }
 
-            // Extensions list
-            item {
-                Spacer(modifier = Modifier.height(6.dp))
-                AppText(
-                    text = "Tiện ích khả dụng (${filteredExtensions.size})",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
-
-            if (filteredExtensions.isEmpty() && !isLoading) {
+            // Section 2: Tất cả (Uninstalled Available)
+            if (uninstalledExtensions.isNotEmpty()) {
                 item {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(top = 12.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         AppText(
-                            text = "Không tìm thấy tiện ích nào",
-                            color = LegadoTheme.colorScheme.onSurfaceVariant
+                            text = "Tất cả",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = LegadoTheme.colorScheme.onSurface
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = LegadoTheme.colorScheme.secondaryContainer
+                        ) {
+                            AppText(
+                                text = "${uninstalledExtensions.size}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = LegadoTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
-            } else {
-                items(filteredExtensions, key = { it.name + "_" + it.version }) { info ->
-                    val slug = info.name.toSlug()
+
+                items(uninstalledExtensions, key = { "avail_" + it.name + "_" + it.version }) { info ->
+                    val slug = availableSlugs[info] ?: info.name.toSlug()
                     val isInstalling = installingIds.contains(slug)
-                    val installed = installedMap[slug]
-
-                    val buttonText = when {
-                        isInstalling -> "Đang tải..."
-                        installed == null -> "Cài đặt"
-                        installed.version < info.version -> "Cập nhật (v${info.version})"
-                        else -> "Đã cài đặt"
-                    }
-
-                    val buttonEnabled = !isInstalling && (installed == null || installed.version < info.version)
 
                     GlassCard(
                         modifier = Modifier.fillMaxWidth(),
@@ -443,6 +306,13 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .combinedClickable(
+                                    onClick = {
+                                        if (!isInstalling) {
+                                            viewModel.installExtension(info)
+                                        }
+                                    }
+                                )
                                 .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -493,81 +363,25 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
 
                             Spacer(modifier = Modifier.width(12.dp))
 
-                            val isAdmin = remember {
-                                io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com"
-                            }
-                            
-                            Column(
-                                horizontalAlignment = Alignment.End,
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
+                            if (isInstalling) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.dp,
+                                    color = LegadoTheme.colorScheme.primary
+                                )
+                            } else {
+                                IconButton(
                                     onClick = { viewModel.installExtension(info) },
-                                    enabled = buttonEnabled,
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (installed != null) LegadoTheme.colorScheme.secondary else LegadoTheme.colorScheme.primary
-                                    ),
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                    modifier = Modifier.height(36.dp)
+                                    modifier = Modifier
+                                        .background(LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f), CircleShape)
+                                        .size(36.dp)
                                 ) {
-                                    AppText(
-                                        text = buttonText,
-                                        fontSize = 12.sp,
-                                        color = if (buttonEnabled) LegadoTheme.colorScheme.onPrimary else LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    Icon(
+                                        imageVector = Icons.Default.Download,
+                                        contentDescription = "Cài đặt",
+                                        tint = LegadoTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
                                     )
-                                }
-                                
-                                if (isAdmin) {
-                                    var showConfirmDialog by remember { mutableStateOf(false) }
-                                    
-                                    Button(
-                                        onClick = { showConfirmDialog = true },
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = LegadoTheme.colorScheme.errorContainer,
-                                            contentColor = LegadoTheme.colorScheme.onErrorContainer
-                                        ),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                                        modifier = Modifier.height(36.dp)
-                                    ) {
-                                        Text(
-                                            text = "Xóa",
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    
-                                    if (showConfirmDialog) {
-                                        AlertDialog(
-                                            onDismissRequest = { showConfirmDialog = false },
-                                            title = { Text("Xác nhận xóa") },
-                                            text = { Text("Bạn có chắc chắn muốn xóa tiện ích này khỏi kho GitHub?") },
-                                            confirmButton = {
-                                                TextButton(
-                                                    onClick = {
-                                                        showConfirmDialog = false
-                                                        viewModel.deleteExtensionFromGithub(
-                                                            info = info,
-                                                            onSuccess = {
-                                                                context.toastOnUi("Xóa tiện ích thành công")
-                                                            },
-                                                            onFailure = { err ->
-                                                                context.toastOnUi("Lỗi: $err")
-                                                            }
-                                                        )
-                                                    }
-                                                ) {
-                                                    Text("Xóa", color = LegadoTheme.colorScheme.error)
-                                                }
-                                            },
-                                            dismissButton = {
-                                                TextButton(onClick = { showConfirmDialog = false }) {
-                                                    Text("Hủy")
-                                                }
-                                            }
-                                        )
-                                    }
                                 }
                             }
                         }
@@ -577,12 +391,42 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
         }
     }
 
+    // Dialog components
+    activeDetailExtension?.let { ext ->
+        val currentExt = installed.find { it.id == ext.id } ?: ext
+        ExtensionDetailDialog(
+            extension = currentExt,
+            viewModel = viewModel,
+            onDismissRequest = { activeDetailExtension = null },
+            onUninstallClick = {
+                showDeleteDialogFor = currentExt
+                activeDetailExtension = null
+            }
+        )
+    }
+
+    showDeleteDialogFor?.let { ext ->
+        AppAlertDialog(
+            data = ext,
+            onDismissRequest = { showDeleteDialogFor = null },
+            title = "Gỡ cài đặt tiện ích?",
+            text = "Bạn có chắc chắn muốn gỡ cài đặt tiện ích \"${ext.name}\" không?",
+            confirmText = "Xác nhận",
+            onConfirm = {
+                viewModel.uninstallExtension(ext.id)
+                showDeleteDialogFor = null
+            },
+            dismissText = "Hủy",
+            onDismiss = { showDeleteDialogFor = null }
+        )
+    }
+
     if (showAddRepoDialog) {
         var repoUrl by remember { mutableStateOf("") }
         var repoName by remember { mutableStateOf("") }
-
+ 
         AlertDialog(
-            onDismissRequest = { showAddRepoDialog = false },
+            onDismissRequest = { viewModel.showAddRepoDialog(false) },
             title = { Text("Thêm kho tiện ích mới") },
             text = {
                 Column {
@@ -607,7 +451,7 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                     onClick = {
                         if (repoUrl.isNotBlank()) {
                             viewModel.addRepository(repoUrl, repoName)
-                            showAddRepoDialog = false
+                            viewModel.showAddRepoDialog(false)
                         }
                     }
                 ) {
@@ -615,8 +459,86 @@ fun ExtensionStoreTab(viewModel: ExtensionViewModel) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAddRepoDialog = false }) {
+                TextButton(onClick = { viewModel.showAddRepoDialog(false) }) {
                     Text("Hủy")
+                }
+            }
+        )
+    }
+
+    if (showManageReposDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.showManageReposDialog(false) },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Quản lý kho nguồn", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    IconButton(
+                        onClick = { viewModel.showAddRepoDialog(true) }
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Thêm kho nguồn")
+                    }
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    if (repos.isEmpty()) {
+                        Text("Chưa có kho nguồn nào", fontSize = 14.sp)
+                    } else {
+                        repos.forEach { repo ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    AppText(
+                                        text = repo.name.ifBlank { "Kho nguồn" },
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 13.sp
+                                    )
+                                    val isDefaultRepo = repo.url.contains("Extransion-TTC", ignoreCase = true)
+                                    if (!isDefaultRepo) {
+                                        AppText(
+                                            text = repo.url,
+                                            fontSize = 11.sp,
+                                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                if (repo.url != "file:///android_asset/plugin.json") {
+                                    IconButton(
+                                        onClick = { repoToDelete = repo },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Xóa kho",
+                                            tint = LegadoTheme.colorScheme.error,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.showManageReposDialog(false) }) {
+                    Text("Đóng")
                 }
             }
         )

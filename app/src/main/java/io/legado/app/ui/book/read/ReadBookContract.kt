@@ -39,7 +39,6 @@ sealed interface ReadBookMenuRoute {
     data object Main : ReadBookMenuRoute
     data object ReadStyle : ReadBookMenuRoute
     data object TextTitle : ReadBookMenuRoute
-    data object ReadAloud : ReadBookMenuRoute
     data object AutoRead : ReadBookMenuRoute
     data object PaddingConfig : ReadBookMenuRoute
     data object HeaderFooterConfig : ReadBookMenuRoute
@@ -286,6 +285,7 @@ sealed interface ReadBookIntent {
 
     // Read aloud
     data object ToggleReadAloud : ReadBookIntent
+    data object OpenReadAloud : ReadBookIntent
 
     // Auto page
     data object ToggleAutoPage : ReadBookIntent
@@ -579,6 +579,7 @@ sealed interface ReadBookEffect {
 
     // Read aloud / auto page
     data object ToggleReadAloud : ReadBookEffect
+    data object OpenReadAloud : ReadBookEffect
     data object ToggleAutoPage : ReadBookEffect
     data object StopAutoPage : ReadBookEffect
 

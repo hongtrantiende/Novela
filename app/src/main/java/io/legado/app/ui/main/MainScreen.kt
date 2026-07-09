@@ -62,7 +62,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.Image
 import coil.compose.AsyncImage
+import io.legado.app.help.skin.SkinAssetKeys
+import io.legado.app.help.skin.SkinPackManager
+import io.legado.app.help.skin.SkinPackResolver
+import io.legado.app.help.skin.SkinPackProvider
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
@@ -515,13 +520,14 @@ fun MainScreen(
                             backdrop = floatingBarBackdrop,
                             tabsCount = destinations.size,
                             isBlurEnabled = useLiquidGlass,
-                            hasCustomIcons = destinations.any { dest ->
+                            hasCustomIcons = SkinPackResolver.isSkinActive() || destinations.any { dest ->
                                 dest.customIconPath.isNotEmpty()
                             }
                         ) {
                             destinations.forEachIndexed { index, destination ->
                                 val selected = pagerState.targetPage == index
-                                val hasCustomIcon = destination.customIconPath.isNotEmpty()
+                                val hasSkinIcon = SkinPackResolver.isSkinActive()
+                                val hasCustomIcon = hasSkinIcon || destination.customIconPath.isNotEmpty()
                                 FloatingBottomBarItem(
                                     onClick = {
                                         coroutineScope.launch {
@@ -600,15 +606,37 @@ private fun NavigationIcon(
     selected: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val customIconPath = destination.customIconPath
-    if (customIconPath.isNotEmpty()) {
-        AsyncImage(
-            model = customIconPath,
+    // Check skin pack first
+    val skinNavKey = when (destination) {
+        MainDestination.Home -> SkinAssetKeys.NAV_HOME
+        MainDestination.Bookshelf -> SkinAssetKeys.NAV_BOOKSHELF
+        MainDestination.Explore -> SkinAssetKeys.NAV_EXPLORE
+        MainDestination.Updates -> SkinAssetKeys.NAV_UPDATES
+        MainDestination.My -> SkinAssetKeys.NAV_MY
+        MainDestination.Rss -> null
+        MainDestination.ReadRecord -> null
+    }
+    val skinPainter = if (skinNavKey != null) {
+        SkinPackResolver.rememberSkinImage(skinNavKey)
+    } else null
+
+    if (skinPainter != null) {
+        Image(
+            painter = skinPainter,
             contentDescription = null,
             modifier = modifier.size(40.dp)
         )
     } else {
-        val icon = AppIcons.mainDestination(destination, selected)
-        AppIcon(icon, contentDescription = null, modifier = modifier)
+        val customIconPath = destination.customIconPath
+        if (customIconPath.isNotEmpty()) {
+            AsyncImage(
+                model = customIconPath,
+                contentDescription = null,
+                modifier = modifier.size(40.dp)
+            )
+        } else {
+            val icon = AppIcons.mainDestination(destination, selected)
+            AppIcon(icon, contentDescription = null, modifier = modifier)
+        }
     }
 }

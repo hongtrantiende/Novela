@@ -393,6 +393,9 @@ object PreferKey {
     // Google Drive
     const val googleDriveEmail = "googleDriveEmail"
     const val exportToGoogleDrive = "exportToGoogleDrive"
+
+    // Skin Pack
+    const val activeSkinPack = "activeSkinPack"
 }
 
 object ReadMenuBlurMode {

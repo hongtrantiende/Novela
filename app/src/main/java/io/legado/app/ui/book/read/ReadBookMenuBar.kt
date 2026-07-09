@@ -286,22 +286,11 @@ fun ReadBookMenuBar(
             visible = state.menuVisible || searchMenuVisible,
             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier
-                .then(
-                    if (currentRoute == ReadBookMenuRoute.ReadAloud) {
-                        Modifier.fillMaxSize()
-                    } else {
-                        Modifier.align(Alignment.BottomCenter)
-                    }
-                ),
+            modifier = Modifier.align(Alignment.BottomCenter),
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = if (currentRoute == ReadBookMenuRoute.ReadAloud) {
-                    Modifier.fillMaxSize()
-                } else {
-                    Modifier
-                }
+                modifier = Modifier
             ) {
                 if (state.menuVisible &&
                     state.menuConfig.showTitleBarIcons &&
@@ -366,11 +355,7 @@ private fun ReadBookMenuSurface(
         label = "ReadBookMenuMorph",
     )
     val maxHeight = with(density) {
-        if (route == ReadBookMenuRoute.ReadAloud) {
-            windowSize.height.toDp()
-        } else {
-            windowSize.height.toDp() * 0.64f
-        }
+        windowSize.height.toDp() * 0.64f
     }
     val screenWidth = with(density) { windowSize.width.toDp() }
     val dialogAvailableWidth = screenWidth - 48.dp
@@ -390,30 +375,24 @@ private fun ReadBookMenuSurface(
     val floatingHorizontalMargin = if (isFloating) 16.dp else 0.dp
     val floatingBottomMargin = if (isFloating) 16.dp + navBarHeight else 0.dp
     val mainHorizontalMargin =
-        if (route == ReadBookMenuRoute.ReadAloud) 0.dp
-        else if (expanded && !isFloating) 0.dp else floatingHorizontalMargin
+        if (expanded && !isFloating) 0.dp else floatingHorizontalMargin
     val mainBottomMargin =
-        if (route == ReadBookMenuRoute.ReadAloud) 0.dp
-        else if (expanded && !isFloating) 0.dp else floatingBottomMargin
-    val mainCorner = if (route == ReadBookMenuRoute.ReadAloud) 0.dp else state.menuConfig.readMenuBottomCornerRadius.dp
+        if (expanded && !isFloating) 0.dp else floatingBottomMargin
+    val mainCorner = state.menuConfig.readMenuBottomCornerRadius.dp
     val mainWidth = (screenWidth - mainHorizontalMargin * 2).coerceAtLeast(0.dp)
-    val surfaceWidth = if (route == ReadBookMenuRoute.ReadAloud) {
-        screenWidth
-    } else if (expanded) {
+    val surfaceWidth = if (expanded) {
         if (isFloating && !dialogLikeRoute) mainWidth
         else lerp(screenWidth, dialogWidth, morphProgress)
     } else {
         mainWidth
     }
     val bottomTopCorner by animateDpAsState(
-        targetValue = if (route == ReadBookMenuRoute.ReadAloud) 0.dp else if (expanded && !isFloating) 24.dp else 0.dp,
+        targetValue = if (expanded && !isFloating) 24.dp else 0.dp,
         label = "ReadBookMenuCorner",
     )
     val corner = lerp(bottomTopCorner, 28.dp, morphProgress)
     val bottomCorner = lerp(0.dp, 28.dp, morphProgress)
-    val surfaceShape = if (route == ReadBookMenuRoute.ReadAloud) {
-        RoundedCornerShape(0.dp)
-    } else if (expanded) {
+    val surfaceShape = if (expanded) {
         if (isFloating && !dialogLikeRoute) {
             RoundedCornerShape(mainCorner)
         } else {
@@ -470,81 +449,76 @@ private fun ReadBookMenuSurface(
     }
 
     Surface(
-        modifier = if (route == ReadBookMenuRoute.ReadAloud) {
-            // ReadAloud: full screen, no border, no offset, no padding
-            Modifier.fillMaxSize()
-        } else {
-            Modifier
-                .padding(
-                    start = mainHorizontalMargin,
-                    end = mainHorizontalMargin,
-                    bottom = mainBottomMargin,
-                )
-                .then(
-                    if (route == ReadBookMenuRoute.Main) {
-                        Modifier
-                    } else {
-                        Modifier.windowInsetsPadding(
-                            WindowInsets.safeDrawing.only(surfaceWindowInsetSides)
-                        )
-                    }
-                )
-                .width(surfaceWidth)
-                .heightIn(max = maxHeight)
-                .onSizeChanged { surfaceHeightPx = it.height }
-                .offset {
-                    val dialogLiftPx = ((windowSize.height - surfaceHeightPx) / 2f) * morphProgress
-                    IntOffset(x = 0, y = -dialogLiftPx.roundToInt())
+        modifier = Modifier
+            .padding(
+                start = mainHorizontalMargin,
+                end = mainHorizontalMargin,
+                bottom = mainBottomMargin,
+            )
+            .then(
+                if (route == ReadBookMenuRoute.Main) {
+                    Modifier
+                } else {
+                    Modifier.windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(surfaceWindowInsetSides)
+                    )
                 }
-                .then(
-                    if (useLiquidGlass) {
-                        Modifier.readMenuLiquidGlass(
-                            backdrop = backdrop,
-                            colors = colors,
-                            shape = surfaceShape,
-                            useTopBarStyle = false,
-                            useLens = useLens,
-                            menuConfig = state.menuConfig,
+            )
+            .width(surfaceWidth)
+            .heightIn(max = maxHeight)
+            .onSizeChanged { surfaceHeightPx = it.height }
+            .offset {
+                val dialogLiftPx = ((windowSize.height - surfaceHeightPx) / 2f) * morphProgress
+                IntOffset(x = 0, y = -dialogLiftPx.roundToInt())
+            }
+            .then(
+                if (useLiquidGlass) {
+                    Modifier.readMenuLiquidGlass(
+                        backdrop = backdrop,
+                        colors = colors,
+                        shape = surfaceShape,
+                        useTopBarStyle = false,
+                        useLens = useLens,
+                        menuConfig = state.menuConfig,
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .then(
+                if (useHaze && hazeState != null) {
+                    Modifier.readMenuBottomBarHazeEffect(
+                        state = hazeState,
+                        colors = colors,
+                        shape = surfaceShape,
+                        menuConfig = state.menuConfig,
+                        progressive = bottomBarProgressiveBlur,
+                    )
+                } else {
+                    Modifier
+                }
+            )
+            .drawWithCache {
+                val strokeWidthPx = bottomBarBorderWidth.dp.toPx()
+                val outline = surfaceShape.createOutline(size, layoutDirection, this)
+                val strokeStyle = Stroke(width = strokeWidthPx * 2)
+                val outlinePath = when (outline) {
+                    is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
+                    is Outline.Rectangle -> Path().apply { addRect(outline.rect) }
+                    is Outline.Generic -> outline.path
+                }
+                onDrawBehind {
+                    if (bottomBarBorderWidth > 0) {
+                        drawPath(
+                            path = outlinePath,
+                            color = Color(bottomBarBorderColor),
+                            style = strokeStyle,
                         )
-                    } else {
-                        Modifier
-                    }
-                )
-                .then(
-                    if (useHaze && hazeState != null) {
-                        Modifier.readMenuBottomBarHazeEffect(
-                            state = hazeState,
-                            colors = colors,
-                            shape = surfaceShape,
-                            menuConfig = state.menuConfig,
-                            progressive = bottomBarProgressiveBlur,
-                        )
-                    } else {
-                        Modifier
-                    }
-                )
-                .drawWithCache {
-                    val strokeWidthPx = bottomBarBorderWidth.dp.toPx()
-                    val outline = surfaceShape.createOutline(size, layoutDirection, this)
-                    val strokeStyle = Stroke(width = strokeWidthPx * 2)
-                    val outlinePath = when (outline) {
-                        is Outline.Rounded -> Path().apply { addRoundRect(outline.roundRect) }
-                        is Outline.Rectangle -> Path().apply { addRect(outline.rect) }
-                        is Outline.Generic -> outline.path
-                    }
-                    onDrawBehind {
-                        if (bottomBarBorderWidth > 0) {
-                            drawPath(
-                                path = outlinePath,
-                                color = Color(bottomBarBorderColor),
-                                style = strokeStyle,
-                            )
-                        }
                     }
                 }
-        },
+            },
         shape = surfaceShape,
-        color = if (route == ReadBookMenuRoute.ReadAloud || useLiquidGlass || useHaze) Color.Transparent else colors.background.copy(
+        color = if (useLiquidGlass || useHaze) Color.Transparent else colors.background.copy(
             alpha = state.menuConfig.readMenuBlurAlpha.coerceIn(0, 100) / 100f
         ),
         contentColor = colors.content
@@ -681,24 +655,7 @@ private fun ReadBookMenuSurface(
                         }
                     }
 
-                    ReadBookMenuRoute.ReadAloud -> {
-                        // Bypass ReadBookMenuRoutePage — render directly for true full screen
-                        ReadAloudContent(
-                            state = state,
-                            onIntent = onIntent,
-                            onDismissRequest = { onIntent(ReadBookIntent.HideMenu) },
-                            onOpenChapterList = {
-                                onIntent(ReadBookIntent.OpenChapterList)
-                            },
-                            onGoToBackground = {
-                                onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
-                            },
-                            onShowReadAloudConfig = {
-                                onIntent(ReadBookIntent.ShowReadAloudConfig)
-                            },
-                            modifier = Modifier.fillMaxSize(),
-                        )
-                    }
+
 
                 ReadBookMenuRoute.AutoRead -> {
                     ReadBookMenuRoutePage(
@@ -2565,10 +2522,10 @@ private fun loadToolButtons(
         infoMap.getValue("read_aloud").toButton(
             isActive = state.isReadAloudRunning,
             onLongClick = {
-                onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
+                onIntent(ReadBookIntent.OpenReadAloud)
             },
         ) {
-            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
+            onIntent(ReadBookIntent.OpenReadAloud)
         },
         infoMap.getValue("setting").toButton {
             onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle))
@@ -2921,7 +2878,7 @@ private fun loadFloatingIcons(
     val actionMap: Map<String, () -> Unit> = mapOf(
         "catalog" to { onIntent(ReadBookIntent.OpenChapterList) },
         "read_aloud" to {
-            onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud))
+            onIntent(ReadBookIntent.OpenReadAloud)
         },
         "setting" to { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadStyle)) },
         "addBookmark" to { onIntent(ReadBookIntent.AddBookmark) },
@@ -2950,7 +2907,7 @@ private fun loadFloatingIcons(
                 isActive = id in activeIds,
                 onClick = actionMap[id] ?: {},
                 onLongClick = if (id == "read_aloud") {
-                    { onIntent(ReadBookIntent.OpenReadMenuRoute(ReadBookMenuRoute.ReadAloud)) }
+                    { onIntent(ReadBookIntent.OpenReadAloud) }
                 } else {
                     null
                 },
