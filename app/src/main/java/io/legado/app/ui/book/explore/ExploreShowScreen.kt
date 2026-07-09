@@ -102,6 +102,9 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import io.legado.app.ui.config.translation.TranslationConfig
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.toImmutableList
+import kotlinx.collections.immutable.persistentListOf
 import androidx.compose.ui.platform.LocalContext
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.search.SearchScope
@@ -204,12 +207,13 @@ fun ExploreShowScreen(
     val filterStateId = CoverConfig.exploreFilterState
     val books = remember(state.books, filterStateId) {
         val filter = BookFilterState.fromId(filterStateId)
-        when (filter) {
+        val filtered = when (filter) {
             BookFilterState.SHOW_ALL -> state.books
             BookFilterState.HIDE_IN_SHELF -> state.books.filter { it.shelfState != BookShelfState.IN_SHELF }
             BookFilterState.HIDE_SAME_NAME_AUTHOR -> state.books.filter { it.shelfState != BookShelfState.SAME_NAME_AUTHOR }
             BookFilterState.SHOW_NOT_IN_SHELF_ONLY -> state.books.filter { it.shelfState == BookShelfState.NOT_IN_SHELF }
         }
+        filtered.toImmutableList()
     }
     val scope = rememberCoroutineScope()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
@@ -430,7 +434,8 @@ fun ExploreShowScreen(
         ) {
             val isExtension = state.sourceUrl?.startsWith("ext_") == true
             val tabs = state.homeKinds
-            val showTabs = isExtension && tabs.isNotEmpty() && !isSearchMode && state.searchQuery == null
+            val isSelectedInTabs = tabs.any { it.title == state.selectedKindTitle }
+            val showTabs = isExtension && tabs.isNotEmpty() && isSelectedInTabs && !isSearchMode && state.searchQuery == null
 
             if (showTabs) {
                 val selectedIndex = remember(state.selectedKindTitle, tabs) {
@@ -442,6 +447,7 @@ fun ExploreShowScreen(
                 )
 
                 LaunchedEffect(pagerState.currentPage) {
+                    kotlinx.coroutines.delay(150)
                     val targetKind = tabs.getOrNull(pagerState.currentPage)
                     if (targetKind != null && targetKind.title != state.selectedKindTitle) {
                         viewModel.onIntent(ExploreShowIntent.SwitchKind(targetKind))
@@ -485,17 +491,17 @@ fun ExploreShowScreen(
                         .weight(1f)
                 ) { page ->
                     val pageTab = tabs.getOrNull(page)
-                    val pageBooks = remember(page, state.sourceUrl, pageTab?.url, state.books) {
+                    val pageBooks = remember(page, state.sourceUrl, pageTab?.url) {
                         val cacheKey = "${state.sourceUrl}##${pageTab?.url}"
                         ExploreShowCache.getBooks(cacheKey)?.map { item ->
                             ExploreBookItemUi(
                                 book = item,
                                 shelfState = BookShelfState.NOT_IN_SHELF
                             )
-                        } ?: emptyList()
+                        }?.toImmutableList() ?: persistentListOf()
                     }
                     val isCurrent = pageTab?.title == state.selectedKindTitle
-                    val displayBooks = if (isCurrent) books else pageBooks
+                    val displayBooks: ImmutableList<ExploreBookItemUi> = if (isCurrent) books else pageBooks
 
                     ExploreShowContent(
                         books = displayBooks,
@@ -705,7 +711,7 @@ fun ExploreCategoryChip(
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun ExploreShowContent(
-    books: List<ExploreBookItemUi>,
+    books: ImmutableList<ExploreBookItemUi>,
     isGridMode: Boolean,
     state: ExploreShowUiState,
     hazeState: HazeState,
@@ -795,7 +801,7 @@ private fun ExploreShowContent(
                     ) {
                         itemsIndexed(
                             items = books,
-                            key = { index, item -> "${item.book.bookUrl}:$index" }
+                            key = { _, item -> item.book.bookUrl }
                         ) { index, item ->
                             val sharedCoverKey = bookCoverSharedElementKey(
                                 item.book.bookUrl,
@@ -816,7 +822,6 @@ private fun ExploreShowContent(
                                     previewBookSetter(book)
                                     previewSharedCoverKeySetter(coverKey)
                                 },
-                                modifier = Modifier.animateItem(),
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                                 sharedCoverKey = sharedCoverKey,
@@ -846,7 +851,7 @@ private fun ExploreShowContent(
                     ) {
                         itemsIndexed(
                             items = books,
-                            key = { index, item -> "${item.book.bookUrl}:$index" }
+                            key = { _, item -> item.book.bookUrl }
                         ) { index, item ->
                             val sharedCoverKey = bookCoverSharedElementKey(
                                 item.book.bookUrl,
@@ -867,7 +872,6 @@ private fun ExploreShowContent(
                                     previewBookSetter(book)
                                     previewSharedCoverKeySetter(coverKey)
                                 },
-                                modifier = Modifier.animateItem(),
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                                 sharedCoverKey = sharedCoverKey,

@@ -41,6 +41,7 @@ import io.legado.app.help.book.upKind
 import io.legado.app.help.book.updateTo
 import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.coroutine.Coroutine
+import io.legado.app.help.source.exploreKinds
 import io.legado.app.lib.webdav.ObjectNotFoundException
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.BookCover
@@ -344,6 +345,7 @@ class BookInfoViewModel(
 
             is BookInfoIntent.RelatedBookClick -> onRelatedBookClick(intent.book)
             is BookInfoIntent.RelatedBooksMore -> onRelatedBooksMore(intent.title, intent.url)
+            is BookInfoIntent.KindClick -> onKindClick(intent.kind)
         }
     }
 
@@ -1492,6 +1494,36 @@ class BookInfoViewModel(
                 exploreUrl = resolvedUrl,
             )
         )
+    }
+
+    private fun onKindClick(kind: String) {
+        val book = currentBook ?: return
+        val origin = book.origin
+        execute {
+            val kinds = if (origin.startsWith("ext_")) {
+                val home = extensionRepository.getHomeKinds(origin)
+                val genre = extensionRepository.getGenreKinds(origin)
+                home + genre
+            } else {
+                val source = bookSource ?: appDb.bookSourceDao.getBookSource(origin)
+                source?.exploreKinds() ?: emptyList()
+            }
+            kinds
+        }.onSuccess { kinds ->
+            val matchedKind = kinds.find { 
+                it.title?.trim()?.equals(kind.trim(), ignoreCase = true) == true 
+            } ?: kinds.find {
+                kind.contains(it.title ?: "", ignoreCase = true) || (it.title ?: "").contains(kind, ignoreCase = true)
+            }
+            val resolvedUrl = matchedKind?.url ?: kind
+            emitEffect(
+                BookInfoEffect.NavigateToExploreShow(
+                    title = matchedKind?.title ?: kind,
+                    sourceUrl = origin,
+                    exploreUrl = resolvedUrl,
+                )
+            )
+        }
     }
 
     private fun scheduleRelatedBooksLoad(

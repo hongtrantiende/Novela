@@ -251,84 +251,134 @@ class ExploreShowViewModel(
 
         viewModelScope.launch {
             val cacheKeyPrefix = incomingSourceUrl
+            val isExtension = incomingSourceUrl.startsWith("ext_")
+            
             var finalKinds: List<ExploreKind> = emptyList()
             var homeKinds: List<ExploreKind> = emptyList()
             var genreKinds: List<ExploreKind> = emptyList()
 
-            try {
-                val cachedKinds = ExploreShowCache.getKinds(cacheKeyPrefix)
-                if (cachedKinds != null) {
-                    finalKinds = cachedKinds
-                    if (incomingSourceUrl.startsWith("ext_")) {
+            val cachedKinds = ExploreShowCache.getKinds(cacheKeyPrefix)
+            val cachedHome = if (isExtension) ExploreShowCache.getHomeKinds(cacheKeyPrefix) else null
+            val cachedGenre = if (isExtension) ExploreShowCache.getGenreKinds(cacheKeyPrefix) else null
+
+            if (cachedKinds != null && (!isExtension || (cachedHome != null && cachedGenre != null))) {
+                finalKinds = cachedKinds
+                homeKinds = cachedHome ?: emptyList()
+                genreKinds = cachedGenre ?: emptyList()
+                
+                _kindState.update {
+                    it.copy(
+                        kinds = finalKinds,
+                        homeKinds = homeKinds,
+                        genreKinds = genreKinds
+                    )
+                }
+                
+                initializeBooksWithCache(incomingSourceUrl, incomingExploreUrl, finalKinds)
+            } else {
+                try {
+                    if (isExtension) {
+                        // 1. Fetch home kinds first and update UI
                         homeKinds = repository.getHomeKinds(incomingSourceUrl)
-                        genreKinds = repository.getGenreKinds(incomingSourceUrl)
-                    }
-                } else {
-                    if (incomingSourceUrl.startsWith("ext_")) {
-                        homeKinds = repository.getHomeKinds(incomingSourceUrl)
-                        genreKinds = repository.getGenreKinds(incomingSourceUrl)
-                        finalKinds = homeKinds + genreKinds
+                        finalKinds = homeKinds
+                        ExploreShowCache.putHomeKinds(cacheKeyPrefix, homeKinds)
+                        ExploreShowCache.putKinds(cacheKeyPrefix, finalKinds)
+                        
+                        _kindState.update {
+                            it.copy(
+                                kinds = finalKinds,
+                                homeKinds = homeKinds,
+                                genreKinds = genreKinds
+                            )
+                        }
+
+                        // Load books immediately
+                        initializeBooksWithCache(incomingSourceUrl, incomingExploreUrl, finalKinds)
+                        
+                        // 2. Fetch genre kinds in background without blocking
+                        viewModelScope.launch {
+                            try {
+                                val loadedGenres = repository.getGenreKinds(incomingSourceUrl)
+                                if (loadedGenres.isNotEmpty()) {
+                                    genreKinds = loadedGenres
+                                    finalKinds = homeKinds + loadedGenres
+                                    ExploreShowCache.putGenreKinds(cacheKeyPrefix, loadedGenres)
+                                    ExploreShowCache.putKinds(cacheKeyPrefix, finalKinds)
+                                    
+                                    _kindState.update {
+                                        it.copy(
+                                            kinds = finalKinds,
+                                            genreKinds = loadedGenres
+                                        )
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
                     } else {
                         finalKinds = repository.getSourceExploreKinds(incomingSourceUrl)
+                        ExploreShowCache.putKinds(cacheKeyPrefix, finalKinds)
+                        
+                        _kindState.update {
+                            it.copy(kinds = finalKinds)
+                        }
+                        
+                        initializeBooksWithCache(incomingSourceUrl, incomingExploreUrl, finalKinds)
                     }
-                    ExploreShowCache.putKinds(cacheKeyPrefix, finalKinds)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    _loadState.update { it.copy(errorMsg = "Lỗi tải phân loại: ${e.localizedMessage}") }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _loadState.update { it.copy(errorMsg = "Lỗi tải phân loại: ${e.localizedMessage}") }
             }
+        }
+    }
 
-            _kindState.update {
-                it.copy(
-                    kinds = finalKinds,
-                    homeKinds = homeKinds,
-                    genreKinds = genreKinds
-                )
-            }
+    private fun initializeBooksWithCache(incomingSourceUrl: String, incomingExploreUrl: String?, finalKinds: List<ExploreKind>) {
+        var resolvedExploreUrl = incomingExploreUrl
+        if (resolvedExploreUrl == null && finalKinds.isNotEmpty()) {
+            resolvedExploreUrl = finalKinds.first().url
+        }
+        exploreUrl = resolvedExploreUrl
 
-            var resolvedExploreUrl = incomingExploreUrl
-            if (resolvedExploreUrl == null && finalKinds.isNotEmpty()) {
-                resolvedExploreUrl = finalKinds.first().url
-            }
-            exploreUrl = resolvedExploreUrl
+        _displayState.update {
+            it.copy(
+                sourceUrl = incomingSourceUrl,
+                sheet = ExploreShowSheet.None,
+            )
+        }
 
-            _displayState.update {
-                it.copy(
-                    sourceUrl = incomingSourceUrl,
-                    sheet = ExploreShowSheet.None,
-                )
-            }
-
-            val cacheKey = "$incomingSourceUrl##$resolvedExploreUrl"
-            val cachedBooks = ExploreShowCache.getBooks(cacheKey)
-            if (cachedBooks != null) {
-                _rawBooks.value = cachedBooks
-                preloadBookCovers(cachedBooks)
-                page = ExploreShowCache.getPage(cacheKey) ?: 1
-                val cachedSelected = ExploreShowCache.getSelectedKind(cacheKey) ?: run {
-                    val matchedKind = finalKinds.find { 
-                        it.url == resolvedExploreUrl || 
-                        (it.url?.contains("||") == true && it.url.substringAfter("||") == resolvedExploreUrl) ||
-                        (resolvedExploreUrl?.contains("||") == true && it.url == resolvedExploreUrl.substringAfter("||"))
-                    }
-                    matchedKind?.title
-                }
-                _kindState.update { it.copy(selectedKindTitle = cachedSelected) }
-                val cachedIsEnd = ExploreShowCache.getIsEnd(cacheKey) ?: false
-                _loadState.update { it.copy(isLoading = false, isEnd = cachedIsEnd) }
-            } else {
+        val cacheKey = "$incomingSourceUrl##$resolvedExploreUrl"
+        val cachedBooks = ExploreShowCache.getBooks(cacheKey)
+        if (cachedBooks != null) {
+            _rawBooks.value = cachedBooks
+            preloadBookCovers(cachedBooks)
+            page = ExploreShowCache.getPage(cacheKey) ?: 1
+            val cachedSelected = ExploreShowCache.getSelectedKind(cacheKey) ?: run {
                 val matchedKind = finalKinds.find { 
                     it.url == resolvedExploreUrl || 
                     (it.url?.contains("||") == true && it.url.substringAfter("||") == resolvedExploreUrl) ||
                     (resolvedExploreUrl?.contains("||") == true && it.url == resolvedExploreUrl.substringAfter("||"))
                 }
-                _kindState.update { it.copy(selectedKindTitle = matchedKind?.title) }
-                page = 1
-                autoPageCount = 0
-                _rawBooks.value = emptyList()
-                _loadState.update { it.copy(isLoading = false, isEnd = false) }
-                loadMore(isRefresh = true)
+                matchedKind?.title
             }
+            _kindState.update { it.copy(selectedKindTitle = cachedSelected) }
+            val cachedIsEnd = ExploreShowCache.getIsEnd(cacheKey) ?: false
+            _loadState.update { it.copy(isLoading = false, isEnd = cachedIsEnd) }
+            // Silent refresh: load page 1 from network in background
+            loadMore(isRefresh = true, forceLoad = false, keepList = true)
+        } else {
+            val matchedKind = finalKinds.find { 
+                it.url == resolvedExploreUrl || 
+                (it.url?.contains("||") == true && it.url.substringAfter("||") == resolvedExploreUrl) ||
+                (resolvedExploreUrl?.contains("||") == true && it.url == resolvedExploreUrl.substringAfter("||"))
+            }
+            _kindState.update { it.copy(selectedKindTitle = matchedKind?.title) }
+            page = 1
+            autoPageCount = 0
+            _rawBooks.value = emptyList()
+            _loadState.update { it.copy(isLoading = false, isEnd = false, errorMsg = null) }
+            loadMore(isRefresh = false, forceLoad = true)
         }
     }
 
@@ -337,6 +387,7 @@ class ExploreShowViewModel(
         _kindState.update { it.copy(selectedKindTitle = kind.title) }
         exploreUrl = kind.url
         autoPageCount = 0
+        _searchQuery.value = null // Clear active search query when switching categories
         
         val source = sourceUrl
         val url = kind.url
@@ -349,6 +400,9 @@ class ExploreShowViewModel(
                 page = ExploreShowCache.getPage(cacheKey) ?: 1
                 val cachedIsEnd = ExploreShowCache.getIsEnd(cacheKey) ?: false
                 _loadState.update { it.copy(isLoading = false, isEnd = cachedIsEnd, errorMsg = null) }
+                
+                // Silent refresh: load page 1 from network in background without clearing current UI list
+                loadMore(isRefresh = true, forceLoad = false, keepList = true)
             } else {
                 page = 1
                 _rawBooks.value = emptyList()
@@ -402,7 +456,7 @@ class ExploreShowViewModel(
         _displayState.update { it.copy(gridCount = count) }
     }
 
-    private fun loadMore(isRefresh: Boolean = false, forceLoad: Boolean = false) {
+    private fun loadMore(isRefresh: Boolean = false, forceLoad: Boolean = false, keepList: Boolean = false) {
         val source = sourceUrl
         val url = exploreUrl
         val loadState = _loadState.value
@@ -411,7 +465,7 @@ class ExploreShowViewModel(
         _loadState.update {
             it.copy(
                 isLoading = true,
-                isRefreshing = isRefresh,
+                isRefreshing = isRefresh && !keepList,
                 isEnd = if (isRefresh || forceLoad) false else it.isEnd,
                 errorMsg = null,
             )
@@ -422,7 +476,9 @@ class ExploreShowViewModel(
             if (isRefresh) {
                 page = 1
                 autoPageCount = 0
-                _rawBooks.value = emptyList()
+                if (!keepList) {
+                    _rawBooks.value = emptyList()
+                }
                 val query = _searchQuery.value
                 val cacheKey = if (query != null) {
                     "$source##search##$query"
@@ -447,20 +503,24 @@ class ExploreShowViewModel(
             if (url != exploreUrl) {
                 return
             }
-            val currentList = _rawBooks.value
-            val existingUrls = currentList.map { it.bookUrl }.toSet()
-            val uniqueNewBooks = result.books
-                .filter { it.bookUrl !in existingUrls }
-                .distinctBy { it.bookUrl }
-
-            if (result.books.isNotEmpty()) {
-                saveSearchBooksUseCase.save(result.books)
+            // Offload distinct, filtering and saving to background thread
+            val (uniqueNewBooks, newBooksList) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                val currentList = if (page == 1) emptyList() else _rawBooks.value
+                val existingUrls = currentList.map { it.bookUrl }.toSet()
+                val filtered = result.books
+                    .filter { it.bookUrl !in existingUrls }
+                    .distinctBy { it.bookUrl }
+                
+                if (result.books.isNotEmpty()) {
+                    saveSearchBooksUseCase.save(result.books)
+                }
+                
+                filtered to (currentList + filtered)
             }
 
             if (uniqueNewBooks.isEmpty()) {
                 fetchNextAutoPageOrFinish(sourceUrl, url)
             } else {
-                val newBooksList = currentList + uniqueNewBooks
                 _rawBooks.value = newBooksList
                 page++
                 autoPageCount = 0

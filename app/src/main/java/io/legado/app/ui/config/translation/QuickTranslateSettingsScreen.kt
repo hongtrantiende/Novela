@@ -202,212 +202,195 @@ fun QuickTranslateSettingsScreen(
                                 style = LegadoTheme.typography.titleMediumEmphasized,
                                 color = LegadoTheme.colorScheme.primary
                             )
-                            if (io.legado.app.help.MemberManager.isVip) {
-                                Button(
-                                    onClick = {
-                                        isDownloading = true
-                                        downloadProgressText = "Đang kết nối..."
-                                        scope.launch(Dispatchers.IO) {
-                                            var success = QuickTranslateEngine.downloadAndUnzipDict(context, downloadUrl) { progress ->
-                                                downloadProgressText = progress
-                                            }
-                                            if (!success) {
-                                                withContext(Dispatchers.Main) {
-                                                    downloadProgressText = "Đang giải nén từ điển mặc định..."
-                                                }
-                                                success = QuickTranslateEngine.unzipDictFromAssets(context)
-                                            }
+                            Button(
+                                onClick = {
+                                    isDownloading = true
+                                    downloadProgressText = "Đang kết nối..."
+                                    scope.launch(Dispatchers.IO) {
+                                        var success = QuickTranslateEngine.downloadAndUnzipDict(context, downloadUrl) { progress ->
+                                            downloadProgressText = progress
+                                        }
+                                        if (!success) {
                                             withContext(Dispatchers.Main) {
-                                                isDownloading = false
-                                                refreshTrigger++
-                                                if (success) {
-                                                    Toast.makeText(context, "Tải từ điển hoàn thành!", Toast.LENGTH_SHORT).show()
-                                                } else {
-                                                    Toast.makeText(context, "Lỗi tải từ điển!", Toast.LENGTH_SHORT).show()
-                                                }
+                                                downloadProgressText = "Đang giải nén từ điển mặc định..."
+                                            }
+                                            success = QuickTranslateEngine.unzipDictFromAssets(context)
+                                        }
+                                        withContext(Dispatchers.Main) {
+                                            isDownloading = false
+                                            refreshTrigger++
+                                            if (success) {
+                                                Toast.makeText(context, "Tải từ điển hoàn thành!", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "Lỗi tải từ điển!", Toast.LENGTH_SHORT).show()
                                             }
                                         }
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.CloudDownload,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                AppText("Tải từ điển mặc định", style = LegadoTheme.typography.labelSmall)
+                            }
+                        }
+
+                        // Grid of 5 dictionary files
+                        val dicts = listOf(
+                            Triple("VietPhrase.txt", vietPhraseCount, "VP"),
+                            Triple("Name.txt", nameCount, "Name"),
+                            Triple("PhienAm.txt", phienAmCount, "Phiên Âm"),
+                            Triple("Pronouns.txt", pronounsCount, "Nhân Xưng"),
+                            Triple("LuatNhan.txt", luatNhanCount, "Luật Nhân")
+                        )
+
+                        // 3 items in first row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (i in 0..2) {
+                                Box(
+                                    modifier = Modifier.weight(1f)
                                 ) {
-                                    Icon(
-                                        Icons.Default.CloudDownload,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    AppText("Tải từ điển mặc định", style = LegadoTheme.typography.labelSmall)
+                                    GlassCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(onClick = { expandedMenuIndex = i }, onLongClick = { expandedMenuIndex = i }),
+                                        cornerRadius = 12.dp
+                                    ) {
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            AppText(
+                                                text = dicts[i].first,
+                                                style = LegadoTheme.typography.bodyMediumEmphasized,
+                                                maxLines = 1
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            AppText(
+                                                text = dicts[i].second,
+                                                style = LegadoTheme.typography.bodySmall,
+                                                color = LegadoTheme.colorScheme.primary,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = expandedMenuIndex == i,
+                                        onDismissRequest = { expandedMenuIndex = -1 }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { AppText("Sửa") },
+                                            onClick = {
+                                                expandedMenuIndex = -1
+                                                editingDictFile = dicts[i].first
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { AppText("Nhập") },
+                                            onClick = {
+                                                expandedMenuIndex = -1
+                                                importingDictFile = dicts[i].first
+                                                importLauncher.launch("*/*")
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Xuất") },
+                                            onClick = {
+                                                expandedMenuIndex = -1
+                                                exportingDictFile = dicts[i].first
+                                                exportLauncher.launch(dicts[i].first)
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Xóa") },
+                                            onClick = {
+                                                expandedMenuIndex = -1
+                                                showDeleteConfirmDialog = dicts[i].first
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
 
-                        if (!io.legado.app.help.MemberManager.isVip) {
-                            GlassCard(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                                cornerRadius = 12.dp
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    AppText(
-                                        text = "🔒 Tính năng tải từ điển chung yêu cầu kích hoạt Thành viên nội bộ.",
-                                        style = LegadoTheme.typography.bodyMediumEmphasized,
-                                        color = LegadoTheme.colorScheme.error
-                                    )
-                                }
-                            }
-                        } else {
-                            // Grid of 5 dictionary files
-                            val dicts = listOf(
-                                Triple("VietPhrase.txt", vietPhraseCount, "VP"),
-                                Triple("Name.txt", nameCount, "Name"),
-                                Triple("PhienAm.txt", phienAmCount, "Phiên Âm"),
-                                Triple("Pronouns.txt", pronounsCount, "Nhân Xưng"),
-                                Triple("LuatNhan.txt", luatNhanCount, "Luật Nhân")
-                            )
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                            // 3 items in first row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                for (i in 0..2) {
-                                    Box(
-                                        modifier = Modifier.weight(1f)
+                        // 2 items in second row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            for (i in 3..4) {
+                                Box(
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    GlassCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .combinedClickable(onClick = { expandedMenuIndex = i }, onLongClick = { expandedMenuIndex = i }),
+                                        cornerRadius = 12.dp
                                     ) {
-                                        GlassCard(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .combinedClickable(onClick = { expandedMenuIndex = i }, onLongClick = { expandedMenuIndex = i }),
-                                            cornerRadius = 12.dp
-                                        ) {
-                                            Column(modifier = Modifier.padding(12.dp)) {
-                                                AppText(
-                                                    text = dicts[i].first,
-                                                    style = LegadoTheme.typography.bodyMediumEmphasized,
-                                                    maxLines = 1
-                                                )
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                AppText(
-                                                    text = dicts[i].second,
-                                                    style = LegadoTheme.typography.bodySmall,
-                                                    color = LegadoTheme.colorScheme.primary,
-                                                    maxLines = 1
-                                                )
-                                            }
-                                        }
-
-                                        DropdownMenu(
-                                            expanded = expandedMenuIndex == i,
-                                            onDismissRequest = { expandedMenuIndex = -1 }
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = { AppText("Sửa") },
-                                                onClick = {
-                                                    expandedMenuIndex = -1
-                                                    editingDictFile = dicts[i].first
-                                                }
+                                        Column(modifier = Modifier.padding(12.dp)) {
+                                            AppText(
+                                                text = dicts[i].first,
+                                                style = LegadoTheme.typography.bodyMediumEmphasized,
+                                                maxLines = 1
                                             )
-                                            DropdownMenuItem(
-                                                text = { AppText("Nhập") },
-                                                onClick = {
-                                                    expandedMenuIndex = -1
-                                                    importingDictFile = dicts[i].first
-                                                    importLauncher.launch("*/*")
-                                                }
-                                            )
-                                            DropdownMenuItem(
-                                                text = { Text("Xuất") },
-                                                onClick = {
-                                                    expandedMenuIndex = -1
-                                                    exportingDictFile = dicts[i].first
-                                                    exportLauncher.launch(dicts[i].first)
-                                                }
-                                            )
-                                            DropdownMenuItem(
-                                                text = { Text("Xóa") },
-                                                onClick = {
-                                                    expandedMenuIndex = -1
-                                                    showDeleteConfirmDialog = dicts[i].first
-                                                }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            AppText(
+                                                text = dicts[i].second,
+                                                style = LegadoTheme.typography.bodySmall,
+                                                color = LegadoTheme.colorScheme.primary,
+                                                maxLines = 1
                                             )
                                         }
                                     }
-                                }
-                            }
 
-                            Spacer(modifier = Modifier.height(8.dp))
-
-                            // 2 items in second row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                for (i in 3..4) {
-                                    Box(
-                                        modifier = Modifier.weight(1f)
+                                    DropdownMenu(
+                                        expanded = expandedMenuIndex == i,
+                                        onDismissRequest = { expandedMenuIndex = -1 }
                                     ) {
-                                        GlassCard(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .combinedClickable(onClick = { expandedMenuIndex = i }, onLongClick = { expandedMenuIndex = i }),
-                                            cornerRadius = 12.dp
-                                        ) {
-                                            Column(modifier = Modifier.padding(12.dp)) {
-                                                AppText(
-                                                    text = dicts[i].first,
-                                                    style = LegadoTheme.typography.bodyMediumEmphasized,
-                                                    maxLines = 1
-                                                )
-                                                Spacer(modifier = Modifier.height(4.dp))
-                                                AppText(
-                                                    text = dicts[i].second,
-                                                    style = LegadoTheme.typography.bodySmall,
-                                                    color = LegadoTheme.colorScheme.primary,
-                                                    maxLines = 1
-                                                )
+                                        DropdownMenuItem(
+                                            text = { AppText("Sửa") },
+                                            onClick = {
+                                                expandedMenuIndex = -1
+                                                editingDictFile = dicts[i].first
                                             }
-                                        }
-
-                                        DropdownMenu(
-                                            expanded = expandedMenuIndex == i,
-                                            onDismissRequest = { expandedMenuIndex = -1 }
-                                        ) {
-                                            DropdownMenuItem(
-                                                text = { AppText("Sửa") },
-                                                onClick = {
-                                                    expandedMenuIndex = -1
-                                                    editingDictFile = dicts[i].first
-                                                }
-                                            )
-                                            DropdownMenuItem(
-                                                text = { AppText("Nhập") },
-                                                onClick = {
-                                                    expandedMenuIndex = -1
-                                                    importingDictFile = dicts[i].first
-                                                    importLauncher.launch("*/*")
-                                                }
-                                            )
-                                            DropdownMenuItem(
-                                                text = { AppText("Xuất") },
-                                                onClick = {
-                                                    expandedMenuIndex = -1
-                                                    exportingDictFile = dicts[i].first
-                                                    exportLauncher.launch(dicts[i].first)
-                                                }
-                                            )
-                                            DropdownMenuItem(
-                                                text = { AppText("Xóa") },
-                                                onClick = {
-                                                    expandedMenuIndex = -1
-                                                    showDeleteConfirmDialog = dicts[i].first
-                                                }
-                                            )
-                                        }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { AppText("Nhập") },
+                                            onClick = {
+                                                expandedMenuIndex = -1
+                                                importingDictFile = dicts[i].first
+                                                importLauncher.launch("*/*")
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { AppText("Xuất") },
+                                            onClick = {
+                                                expandedMenuIndex = -1
+                                                exportingDictFile = dicts[i].first
+                                                exportLauncher.launch(dicts[i].first)
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { AppText("Xóa") },
+                                            onClick = {
+                                                expandedMenuIndex = -1
+                                                showDeleteConfirmDialog = dicts[i].first
+                                            }
+                                        )
                                     }
                                 }
-                                // Empty spacer to occupy the 3rd column space
-                                Box(modifier = Modifier.weight(1f))
                             }
+                            // Empty spacer to occupy the 3rd column space
+                            Box(modifier = Modifier.weight(1f))
                         }
                     }
                 }

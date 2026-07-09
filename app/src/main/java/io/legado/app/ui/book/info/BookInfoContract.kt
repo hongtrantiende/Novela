@@ -148,6 +148,7 @@ sealed interface BookInfoIntent {
 
     data class RelatedBookClick(val book: SearchBook) : BookInfoIntent
     data class RelatedBooksMore(val title: String, val url: String) : BookInfoIntent
+    data class KindClick(val kind: String) : BookInfoIntent
 }
 
 sealed interface BookInfoEffect {

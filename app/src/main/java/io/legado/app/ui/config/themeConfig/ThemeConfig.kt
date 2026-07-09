@@ -248,11 +248,15 @@ object ThemeConfig {
                 if (isNight) 0xFF121212.toInt() else 0xFFFEF7FF.toInt()
             }
         }
-        if (enableDeepPersonalization && themeBackgroundColor != 0) {
+        if (!isNight && enableDeepPersonalization && themeBackgroundColor != 0) {
             return themeBackgroundColor
         }
         return try {
-            appCtx.themeColor(android.R.attr.colorBackground)
+            if (isNight) {
+                0xFF121212.toInt()
+            } else {
+                appCtx.themeColor(android.R.attr.colorBackground)
+            }
         } catch (e: Exception) {
             if (isNight) 0xFF121212.toInt() else 0xFFFEF7FF.toInt()
         }

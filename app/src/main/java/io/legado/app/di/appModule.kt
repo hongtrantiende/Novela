@@ -106,6 +106,7 @@ import io.legado.app.ui.book.read.ReadBookViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordOverviewViewModel
 import io.legado.app.ui.book.readRecord.ReadRecordViewModel
 import io.legado.app.ui.book.search.SearchViewModel
+import io.legado.app.ui.book.source.manage.BookSourceViewModel
 import io.legado.app.ui.book.searchContent.SearchContentViewModel
 import io.legado.app.ui.book.toc.TocViewModel
 import io.legado.app.ui.book.toc.rule.TxtTocRuleViewModel
@@ -293,6 +294,7 @@ val appModule = module {
     viewModelOf(::ChangeCoverViewModel)
     viewModelOf(::ChangeBookSourceComposeViewModel)
     viewModelOf(::ChangeBookSourceViewModel)
+    viewModelOf(::BookSourceViewModel)
     viewModelOf(::ChangeChapterSourceViewModel)
     viewModelOf(::ExploreViewModel)
     viewModelOf(::RssViewModel)

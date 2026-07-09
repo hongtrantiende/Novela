@@ -219,6 +219,7 @@ private fun BookInfoScreenContent(
                                 onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
                                 onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
                                 onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
+                                onKindClick = { onIntent(BookInfoIntent.KindClick(it)) },
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                                 sharedCoverKey = sharedCoverKey,
@@ -647,6 +648,7 @@ private fun BookInfoHeader(
     onAuthorClick: (Boolean) -> Unit,
     onBookNameClick: (Boolean) -> Unit,
     onOriginClick: () -> Unit,
+    onKindClick: (String) -> Unit,
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     sharedCoverKey: String?,
@@ -784,6 +786,7 @@ private fun BookInfoHeader(
                             textStyle = LegadoTheme.typography.labelLargeEmphasized,
                             backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
                             contentColor = LegadoTheme.colorScheme.onSurface,
+                            onClick = { onKindClick(label) }
                         )
                     }
                 }

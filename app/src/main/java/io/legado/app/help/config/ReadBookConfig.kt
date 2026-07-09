@@ -134,6 +134,30 @@ object ReadBookConfig {
         readStyleRepository.readConfigs().let {
             configList.clear()
             configList.addAll(it)
+            
+            var migrated = false
+            configList.forEach { config ->
+                if (config.name == "Mặc định") {
+                    if (config.bgStr == "羊皮纸1.jpg" && config.bgType == 1) {
+                        config.bgType = 0
+                        config.bgStr = "#FFFFFF"
+                        migrated = true
+                    }
+                    if (config.bgStrNight == "羊皮纸1.jpg" && config.bgTypeNight == 1) {
+                        config.bgTypeNight = 0
+                        config.bgStrNight = "#000000"
+                        migrated = true
+                    }
+                    if (config.getTextColorNight() == "#ff000000" || config.getTextColorNight() == "#000000") {
+                        config.setTextColorNightString("#ffffffff")
+                        config.initColorInt = false
+                        migrated = true
+                    }
+                }
+            }
+            if (migrated) {
+                save()
+            }
         }
     }
 
@@ -866,8 +890,8 @@ object ReadBookConfig {
     @Keep
     data class Config(
         var name: String = "Mặc định",
-        var bgStr: String = "羊皮纸1.jpg",//白天背景
-        var bgStrNight: String = "羊皮纸1.jpg",//夜间背景
+        var bgStr: String = "#FFFFFF",//白天背景
+        var bgStrNight: String = "#000000",//夜间背景
         @Transient
         var menuBgColor: String = "#EEEFE3",
         @Transient
@@ -878,14 +902,14 @@ object ReadBookConfig {
         var menuAcColorNight: String = "#586249",
         var bgStrEInk: String = "#FFFFFF",//EInk背景
         var bgAlpha: Int = 100,//背景透明度
-        var bgType: Int = 1,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
-        var bgTypeNight: Int = 1,//夜间背景类型
+        var bgType: Int = 0,//白天背景类型 0:颜色, 1:assets图片, 2其它图片
+        var bgTypeNight: Int = 0,//夜间背景类型
         var bgTypeEInk: Int = 0,//EInk背景类型
         private var darkStatusIcon: Boolean = true,//白天是否暗色状态栏
         private var darkStatusIconNight: Boolean = false,//晚上是否暗色状态栏
         private var darkStatusIconEInk: Boolean = true,
         private var textColor: String = "#ff000000",//白天文字颜色
-        private var textColorNight: String = "#ff000000",//夜间文字颜色
+        private var textColorNight: String = "#ffffffff",//夜间文字颜色
         private var textColorEInk: String = "#000000",
         private var textAccentColor: String = "#834E00",//白天强调文字颜色
         private var textAccentColorNight: String = "#FE4D55",//夜间强调文字颜色
@@ -1020,7 +1044,7 @@ object ReadBookConfig {
         private var initAccentColorInt = false
 
         @Transient
-        private var initColorInt = false
+        var initColorInt = false
 
         fun toMap() = mapOf(
             "name" to name,
@@ -1236,7 +1260,7 @@ object ReadBookConfig {
             val bg = ReadStyleResolver.currentBackground(this)
             if (bg.type == 0 && mode != ReadStyleResolver.ReadStyleMode.EInk) {
                 val isNight = mode == ReadStyleResolver.ReadStyleMode.Night
-                return ThemeConfig.getActiveThemeTextColor(isNight)
+                return if (isNight) android.graphics.Color.WHITE else android.graphics.Color.BLACK
             }
             ensureColorInts()
             return currentModeValue(
@@ -1300,6 +1324,12 @@ object ReadBookConfig {
         fun getTextColor(): String = textColor
         fun getTextColorNight(): String = textColorNight
         fun getTextColorEInk(): String = textColorEInk
+        fun setTextColorString(colorStr: String) {
+            textColor = colorStr
+        }
+        fun setTextColorNightString(colorStr: String) {
+            textColorNight = colorStr
+        }
         fun getPageAnim(): Int = pageAnim
         fun getPageAnimEInk(): Int = pageAnimEInk
 

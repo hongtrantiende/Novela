@@ -17,6 +17,9 @@ object MemberManager {
 
     val isVip: Boolean
         get() {
+            if (io.legado.app.BuildConfig.DEBUG) {
+                return true
+            }
             if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
                 return true
             }
@@ -33,6 +36,9 @@ object MemberManager {
 
     val daysRemaining: Long
         get() {
+            if (io.legado.app.BuildConfig.DEBUG) {
+                return 9999
+            }
             if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
                 return 9999
             }
@@ -47,6 +53,9 @@ object MemberManager {
 
     val expireDateString: String
         get() {
+            if (io.legado.app.BuildConfig.DEBUG) {
+                return "Vô hạn (Debug)"
+            }
             if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
                 return "Vô hạn (Admin)"
             }
