@@ -153,7 +153,7 @@ android {
             val output = this as? com.android.build.gradle.api.ApkVariantOutput
             if (output != null) {
                 val abi = output.filters.find { it.filterType == "ABI" }?.identifier ?: "universal"
-                output.outputFileName = "Novela-${abi}-${variant.buildType.name}-v${variant.versionName}.apk"
+                output.outputFileName = "Novela-${abi}-${variant.buildType.name}-v${variant.versionName}_${variant.versionCode}.apk"
             }
         }
     }
