@@ -65,6 +65,21 @@ import io.legado.app.vbookextension.data.entity.ExtensionEntity
 import io.legado.app.vbookextension.data.entity.RepositoryEntity
 import io.legado.app.vbookextension.data.dao.ExtensionDao
 import io.legado.app.vbookextension.data.dao.RepositoryDao
+import io.legado.app.data.dao.AiArtifactDao
+import io.legado.app.data.dao.AiChatDao
+import io.legado.app.data.dao.AiMemoryDao
+import io.legado.app.data.dao.AiProfileDao
+import io.legado.app.data.dao.AiPromptPresetDao
+import io.legado.app.data.dao.BookContentProcessDao
+import io.legado.app.data.entities.AiArtifact
+import io.legado.app.data.entities.AiChatConversation
+import io.legado.app.data.entities.AiChatMessage
+import io.legado.app.data.entities.AiMemory
+import io.legado.app.data.entities.AiModelProfile
+import io.legado.app.data.entities.AiPromptPreset
+import io.legado.app.data.entities.AiProviderProfile
+import io.legado.app.data.entities.AiTaskPreset
+import io.legado.app.data.entities.BookContentProcess
 import org.intellij.lang.annotations.Language
 import splitties.init.appCtx
 import io.legado.app.utils.getPrefBoolean
@@ -81,7 +96,7 @@ val appDb by lazy {
 }
 
 @Database(
-    version = 92,
+    version = 93,
     exportSchema = true,
     entities = [Book::class, BookGroup::class, BookSource::class, BookChapter::class,
         ReplaceRule::class, SearchBook::class, SearchKeyword::class, Cookie::class,
@@ -90,7 +105,10 @@ val appDb by lazy {
         RssStar::class, TxtTocRule::class, ReadRecord::class, HttpTTS::class, Cache::class,
         RuleSub::class, DictRule::class, KeyboardAssist::class, Server::class,
         SearchContentHistory::class, HomepageModule::class, HomepageCustomSet::class,
-        HighlightRule::class, ExtensionEntity::class, RepositoryEntity::class],
+        HighlightRule::class, ExtensionEntity::class, RepositoryEntity::class,
+        AiProviderProfile::class, AiModelProfile::class, AiTaskPreset::class,
+        AiArtifact::class, AiChatConversation::class, AiChatMessage::class,
+        AiMemory::class, AiPromptPreset::class, BookContentProcess::class],
     views = [BookSourcePart::class],
     autoMigrations = [
         AutoMigration(from = 43, to = 44),
@@ -172,6 +190,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract val highlightRuleDao: HighlightRuleDao
     abstract val extensionDao: ExtensionDao
     abstract val repositoryDao: RepositoryDao
+
+    abstract val aiProfileDao: AiProfileDao
+    abstract val aiArtifactDao: AiArtifactDao
+    abstract val aiChatDao: AiChatDao
+    abstract val aiMemoryDao: AiMemoryDao
+    abstract val aiPromptPresetDao: AiPromptPresetDao
+    abstract val bookContentProcessDao: BookContentProcessDao
 
     companion object {
 

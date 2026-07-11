@@ -39,10 +39,32 @@ object MainNavigator {
             MainRouteSettingsThemeManage,
             MainRouteSettingsDownloadCache,
             MainRouteSettingsTranslation,
-            MainRouteSettingsQuickTranslate -> {
+            MainRouteSettingsQuickTranslate,
+            MainRouteSettingsAi,
+            MainRouteSettingsAiSummary,
+            MainRouteSettingsTranslationAi,
+            MainRouteSettingsAiScanDict,
+            MainRouteSettingsCoverAlbums -> {
                 backStack.clear()
                 backStack.add(MainRouteHome)
                 backStack.add(MainRouteSettings)
+                backStack.add(route)
+            }
+
+            MainRouteAiChat -> {
+                if (currentRoute == MainRouteSettingsAi || currentRoute == MainRouteHome) {
+                    backStack.add(route)
+                } else {
+                    backStack.clear()
+                    backStack.add(MainRouteHome)
+                    backStack.add(MainRouteSettings)
+                    backStack.add(MainRouteSettingsAi)
+                    backStack.add(route)
+                }
+            }
+
+            is MainRouteSettingsAiProviderEdit,
+            is MainRouteSettingsAiModelEdit -> {
                 backStack.add(route)
             }
 
@@ -255,6 +277,12 @@ object MainNavigator {
             MainRouteConst.ROUTE_SETTINGS_DOWNLOAD_CACHE -> MainRouteSettingsDownloadCache
             MainRouteConst.ROUTE_SETTINGS_TRANSLATION -> MainRouteSettingsTranslation
             MainRouteConst.ROUTE_SETTINGS_QUICK_TRANSLATE -> MainRouteSettingsQuickTranslate
+            MainRouteConst.ROUTE_SETTINGS_AI -> MainRouteSettingsAi
+            MainRouteConst.ROUTE_SETTINGS_AI_SUMMARY -> MainRouteSettingsAiSummary
+            MainRouteConst.ROUTE_SETTINGS_TRANSLATION_AI -> MainRouteSettingsTranslationAi
+            MainRouteConst.ROUTE_SETTINGS_AI_SCAN_DICT -> MainRouteSettingsAiScanDict
+            MainRouteConst.ROUTE_AI_CHAT -> MainRouteAiChat
+            MainRouteConst.ROUTE_SETTINGS_COVER_ALBUMS -> MainRouteSettingsCoverAlbums
             MainRouteConst.ROUTE_IMPORT_LOCAL -> MainRouteImportLocal
             MainRouteConst.ROUTE_IMPORT_REMOTE -> MainRouteImportRemote
             MainRouteConst.ROUTE_CACHE -> MainRouteCache(

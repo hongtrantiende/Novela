@@ -2552,6 +2552,12 @@ private fun loadToolButtons(
         infoMap.getValue("translate").toButton {
             onIntent(ReadBookIntent.ToggleTranslation)
         },
+        infoMap.getValue("ai_summary").toButton {
+            onIntent(ReadBookIntent.OpenChapterSummary)
+        },
+        infoMap.getValue("ai_rewrite").toButton {
+            onIntent(ReadBookIntent.OpenAiCurrentChapterRewrite)
+        },
     )
 
     val allMap = allButtons.associateBy { it.id }

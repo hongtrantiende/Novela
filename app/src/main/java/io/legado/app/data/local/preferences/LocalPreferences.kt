@@ -25,6 +25,11 @@ object LocalPreferencesKeys {
     val PRIVACY_POLICY_OK = booleanPreferencesKey("privacy_policy_ok")
     val PERMISSION_CHECKED = booleanPreferencesKey("permission_checked")
 
+    val COVER_ALBUM_MIGRATED = booleanPreferencesKey("cover_album_migrated")
+    val SELECTED_COVER_ALBUM_ID = stringPreferencesKey("selected_cover_album_id")
+    val SELECTED_LIGHT_COVER_ALBUM_ID = stringPreferencesKey("selected_light_cover_album_id")
+    val SELECTED_DARK_COVER_ALBUM_ID = stringPreferencesKey("selected_dark_cover_album_id")
+
     // Change source options
     val CHANGE_SOURCE_CHECK_AUTHOR = booleanPreferencesKey("changeSourceCheckAuthor")
     val CHANGE_SOURCE_LOAD_INFO = booleanPreferencesKey("changeSourceLoadInfo")

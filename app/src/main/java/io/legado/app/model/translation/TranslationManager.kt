@@ -23,6 +23,7 @@ object TranslationManager : KoinComponent {
 
     private val translationCacheGateway: TranslationCacheGateway by inject()
     private val translateChapterUseCase: TranslateChapterUseCase by inject()
+    private val aiProfileGateway: io.legado.app.domain.gateway.AiProfileGateway by inject()
 
     /** Per-chapter task state flows: bookUrl+chapterIndex -> StateFlow (only for in-progress tasks) */
     private val _taskStateFlows =
@@ -232,98 +233,42 @@ object TranslationManager : KoinComponent {
         val genre = book.kind?.takeIf { it.isNotBlank() } ?: "Không rõ"
         
         try {
+            val preset = aiProfileGateway.getTaskPreset(io.legado.app.domain.model.AiTaskType.SCAN_DICT)
             val isAdvanced = TranslationConfig.llmScanAdvanced
+            val promptTemplate = preset?.promptTemplate ?: io.legado.app.domain.model.AiPromptTemplate.DEFAULT_SCAN_DICT
+            
             val prompt = if (isAdvanced) {
                 val translatedContent = TranslateUtils.forceTranslateContent(rawContent)
-                """
-                Bạn là một trợ lý dịch thuật Trung-Việt chuyên nghiệp, nhiệm vụ của bạn là đối chiếu bản gốc tiếng Trung và bản dịch thô từ từ điển để tìm ra và sửa các lỗi dịch sai, dịch kém chất lượng, từ đó xây dựng/cập nhật từ điển thuật ngữ cho bộ truyện.
-
-                ⚠️ NHIỆM VỤ BẮT BUỘC — PHẢI THỰC HIỆN NGHIÊM TÚC:
-                Đọc kỹ và đối chiếu TOÀN BỘ văn bản bản gốc tiếng Trung và bản dịch thô tiếng Việt dưới đây từ đầu đến cuối. Trích xuất, phân loại và SỬA LẠI các từ dịch sai/chưa tối ưu thuộc đúng 6 nhóm sau:
-
-                1. Tên nhân vật (TAG: PER): TẤT CẢ tên người, nhân vật xuất hiện bị dịch sai hoặc dịch không mượt trong bản dịch thô.
-                2. Địa danh (TAG: LOC): TẤT CẢ địa điểm, thành trì, núi, sông, thế giới bị dịch sai hoặc chưa tối ưu.
-                3. Tổ chức (TAG: ORG): TẤT CẢ tông môn, gia tộc, bang hội, tổ chức bị dịch sai hoặc chưa tối ưu.
-                4. Xưng hô (TAG: PRON): TẤT CẢ đại từ xưng hô, cách gọi đặc trưng bị dịch sai hoặc chưa tối ưu.
-                5. Từ vựng khác (TAG: USER): TẤT CẢ các danh từ, thuật ngữ, từ vựng chung trong truyện bị dịch sai hoặc dịch vô nghĩa trong bản dịch thô.
-                6. Lỗi dịch từ điển (TAG: ERR): Cụ thể các từ/cụm từ bị dịch sai nghĩa nghiêm trọng do từ điển (VietPhrase/Name) dịch sai, dịch ngớ ngẩn (Ví dụ: Từ gốc chỉ hành động/sự vật nhưng từ điển dịch ra nghĩa khác hoàn toàn hoặc dịch ra một từ vô nghĩa).
-
-                Thông tin ngữ cảnh:
-                - Thể loại truyện: $genre
-
-                Quy tắc dịch thuật bắt buộc:
-                - Truyện tiên hiệp/kiếm hiệp/huyền huyễn cổ đại Trung Quốc → dịch âm Hán-Việt chuẩn (萧炎→Tiêu Viêm/PER, 云岚宗→Vân Lam Tông/ORG).
-                - Truyện Võng Du/Khoa Huyễn/Tây Phương → phiên âm Latin/Anh (杰克→Jack/PER).
-                - Light Novel Nhật/Hàn → Romaji hoặc phiên âm gốc (桐人→Kirito/PER).
-                - TUYỆT ĐỐI KHÔNG dịch nghĩa đen tên riêng (萧炎 KHÔNG được dịch thành "Lửa Tiêu").
-
-                ⚠️ CÁC RÀNG BUỘC BẮT BUỘC:
-                - Đối chiếu kỹ lưỡng cả bản gốc tiếng Trung và bản dịch thô tiếng Việt.
-                - Quét TOÀN BỘ văn bản, KHÔNG bỏ qua đoạn nào.
-                - Liệt kê TẤT CẢ thực thể/từ vựng bị dịch sai hoặc chưa tối ưu, kể cả từ chỉ xuất hiện 1 lần.
-                - Mỗi thực thể chỉ xuất hiện 1 lần trong kết quả (không trùng lặp).
-                - Chỉ trả về danh sách thô, KHÔNG có markdown, KHÔNG có tiêu đề, KHÔNG giải thích.
-
-                Định dạng mỗi dòng (bắt buộc):
-                TừGốcTiếngTrung=BảnDịchChínhXác/TAG
-
-                Ví dụ:
-                萧炎=Tiêu Viêm/PER
-                云岚宗=Vân Lam Tông/ORG
-                迦南学院=Ca Nam Học Viện/LOC
-                师父=Sư phụ/PRON
-                斗帝=Đấu Đế/USER
-                白面=mặt trắng/ERR
-
-                ---
-                BẢN GỐC TIẾNG TRUNG:
-                $rawContent
+                var processedPrompt = promptTemplate
+                    .replace("{genre}", genre)
+                    .replace("${genre}", genre)
+                    .replace("$genre", genre)
+                    .replace("{content}", rawContent)
+                    .replace("${rawContent}", rawContent)
+                    .replace("$rawContent", rawContent)
                 
-                ---
-                BẢN DỊCH THÔ TỪ TỪ ĐIỂN:
-                $translatedContent
-                """.trimIndent()
+                if (processedPrompt.contains("{translatedContent}")) {
+                    processedPrompt = processedPrompt.replace("{translatedContent}", translatedContent)
+                } else if (processedPrompt.contains("${translatedContent}")) {
+                    processedPrompt = processedPrompt.replace("${translatedContent}", translatedContent)
+                } else if (processedPrompt.contains("$translatedContent")) {
+                    processedPrompt = processedPrompt.replace("$translatedContent", translatedContent)
+                } else {
+                    processedPrompt = processedPrompt + "\n\nBẢN DỊCH THÔ TỪ TỪ ĐIỂN:\n$translatedContent"
+                }
+                processedPrompt
             } else {
-                """
-                Bạn là một trợ lý dịch thuật Trung-Việt chuyên nghiệp, nhiệm vụ của bạn là xây dựng từ điển thuật ngữ cho bộ truyện.
-
-                ⚠️ NHIỆM VỤ BẮT BUỘC — PHẢI THỰC HIỆN NGHIÊM TÚC:
-                Đọc TOÀN BỘ văn bản chương truyện tiếng Trung dưới đây từ đầu đến cuối. Trích xuất và phân loại TOÀN BỘ, KHÔNG BỎ SÓT bất kỳ thực thể nào thuộc đúng 4 nhóm sau:
-
-                1. Tên nhân vật (TAG: PER): TẤT CẢ tên người, nhân vật xuất hiện — dù nhân vật chính, phụ, hay chỉ được nhắc đến 1 lần.
-                2. Địa danh (TAG: LOC): TẤT CẢ địa điểm, thành trì, núi, sông, vùng đất, cõi giới, thế giới.
-                3. Tổ chức (TAG: ORG): TẤT CẢ tông môn, gia tộc, bang hội, trường phái, đội nhóm, tổ chức.
-                4. Xưng hô (TAG: PRON): TẤT CẢ đại từ xưng hô, cách gọi đặc trưng (ví dụ: 师父=Sư phụ, 弟子=Đệ tử, 陛下=Bệ hạ).
-
-                Thông tin ngữ cảnh:
-                - Thể loại truyện: $genre
-
-                Quy tắc dịch thuật bắt buộc:
-                - Truyện tiên hiệp/kiếm hiệp/huyền huyễn cổ đại Trung Quốc → dịch âm Hán-Việt chuẩn (萧炎→Tiêu Viêm/PER, 云岚宗→Vân Lam Tông/ORG).
-                - Truyện Võng Du/Khoa Huyễn/Tây Phương → phiên âm Latin/Anh (杰克→Jack/PER).
-                - Light Novel Nhật/Hàn → Romaji hoặc phiên âm gốc (桐人→Kirito/PER).
-                - TUYỆT ĐỐI KHÔNG dịch nghĩa đen tên riêng (萧炎 KHÔNG được dịch thành "Lửa Tiêu").
-
-                ⚠️ CÁC RÀNG BUỘC BẮT BUỘC:
-                - Quét TOÀN BỘ văn bản, KHÔNG bỏ qua đoạn nào.
-                - Liệt kê TẤT CẢ thực thể, kể cả nhân vật/địa điểm chỉ xuất hiện 1 lần.
-                - KHÔNG chọn lọc hay chỉ lấy tên "quan trọng" — phải lấy hết.
-                - Mỗi thực thể chỉ xuất hiện 1 lần trong kết quả (không trùng lặp).
-                - Chỉ trả về danh sách thô, KHÔNG có markdown, KHÔNG có tiêu đề, KHÔNG giải thích.
-
-                Định dạng mỗi dòng (bắt buộc):
-                TừGốcTiếngTrung=BảnDịchTiếngViệt/TAG
-
-                Ví dụ:
-                萧炎=Tiêu Viêm/PER
-                云岚宗=Vân Lam Tông/ORG
-                迦南学院=Ca Nam Học Viện/LOC
-                师父=Sư phụ/PRON
-
-                Nội dung chương truyện:
-                $rawContent
-                """.trimIndent()
+                promptTemplate
+                    .replace("{genre}", genre)
+                    .replace("${genre}", genre)
+                    .replace("$genre", genre)
+                    .replace("{content}", rawContent)
+                    .replace("${rawContent}", rawContent)
+                    .replace("$rawContent", rawContent)
             }
+
+            val temperature = preset?.params?.temperature ?: 0.1f
+            val maxTokens = preset?.params?.maxOutputTokens?.takeIf { it > 0 } ?: 4096
 
             val jsonBody = org.json.JSONObject().apply {
                 put("model", TranslationConfig.llmModel.ifBlank { "gpt-3.5-turbo" })
@@ -333,8 +278,8 @@ object TranslationManager : KoinComponent {
                         put("content", prompt)
                     })
                 })
-                put("temperature", 0.1)
-                put("max_tokens", 4096)
+                put("temperature", temperature)
+                put("max_tokens", maxTokens)
             }
 
             val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
@@ -346,6 +291,10 @@ object TranslationManager : KoinComponent {
                 TranslationConfig.llmBaseUrl + "/chat/completions"
             }
 
+            android.util.Log.d("TranslationManager", "AI Dict Scan Request URL: $url")
+            android.util.Log.d("TranslationManager", "AI Dict Scan Model: ${TranslationConfig.llmModel}")
+            android.util.Log.d("TranslationManager", "AI Dict Scan Prompt:\n$prompt")
+
             val request = okhttp3.Request.Builder()
                 .url(url)
                 .post(requestBody)
@@ -353,8 +302,10 @@ object TranslationManager : KoinComponent {
                 .build()
 
             io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                android.util.Log.d("TranslationManager", "AI Dict Scan Response Code: ${response.code}")
                 if (response.isSuccessful) {
                     val responseBody = response.body?.string() ?: return@use
+                    android.util.Log.d("TranslationManager", "AI Dict Scan Response Body:\n$responseBody")
                     val responseJson = org.json.JSONObject(responseBody)
                     val choices = responseJson.optJSONArray("choices")
                     if (choices != null && choices.length() > 0) {
@@ -364,6 +315,7 @@ object TranslationManager : KoinComponent {
                             .trim()
 
                         // Parse các dòng AI trả về
+                        val allowedTags = setOf("PER", "LOC", "ORG", "PRON")
                         val newEntries = ArrayList<Pair<String, String>>()
                         aiResult.split("\n").forEach { line ->
                             val cleanLine = line.trim()
@@ -373,7 +325,10 @@ object TranslationManager : KoinComponent {
                                     val key = parts[0].trim()
                                     val value = parts[1].trim()
                                     if (key.isNotEmpty() && value.isNotEmpty()) {
-                                        newEntries.add(Pair(key, value))
+                                        val tag = value.substringAfter('/', "").trim().uppercase()
+                                        if (tag in allowedTags) {
+                                            newEntries.add(Pair(key, value))
+                                        }
                                     }
                                 }
                             }

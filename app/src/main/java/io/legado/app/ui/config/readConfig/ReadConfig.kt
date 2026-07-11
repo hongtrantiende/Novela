@@ -1,6 +1,8 @@
 package io.legado.app.ui.config.readConfig
 
 import io.legado.app.data.repository.ReadPreferences
+import io.legado.app.ui.config.prefDelegate
+import io.legado.app.constant.PreferKey
 
 /**
  * 阅读配置门面
@@ -305,4 +307,11 @@ object ReadConfig {
             tocCountWords = preferences.tocCountWords
         }
     }
+
+    var autoSuggestDayNight by prefDelegate(PreferKey.autoSuggestDayNight, false)
+    var showSelectMenuIcon by prefDelegate(PreferKey.showSelectMenuIcon, true)
+    var textSelectMenuFilter by prefDelegate(PreferKey.textSelectMenuFilter, "")
+    var textSelectMenuConfig by prefDelegate(PreferKey.textSelectMenuConfig, "")
+    var ttsParagraphInterval by prefDelegate(PreferKey.ttsParagraphInterval, 0)
+
 }

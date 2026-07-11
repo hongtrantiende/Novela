@@ -89,7 +89,7 @@ object TranslationConfig {
 
     var translationEngine by prefDelegate(
         "translationEngine",
-        "QT"
+        "VP"
     )
 
     var translationScope by prefDelegate(
@@ -104,13 +104,26 @@ object TranslationConfig {
         translationScope = scope
         
         if (enabled) {
-            if (engine == "STV") {
-                isGlobalTranslateEnabled = false
-                llmTranslateEnabled = true
-                llmProvider = "sangtacviet"
-            } else {
-                isGlobalTranslateEnabled = true
-                llmTranslateEnabled = false
+            when (engine) {
+                "STV" -> {
+                    isGlobalTranslateEnabled = false
+                    llmTranslateEnabled = true
+                    llmProvider = PROVIDER_SANGTACVIET
+                }
+                "VP" -> {
+                    isGlobalTranslateEnabled = false
+                    llmTranslateEnabled = true
+                    llmProvider = PROVIDER_VIETPHRASE
+                }
+                "AI" -> {
+                    isGlobalTranslateEnabled = false
+                    llmTranslateEnabled = true
+                    llmProvider = PROVIDER_APP_AI
+                }
+                else -> {
+                    isGlobalTranslateEnabled = true
+                    llmTranslateEnabled = false
+                }
             }
         } else {
             isGlobalTranslateEnabled = false
@@ -120,8 +133,10 @@ object TranslationConfig {
 
     // Delegate constants to domain layer
     const val PROVIDER_OPENAI = TranslationConstants.PROVIDER_OPENAI
+    const val PROVIDER_APP_AI = TranslationConstants.PROVIDER_APP_AI
     const val PROVIDER_GOOGLE = TranslationConstants.PROVIDER_GOOGLE
     const val PROVIDER_SANGTACVIET = TranslationConstants.PROVIDER_SANGTACVIET
+    const val PROVIDER_VIETPHRASE = TranslationConstants.PROVIDER_VIETPHRASE
     val providerDisplayNames get() = TranslationConstants.providerDisplayNames
     val providerValues get() = TranslationConstants.providerValues
     val targetLanguages get() = TranslationConstants.targetLanguages

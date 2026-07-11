@@ -126,11 +126,24 @@ object QuickTranslateEngine {
                 fun parseLineAndPut(line: String, map: HashMap<String, String>) {
                     val eqIdx = line.indexOf('=')
                     if (eqIdx != -1) {
-                        val key = line.substring(0, eqIdx).trim()
+                        // Strip surrounding quotes from key
+                        val key = line.substring(0, eqIdx).trim().removeSurrounding("\"")
                         if (key.isNotEmpty()) {
-                            val rawValue = line.substring(eqIdx + 1)
+                            val rawValue = line.substring(eqIdx + 1).trim()
+                            
+                            // Find first occurrence of '/' or '|'
                             val slashIdx = rawValue.indexOf('/')
-                            val valPart = (if (slashIdx != -1) rawValue.substring(0, slashIdx) else rawValue).trim()
+                            val barIdx = rawValue.indexOf('|')
+                            val splitIdx = when {
+                                slashIdx != -1 && barIdx != -1 -> minOf(slashIdx, barIdx)
+                                slashIdx != -1 -> slashIdx
+                                barIdx != -1 -> barIdx
+                                else -> -1
+                            }
+                            
+                            val firstPart = if (splitIdx != -1) rawValue.substring(0, splitIdx).trim() else rawValue
+                            val valPart = firstPart.removeSurrounding("\"")
+                            
                             if (valPart.isNotEmpty()) {
                                 map[key] = dedup(valPart)
                             }

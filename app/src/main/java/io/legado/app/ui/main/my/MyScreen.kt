@@ -82,11 +82,14 @@ import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import org.koin.androidx.compose.koinViewModel
 
 
+import androidx.compose.material.icons.filled.AutoAwesome
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MyScreen(
     viewModel: MyViewModel = koinViewModel(),
     onOpenSettings: () -> Unit,
+    onNavigateToChat: () -> Unit,
     onNavigate: (PrefClickEvent) -> Unit
 ) {
 
@@ -189,6 +192,11 @@ fun MyScreen(
             SplicedColumnGroup(
                 title = stringResource(R.string.other)
             ) {
+                ClickableSettingItem(
+                    title = stringResource(R.string.ai_chat),
+                    imageVector = Icons.Default.AutoAwesome,
+                    onClick = onNavigateToChat
+                )
                 ClickableSettingItem(
                     title = stringResource(R.string.setting),
                     imageVector = Icons.Default.Settings,

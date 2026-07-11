@@ -4,14 +4,15 @@ object TranslationConstants {
 
     const val PROVIDER_OPENAI = "openai"
     const val PROVIDER_GOOGLE = "google"
+    const val PROVIDER_APP_AI = "app_ai"
     const val PROVIDER_VIETPHRASE = "vietphrase"
     const val PROVIDER_SANGTACVIET = "sangtacviet"
     const val MIN_TEMPERATURE = 0f
     const val MAX_TEMPERATURE = 2f
     const val DEFAULT_TEMPERATURE = 1.3f
 
-    val providerDisplayNames = listOf("Google Translate", "Giao diện thích ứng OpenAI", "Từ điển VietPhrase", "Dịch API Sáng Tác Việt")
-    val providerValues = listOf(PROVIDER_GOOGLE, PROVIDER_OPENAI, PROVIDER_VIETPHRASE, PROVIDER_SANGTACVIET)
+    val providerDisplayNames = listOf("Dịch API Sáng Tác Việt", "Từ điển VietPhrase", "Nhà cung cấp dịch AI")
+    val providerValues = listOf(PROVIDER_SANGTACVIET, PROVIDER_VIETPHRASE, PROVIDER_APP_AI)
 
     val targetLanguages = listOf(
         "vi" to "Tiếng Việt",

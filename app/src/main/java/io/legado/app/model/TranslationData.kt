@@ -10,5 +10,7 @@ package io.legado.app.model
 data class TranslationData(
     val names: DoubleArrayTrie,
     val vietPhrase: DoubleArrayTrie,
-    val chinesePhienAm: Map<String, String>
+    val chinesePhienAm: Map<String, String>,
+    val luatNhan: Map<String, String> = emptyMap(),
+    val pronouns: DoubleArrayTrie? = null
 )

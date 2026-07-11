@@ -151,7 +151,7 @@ jobs:
           echo "清空18PlusList.txt"
           echo "">$GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
       - name: Release Apk Sign
-        if: ${{ github.actor == 'hongtrantiende' && secrets.SIGNING_KEY != '' }}
+        if: github.actor == 'hongtrantiende' && secrets.SIGNING_KEY != ''
         shell: bash
         run: |
           echo "${{ secrets.SIGNING_KEY }}" | base64 -d >"$GITHUB_WORKSPACE/app/my-release-key.jks"
@@ -265,7 +265,6 @@ jobs:
           pattern: '*-apk-*'
           path: artifacts
           merge-multiple: true
-          if-no-artifact-found: error
 
       # 2. 下载 mapping 文件
       - name: 下载 Mapping Artifacts

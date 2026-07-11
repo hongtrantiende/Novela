@@ -56,6 +56,11 @@ import io.legado.app.ui.config.readConfig.ReadConfigScreen
 import io.legado.app.ui.config.themeConfig.ThemeConfigScreen
 import io.legado.app.ui.config.themeManage.ThemeManageScreen
 import io.legado.app.ui.config.translation.TranslationConfigScreen
+import io.legado.app.ui.config.ai.AiConfigRouteScreen
+import io.legado.app.ui.config.ai.AiProviderEditRouteScreen
+import io.legado.app.ui.config.ai.AiModelEditRouteScreen
+import io.legado.app.ui.config.ai.summary.AiSummaryConfigRouteScreen
+import io.legado.app.ui.ai.chat.AiChatRouteScreen
 import io.legado.app.ui.rss.article.MainRouteRssSort
 import io.legado.app.ui.rss.article.RssSortRouteScreen
 import io.legado.app.ui.rss.favorites.RssFavoritesScreen
@@ -180,6 +185,7 @@ fun MainActivity.mainEntryProvider(
                 onNavigateToRoute(MainRouteAbout)
             },
             onNavigateToQuickTranslate = { onNavigateToRoute(MainRouteSettingsQuickTranslate) },
+            onNavigateToChat = { onNavigateToRoute(MainRouteAiChat) },
             sharedTransitionScope = sharedTransitionScope,
             animatedVisibilityScope = LocalNavAnimatedContentScope.current,
         )
@@ -193,6 +199,7 @@ fun MainActivity.mainEntryProvider(
             onNavigateToCover = { backStack.add(MainRouteSettingsCover) },
             onNavigateToTheme = { backStack.add(MainRouteSettingsTheme) },
             onNavigateToBackup = { backStack.add(MainRouteSettingsBackup) },
+            onNavigateToAi = { backStack.add(MainRouteSettingsAi) },
             onNavigateToDownloadCache = { backStack.add(MainRouteSettingsDownloadCache) },
             onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) },
             onNavigateToLab = { backStack.add(MainRouteSettingsLabConfig) }
@@ -230,7 +237,72 @@ fun MainActivity.mainEntryProvider(
     entry<MainRouteSettingsTranslation> {
         TranslationConfigScreen(
             onBackClick = { onNavigateBack() },
-            onNavigateToQuickTranslate = { onNavigateToRoute(MainRouteSettingsQuickTranslate) }
+            onNavigateToQuickTranslate = { onNavigateToRoute(MainRouteSettingsQuickTranslate) },
+            onNavigateToAi = { onNavigateToRoute(MainRouteSettingsTranslationAi) }
+        )
+    }
+
+    entry<MainRouteSettingsAi> {
+        AiConfigRouteScreen(
+            onBackClick = { onNavigateBack() },
+            onNavigateToProviderEdit = { providerId ->
+                backStack.add(MainRouteSettingsAiProviderEdit(providerId = providerId))
+            },
+            onNavigateToModelEdit = { providerId, modelProfileId ->
+                backStack.add(
+                    MainRouteSettingsAiModelEdit(
+                        providerId = providerId.orEmpty(),
+                        modelId = modelProfileId
+                    )
+                )
+            },
+            onNavigateToTranslation = { backStack.add(MainRouteSettingsTranslation) },
+            onNavigateToAiSummary = { backStack.add(MainRouteSettingsAiSummary) },
+            onNavigateToAiScanDict = { backStack.add(MainRouteSettingsAiScanDict) }
+        )
+    }
+
+    entry<MainRouteSettingsAiSummary> {
+        AiSummaryConfigRouteScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteSettingsTranslationAi> {
+        io.legado.app.ui.config.translation.ai.TranslationAiConfigRouteScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteSettingsAiScanDict> {
+        io.legado.app.ui.config.ai.scandict.AiScanDictConfigRouteScreen(onBackClick = { onNavigateBack() })
+    }
+
+    entry<MainRouteSettingsAiProviderEdit> { route ->
+        AiProviderEditRouteScreen(
+            providerId = route.providerId,
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteSettingsAiModelEdit> { route ->
+        AiModelEditRouteScreen(
+            providerId = route.providerId,
+            modelProfileId = route.modelId,
+            onBackClick = { onNavigateBack() }
+        )
+    }
+
+    entry<MainRouteAiChat> {
+        AiChatRouteScreen(
+            onBackClick = { onNavigateBack() },
+            onOpenBookInfo = { book ->
+                onNavigateToRoute(
+                    MainRouteBookInfo(
+                        name = book.name,
+                        author = book.author,
+                        bookUrl = book.bookUrl,
+                        origin = book.origin,
+                        coverPath = book.coverPath
+                    )
+                )
+            }
         )
     }
 

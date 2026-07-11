@@ -25,13 +25,13 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import io.legado.app.ui.theme.LegadoTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -42,7 +42,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.legado.app.R
 import io.legado.app.help.config.SavedTheme
-import io.legado.app.help.config.ThemeImportExport
+import io.legado.app.help.config.ThemePackageManager
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.AppTextField
@@ -57,14 +57,18 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.restart
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.flow.collectLatest
+import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ThemeManageScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: ThemeManageViewModel = koinViewModel(),
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val context = LocalContext.current
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     var showSaveDialog by remember { mutableStateOf(false) }
     var newThemeName by remember { mutableStateOf("") }
@@ -73,38 +77,61 @@ fun ThemeManageScreen(
     var exportTarget by remember { mutableStateOf<SavedTheme?>(null) }
     var editTarget by remember { mutableStateOf<SavedTheme?>(null) }
     var showRestartDialog by remember { mutableStateOf(false) }
-    var savedThemesVersion by remember { mutableIntStateOf(0) }
-    val savedThemes = remember(savedThemesVersion) { ThemeImportExport.savedThemes.toList() }
+    val savedThemes = state.savedThemes
 
     val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
+        ActivityResultContracts.CreateDocument("application/zip")
     ) { uri ->
         uri?.let {
             val target = exportTarget
-            if (target != null) {
-                exportTarget = null
-                if (ThemeImportExport.exportSavedThemeToFile(context, target, it)) {
-                    context.toastOnUi(R.string.theme_manage_export_success)
-                } else {
-                    context.toastOnUi(R.string.theme_manage_export_failed)
-                }
-            } else if (ThemeImportExport.exportToFile(context, it)) {
-                context.toastOnUi(R.string.theme_manage_export_success)
-            } else {
-                context.toastOnUi(R.string.theme_manage_export_failed)
-            }
+            exportTarget = null
+            viewModel.onIntent(
+                ThemeManageIntent.ExportPackage(
+                    uri = it.toString(),
+                    themeName = target?.name,
+                    themeData = target?.data,
+                    savedTheme = target,
+                )
+            )
         }
     }
 
-    val importLauncher = rememberLauncherForActivityResult(
+    val importPackageLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
-            if (ThemeImportExport.importFromUri(context, it)) {
-                context.toastOnUi(R.string.theme_manage_import_success)
-                showRestartDialog = true
-            } else {
-                context.toastOnUi(R.string.theme_manage_import_failed)
+            viewModel.onIntent(ThemeManageIntent.ImportPackage(it.toString()))
+        }
+    }
+
+    val importLegacyLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            viewModel.onIntent(ThemeManageIntent.ImportLegacyJson(it.toString()))
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.effects.collectLatest { effect ->
+            when (effect) {
+                ThemeManageEffect.RestartRequired -> {
+                    showRestartDialog = true
+                }
+
+                is ThemeManageEffect.ShowResult -> {
+                    val message = buildString {
+                        append(context.getString(effect.messageRes))
+                        effect.detail?.takeIf(String::isNotBlank)?.let {
+                            append('\n')
+                            append(it)
+                        }
+                    }
+                    context.toastOnUi(message)
+                    if (effect.restartRequired) {
+                        showRestartDialog = true
+                    }
+                }
             }
         }
     }
@@ -146,14 +173,26 @@ fun ThemeManageScreen(
                         description = stringResource(R.string.theme_manage_export_current_summary),
                         onClick = {
                             exportTarget = null
-                            exportLauncher.launch("legado_theme_${System.currentTimeMillis()}.json")
+                            exportLauncher.launch(
+                                "materado_theme_${System.currentTimeMillis()}." +
+                                    ThemePackageManager.FILE_EXTENSION
+                            )
+                        }
+                    )
+                    ClickableSettingItem(
+                        title = stringResource(R.string.theme_manage_import_package),
+                        description = stringResource(R.string.theme_manage_import_package_summary),
+                        onClick = {
+                            importPackageLauncher.launch(
+                                arrayOf("application/zip", "application/octet-stream")
+                            )
                         }
                     )
                     ClickableSettingItem(
                         title = stringResource(R.string.theme_manage_import_config),
                         description = stringResource(R.string.theme_manage_import_config_summary),
                         onClick = {
-                            importLauncher.launch(arrayOf("application/json"))
+                            importLegacyLauncher.launch(arrayOf("application/json", "text/json"))
                         }
                     )
                 }
@@ -163,8 +202,8 @@ fun ThemeManageScreen(
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     AppText(
                         text = stringResource(R.string.theme_manage_saved_themes),
-                        style = LegadoTheme.typography.titleSmall,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                     )
                 }
@@ -176,7 +215,9 @@ fun ThemeManageScreen(
                         onEdit = { editTarget = theme },
                         onExport = {
                             exportTarget = theme
-                            exportLauncher.launch("${theme.name}.json")
+                            exportLauncher.launch(
+                                "${theme.name}.${ThemePackageManager.FILE_EXTENSION}"
+                            )
                         },
                         onDelete = { deleteTarget = theme }
                     )
@@ -212,8 +253,7 @@ fun ThemeManageScreen(
         confirmText = stringResource(R.string.theme_manage_save),
         onConfirm = {
             if (newThemeName.isNotBlank()) {
-                ThemeImportExport.saveCurrentAsTheme(newThemeName)
-                savedThemesVersion++
+                viewModel.onIntent(ThemeManageIntent.SaveTheme(newThemeName))
                 showSaveDialog = false
             }
         },
@@ -238,8 +278,7 @@ fun ThemeManageScreen(
         confirmText = stringResource(R.string.theme_manage_apply),
         onConfirm = {
             applyTarget?.let { theme ->
-                ThemeImportExport.applySavedTheme(theme)
-                showRestartDialog = true
+                viewModel.onIntent(ThemeManageIntent.ApplySavedTheme(theme))
             }
             applyTarget = null
         },
@@ -256,8 +295,7 @@ fun ThemeManageScreen(
         confirmText = stringResource(R.string.delete),
         onConfirm = {
             deleteTarget?.let { theme ->
-                ThemeImportExport.deleteSavedTheme(theme)
-                savedThemesVersion++
+                viewModel.onIntent(ThemeManageIntent.DeleteSavedTheme(theme))
             }
             deleteTarget = null
         },
@@ -273,11 +311,13 @@ fun ThemeManageScreen(
         themeName = editTarget?.name ?: "",
         onDismissRequest = { editTarget = null },
         onSave = { newName, newData ->
-            editTarget?.let { old ->
-                ThemeImportExport.deleteSavedTheme(old)
-            }
-            ThemeImportExport.saveCurrentAsTheme(newName, newData)
-            savedThemesVersion++
+            viewModel.onIntent(
+                ThemeManageIntent.SaveTheme(
+                    name = newName,
+                    data = newData,
+                    replacedTheme = editTarget,
+                )
+            )
             editTarget = null
         }
     )
@@ -300,15 +340,30 @@ private fun SavedThemeItem(
         ) {
             val lightPrimary = if (theme.data.themeColor != 0) Color(theme.data.themeColor)
             else if (theme.data.cPrimary != 0) Color(theme.data.cPrimary)
-            else LegadoTheme.colorScheme.primary
+            else MaterialTheme.colorScheme.primary
 
-            val darkPrimary = if (theme.data.cNPrimary != 0) Color(theme.data.cNPrimary)
-            else lightPrimary
+            val darkPrimary = if (theme.data.themeColorNight != 0) {
+                Color(theme.data.themeColorNight)
+            } else if (theme.data.cNPrimary != 0) {
+                Color(theme.data.cNPrimary)
+            } else {
+                lightPrimary
+            }
 
             val lightBg = if (theme.data.themeBackgroundColor != 0) Color(theme.data.themeBackgroundColor)
             else Color(0xFFF7F2FA)
 
-            val darkBg = if (theme.data.isPureBlack) Color.Black else Color(0xFF1C1B1F)
+            val darkBg = if (theme.data.themeBackgroundColorNight != 0) {
+                Color(theme.data.themeBackgroundColorNight)
+            } else if (theme.data.enableDeepPersonalization &&
+                theme.data.themeBackgroundColor != 0
+            ) {
+                Color(theme.data.themeBackgroundColor)
+            } else if (theme.data.isPureBlack) {
+                Color.Black
+            } else {
+                Color(0xFF1C1B1F)
+            }
 
             // 预览区域
             Column(
@@ -325,7 +380,7 @@ private fun SavedThemeItem(
                 ) {
                     AppText(
                         text = stringResource(R.string.theme_manage_preview_day),
-                        style = LegadoTheme.typography.labelMediumEmphasized,
+                        style = MaterialTheme.typography.labelMediumEmphasized,
                         color = if (theme.data.primaryTextColor != 0) Color(theme.data.primaryTextColor).copy(alpha = 0.6f)
                         else Color.Black.copy(alpha = 0.5f),
                         modifier = Modifier
@@ -357,8 +412,16 @@ private fun SavedThemeItem(
                 ) {
                     AppText(
                         text = stringResource(R.string.theme_manage_preview_night),
-                        style = LegadoTheme.typography.labelMediumEmphasized,
-                        color = Color.White.copy(alpha = 0.5f),
+                        style = MaterialTheme.typography.labelMediumEmphasized,
+                        color = if (theme.data.primaryTextColorNight != 0) {
+                            Color(theme.data.primaryTextColorNight).copy(alpha = 0.6f)
+                        } else if (theme.data.enableDeepPersonalization &&
+                            theme.data.primaryTextColor != 0
+                        ) {
+                            Color(theme.data.primaryTextColor).copy(alpha = 0.6f)
+                        } else {
+                            Color.White.copy(alpha = 0.5f)
+                        },
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .padding(start = 12.dp)
@@ -385,7 +448,7 @@ private fun SavedThemeItem(
             ) {
                 AppText(
                     text = theme.name,
-                    style = LegadoTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1
                 )
 

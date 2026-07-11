@@ -400,8 +400,16 @@ object TranslateUtils {
             
             // If translation found, take first part (split '/')
             if (translation != null) {
-                if (translation.contains("/")) {
-                    translation = translation.split("/")[0]
+                val slashIdx = translation.indexOf('/')
+                val barIdx = translation.indexOf('|')
+                val splitIdx = when {
+                    slashIdx != -1 && barIdx != -1 -> minOf(slashIdx, barIdx)
+                    slashIdx != -1 -> slashIdx
+                    barIdx != -1 -> barIdx
+                    else -> -1
+                }
+                if (splitIdx != -1) {
+                    translation = translation.substring(0, splitIdx).trim()
                 }
             } else {
                 translation = token
@@ -450,8 +458,16 @@ object TranslateUtils {
             
             var translation = searchInDictionaries(token, data)
             if (translation != null) {
-                if (translation.contains("/")) {
-                    translation = translation.split("/")[0]
+                val slashIdx = translation.indexOf('/')
+                val barIdx = translation.indexOf('|')
+                val splitIdx = when {
+                    slashIdx != -1 && barIdx != -1 -> minOf(slashIdx, barIdx)
+                    slashIdx != -1 -> slashIdx
+                    barIdx != -1 -> barIdx
+                    else -> -1
+                }
+                if (splitIdx != -1) {
+                    translation = translation.substring(0, splitIdx).trim()
                 }
                 val lastChar = if (sb.isNotEmpty()) sb.last() else ' '
                 if (lastChar.isLetterOrDigit()) {
@@ -623,8 +639,16 @@ object TranslateUtils {
         for (token in tokens) {
             var phienAm = data.chinesePhienAm[token]
             if (phienAm != null) {
-                if (phienAm.contains("/")) {
-                    phienAm = phienAm.split("/")[0]
+                val slashIdx = phienAm.indexOf('/')
+                val barIdx = phienAm.indexOf('|')
+                val splitIdx = when {
+                    slashIdx != -1 && barIdx != -1 -> minOf(slashIdx, barIdx)
+                    slashIdx != -1 -> slashIdx
+                    barIdx != -1 -> barIdx
+                    else -> -1
+                }
+                if (splitIdx != -1) {
+                    phienAm = phienAm.substring(0, splitIdx).trim()
                 }
             } else {
                 phienAm = token
@@ -776,6 +800,7 @@ fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = nul
             return@LaunchedEffect
         }
         
+        android.util.Log.d("TranslateUtils", "translateAsState starting for: '$text'")
         if (isEnabled) {
             if (engine == "QT") {
                 if (TranslationConfig.translationTarget == "Hán Việt") {
@@ -787,6 +812,7 @@ fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = nul
             } else {
                 state.value = TranslateUtils.translateWithEngine(text, engine, mode)
             }
+            android.util.Log.d("TranslateUtils", "translateAsState finished: '$text' -> '${state.value}'")
         } else {
             state.value = text
         }

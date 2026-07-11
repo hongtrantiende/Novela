@@ -32,7 +32,7 @@ data class ReadPreferences(
     val showBrightnessView: String = "1",
     val brightnessVwPos: String = "1",
     val readBrightness: Int = 100,
-    val brightnessAuto: Boolean = true,
+    val brightnessAuto: Boolean = false,
     val useUnderline: Boolean = false,
     val readSliderMode: String = "0",
     val doubleHorizontalPage: String = "0",
@@ -45,12 +45,15 @@ data class ReadPreferences(
     val sliderVibrator: Boolean = false,
     val selectVibrator: Boolean = false,
     val autoChangeSource: Boolean = true,
+    val autoSuggestDayNight: Boolean = false,
     val selectText: Boolean = true,
     val noAnimScrollPage: Boolean = false,
     val clickImgWay: String = "2",
     val optimizeRender: Boolean = false,
     val disableReturnKey: Boolean = false,
     val expandTextMenu: Boolean = false,
+    val showSelectMenuIcon: Boolean = true,
+    val textSelectMenuFilter: String = "",
     val showReadTitleAddition: Boolean = true,
     val autoReadSpeed: Int = 10,
     val prevKeys: String = "",
@@ -62,15 +65,15 @@ data class ReadPreferences(
     val shareLayout: Boolean = false,
     val readBarStyleFollowPage: Boolean = false,
     val readBarStyle: Int = 0,
-    val clickActionTL: Int = -1,
-    val clickActionTC: Int = -1,
-    val clickActionTR: Int = -1,
-    val clickActionML: Int = -1,
+    val clickActionTL: Int = 2,
+    val clickActionTC: Int = 2,
+    val clickActionTR: Int = 1,
+    val clickActionML: Int = 2,
     val clickActionMC: Int = 0,
-    val clickActionMR: Int = -1,
-    val clickActionBL: Int = -1,
-    val clickActionBC: Int = -1,
-    val clickActionBR: Int = -1,
+    val clickActionMR: Int = 1,
+    val clickActionBL: Int = 2,
+    val clickActionBC: Int = 1,
+    val clickActionBR: Int = 1,
     val fontFolder: String = "",
     val readMenuBgColor: Int = 0,
     val readMenuAccentColor: Int = 0,
@@ -85,8 +88,8 @@ data class ReadPreferences(
     val readMenuIconRowCount: Int = 1,
     val readMenuBottomCornerRadius: Int = 0,
     val readMenuFloatingBottomBar: Boolean = false,
-    val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.Haze,
-    val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.Haze,
+    val readMenuTopBarBlurMode: Int = ReadMenuBlurMode.None,
+    val readMenuBottomBarBlurMode: Int = ReadMenuBlurMode.None,
     val readMenuTopBarLiquidGlassButtons: Boolean = false,
     val readMenuTopBarTitleCapsule: Boolean = false,
     val readMenuBottomBarLiquidGlassButtons: Boolean = false,
@@ -212,6 +215,9 @@ class ReadSettingsRepository(
     suspend fun setAutoChangeSource(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.autoChangeSource, value)
 
+    suspend fun setAutoSuggestDayNight(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.autoSuggestDayNight, value)
+
     suspend fun setSelectText(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.selectText, value)
 
@@ -229,6 +235,12 @@ class ReadSettingsRepository(
 
     suspend fun setExpandTextMenu(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.expandTextMenu, value)
+
+    suspend fun setShowSelectMenuIcon(value: Boolean) =
+        settingsRepository.putBoolean(PreferKey.showSelectMenuIcon, value)
+
+    suspend fun setTextSelectMenuFilter(value: String) =
+        settingsRepository.putString(PreferKey.textSelectMenuFilter, value)
 
     suspend fun setShowReadTitleAddition(value: Boolean) =
         settingsRepository.putBoolean(PreferKey.showReadTitleAddition, value)
@@ -401,7 +413,7 @@ class ReadSettingsRepository(
             showBrightnessView = this[Keys.ShowBrightnessView] ?: "1",
             brightnessVwPos = this[Keys.BrightnessVwPos] ?: "1",
             readBrightness = this[Keys.ReadBrightness] ?: 100,
-            brightnessAuto = this[Keys.BrightnessAuto] ?: true,
+            brightnessAuto = this[Keys.BrightnessAuto] ?: false,
             useUnderline = this[Keys.UseUnderline] ?: false,
             readSliderMode = this[Keys.ReadSliderMode] ?: "0",
             doubleHorizontalPage = this[Keys.DoubleHorizontalPage] ?: "0",
@@ -414,12 +426,15 @@ class ReadSettingsRepository(
             sliderVibrator = this[Keys.SliderVibrator] ?: false,
             selectVibrator = this[Keys.SelectVibrator] ?: false,
             autoChangeSource = this[Keys.AutoChangeSource] ?: true,
+            autoSuggestDayNight = this[Keys.AutoSuggestDayNight] ?: false,
             selectText = this[Keys.SelectText] ?: true,
             noAnimScrollPage = this[Keys.NoAnimScrollPage] ?: false,
             clickImgWay = this[Keys.ClickImgWay] ?: "2",
             optimizeRender = this[Keys.OptimizeRender] ?: false,
             disableReturnKey = this[Keys.DisableReturnKey] ?: false,
             expandTextMenu = this[Keys.ExpandTextMenu] ?: false,
+            showSelectMenuIcon = this[Keys.ShowSelectMenuIcon] ?: true,
+            textSelectMenuFilter = this[Keys.TextSelectMenuFilter] ?: "",
             showReadTitleAddition = this[Keys.ShowReadTitleAddition] ?: true,
             autoReadSpeed = this[Keys.AutoReadSpeed] ?: 10,
             prevKeys = this[Keys.PrevKeys] ?: "",
@@ -431,15 +446,15 @@ class ReadSettingsRepository(
             shareLayout = this[Keys.ShareLayout] ?: false,
             readBarStyleFollowPage = this[Keys.ReadBarStyleFollowPage] ?: false,
             readBarStyle = this[Keys.ReadBarStyle] ?: 0,
-            clickActionTL = this[Keys.ClickActionTL] ?: -1,
-            clickActionTC = this[Keys.ClickActionTC] ?: -1,
-            clickActionTR = this[Keys.ClickActionTR] ?: -1,
-            clickActionML = this[Keys.ClickActionML] ?: -1,
+            clickActionTL = this[Keys.ClickActionTL] ?: 2,
+            clickActionTC = this[Keys.ClickActionTC] ?: 2,
+            clickActionTR = this[Keys.ClickActionTR] ?: 1,
+            clickActionML = this[Keys.ClickActionML] ?: 2,
             clickActionMC = this[Keys.ClickActionMC] ?: 0,
-            clickActionMR = this[Keys.ClickActionMR] ?: -1,
-            clickActionBL = this[Keys.ClickActionBL] ?: -1,
-            clickActionBC = this[Keys.ClickActionBC] ?: -1,
-            clickActionBR = this[Keys.ClickActionBR] ?: -1,
+            clickActionMR = this[Keys.ClickActionMR] ?: 1,
+            clickActionBL = this[Keys.ClickActionBL] ?: 2,
+            clickActionBC = this[Keys.ClickActionBC] ?: 1,
+            clickActionBR = this[Keys.ClickActionBR] ?: 1,
             fontFolder = this[Keys.FontFolder] ?: "",
             readMenuBgColor = this[Keys.ReadMenuBgColor] ?: 0,
             readMenuAccentColor = this[Keys.ReadMenuAccentColor] ?: 0,
@@ -454,9 +469,9 @@ class ReadSettingsRepository(
             readMenuIconRowCount = this[Keys.ReadMenuIconRowCount] ?: 1,
             readMenuBottomCornerRadius = this[Keys.ReadMenuBottomCornerRadius] ?: 0,
             readMenuFloatingBottomBar = this[Keys.ReadMenuFloatingBottomBar] ?: false,
-            readMenuTopBarBlurMode = this[Keys.ReadMenuTopBarBlurMode] ?: ReadMenuBlurMode.Haze,
+            readMenuTopBarBlurMode = this[Keys.ReadMenuTopBarBlurMode] ?: ReadMenuBlurMode.None,
             readMenuBottomBarBlurMode = this[Keys.ReadMenuBottomBarBlurMode]
-                ?: ReadMenuBlurMode.Haze,
+                ?: ReadMenuBlurMode.None,
             readMenuTopBarLiquidGlassButtons = this[Keys.ReadMenuTopBarLiquidGlassButtons] ?: false,
             readMenuTopBarTitleCapsule = this[Keys.ReadMenuTopBarTitleCapsule] ?: false,
             readMenuBottomBarLiquidGlassButtons = this[Keys.ReadMenuBottomBarLiquidGlassButtons]
@@ -512,12 +527,15 @@ class ReadSettingsRepository(
         val SliderVibrator = booleanPreferencesKey(PreferKey.sliderVibrator)
         val SelectVibrator = booleanPreferencesKey(PreferKey.selectVibrator)
         val AutoChangeSource = booleanPreferencesKey(PreferKey.autoChangeSource)
+        val AutoSuggestDayNight = booleanPreferencesKey(PreferKey.autoSuggestDayNight)
         val SelectText = booleanPreferencesKey(PreferKey.selectText)
         val NoAnimScrollPage = booleanPreferencesKey(PreferKey.noAnimScrollPage)
         val ClickImgWay = stringPreferencesKey(PreferKey.clickImgWay)
         val OptimizeRender = booleanPreferencesKey(PreferKey.optimizeRender)
         val DisableReturnKey = booleanPreferencesKey(PreferKey.disableReturnKey)
         val ExpandTextMenu = booleanPreferencesKey(PreferKey.expandTextMenu)
+        val ShowSelectMenuIcon = booleanPreferencesKey(PreferKey.showSelectMenuIcon)
+        val TextSelectMenuFilter = stringPreferencesKey(PreferKey.textSelectMenuFilter)
         val ShowReadTitleAddition = booleanPreferencesKey(PreferKey.showReadTitleAddition)
         val AutoReadSpeed = intPreferencesKey(PreferKey.autoReadSpeed)
         val PrevKeys = stringPreferencesKey(PreferKey.prevKeys)

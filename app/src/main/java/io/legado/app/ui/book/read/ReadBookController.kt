@@ -561,6 +561,19 @@ class ReadBookController(
                 return true
             }
 
+            R.id.menu_ai_rewrite -> {
+                refs?.readView?.curPage?.createBookmark()?.let { selection ->
+                    viewModel.onIntent(
+                        ReadBookIntent.OpenAiTextRewrite(
+                            text = selection.bookText,
+                            chapterIndex = selection.chapterIndex,
+                            chapterPosition = selection.chapterPos,
+                        )
+                    )
+                } ?: activity.toastOnUi(R.string.create_bookmark_error)
+                return true
+            }
+
 
 
 

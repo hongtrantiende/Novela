@@ -386,73 +386,93 @@ class DoubleArrayTrie : ITrieDictionary {
 
     /** Insert for build (stores entry index in terminal base — used for legacy heap mode). */
     private fun insert(siblings: List<Node>, parentIndex: Int, keys: Array<String>, values: Array<String>) {
-        if (siblings.isEmpty()) return
-        var begin: Int
-        var pos = maxOf(nextCheckPos, siblings[0].code + 1) - 1
+        data class Frame(val siblings: List<Node>, val parentIndex: Int)
+        val stack = ArrayDeque<Frame>()
+        stack.addLast(Frame(siblings, parentIndex))
 
-        while (true) {
-            pos++
-            ensureCapacity(pos + 1)
-            if (check[pos] != -1) continue
-            begin = pos - siblings[0].code
-            if (begin <= 0) continue
-            if (used.size <= begin) ensureCapacity(begin + siblings.last().code + 1)
-            if (begin + siblings.last().code >= check.size) ensureCapacity(begin + siblings.last().code + 1)
-            if (used[begin]) continue
-            var conflict = false
-            for (s in siblings) {
-                val idx = begin + s.code
-                if (idx >= check.size) ensureCapacity(idx + 1)
-                if (check[idx] != -1) { conflict = true; break }
+        while (stack.isNotEmpty()) {
+            val frame = stack.removeLast()
+            val curSiblings = frame.siblings
+            val curParent = frame.parentIndex
+            if (curSiblings.isEmpty()) continue
+
+            var begin: Int
+            var pos = maxOf(nextCheckPos, curSiblings[0].code + 1) - 1
+
+            while (true) {
+                pos++
+                ensureCapacity(pos + 1)
+                if (check[pos] != -1) continue
+                begin = pos - curSiblings[0].code
+                if (begin <= 0) continue
+                if (used.size <= begin) ensureCapacity(begin + curSiblings.last().code + 1)
+                if (begin + curSiblings.last().code >= check.size) ensureCapacity(begin + curSiblings.last().code + 1)
+                if (used[begin]) continue
+                var conflict = false
+                for (s in curSiblings) {
+                    val idx = begin + s.code
+                    if (idx >= check.size) ensureCapacity(idx + 1)
+                    if (check[idx] != -1) { conflict = true; break }
+                }
+                if (!conflict) break
             }
-            if (!conflict) break
-        }
-        used[begin] = true
-        base[parentIndex] = begin
-        if (pos + 1 > nextCheckPos) nextCheckPos = pos
-        for (s in siblings) check[begin + s.code] = parentIndex
-        for (s in siblings) {
-            val idx = begin + s.code
-            if (s.code == 0) { base[idx] = s.left; continue }
-            val newSiblings = fetch(s, keys)
-            if (newSiblings.isEmpty()) continue
-            insert(newSiblings, idx, keys, values)
+            used[begin] = true
+            base[curParent] = begin
+            if (pos + 1 > nextCheckPos) nextCheckPos = pos
+            for (s in curSiblings) check[begin + s.code] = curParent
+            for (s in curSiblings) {
+                val idx = begin + s.code
+                if (s.code == 0) { base[idx] = s.left; continue }
+                val newSiblings = fetch(s, keys)
+                if (newSiblings.isEmpty()) continue
+                stack.addLast(Frame(newSiblings, idx))
+            }
         }
     }
 
     /** Insert for save (stores string pool offset in terminal base). */
     private fun insertWithOffsets(siblings: List<Node>, parentIndex: Int, keys: Array<String>, stringOffsets: IntArray) {
-        if (siblings.isEmpty()) return
-        var begin: Int
-        var pos = maxOf(nextCheckPos, siblings[0].code + 1) - 1
+        data class Frame(val siblings: List<Node>, val parentIndex: Int)
+        val stack = ArrayDeque<Frame>()
+        stack.addLast(Frame(siblings, parentIndex))
 
-        while (true) {
-            pos++
-            ensureCapacity(pos + 1)
-            if (check[pos] != -1) continue
-            begin = pos - siblings[0].code
-            if (begin <= 0) continue
-            if (used.size <= begin) ensureCapacity(begin + siblings.last().code + 1)
-            if (begin + siblings.last().code >= check.size) ensureCapacity(begin + siblings.last().code + 1)
-            if (used[begin]) continue
-            var conflict = false
-            for (s in siblings) {
-                val idx = begin + s.code
-                if (idx >= check.size) ensureCapacity(idx + 1)
-                if (check[idx] != -1) { conflict = true; break }
+        while (stack.isNotEmpty()) {
+            val frame = stack.removeLast()
+            val curSiblings = frame.siblings
+            val curParent = frame.parentIndex
+            if (curSiblings.isEmpty()) continue
+
+            var begin: Int
+            var pos = maxOf(nextCheckPos, curSiblings[0].code + 1) - 1
+
+            while (true) {
+                pos++
+                ensureCapacity(pos + 1)
+                if (check[pos] != -1) continue
+                begin = pos - curSiblings[0].code
+                if (begin <= 0) continue
+                if (used.size <= begin) ensureCapacity(begin + curSiblings.last().code + 1)
+                if (begin + curSiblings.last().code >= check.size) ensureCapacity(begin + curSiblings.last().code + 1)
+                if (used[begin]) continue
+                var conflict = false
+                for (s in curSiblings) {
+                    val idx = begin + s.code
+                    if (idx >= check.size) ensureCapacity(idx + 1)
+                    if (check[idx] != -1) { conflict = true; break }
+                }
+                if (!conflict) break
             }
-            if (!conflict) break
-        }
-        used[begin] = true
-        base[parentIndex] = begin
-        if (pos + 1 > nextCheckPos) nextCheckPos = pos
-        for (s in siblings) check[begin + s.code] = parentIndex
-        for (s in siblings) {
-            val idx = begin + s.code
-            if (s.code == 0) { base[idx] = stringOffsets[s.left]; continue }
-            val newSiblings = fetch(s, keys)
-            if (newSiblings.isEmpty()) continue
-            insertWithOffsets(newSiblings, idx, keys, stringOffsets)
+            used[begin] = true
+            base[curParent] = begin
+            if (pos + 1 > nextCheckPos) nextCheckPos = pos
+            for (s in curSiblings) check[begin + s.code] = curParent
+            for (s in curSiblings) {
+                val idx = begin + s.code
+                if (s.code == 0) { base[idx] = stringOffsets[s.left]; continue }
+                val newSiblings = fetch(s, keys)
+                if (newSiblings.isEmpty()) continue
+                stack.addLast(Frame(newSiblings, idx))
+            }
         }
     }
 

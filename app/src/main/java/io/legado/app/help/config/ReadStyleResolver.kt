@@ -63,18 +63,11 @@ object ReadStyleResolver {
     }
 
     fun currentBackground(config: ReadBookConfig.Config): ReadBackground {
-        val mode = currentMode()
-        val bg = when (mode) {
+        return when (currentMode()) {
             ReadStyleMode.EInk -> ReadBackground(config.bgTypeEInk, config.bgStrEInk)
             ReadStyleMode.Night -> ReadBackground(config.bgTypeNight, config.bgStrNight)
             ReadStyleMode.Day -> ReadBackground(config.bgType, config.bgStr)
         }
-        if (bg.type == 0) {
-            val isNight = mode == ReadStyleMode.Night
-            val themeBgColor = io.legado.app.ui.config.themeConfig.ThemeConfig.getActiveThemeBackgroundColor(isNight)
-            return ReadBackground(0, String.format("#%06X", 0xFFFFFF and themeBgColor))
-        }
-        return bg
     }
 
     fun backgroundPath(config: ReadBookConfig.Config, bgIndex: Int): String? {
@@ -84,17 +77,14 @@ object ReadStyleResolver {
             2 -> config.bgTypeEInk
             else -> error("unknown bgIndex: $bgIndex")
         }
+        if (bgType != 2) {
+            return null
+        }
         val bgStr = when (bgIndex) {
             0 -> config.bgStr
             1 -> config.bgStrNight
             2 -> config.bgStrEInk
             else -> error("unknown bgIndex: $bgIndex")
-        }
-        if (bgType == 1) {
-            return "file:///android_asset/bg/" + bgStr
-        }
-        if (bgType != 2) {
-            return null
         }
         return if (bgStr.contains(File.separator)) {
             bgStr

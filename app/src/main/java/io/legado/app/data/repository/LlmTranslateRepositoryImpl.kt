@@ -64,11 +64,26 @@ class LlmTranslateRepositoryImpl : LlmGateway {
                     retryReason
                 )
                 TranslationConstants.PROVIDER_VIETPHRASE -> {
-                    val translatedText = io.legado.app.utils.TranslateUtils.translateContent(text)
-                    if (translatedText.isNotEmpty()) {
-                        Result.success(translatedText)
+                    val context = splitties.init.appCtx
+                    val engine = io.legado.app.vbookextension.util.QuickTranslateEngine
+                    if (!engine.isDictLoaded()) {
+                        engine.init(context)
+                        // Wait for dict to load (max 3 seconds)
+                        var waitCount = 0
+                        while (engine.isDictLoading() && !engine.isDictLoaded() && waitCount < 30) {
+                            kotlinx.coroutines.delay(100)
+                            waitCount++
+                        }
+                    }
+                    if (engine.isDictLoaded()) {
+                        val translatedText = engine.translate(context, text)
+                        if (translatedText.isNotEmpty() && translatedText != text) {
+                            Result.success(translatedText)
+                        } else {
+                            Result.failure(Exception("VietPhrase translation returned same or empty text"))
+                        }
                     } else {
-                        Result.failure(Exception("Empty VietPhrase translation result"))
+                        Result.failure(Exception("VietPhrase dictionaries not loaded"))
                     }
                 }
                 TranslationConstants.PROVIDER_SANGTACVIET -> {

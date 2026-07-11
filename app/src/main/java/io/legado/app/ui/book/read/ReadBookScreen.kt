@@ -49,6 +49,9 @@ import io.legado.app.ui.book.read.sheet.ChangeChapterSourceSheet
 import io.legado.app.ui.book.read.sheet.CharsetConfigSheet
 import io.legado.app.ui.book.read.sheet.ClickActionConfigSheet
 import io.legado.app.ui.book.read.sheet.ContentEditSheet
+import io.legado.app.ui.book.read.sheet.ChapterSummarySheet
+import io.legado.app.ui.book.read.sheet.AiTextRewriteSheet
+import io.legado.app.ui.book.read.sheet.AiRewritePresetConfigSheet
 import io.legado.app.ui.dict.DictSheet
 import io.legado.app.ui.book.read.sheet.DownloadSheet
 import io.legado.app.ui.book.read.sheet.EffectiveReplacesSheet
@@ -184,12 +187,7 @@ fun ReadBookScreen(
             onDismissRequest = { onIntent(ReadBookIntent.DismissDialog) },
             onSettingsClick = onNavigateToTranslationSettings,
             onSave = { enabled, target, engine, scope ->
-                val mode = when {
-                    !enabled -> 0
-                    engine == "STV" -> 2
-                    else -> 1
-                }
-                onIntent(ReadBookIntent.SelectTranslationSource(mode))
+                onIntent(ReadBookIntent.SelectTranslationSource(0))
             }
         )
     }
@@ -286,6 +284,24 @@ fun ReadBookScreen(
     ContentEditSheet(
         show = state.activeSheet is ReadBookSheet.ContentEdit,
         state = state,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
+    )
+    ChapterSummarySheet(
+        show = state.activeSheet is ReadBookSheet.ChapterSummary,
+        state = state.chapterSummary,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
+    )
+    AiTextRewriteSheet(
+        show = state.activeSheet is ReadBookSheet.AiTextRewrite,
+        state = state.aiTextRewrite,
+        onIntent = onIntent,
+        onDismissRequest = dismissSheet,
+    )
+    AiRewritePresetConfigSheet(
+        show = state.activeSheet is ReadBookSheet.AiRewritePresetConfig,
+        state = state.aiRewritePresetConfig,
         onIntent = onIntent,
         onDismissRequest = dismissSheet,
     )

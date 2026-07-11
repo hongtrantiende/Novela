@@ -352,9 +352,19 @@ fun Context.shareWithQr(
 }
 
 fun Context.sendToClip(text: String) {
-    val clipData = ClipData.newPlainText(null, text)
-    clipboardManager.setPrimaryClip(clipData)
-    longToastOnUi(R.string.copy_complete)
+    try {
+        val maxClipLength = 500_000 // ~500KB, well under Android's 1MB Binder limit
+        val clippedText = if (text.length > maxClipLength) {
+            text.take(maxClipLength) + "\n\n... [Truncated: ${text.length} chars total]"
+        } else {
+            text
+        }
+        val clipData = ClipData.newPlainText(null, clippedText)
+        clipboardManager.setPrimaryClip(clipData)
+        longToastOnUi(R.string.copy_complete)
+    } catch (e: Exception) {
+        toastOnUi("Copy failed: ${e.localizedMessage}")
+    }
 }
 
 fun Context.getClipText(): String? {

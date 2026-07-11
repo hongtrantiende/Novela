@@ -11,11 +11,13 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.readRecord.ReadRecord
 import io.legado.app.data.entities.readRecord.ReadRecordSession
 import io.legado.app.data.repository.ReadRecordRepository
+import io.legado.app.vbookextension.data.repository.ExtensionRepository
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.book.isImage
 import io.legado.app.help.book.isLocal
+import io.legado.app.help.book.isLocalTxt
 import io.legado.app.help.book.isPdf
 import io.legado.app.help.book.isSameNameAuthor
 import io.legado.app.help.book.readSimulating
@@ -48,7 +50,6 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -85,7 +86,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     var bookSource: BookSource? = null
     var msg: String? = null
     private val readRecordRepository: ReadRecordRepository by inject()
-    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository by inject()
+    private val extensionRepository: ExtensionRepository by inject()
     private var lastReadLength: Long = 0
     private val loadingChapters = arrayListOf<Int>()
     private val readRecord = ReadRecord()
@@ -95,6 +96,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     private val curChapterLoadingLock = Mutex()
     private val nextChapterLoadingLock = Mutex()
     var readStartTime: Long = System.currentTimeMillis()
+    var isUiActive = false
+    val isAutoSaveSessionRunning: Boolean
+        get() = autoSaveJob != null
+
 
     /* 跳转进度前进度记录 */
     var lastBookProgress: BookProgress? = null
@@ -124,8 +129,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun resetData(book: Book) {
         ReadBook.book = book
-        val bookKey = io.legado.app.utils.MD5Utils.md5Encode16(book.bookUrl)
-        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(appCtx, bookKey)
         readRecord.bookName = book.name
         readRecord.bookAuthor = book.author
         readRecord.readTime = appDb.readRecordDao.getReadTime("", book.name, book.author) ?: 0
@@ -156,8 +159,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun upData(book: Book) {
         ReadBook.book = book
-        val bookKey = io.legado.app.utils.MD5Utils.md5Encode16(book.bookUrl)
-        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(appCtx, bookKey)
         chapterSize = appDb.bookChapterDao.getChapterCount(book.bookUrl)
         simulatedChapterSize = if (book.readSimulating()) {
             book.simulatedTotalChapterNum()
@@ -213,6 +214,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     }
 
     fun upReadBookConfig(book: Book) {
+        val bookKey = io.legado.app.utils.MD5Utils.md5Encode16(book.bookUrl)
+        io.legado.app.vbookextension.util.QuickTranslateEngine.initBookPrivateDict(appCtx, bookKey)
         val oldIndex = ReadBookConfig.styleSelect
         ReadBookConfig.isComic = book.isImage
         if (oldIndex != ReadBookConfig.styleSelect) {
@@ -253,14 +256,14 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun clearTextChapter() {
         clearExpiredChapterLoadingJob(true)
-        clearTranslationObserverJobs(true)
+        clearTranslationObserverJobs()
         prevTextChapter = null
         curTextChapter = null
         nextTextChapter = null
     }
 
-    private fun clearTranslationObserverJobs(forceAll: Boolean = false) {
-        translationObserverJobs.entries.filter { forceAll || it.key !in durChapterIndex - 1..durChapterIndex + 1 }
+    private fun clearTranslationObserverJobs() {
+        translationObserverJobs.entries.filter { it.key !in durChapterIndex - 1..durChapterIndex + 1 }
             .forEach { (index, job) ->
                 job.cancel()
                 translationObserverJobs.remove(index)
@@ -299,7 +302,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         Coroutine.async {
             AppWebDav.getBookProgress(book)
         }.onError {
-            AppLog.put("Không lấy được tiến trình đọc", it)
+            AppLog.put("拉取阅读进度失败", it)
         }.onSuccess { progress ->
             if (progress == null || progress.durChapterIndex < book.durChapterIndex ||
                 (progress.durChapterIndex == book.durChapterIndex
@@ -321,69 +324,88 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }
     }
 
-    fun initReadTime() {
-        val currentBookName = book?.name ?: return
-        val currentBookAuthor = book?.author ?: ""
-        if (currentActiveSession != null &&
-            (currentActiveSession!!.bookName != currentBookName || currentActiveSession!!.bookAuthor != currentBookAuthor)
-        ) {
-            commitReadSession()
+    fun startReadSession() {
+        synchronized(this) {
+            readStartTime = System.currentTimeMillis()
+            initReadTime()
+            startAutoSaveSession()
         }
+    }
 
-        if (currentActiveSession == null) {
-            lastReadLength = currentReadLength
-            currentActiveSession = ReadRecordSession(
-                deviceId = "",
-                bookName = currentBookName,
-                bookAuthor = currentBookAuthor,
-                startTime = readStartTime,
-                endTime = readStartTime,
-                words = durChapterIndex.toLong()
-            )
+    fun initReadTime() {
+        synchronized(this) {
+            val currentBookName = book?.name ?: return
+            val currentBookAuthor = book?.author ?: ""
+            if (currentActiveSession != null &&
+                (currentActiveSession!!.bookName != currentBookName || currentActiveSession!!.bookAuthor != currentBookAuthor)
+            ) {
+                commitReadSession()
+            }
+
+            if (currentActiveSession == null) {
+                lastReadLength = currentReadLength
+                currentActiveSession = ReadRecordSession(
+                    deviceId = "",
+                    bookName = currentBookName,
+                    bookAuthor = currentBookAuthor,
+                    startTime = readStartTime,
+                    endTime = readStartTime,
+                    words = durChapterIndex.toLong()
+                )
+            }
         }
     }
 
     fun upReadTime() {
-        val currentLength = currentReadLength
-        val currentBookName = book?.name ?: return
-        val currentBookAuthor = book?.author ?: ""
-        val endTime = System.currentTimeMillis()
+        synchronized(this) {
+            val currentLength = currentReadLength
+            val currentBookName = book?.name ?: return
+            val currentBookAuthor = book?.author ?: ""
+            val endTime = System.currentTimeMillis()
 
-        if (currentActiveSession == null ||
-            currentActiveSession!!.bookName != currentBookName ||
-            currentActiveSession!!.bookAuthor != currentBookAuthor
-        ) {
-            initReadTime()
-            return
+            if (currentActiveSession == null ||
+                currentActiveSession!!.bookName != currentBookName ||
+                currentActiveSession!!.bookAuthor != currentBookAuthor
+            ) {
+                initReadTime()
+                return
+            }
+
+            currentActiveSession = currentActiveSession!!.copy(
+                endTime = endTime,
+                words = durChapterIndex.toLong()
+            )
+
+            readStartTime = endTime
+            lastReadLength = currentLength
         }
-
-        currentActiveSession = currentActiveSession!!.copy(
-            endTime = endTime,
-            words = durChapterIndex.toLong()
-        )
-
-        readStartTime = endTime
-        lastReadLength = currentLength
     }
 
     fun startAutoSaveSession() {
-        autoSaveJob?.cancel()
-        autoSaveJob = ioScope.launch {
-            while (isActive) {
-                delay(AUTO_SAVE_INTERVAL)
-                commitSessionInternal()
+        synchronized(this) {
+            autoSaveJob?.cancel()
+            autoSaveJob = ioScope.launch {
+                while (isActive) {
+                    delay(AUTO_SAVE_INTERVAL)
+                    commitSessionInternal()
+                }
             }
         }
     }
 
     fun stopAutoSaveSession() {
-        autoSaveJob?.cancel()
-        autoSaveJob = null
+        synchronized(this) {
+            autoSaveJob?.cancel()
+            autoSaveJob = null
+        }
     }
 
     fun commitReadSession() {
-        val sessionToCommit = currentActiveSession ?: return
-        currentActiveSession = null
+        val sessionToCommit = synchronized(this) {
+            val session = currentActiveSession
+            currentActiveSession = null
+            session
+        } ?: return
         ioScope.launch {
             saveSessionToDb(sessionToCommit)
         }
@@ -393,7 +415,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
      * 内部提交逻辑（auto-save 专用）：保存后立即创建新 session 保证连续记录
      */
     private suspend fun commitSessionInternal() {
-        val sessionToSave = currentActiveSession ?: return
+        val sessionToSave = synchronized(this) { currentActiveSession } ?: return
         val sessionDuration = sessionToSave.endTime - sessionToSave.startTime
         if (sessionDuration < MIN_READ_DURATION) {
             return
@@ -401,15 +423,23 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         try {
             readRecordRepository.saveReadSession(sessionToSave)
         } catch (e: Exception) {
-            AppLog.put("Lỗi lưu phiên đọc: ${sessionToSave.bookName}", e)
+            AppLog.put("保存阅读会话出错: ${sessionToSave.bookName}", e)
             return
         }
         // 保存成功后立即创建新 session，避免 auto-save 空窗期
-        currentActiveSession = sessionToSave.copy(
-            startTime = sessionToSave.endTime,
-            endTime = sessionToSave.endTime,
-            words = durChapterIndex.toLong()
-        )
+        synchronized(this) {
+            val current = currentActiveSession
+            if (current != null &&
+                current.bookName == sessionToSave.bookName &&
+                current.bookAuthor == sessionToSave.bookAuthor
+            ) {
+                currentActiveSession = current.copy(
+                    startTime = sessionToSave.endTime,
+                    endTime = sessionToSave.endTime,
+                    words = durChapterIndex.toLong()
+                )
+            }
+        }
     }
 
     /**
@@ -421,7 +451,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         try {
             readRecordRepository.saveReadSession(session)
         } catch (e: Exception) {
-            AppLog.put("Lỗi lưu phiên đọc: ${session.bookName}", e)
+            AppLog.put("保存阅读会话出错: ${session.bookName}", e)
         }
     }
 
@@ -464,9 +494,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
 
     fun moveToNextChapter(upContent: Boolean, upContentInPlace: Boolean = true): Boolean {
         if (durChapterIndex < simulatedChapterSize - 1) {
-            if (BaseReadAloudService.isRun) {
-                BaseReadAloudService.instance?.playStop()
-            }
             durChapterPos = 0
             durChapterIndex++
             clearExpiredChapterLoadingJob()
@@ -474,11 +501,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curTextChapter = nextTextChapter
             nextTextChapter = null
             if (curTextChapter == null) {
-                AppLog.putDebug("moveToNextChapter-Chương chưa được tải, bắt đầu tải")
+                AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
                 if (upContentInPlace) callBack?.upContent()
                 loadContent(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
-                AppLog.putDebug("moveToNextChapter-Chapter đã được tải, hãy làm mới chế độ xem")
+                AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
                 callBack?.upContent()
             }
             loadContent(durChapterIndex.plus(1), upContent, false)
@@ -488,7 +515,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curPageChanged()
             return true
         } else {
-            AppLog.putDebug("Chuyển sang chương tiếp theo không thành công, không có chương tiếp theo")
+            AppLog.putDebug("跳转下一章失败,没有下一章")
             return false
         }
     }
@@ -505,11 +532,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curTextChapter = nextTextChapter
             nextTextChapter = null
             if (curTextChapter == null) {
-                AppLog.putDebug("moveToNextChapter-Chương chưa được tải, bắt đầu tải")
+                AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
                 if (upContentInPlace) callBack?.upContentAwait()
                 loadContentAwait(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent && upContentInPlace) {
-                AppLog.putDebug("moveToNextChapter-Chapter đã được tải, hãy làm mới chế độ xem")
+                AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
                 callBack?.upContentAwait()
             }
             loadContent(durChapterIndex.plus(1), upContent, false)
@@ -519,7 +546,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             curPageChanged()
             return true
         } else {
-            AppLog.putDebug("Chuyển sang chương tiếp theo không thành công, không có chương tiếp theo")
+            AppLog.putDebug("跳转下一章失败,没有下一章")
             return false
         }
     }
@@ -530,9 +557,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         upContentInPlace: Boolean = true
     ): Boolean {
         if (durChapterIndex > 0) {
-            if (BaseReadAloudService.isRun) {
-                BaseReadAloudService.instance?.playStop()
-            }
             durChapterPos = if (toLast) prevTextChapter?.lastReadLength ?: Int.MAX_VALUE else 0
             durChapterIndex--
             clearExpiredChapterLoadingJob()
@@ -593,9 +617,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         success: (() -> Unit)? = null
     ) {
         if (index < chapterSize) {
-            if (BaseReadAloudService.isRun) {
-                BaseReadAloudService.instance?.playStop()
-            }
             clearTextChapter()
             if (upContent) callBack?.upContent()
             durChapterIndex = index
@@ -629,15 +650,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     /**
      * 朗读
      */
-    fun readAloud(play: Boolean = true, startPos: Int = -1) {
+    fun readAloud(play: Boolean = true, startPos: Int = 0) {
         book ?: return
         val textChapter = curTextChapter ?: return
         if (textChapter.isCompleted) {
-            val actualStartPos = if (startPos >= 0) startPos else {
-                val pageIndex = durPageIndex
-                maxOf(0, durChapterPos - textChapter.getReadLength(pageIndex))
-            }
-            ReadAloud.play(appCtx, play, startPos = actualStartPos)
+            ReadAloud.play(appCtx, play, startPos = startPos)
         }
     }
 
@@ -731,7 +748,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
             val book = book!!
             val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, index) ?: run {
                 if (index == durChapterIndex) {
-                    upMsg("Chương không tồn tại")
+                    upMsg("章节不存在")
                 }
                 return@async
             }
@@ -739,8 +756,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 val content = if (book.getTranslationMode()) {
                     TranslationManager.getCachedTranslation(book, chapter)
                         ?: run {
-                            TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
-                                startTranslationObserver(taskFlow, book, chapter)
+                            val isAiEngine = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
+                                    io.legado.app.ui.config.translation.TranslationConfig.llmProvider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI
+                            if (!isAiEngine || index == durChapterIndex) {
+                                TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
+                                    startTranslationObserver(taskFlow, book, chapter)
+                                }
                             }
                             BookHelp.getContent(book, chapter)
                         }
@@ -765,9 +786,9 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         }.onError {
             removeLoading(index)
             if (index == durChapterIndex) {
-                upMsg("Lỗi tải văn bản\n${it.localizedMessage}")
+                upMsg("加载正文出错\n${it.localizedMessage}")
             }
-            AppLog.put("Lỗi tải văn bản\n${it.localizedMessage}", it)
+            AppLog.put("加载正文出错\n${it.localizedMessage}", it)
         }
     }
 
@@ -784,8 +805,12 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 val content = if (book.getTranslationMode()) {
                     TranslationManager.getCachedTranslation(book, chapter)
                         ?: run {
-                            TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
-                                startTranslationObserver(taskFlow, book, chapter)
+                            val isAiEngine = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
+                                    io.legado.app.ui.config.translation.TranslationConfig.llmProvider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI
+                            if (!isAiEngine || index == durChapterIndex) {
+                                TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
+                                    startTranslationObserver(taskFlow, book, chapter)
+                                }
                             }
                             BookHelp.getContent(book, chapter) ?: downloadAwait(chapter)
                         }
@@ -795,7 +820,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 contentLoadFinishAwait(book, chapter, content, upContent, resetPageOffset)
                 success?.invoke()
             } catch (e: Exception) {
-                AppLog.put("Lỗi tải văn bản\n${e.localizedMessage}")
+                AppLog.put("加载正文出错\n${e.localizedMessage}")
             } finally {
                 removeLoading(index)
             }
@@ -868,11 +893,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 removeLoading(chapter.index)
             }
         } else {
-            val msg = if (book.isLocal) "Không có nội dung" else "Không có nguồn sách"
+            val msg = if (book.isLocal) "无内容" else "没有书源"
             contentLoadFinish(
                 book,
                 chapter,
-                "Tải chính văn thất bại\n$msg",
+                "加载正文失败\n$msg",
                 resetPageOffset = resetPageOffset,
                 success = success
             )
@@ -894,8 +919,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
         if (bookSource != null) {
             return CacheBook.getOrCreate(bookSource, book).downloadAwait(chapter)
         } else {
-            val msg = if (book.isLocal) "Không có nội dung" else "Không có nguồn sách"
-            return "Tải chính văn thất bại\n$msg"
+            val msg = if (book.isLocal) "无内容" else "没有书源"
+            return "加载正文失败\n$msg"
         }
     }
 
@@ -915,15 +940,6 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         state.mixedContent?.let { mixed ->
                             contentLoadFinish(book, chapter, mixed, upContent = true, resetPageOffset = false)
                         }
-                    }
-                    TranslationChapterStatus.Translated -> {
-                        state.translatedContent?.let { finalContent ->
-                            contentLoadFinish(book, chapter, finalContent, upContent = true, resetPageOffset = false)
-                        }
-                        this@launch.cancel()
-                    }
-                    TranslationChapterStatus.Failed -> {
-                        this@launch.cancel()
                     }
                     else -> {
                         // no-op
@@ -1170,6 +1186,10 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
     fun setCharset(charset: String) {
         book?.let {
             it.charset = charset
+            if (it.isLocalTxt) {
+                TextFile.clear()
+                clearTextChapter()
+            }
             callBack?.loadChapterList(it)
         }
         saveRead()
@@ -1195,7 +1215,7 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 }
                 book.update()
             }.onFailure {
-                AppLog.put("Lưu thông tin tiến độ đọc sách lỗi\n$it", it)
+                AppLog.put("保存书籍阅读进度信息出错\n$it", it)
             }
         }
     }

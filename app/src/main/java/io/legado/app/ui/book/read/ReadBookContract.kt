@@ -165,6 +165,9 @@ data class ReadBookUiState(
     // Menu config (from ReadBookConfig via repository)
     val menuConfig: ReadMenuConfig = ReadMenuConfig(),
     val highlightRuleConfig: HighlightRuleConfigUiState = HighlightRuleConfigUiState(),
+    val chapterSummary: ChapterSummaryUiState = ChapterSummaryUiState(),
+    val aiTextRewrite: AiTextRewriteUiState = AiTextRewriteUiState(),
+    val aiRewritePresetConfig: AiRewritePresetConfigUiState = AiRewritePresetConfigUiState(),
 ) {
     val menuVisible: Boolean
         get() = menuState.visible
@@ -248,6 +251,8 @@ internal val ReadBookButtonIds = listOf(
     "next_chapter",
     "replace",
     "replace_badge",
+    "ai_summary",
+    "ai_rewrite",
 )
 
 sealed interface ReadBookIntent {
@@ -453,6 +458,32 @@ sealed interface ReadBookIntent {
     data class TextActionReplace(val text: String) : ReadBookIntent
     data class TextActionSearchContent(val text: String) : ReadBookIntent
     data class TextActionDict(val text: String) : ReadBookIntent
+
+    data object OpenChapterSummary : ReadBookIntent
+    data object RetryChapterSummary : ReadBookIntent
+    data class OpenAiTextRewrite(
+        val text: String,
+        val chapterIndex: Int,
+        val chapterPosition: Int,
+    ) : ReadBookIntent
+    data object OpenAiCurrentChapterRewrite : ReadBookIntent
+    data class SelectAiRewritePreset(val presetId: String) : ReadBookIntent
+    data class SetAiRewriteTemporaryInstruction(val instruction: String) : ReadBookIntent
+    data object GenerateAiTextRewrite : ReadBookIntent
+    data object RetryAiTextRewrite : ReadBookIntent
+    data class EditAiRewrittenText(val text: String) : ReadBookIntent
+    data object ConfirmAiTextRewrite : ReadBookIntent
+    data object OpenAiRewritePresetConfig : ReadBookIntent
+    data object CloseAiRewritePresetConfig : ReadBookIntent
+    data object AddAiRewritePreset : ReadBookIntent
+    data class EditAiRewritePreset(val preset: AiRewritePresetUi) : ReadBookIntent
+    data class SetAiRewritePresetName(val name: String) : ReadBookIntent
+    data class SetAiRewritePresetInstruction(val instruction: String) : ReadBookIntent
+    data object SaveAiRewritePreset : ReadBookIntent
+    data object CancelAiRewritePresetEdit : ReadBookIntent
+    data class RequestDeleteAiRewritePreset(val preset: AiRewritePresetUi) : ReadBookIntent
+    data object ConfirmDeleteAiRewritePreset : ReadBookIntent
+    data object DismissDeleteAiRewritePreset : ReadBookIntent
 
     // Screen / selection config
     data class KeepLightChanged(val value: String) : ReadBookIntent
@@ -676,6 +707,9 @@ sealed interface ReadBookEffect {
 
 @Immutable
 sealed interface ReadBookSheet {
+    data object ChapterSummary : ReadBookSheet
+    data object AiTextRewrite : ReadBookSheet
+    data object AiRewritePresetConfig : ReadBookSheet
     data class ScanNames(val selectedText: String? = null) : ReadBookSheet
     data object NerAnalyze : ReadBookSheet
     data object DictManager : ReadBookSheet
@@ -1233,3 +1267,52 @@ sealed interface ConfigUpdate {
         override val actions = setOf(ConfigUpdateAction.ReloadContent)
     }
 }
+
+@Stable
+data class ChapterSummaryUiState(
+    val bookUrl: String = "",
+    val chapterIndex: Int = -1,
+    val chapterTitle: String = "",
+    val isLoading: Boolean = false,
+    val summary: String = "",
+    val reasoningText: String = "",
+    val thinkingDuration: Int = 0,
+    val errorMessage: String? = null,
+)
+
+@Stable
+data class AiRewritePresetUi(
+    val id: String,
+    val name: String,
+    val instruction: String,
+)
+
+@Stable
+data class AiTextRewriteUiState(
+    val bookUrl: String = "",
+    val chapterIndex: Int = -1,
+    val chapterTitle: String = "",
+    val isLoading: Boolean = false,
+    val isApplying: Boolean = false,
+    val originalText: String = "",
+    val rewrittenText: String = "",
+    val reasoningText: String = "",
+    val thinkingDuration: Int = 0,
+    val selectedPresetId: String = "",
+    val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
+    val temporaryInstruction: String = "",
+    val referenceCount: Int = 0,
+    val errorMessage: String? = null,
+)
+
+@Stable
+data class AiRewritePresetConfigUiState(
+    val presets: ImmutableList<AiRewritePresetUi> = persistentListOf(),
+    val editing: Boolean = false,
+    val editingPresetId: String? = null,
+    val editingName: String = "",
+    val editingInstruction: String = "",
+    val deletePreset: AiRewritePresetUi? = null,
+    val errorMessage: String? = null,
+)
+

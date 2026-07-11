@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -841,6 +842,8 @@ internal fun readMenuButtonInfos(context: Context): List<ReadMenuButtonInfo> = l
     ReadMenuButtonInfo("replace", Icons.Default.FindReplace, context.getString(R.string.replace_purify)),
     ReadMenuButtonInfo("replace_badge", Icons.Default.AutoAwesome, context.getString(R.string.replace_purify_badge)),
     ReadMenuButtonInfo("translate", Icons.Default.Translate, context.getString(R.string.translate)),
+    ReadMenuButtonInfo("ai_summary", Icons.Default.AutoAwesome, context.getString(R.string.ai_chapter_summary)),
+    ReadMenuButtonInfo("ai_rewrite", Icons.Default.Edit, context.getString(R.string.ai_text_rewrite)),
 )
 
 // ========== Color Swatch ==========

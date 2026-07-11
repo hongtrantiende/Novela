@@ -16,8 +16,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import io.legado.app.data.appDb
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -77,13 +79,8 @@ fun DictManagerSheet(
 
     // AI settings state
     var showAiSettingsDialog by remember { mutableStateOf(false) }
-    var tempLlmBaseUrl by remember { mutableStateOf(TranslationConfig.llmBaseUrl) }
-    var tempLlmApiKey by remember { mutableStateOf(TranslationConfig.llmApiKey) }
-    var tempLlmModel by remember { mutableStateOf(TranslationConfig.llmModel) }
-    var tempLlmScanAdvanced by remember { mutableStateOf(TranslationConfig.llmScanAdvanced) }
-    var modelMenuExpanded by remember { mutableStateOf(false) }
-    var fetchedModels by remember { mutableStateOf<List<String>>(emptyList()) }
-    var isFetchingModels by remember { mutableStateOf(false) }
+    val providers by remember { appDb.aiProfileDao.observeProviders() }.collectAsState(initial = emptyList())
+    val models by remember { appDb.aiProfileDao.observeModels() }.collectAsState(initial = emptyList())
     
     val isScanningFlowState = io.legado.app.service.AiScanService.isScanningFlow.collectAsState()
     val scanProgressFlowState = io.legado.app.service.AiScanService.scanProgressFlow.collectAsState()
@@ -191,7 +188,7 @@ fun DictManagerSheet(
     AppModalBottomSheet(
         show = show,
         onDismissRequest = onDismissRequest,
-        animateSize = false
+        animateContentSize = false
     ) {
         Column(
             modifier = Modifier
@@ -236,10 +233,6 @@ fun DictManagerSheet(
                     Icon(Icons.Default.CloudUpload, contentDescription = "Nhập file TXT")
                 }
                 IconButton(onClick = {
-                    tempLlmBaseUrl = TranslationConfig.llmBaseUrl
-                    tempLlmApiKey = TranslationConfig.llmApiKey
-                    tempLlmModel = TranslationConfig.llmModel
-                    tempLlmScanAdvanced = false
                     showAiSettingsDialog = true
                 }) {
                     Icon(Icons.Default.Settings, contentDescription = "Cấu hình AI")
@@ -610,141 +603,63 @@ fun DictManagerSheet(
             AppAlertDialog(
                 show = true,
                 onDismissRequest = { showAiSettingsDialog = false },
-                title = "Cấu hình AI Quét Từ Điển",
+                title = "Chọn model quét từ điển",
                 content = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        OutlinedTextField(
-                            value = tempLlmBaseUrl,
-                            onValueChange = { tempLlmBaseUrl = it },
-                            label = { Text("Base URL") },
-                            placeholder = { Text("https://api.openai.com/v1") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        OutlinedTextField(
-                            value = tempLlmApiKey,
-                            onValueChange = { tempLlmApiKey = it },
-                            label = { Text("API Key") },
-                            placeholder = { Text("sk-...") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            OutlinedTextField(
-                                value = tempLlmModel,
-                                onValueChange = { tempLlmModel = it },
-                                label = { Text("Model") },
-                                placeholder = { Text("gpt-3.5-turbo") },
-                                trailingIcon = {
-                                    if (isFetchingModels) {
-                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                                    } else {
-                                        Text(
-                                            text = "Quét",
-                                            color = LegadoTheme.colorScheme.primary,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier
-                                                .clickable {
-                                                    if (tempLlmBaseUrl.isBlank()) {
-                                                        Toast.makeText(context, "Vui lòng nhập Base URL", Toast.LENGTH_SHORT).show()
-                                                        return@clickable
-                                                    }
-                                                    scope.launch(Dispatchers.IO) {
-                                                        isFetchingModels = true
-                                                        try {
-                                                            val url = if (tempLlmBaseUrl.endsWith("/")) {
-                                                                tempLlmBaseUrl + "models"
-                                                            } else {
-                                                                tempLlmBaseUrl + "/models"
-                                                            }
-                                                            val requestBuilder = okhttp3.Request.Builder().url(url)
-                                                            if (tempLlmApiKey.isNotBlank()) {
-                                                                requestBuilder.addHeader("Authorization", "Bearer $tempLlmApiKey")
-                                                            }
-                                                            val request = requestBuilder.build()
-                                                            val response = io.legado.app.help.http.okHttpClient.newCall(request).execute()
-                                                            try {
-                                                                if (response.isSuccessful) {
-                                                                    val bodyStr = response.body?.string() ?: ""
-                                                                    val json = org.json.JSONObject(bodyStr)
-                                                                    val dataArr = json.optJSONArray("data")
-                                                                    val modelsList = ArrayList<String>()
-                                                                    if (dataArr != null) {
-                                                                        for (i in 0 until dataArr.length()) {
-                                                                            val modelObj = dataArr.getJSONObject(i)
-                                                                            val id = modelObj.optString("id")
-                                                                            if (!id.isNullOrBlank()) {
-                                                                                modelsList.add(id)
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                    withContext(Dispatchers.Main) {
-                                                                        if (modelsList.isNotEmpty()) {
-                                                                            fetchedModels = modelsList.sorted()
-                                                                            modelMenuExpanded = true
-                                                                        } else {
-                                                                            Toast.makeText(context, "Không tìm thấy model nào", Toast.LENGTH_SHORT).show()
-                                                                        }
-                                                                    }
-                                                                } else {
-                                                                    withContext(Dispatchers.Main) {
-                                                                        Toast.makeText(context, "Lỗi HTTP: ${response.code}", Toast.LENGTH_SHORT).show()
-                                                                    }
-                                                                }
-                                                            } finally {
-                                                                response.close()
-                                                            }
-                                                        } catch (e: Exception) {
-                                                            withContext(Dispatchers.Main) {
-                                                                Toast.makeText(context, "Lỗi kết nối: ${e.message}", Toast.LENGTH_SHORT).show()
-                                                            }
-                                                        } finally {
-                                                            isFetchingModels = false
-                                                        }
-                                                    }
-                                                }
-                                                .padding(8.dp)
+                    LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
+                        if (models.isEmpty()) {
+                            item {
+                                Text("Chưa cấu hình model nào trong Cài đặt AI", modifier = Modifier.padding(16.dp))
+                            }
+                        } else {
+                            items(models) { model ->
+                                val provider = providers.find { it.id == model.providerId }
+                                val providerName = provider?.name ?: "Không rõ"
+                                val savedId = context.getSharedPreferences("ai_config", Context.MODE_PRIVATE)
+                                    .getString("selected_dict_scan_model_profile_id", "") ?: ""
+                                
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (provider != null) {
+                                                context.getSharedPreferences("ai_config", Context.MODE_PRIVATE)
+                                                    .edit()
+                                                    .putString("selected_dict_scan_model_profile_id", model.id)
+                                                    .apply()
+                                                
+                                                TranslationConfig.llmBaseUrl = provider.baseUrl
+                                                TranslationConfig.llmApiKey = provider.apiKey
+                                                TranslationConfig.llmModel = model.modelId
+                                                TranslationConfig.llmScanAdvanced = false
+                                                
+                                                Toast.makeText(context, "Đã chọn model: ${model.displayName}", Toast.LENGTH_SHORT).show()
+                                            }
+                                            showAiSettingsDialog = false
+                                        }
+                                        .padding(vertical = 12.dp, horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = model.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = LegadoTheme.colorScheme.onSurface)
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(text = "${providerName} / ${model.modelId}", fontSize = 12.sp, color = LegadoTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (model.id == savedId) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = LegadoTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
-                                },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(8.dp)
-                            )
-                            DropdownMenu(
-                                expanded = modelMenuExpanded,
-                                onDismissRequest = { modelMenuExpanded = false },
-                                modifier = Modifier.fillMaxWidth().heightIn(max = 200.dp)
-                            ) {
-                                fetchedModels.forEach { modelName ->
-                                    DropdownMenuItem(
-                                        text = { Text(modelName, fontSize = 13.sp) },
-                                        onClick = {
-                                            tempLlmModel = modelName
-                                            modelMenuExpanded = false
-                                        }
-                                    )
                                 }
                             }
                         }
                     }
                 },
-                confirmText = "Lưu",
-                onConfirm = {
-                    TranslationConfig.llmBaseUrl = tempLlmBaseUrl
-                    TranslationConfig.llmApiKey = tempLlmApiKey
-                    TranslationConfig.llmModel = tempLlmModel
-                    TranslationConfig.llmScanAdvanced = false
-                    Toast.makeText(context, "Đã lưu cấu hình AI", Toast.LENGTH_SHORT).show()
-                    showAiSettingsDialog = false
-                },
-                dismissText = "Hủy",
+                onConfirm = null,
+                dismissText = "Đóng",
                 onDismiss = { showAiSettingsDialog = false }
             )
         }

@@ -31,6 +31,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.disabled
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.SettingCard
@@ -52,6 +57,9 @@ fun SettingItem(
     dropdownMenu: (@Composable (onDismiss: () -> Unit) -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
+    enabled: Boolean = true,
+    semanticRole: Role? = null,
+    semanticStateDescription: String? = null,
     expanded: Boolean = false,
     onExpandChange: ((Boolean) -> Unit)? = null,
     expandContent: (@Composable ColumnScope.() -> Unit)? = null
@@ -65,13 +73,20 @@ fun SettingItem(
             .fillMaxWidth(),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = color ?: LegadoTheme.colorScheme.surfaceContainerLow
+            containerColor = color ?: MaterialTheme.colorScheme.surfaceContainerLow
         ),
     ) {
         Column {
             ListItem(
                 modifier = Modifier
+                    .semantics(mergeDescendants = true) {
+                        semanticRole?.let { role = it }
+                        semanticStateDescription?.let { stateDescription = it }
+                        if (!enabled) disabled()
+                    }
                     .combinedClickable(
+                        enabled = enabled,
+                        role = semanticRole,
                         onClick = {
                             when {
                                 dropdownMenu != null -> showMenu = true
@@ -90,13 +105,13 @@ fun SettingItem(
                             Icon(
                                 painter = painter,
                                 contentDescription = null,
-                                tint = LegadoTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         } else if (imageVector != null) {
                             Icon(
                                 imageVector = imageVector,
                                 contentDescription = null,
-                                tint = LegadoTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -114,14 +129,14 @@ fun SettingItem(
                                 AppText(
                                     it,
                                     style = LegadoTheme.typography.bodySmallEmphasized,
-                                    color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
                             }
                             option?.let {
                                 AppText(
                                     it,
                                     style = LegadoTheme.typography.labelMediumEmphasized,
-                                    color = LegadoTheme.colorScheme.primary
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }

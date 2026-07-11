@@ -1,4 +1,4 @@
-﻿package io.legado.app.ui.widget.components
+package io.legado.app.ui.widget.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -21,6 +21,8 @@ fun ValueStepper(
     onValueChange: (Float) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    showDecimal: Boolean = false,
+    valueFormat: ((Float) -> String)? = null,
 ) {
     Row(
         modifier = modifier,
@@ -35,11 +37,16 @@ fun ValueStepper(
             enabled = enabled,
             icon = Icons.Default.Remove,
         )
+        val displayText = valueFormat?.invoke(displayValue) ?: if (showDecimal) {
+            displayValue.toString()
+        } else {
+            displayValue.toInt().toString()
+        }
         TextCard(
             cornerRadius = 8.dp,
             horizontalPadding = 8.dp,
             verticalPadding = 4.dp,
-            text = displayValue.toInt().toString(),
+            text = displayText,
             backgroundColor = LegadoTheme.colorScheme.surfaceContainerHigh,
             contentColor = LegadoTheme.colorScheme.onSurface
         )

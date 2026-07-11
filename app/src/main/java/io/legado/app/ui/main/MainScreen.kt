@@ -131,6 +131,7 @@ fun MainScreen(
     onNavigateToReadRecordOverview: () -> Unit,
     onNavigateToAbout: () -> Unit,
     onNavigateToQuickTranslate: () -> Unit,
+    onNavigateToChat: () -> Unit,
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
 ) {
@@ -479,6 +480,7 @@ fun MainScreen(
 
                             MainDestination.My -> MyScreen(
                                 onOpenSettings = onOpenSettings,
+                                onNavigateToChat = onNavigateToChat,
                                 onNavigate = { event ->
                                     when (event) {
                                         PrefClickEvent.OpenBookCacheManage -> onNavigateToBookCacheManage()

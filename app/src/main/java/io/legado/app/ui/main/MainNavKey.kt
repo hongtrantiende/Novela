@@ -46,6 +46,30 @@ data object MainRouteSettingsTranslation : MainRoute
 data object MainRouteSettingsQuickTranslate : MainRoute
 
 @Serializable
+data object MainRouteSettingsAi : MainRoute
+
+@Serializable
+data class MainRouteSettingsAiProviderEdit(val providerId: String?) : MainRoute
+
+@Serializable
+data class MainRouteSettingsAiModelEdit(val providerId: String, val modelId: String?) : MainRoute
+
+@Serializable
+data object MainRouteSettingsAiSummary : MainRoute
+
+@Serializable
+data object MainRouteSettingsTranslationAi : MainRoute
+
+@Serializable
+data object MainRouteSettingsAiScanDict : MainRoute
+
+@Serializable
+data object MainRouteAiChat : MainRoute
+
+@Serializable
+data object MainRouteSettingsCoverAlbums : MainRoute
+
+@Serializable
 data object MainRouteImportLocal : MainRoute
 
 @Serializable
@@ -123,6 +147,14 @@ object MainRouteConst {
     const val ROUTE_SETTINGS_DOWNLOAD_CACHE = "settings/download_cache"
     const val ROUTE_SETTINGS_TRANSLATION = "settings/translation"
     const val ROUTE_SETTINGS_QUICK_TRANSLATE = "settings/quick_translate"
+    const val ROUTE_SETTINGS_AI = "settings/ai"
+    const val ROUTE_SETTINGS_AI_PROVIDER_EDIT = "settings/ai/provider/edit"
+    const val ROUTE_SETTINGS_AI_MODEL_EDIT = "settings/ai/model/edit"
+    const val ROUTE_SETTINGS_AI_SUMMARY = "settings/ai/summary"
+    const val ROUTE_SETTINGS_TRANSLATION_AI = "settings/translation/ai"
+    const val ROUTE_SETTINGS_AI_SCAN_DICT = "settings/ai/scan_dict"
+    const val ROUTE_AI_CHAT = "settings/ai/chat"
+    const val ROUTE_SETTINGS_COVER_ALBUMS = "settings/cover/albums"
     const val ROUTE_IMPORT_LOCAL = "import/local"
     const val ROUTE_IMPORT_REMOTE = "import/remote"
     const val ROUTE_CACHE = "cache"

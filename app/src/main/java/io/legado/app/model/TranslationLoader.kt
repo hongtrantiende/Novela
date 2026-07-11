@@ -36,11 +36,31 @@ object TranslationLoader {
     private const val PHONETIC_VERSION = 1
 
     /**
+     * Increment this when DoubleArrayTrie binary format or build logic changes.
+     * On mismatch, all cached .dat files will be cleared and rebuilt.
+     */
+    private const val DICT_BINARY_VERSION = 4
+    private const val PREF_DICT_BINARY_VERSION = "dict_binary_version"
+
+    private fun invalidateCacheIfNeeded() {
+        val prefs = appCtx.getSharedPreferences("translation_loader", android.content.Context.MODE_PRIVATE)
+        val cachedVersion = prefs.getInt(PREF_DICT_BINARY_VERSION, 0)
+        if (cachedVersion != DICT_BINARY_VERSION) {
+            android.util.Log.i("TranslationLoader", "Binary version changed ($cachedVersion -> $DICT_BINARY_VERSION), clearing all binary caches")
+            clearAllBinaryCache()
+            prefs.edit().putInt(PREF_DICT_BINARY_VERSION, DICT_BINARY_VERSION).apply()
+        }
+    }
+
+    /**
      * Load translation data (lazy loading, singleton pattern)
      * Priority: Binary files > Custom text files > Default text files
      */
     suspend fun loadTranslationData(): TranslationData? = withContext(Dispatchers.IO) {
         
+        // Invalidate binary cache if app/dict binary version changed
+        invalidateCacheIfNeeded()
+
         // Return cached data if available
         translationData?.let { 
             return@withContext it 
@@ -93,7 +113,23 @@ object TranslationLoader {
                     throw e
                 }
 
-                translationData = TranslationData(namesTrie, vietPhraseTrie, chinesePhienAm)
+                // Load LuatNhan dictionary (template patterns, optional)
+                val luatNhan = try {
+                    loadDownloadedMapDict("LuatNhan.txt")
+                } catch (e: Exception) {
+                    android.util.Log.w("TranslationLoader", "Failed to load LuatNhan dictionary, skipping", e)
+                    emptyMap()
+                }
+
+                // Load Pronouns dictionary (trie, optional)
+                val pronounsTrie = try {
+                    loadDownloadedTrieDict("Pronouns.txt")
+                } catch (e: Exception) {
+                    android.util.Log.w("TranslationLoader", "Failed to load Pronouns dictionary, skipping", e)
+                    null
+                }
+
+                translationData = TranslationData(namesTrie, vietPhraseTrie, chinesePhienAm, luatNhan, pronounsTrie)
                 translationData
             } catch (e: Exception) {
                 android.util.Log.e("TranslationLoader", "Error loading translation data", e)
@@ -116,54 +152,32 @@ object TranslationLoader {
     ): DoubleArrayTrie = withContext(Dispatchers.IO) {
         val trie = DoubleArrayTrie()
 
-        // Try custom dictionary first
+        // 1. Try custom dictionary first
         if (DictManager.hasCustomDict(customType)) {
             val customFile = DictManager.getCustomDictFile(customType)
             val customBinaryFile = File(customFile.parent, "${customFile.nameWithoutExtension}.dat")
-
-            if (customBinaryFile.exists()) {
-                try {
-                    trie.loadMapped(customBinaryFile)
-                    android.util.Log.d("TranslationLoader", "Loaded custom dict (mmap): ${customBinaryFile.path}")
-                    return@withContext trie
-                } catch (e: Exception) {
-                    try {
-                        customBinaryFile.delete()
-                        android.util.Log.w("TranslationLoader", "Deleted corrupted custom binary: ${customBinaryFile.path}")
-                    } catch (_: Exception) {}
-                }
-            }
-
-            if (customFile.exists()) {
-                FileInputStream(customFile).use { stream ->
-                    val entries = loadEntriesFromText(stream)
-                    // Build and save as VERSION 3 .dat
-                    val tmpFile = File(customBinaryFile.parentFile, customBinaryFile.name + ".tmp")
-                    try {
-                        FileOutputStream(tmpFile).use { fos ->
-                            BufferedOutputStream(fos, 1024 * 1024).use { bos ->
-                                trie.save(bos, entries)
-                            }
-                        }
-                        if (customBinaryFile.exists()) customBinaryFile.delete()
-                        if (!tmpFile.renameTo(customBinaryFile)) {
-                            throw IllegalStateException("Failed to rename temp cache")
-                        }
-                    } catch (e: Exception) {
-                        try { tmpFile.delete() } catch (_: Exception) {}
-                        android.util.Log.w("TranslationLoader", "Failed to cache custom trie", e)
-                    }
-                }
-                // Now load the saved file via mmap
-                if (customBinaryFile.exists()) {
-                    trie.loadMapped(customBinaryFile)
-                    android.util.Log.d("TranslationLoader", "Custom dict built+mapped: ${customBinaryFile.path}")
-                    return@withContext trie
-                }
+            if (loadDictionaryFromTextFile(customFile, customBinaryFile, trie)) {
+                return@withContext trie
             }
         }
 
-        // Try persistent default binary in filesDir (memory-mapped)
+        // 2. Try downloaded dictionaries in filesDir/dict/
+        val downloadedFileName = when (customType) {
+            DictManager.DictType.NAMES -> "Name.txt"
+            DictManager.DictType.VIETPHRASE -> "VietPhrase.txt"
+            DictManager.DictType.PHIENAM -> "PhienAm.txt"
+            DictManager.DictType.LUATNHAN -> "LuatNhan.txt"
+            DictManager.DictType.PRONOUNS -> "Pronouns.txt"
+        }
+        val downloadedFile = File(appCtx.filesDir, "dict/$downloadedFileName")
+        if (downloadedFile.exists()) {
+            val downloadedBinaryFile = File(downloadedFile.parentFile, "${downloadedFile.nameWithoutExtension}.dat")
+            if (loadDictionaryFromTextFile(downloadedFile, downloadedBinaryFile, trie)) {
+                return@withContext trie
+            }
+        }
+
+        // 3. Try default binary in filesDir
         val binDir = File(appCtx.filesDir, DEFAULT_BIN_DIR)
         val binFile = File(binDir, File(binaryAsset).name)
         if (binFile.exists()) {
@@ -177,28 +191,73 @@ object TranslationLoader {
             }
         }
 
-        // Copy asset to filesDir, then memory-map
-        binDir.mkdirs()
-        val tmpFile = File(binDir, binFile.name + ".tmp")
+        // Copy asset to filesDir, then memory-map (only if asset is present, else fails gracefully)
         try {
+            binDir.mkdirs()
+            val tmpFile = File(binDir, binFile.name + ".tmp")
             appCtx.assets.open(binaryAsset).use { input ->
                 FileOutputStream(tmpFile).use { fos ->
                     input.copyTo(fos, 1024 * 1024)
                 }
             }
             if (binFile.exists()) binFile.delete()
-            if (!tmpFile.renameTo(binFile)) {
-                throw IllegalStateException("Failed to rename temp asset copy")
+            if (tmpFile.renameTo(binFile)) {
+                trie.loadMapped(binFile)
+                android.util.Log.d("TranslationLoader", "Asset copied+mapped: ${binFile.path}")
+                return@withContext trie
             }
         } catch (e: Exception) {
-            try { tmpFile.delete() } catch (_: Exception) {}
-            android.util.Log.e("TranslationLoader", "Failed to copy asset to filesDir", e)
-            throw e
+            android.util.Log.w("TranslationLoader", "Failed to load default asset dictionary: $binaryAsset")
         }
 
-        trie.loadMapped(binFile)
-        android.util.Log.d("TranslationLoader", "Asset copied+mapped: ${binFile.path}")
         trie
+    }
+
+    private suspend fun loadDictionaryFromTextFile(
+        textFile: File,
+        binaryFile: File,
+        trie: DoubleArrayTrie
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (!textFile.exists()) return@withContext false
+        
+        if (binaryFile.exists()) {
+            try {
+                trie.loadMapped(binaryFile)
+                android.util.Log.d("TranslationLoader", "Loaded compiled dict (mmap): ${binaryFile.path}")
+                return@withContext true
+            } catch (e: Exception) {
+                try { binaryFile.delete() } catch (_: Exception) {}
+            }
+        }
+        
+        try {
+            FileInputStream(textFile).use { stream ->
+                val entries = loadEntriesFromText(stream)
+                val tmpFile = File(binaryFile.parentFile, binaryFile.name + ".tmp")
+                try {
+                    FileOutputStream(tmpFile).use { fos ->
+                        BufferedOutputStream(fos, 1024 * 1024).use { bos ->
+                            trie.save(bos, entries)
+                        }
+                    }
+                    if (binaryFile.exists()) binaryFile.delete()
+                    if (!tmpFile.renameTo(binaryFile)) {
+                        throw IllegalStateException("Failed to rename temp cache")
+                    }
+                } catch (e: Exception) {
+                    try { tmpFile.delete() } catch (_: Exception) {}
+                    android.util.Log.w("TranslationLoader", "Failed to cache compiled trie", e)
+                }
+            }
+            if (binaryFile.exists()) {
+                trie.loadMapped(binaryFile)
+                android.util.Log.d("TranslationLoader", "Compiled dict built+mapped: ${binaryFile.path}")
+                return@withContext true
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("TranslationLoader", "Error compiling text dictionary: ${textFile.path}", e)
+        }
+        return@withContext false
     }
     
     /**
@@ -208,6 +267,7 @@ object TranslationLoader {
         textAsset: String,
         customType: DictManager.DictType
     ): Map<String, String> = withContext(Dispatchers.IO) {
+        // 1. Try custom dictionary first
         if (DictManager.hasCustomDict(customType)) {
             val customFile = DictManager.getCustomDictFile(customType)
             val customBin = File(customFile.parent, "${customFile.nameWithoutExtension}$PHONETIC_BIN_SUFFIX")
@@ -238,6 +298,41 @@ object TranslationLoader {
             }
         }
 
+        // 2. Try downloaded dictionary in filesDir/dict/
+        val downloadedFile = File(appCtx.filesDir, "dict/PhienAm.txt")
+        if (downloadedFile.exists()) {
+            val downloadedBin = File(downloadedFile.parentFile, "PhienAm$PHONETIC_BIN_SUFFIX")
+            if (downloadedBin.exists()) {
+                try {
+                    android.util.Log.d("TranslationLoader", "Loaded downloaded phonetic binary: ${downloadedBin.path}")
+                    return@withContext loadPhoneticBinary(downloadedBin)
+                } catch (e: Exception) {
+                    try { downloadedBin.delete() } catch (_: Exception) {}
+                    android.util.Log.w("TranslationLoader", "Failed to load downloaded phonetic binary, fallback", e)
+                }
+            }
+
+            if (downloadedFile.exists()) {
+                android.util.Log.d("TranslationLoader", "Loading downloaded phonetic file: ${downloadedFile.path}")
+                try {
+                    FileInputStream(downloadedFile).use { stream ->
+                        val map = loadMapFromStream(stream)
+                        android.util.Log.d("TranslationLoader", "Downloaded phonetic entries loaded: ${map.size}")
+                        try {
+                            savePhoneticBinary(map, downloadedBin)
+                            android.util.Log.d("TranslationLoader", "Downloaded phonetic cached to: ${downloadedBin.path}")
+                        } catch (e: Exception) {
+                            android.util.Log.w("TranslationLoader", "Failed to cache downloaded phonetic", e)
+                        }
+                        return@withContext map
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("TranslationLoader", "Failed to load downloaded phonetic file", e)
+                }
+            }
+        }
+
+        // 3. Try persistent default binary in filesDir
         val defaultBinDir = File(appCtx.filesDir, DEFAULT_BIN_DIR)
         val defaultBin = File(defaultBinDir, File(textAsset).nameWithoutExtension + PHONETIC_BIN_SUFFIX)
         if (defaultBin.exists()) {
@@ -250,20 +345,26 @@ object TranslationLoader {
             }
         }
         
-        // Load default file
-        android.util.Log.d("TranslationLoader", "Loading default phonetic file: $textAsset")
-        appCtx.assets.open(textAsset).use { stream ->
-            val map = loadMapFromStream(stream)
-            android.util.Log.d("TranslationLoader", "Default phonetic entries loaded: ${map.size}")
-            try {
-                defaultBinDir.mkdirs()
-                savePhoneticBinary(map, defaultBin)
-                android.util.Log.d("TranslationLoader", "Default phonetic cached to: ${defaultBin.path}")
-            } catch (e: Exception) {
-                android.util.Log.w("TranslationLoader", "Failed to cache default phonetic", e)
+        // 4. Try copy default asset (fallback)
+        try {
+            android.util.Log.d("TranslationLoader", "Loading default phonetic file: $textAsset")
+            appCtx.assets.open(textAsset).use { stream ->
+                val map = loadMapFromStream(stream)
+                android.util.Log.d("TranslationLoader", "Default phonetic entries loaded: ${map.size}")
+                try {
+                    defaultBinDir.mkdirs()
+                    savePhoneticBinary(map, defaultBin)
+                    android.util.Log.d("TranslationLoader", "Default phonetic cached to: ${defaultBin.path}")
+                } catch (e: Exception) {
+                    android.util.Log.w("TranslationLoader", "Failed to cache default phonetic", e)
+                }
+                return@withContext map
             }
-            map
+        } catch (e: Exception) {
+            android.util.Log.w("TranslationLoader", "Failed to load default asset phonetic: $textAsset")
         }
+
+        emptyMap()
     }
 
     suspend fun prebuildAll() {
@@ -292,6 +393,12 @@ object TranslationLoader {
                         textAsset = "translate/vietphrase/ChinesePhienAmWords.txt",
                         customType = DictManager.DictType.PHIENAM
                     )
+                }
+                DictManager.DictType.LUATNHAN -> {
+                    loadDownloadedMapDict("LuatNhan.txt")
+                }
+                DictManager.DictType.PRONOUNS -> {
+                    loadDownloadedTrieDict("Pronouns.txt")
                 }
             }
         }
@@ -332,6 +439,45 @@ object TranslationLoader {
             throw IllegalStateException("Failed to finalize phonetic binary")
         }
     }
+
+    /**
+     * Load a downloaded map dictionary from filesDir/dict/
+     * Used for LuatNhan.txt (template patterns)
+     */
+    private suspend fun loadDownloadedMapDict(fileName: String): Map<String, String> = withContext(Dispatchers.IO) {
+        val downloadedFile = File(appCtx.filesDir, "dict/$fileName")
+        if (!downloadedFile.exists()) {
+            android.util.Log.d("TranslationLoader", "Downloaded dict not found: $fileName")
+            return@withContext emptyMap()
+        }
+        android.util.Log.d("TranslationLoader", "Loading downloaded map dict: $fileName")
+        FileInputStream(downloadedFile).use { stream ->
+            val map = loadMapFromStream(stream)
+            android.util.Log.d("TranslationLoader", "Loaded $fileName: ${map.size} entries")
+            map
+        }
+    }
+
+    /**
+     * Load a downloaded trie dictionary from filesDir/dict/
+     * Used for Pronouns.txt
+     */
+    private suspend fun loadDownloadedTrieDict(fileName: String): DoubleArrayTrie? = withContext(Dispatchers.IO) {
+        val downloadedFile = File(appCtx.filesDir, "dict/$fileName")
+        if (!downloadedFile.exists()) {
+            android.util.Log.d("TranslationLoader", "Downloaded dict not found: $fileName")
+            return@withContext null
+        }
+        val trie = DoubleArrayTrie()
+        val binaryFile = File(downloadedFile.parentFile, "${downloadedFile.nameWithoutExtension}.dat")
+        if (loadDictionaryFromTextFile(downloadedFile, binaryFile, trie)) {
+            android.util.Log.d("TranslationLoader", "Loaded trie dict $fileName successfully")
+            trie
+        } else {
+            android.util.Log.w("TranslationLoader", "Failed to load trie dict $fileName")
+            null
+        }
+    }
     
     /**
      * Load entries from text file (key=value format)
@@ -358,8 +504,23 @@ object TranslationLoader {
                             if (cleanLine.isNotEmpty() && cleanLine.contains("=")) {
                                 val parts = cleanLine.split("=", limit = 2)
                                 if (parts.size == 2) {
-                                    val key = parts[0].trim()
-                                    val value = parts[1].trim()
+                                    // Strip surrounding quotes from key
+                                    val key = parts[0].trim().removeSurrounding("\"")
+                                    val rawValue = parts[1].trim()
+                                    
+                                    // Find first occurrence of '/' or '|'
+                                    val slashIdx = rawValue.indexOf('/')
+                                    val barIdx = rawValue.indexOf('|')
+                                    val splitIdx = when {
+                                        slashIdx != -1 && barIdx != -1 -> minOf(slashIdx, barIdx)
+                                        slashIdx != -1 -> slashIdx
+                                        barIdx != -1 -> barIdx
+                                        else -> -1
+                                    }
+                                    
+                                    val firstPart = if (splitIdx != -1) rawValue.substring(0, splitIdx).trim() else rawValue
+                                    val value = firstPart.removeSurrounding("\"")
+                                    
                                     // Simplified validation - only check for empty/null
                                     if (key.isNotEmpty() && value.isNotEmpty()) {
                                         entries.add(Pair(key, value))
@@ -406,8 +567,8 @@ object TranslationLoader {
                             if (cleanLine.isNotEmpty() && cleanLine.contains("=")) {
                                 val parts = cleanLine.split("=", limit = 2)
                                 if (parts.size == 2) {
-                                    val key = parts[0].trim()
-                                    val value = parts[1].trim()
+                                    val key = parts[0].trim().removeSurrounding("\"")
+                                    val value = parts[1].trim().removeSurrounding("\"")
                                     // Simplified validation - only check for empty/null
                                     if (key.isNotEmpty() && value.isNotEmpty()) {
                                         map[key] = value
@@ -457,6 +618,28 @@ object TranslationLoader {
                 if (file.name.endsWith(".dat")) {
                     file.delete()
                     android.util.Log.d("TranslationLoader", "Deleted custom binary: ${file.name}")
+                }
+            }
+
+            // Clear downloaded dict binary files (filesDir/dict/)
+            val dictDir = File(appCtx.filesDir, "dict")
+            if (dictDir.exists()) {
+                dictDir.listFiles()?.forEach { file ->
+                    if (file.name.endsWith(".dat") || file.name.endsWith(PHONETIC_BIN_SUFFIX)) {
+                        file.delete()
+                        android.util.Log.d("TranslationLoader", "Deleted downloaded dict binary: ${file.name}")
+                    }
+                }
+            }
+
+            // Clear default binary files (filesDir/translate/binary/)
+            val defaultBinDir = File(appCtx.filesDir, DEFAULT_BIN_DIR)
+            if (defaultBinDir.exists()) {
+                defaultBinDir.listFiles()?.forEach { file ->
+                    if (file.name.endsWith(".dat") || file.name.endsWith(PHONETIC_BIN_SUFFIX)) {
+                        file.delete()
+                        android.util.Log.d("TranslationLoader", "Deleted default binary: ${file.name}")
+                    }
                 }
             }
         } catch (e: Exception) {

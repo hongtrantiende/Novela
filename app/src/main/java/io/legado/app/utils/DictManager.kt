@@ -19,7 +19,9 @@ object DictManager {
     enum class DictType(val fileName: String) {
         NAMES("Names.txt"),
         VIETPHRASE("VietPhrase.txt"),
-        PHIENAM("ChinesePhienAmWords.txt")
+        PHIENAM("ChinesePhienAmWords.txt"),
+        LUATNHAN("LuatNhan.txt"),
+        PRONOUNS("Pronouns.txt")
     }
 
     /**
@@ -112,8 +114,17 @@ object DictManager {
                         val parts = line.split("=", limit = 2)
                         if (parts.size == 2) {
                             val key = parts[0]
-                            val valParts = parts[1].split("/")
-                            "$key=${valParts[0]}"
+                            val rawValue = parts[1]
+                            val slashIdx = rawValue.indexOf('/')
+                            val barIdx = rawValue.indexOf('|')
+                            val splitIdx = when {
+                                slashIdx != -1 && barIdx != -1 -> minOf(slashIdx, barIdx)
+                                slashIdx != -1 -> slashIdx
+                                barIdx != -1 -> barIdx
+                                else -> -1
+                            }
+                            val firstMeaning = if (splitIdx != -1) rawValue.substring(0, splitIdx).trim() else rawValue.trim()
+                            "$key=$firstMeaning"
                         } else {
                             line
                         }

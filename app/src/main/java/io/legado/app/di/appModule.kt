@@ -79,6 +79,12 @@ import io.legado.app.domain.usecase.SearchBooksUseCase
 import io.legado.app.domain.usecase.ShrinkDatabaseUseCase
 import io.legado.app.domain.usecase.TranslateChapterUseCase
 import io.legado.app.domain.usecase.UpdateBooksGroupUseCase
+import io.legado.app.domain.usecase.AiChatGenerationUseCase
+import io.legado.app.domain.usecase.AiTextFactoryUseCase
+import io.legado.app.domain.usecase.CleanSelectedTextUseCase
+import io.legado.app.domain.usecase.GenerateChapterSummaryUseCase
+import io.legado.app.domain.usecase.SaveBookContentProcessUseCase
+import io.legado.app.domain.usecase.CoverAlbumUseCase
 import io.legado.app.domain.usecase.UploadReadingProgressUseCase
 import io.legado.app.domain.usecase.WebDavBackupUseCase
 import io.legado.app.domain.usecase.readRecord.GetReadRecordOverviewUseCase
@@ -139,6 +145,14 @@ import io.legado.app.ui.rss.subscription.RuleSubViewModel
 import io.legado.app.vbookextension.ui.ExtensionViewModel
 import io.legado.app.vbookextension.ui.LegadoStoreViewModel
 import io.legado.app.ui.book.video.VideoReaderViewModel
+import io.legado.app.ui.config.themeManage.ThemeManageViewModel
+import io.legado.app.ui.config.ai.AiConfigViewModel
+import io.legado.app.ui.config.ai.summary.AiSummaryConfigViewModel
+import io.legado.app.ui.config.translation.ai.TranslationAiConfigViewModel
+import io.legado.app.ui.config.ai.scandict.AiScanDictConfigViewModel
+import io.legado.app.ui.ai.chat.AiChatViewModel
+import io.legado.app.ui.config.ai.AiProviderEditViewModel
+import io.legado.app.ui.config.ai.AiModelEditViewModel
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -146,11 +160,35 @@ import org.koin.dsl.module
 
 val appModule = module {
 
+    single<io.legado.app.domain.gateway.AiArtifactGateway> { io.legado.app.data.repository.AiArtifactRepository(get()) }
+    single<io.legado.app.domain.gateway.AiChatGateway> { io.legado.app.data.repository.AiChatRepository(get()) }
+    single<io.legado.app.domain.gateway.AiMemoryGateway> { io.legado.app.data.repository.AiMemoryRepository(get()) }
+    single<io.legado.app.domain.gateway.AiProfileGateway> { io.legado.app.data.repository.AiProfileRepository(get()) }
+    single<io.legado.app.domain.gateway.AiPromptPresetGateway> { io.legado.app.data.repository.AiPromptPresetRepository(get()) }
+    single<io.legado.app.domain.gateway.AiTextGateway> { io.legado.app.data.repository.AiTextRepositoryImpl() }
+    single<io.legado.app.domain.gateway.AiToolGateway> { io.legado.app.data.repository.AiToolRepository(get(), get(), get(), get(), get(), get()) }
+    single<io.legado.app.domain.gateway.BookContentProcessGateway> { io.legado.app.data.repository.BookContentProcessRepository(get()) }
+    single<io.legado.app.domain.gateway.CoverAlbumGateway> { io.legado.app.data.repository.CoverAlbumRepository(get(), get()) }
+
+    singleOf(::AiChatGenerationUseCase)
+    singleOf(::AiTextFactoryUseCase)
+    singleOf(::CleanSelectedTextUseCase)
+    singleOf(::GenerateChapterSummaryUseCase)
+    singleOf(::SaveBookContentProcessUseCase)
+    singleOf(::CoverAlbumUseCase)
+
+
     single { get<AppDatabase>().readRecordDao }
     single { get<AppDatabase>().bookDao }
     single { get<AppDatabase>().bookChapterDao }
     single { get<AppDatabase>().bookGroupDao }
     single { get<AppDatabase>().bookSourceDao }
+    single { get<AppDatabase>().aiProfileDao }
+    single { get<AppDatabase>().aiArtifactDao }
+    single { get<AppDatabase>().aiChatDao }
+    single { get<AppDatabase>().aiMemoryDao }
+    single { get<AppDatabase>().aiPromptPresetDao }
+    single { get<AppDatabase>().bookContentProcessDao }
 
     singleOf(::ReadRecordRepository)
     singleOf(::BookRepository)
@@ -288,7 +326,13 @@ val appModule = module {
             readAloudSettingsRepository = get(),
             localPreferencesRepository = get(),
             highlightRuleRepository = get(),
-            extensionRepository = get()
+            extensionRepository = get(),
+            generateChapterSummaryUseCase = get(),
+            cleanSelectedTextUseCase = get(),
+            aiTextFactoryUseCase = get(),
+            saveBookContentProcessUseCase = get(),
+            bookContentProcessGateway = get(),
+            aiPromptPresetGateway = get(),
         )
     }
     viewModelOf(::ChangeCoverViewModel)
@@ -331,6 +375,27 @@ val appModule = module {
             searchResultIndex = route.searchResultIndex,
             bookRepository = get(),
             searchContentRepository = get()
+        )
+    }
+    viewModelOf(::ThemeManageViewModel)
+    viewModelOf(::AiConfigViewModel)
+    viewModelOf(::AiSummaryConfigViewModel)
+    viewModelOf(::TranslationAiConfigViewModel)
+    viewModelOf(::AiScanDictConfigViewModel)
+    viewModelOf(::AiChatViewModel)
+    viewModel { (providerId: String?) ->
+        AiProviderEditViewModel(
+            initialProviderId = providerId,
+            aiProfileGateway = get(),
+            aiTextGateway = get()
+        )
+    }
+    viewModel { (providerId: String?, modelProfileId: String?) ->
+        AiModelEditViewModel(
+            initialProviderId = providerId,
+            initialModelProfileId = modelProfileId,
+            aiProfileGateway = get(),
+            aiTextGateway = get()
         )
     }
 }

@@ -43,4 +43,11 @@ val appDatabaseModule = module {
     factory<HighlightRuleDao> { get<AppDatabase>().highlightRuleDao }
     factory<ExtensionDao> { get<AppDatabase>().extensionDao }
     factory<RepositoryDao> { get<AppDatabase>().repositoryDao }
+
+    factory<AiProfileDao> { get<AppDatabase>().aiProfileDao }
+    factory<AiArtifactDao> { get<AppDatabase>().aiArtifactDao }
+    factory<AiChatDao> { get<AppDatabase>().aiChatDao }
+    factory<AiMemoryDao> { get<AppDatabase>().aiMemoryDao }
+    factory<AiPromptPresetDao> { get<AppDatabase>().aiPromptPresetDao }
+    factory<BookContentProcessDao> { get<AppDatabase>().bookContentProcessDao }
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -63,10 +64,10 @@ fun ReplaceScanNamesSheet(
     
     // AI Config States
     var showAiConfigDialog by remember { mutableStateOf(false) }
-    var aiUrlBase by remember { mutableStateOf("") }
-    var aiApiKey by remember { mutableStateOf("") }
-    var aiModel by remember { mutableStateOf("") }
     val sharedPrefs: SharedPreferences = remember { appCtx.getSharedPreferences("ai_config", Context.MODE_PRIVATE) }
+    val providers by remember { appDb.aiProfileDao.observeProviders() }.collectAsState(initial = emptyList())
+    val models by remember { appDb.aiProfileDao.observeModels() }.collectAsState(initial = emptyList())
+    var selectedModelProfileId by remember { mutableStateOf("") }
     
     // NER Model states
     var isModelDownloaded by remember { mutableStateOf(false) }
@@ -74,72 +75,64 @@ fun ReplaceScanNamesSheet(
     val isDownloading by LacAnalyzerHelper.isDownloading.collectAsState()
     val downloadProgress by LacAnalyzerHelper.downloadProgress.collectAsState()
 
-    val loadAiConfig = {
-        aiUrlBase = sharedPrefs.getString("url_base", "https://api.openai.com/v1") ?: "https://api.openai.com/v1"
-        aiApiKey = sharedPrefs.getString("api_key", "") ?: ""
-        aiModel = sharedPrefs.getString("model", "gpt-4o-mini") ?: "gpt-4o-mini"
-    }
-    
-    val saveAiConfig = { url: String, key: String, modelStr: String ->
-        sharedPrefs.edit()
-            .putString("url_base", url.trim())
-            .putString("api_key", key.trim())
-            .putString("model", modelStr.trim())
-            .apply()
-    }
-    
-    LaunchedEffect(show) {
+    LaunchedEffect(show, models) {
         if (show) {
-            loadAiConfig()
             isModelDownloaded = LacAnalyzerHelper.isModelDownloaded(context)
+            val savedId = sharedPrefs.getString("selected_model_profile_id", "") ?: ""
+            selectedModelProfileId = if (savedId.isNotEmpty() && models.any { it.id == savedId }) {
+                savedId
+            } else {
+                models.firstOrNull()?.id ?: ""
+            }
         }
     }
     
     if (showAiConfigDialog) {
-        var tempUrl by remember { mutableStateOf(aiUrlBase) }
-        var tempKey by remember { mutableStateOf(aiApiKey) }
-        var tempModel by remember { mutableStateOf(aiModel) }
-        
         AppAlertDialog(
             show = showAiConfigDialog,
-            title = "Cấu hình API AI",
+            title = "Chọn model quét từ điển",
             content = {
-                Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                    OutlinedTextField(
-                        value = tempUrl,
-                        onValueChange = { tempUrl = it },
-                        label = { Text("API URL Base") },
-                        placeholder = { Text("https://api.openai.com/v1") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = tempKey,
-                        onValueChange = { tempKey = it },
-                        label = { Text("API Key") },
-                        placeholder = { Text("Nhập API Key") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = tempModel,
-                        onValueChange = { tempModel = it },
-                        label = { Text("Model") },
-                        placeholder = { Text("gpt-4o-mini") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
+                LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
+                    if (models.isEmpty()) {
+                        item {
+                            Text("Chưa cấu hình model nào trong Cài đặt AI", modifier = Modifier.padding(16.dp))
+                        }
+                    } else {
+                        itemsIndexed(models) { _, model ->
+                            val provider = providers.find { it.id == model.providerId }
+                            val providerName = provider?.name ?: "Không rõ"
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        selectedModelProfileId = model.id
+                                        sharedPrefs.edit().putString("selected_model_profile_id", model.id).apply()
+                                        showAiConfigDialog = false
+                                    }
+                                    .padding(vertical = 12.dp, horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = model.displayName, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = LegadoTheme.colorScheme.onSurface)
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(text = "${providerName} / ${model.modelId}", fontSize = 12.sp, color = LegadoTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (model.id == selectedModelProfileId) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = LegadoTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             },
-            confirmText = "Lưu",
-            onConfirm = {
-                saveAiConfig(tempUrl, tempKey, tempModel)
-                loadAiConfig()
-                showAiConfigDialog = false
-            },
-            dismissText = "Hủy",
+            onConfirm = null,
+            dismissText = "Đóng",
             onDismiss = { showAiConfigDialog = false },
             onDismissRequest = { showAiConfigDialog = false }
         )
@@ -311,9 +304,14 @@ fun ReplaceScanNamesSheet(
                         
                         Button(
                             onClick = {
-                                val apiKey = sharedPrefs.getString("api_key", "") ?: ""
-                                if (apiKey.isBlank()) {
+                                val selectedModel = models.find { it.id == selectedModelProfileId }
+                                val selectedProvider = selectedModel?.let { model -> providers.find { it.id == model.providerId } }
+                                if (selectedModel == null || selectedProvider == null) {
                                     showAiConfigDialog = true
+                                    return@Button
+                                }
+                                if (selectedProvider.apiKey.isBlank()) {
+                                    android.widget.Toast.makeText(context, "API Key của model này trống, vui lòng cấu hình trong Cài đặt AI", android.widget.Toast.LENGTH_SHORT).show()
                                     return@Button
                                 }
                                 
@@ -334,11 +332,13 @@ fun ReplaceScanNamesSheet(
                                         }
                                         
                                         if (targetChapters.isNotEmpty()) {
-                                            val url = sharedPrefs.getString("url_base", "https://api.openai.com/v1") ?: "https://api.openai.com/v1"
-                                            val key = sharedPrefs.getString("api_key", "") ?: ""
-                                            val model = sharedPrefs.getString("model", "gpt-4o-mini") ?: "gpt-4o-mini"
-                                            
-                                            val names = scanNamesWithAi(book, targetChapters, url, key, model) { scanned, total ->
+                                            val names = scanNamesWithAi(
+                                                book, 
+                                                targetChapters, 
+                                                selectedProvider.baseUrl, 
+                                                selectedProvider.apiKey, 
+                                                selectedModel.modelId
+                                            ) { scanned, total ->
                                                 progressText = "AI đang đọc chương $scanned / $total..."
                                             }
                                             scannedNames = names.map { ScanNameItem(it.first, it.second, "") }
@@ -362,7 +362,6 @@ fun ReplaceScanNamesSheet(
                         
                         IconButton(
                             onClick = {
-                                loadAiConfig()
                                 showAiConfigDialog = true
                             }
                         ) {
