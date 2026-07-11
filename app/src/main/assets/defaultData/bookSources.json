@@ -44,5 +44,27 @@
       "chapterUrl": "$.id@js:java.put('chapterId', result);'https://www.shuidi.online/fileMgt/getAudioByChapterId?bookId=' + java.get('bookId') + '&chapterId=' + result + \"&pageNum=1&pageSize=50&keyId={{var header = JSON.parse(source.getLoginHeader());var keyId = '1632746188011002';var ks = java.md5Encode(keyId + java.get('chapterId') + header.Authorization);keyId + '&keySecret=' + ks}\" + '}'"
     },
     "weight": 0
+  },
+  {
+    "bookSourceComment": "Tác giả: Thiên Thư Các. Nguồn video dạng TikTok từ Sextop1.am (bản 5.0)",
+    "bookSourceGroup": "Extension",
+    "bookSourceName": "Sextop1 TikTok 5.0",
+    "bookSourceType": 0,
+    "bookSourceUrl": "ext_sextop1-tiktok",
+    "customButton": false,
+    "customOrder": 0,
+    "enabled": true,
+    "enabledCookieJar": true,
+    "enabledExplore": true,
+    "eventListener": false,
+    "lastUpdateTime": 1783456320000,
+    "respondTime": 180000,
+    "ruleBookInfo": {},
+    "ruleContent": {},
+    "ruleExplore": {},
+    "ruleSearch": {},
+    "ruleToc": {},
+    "searchUrl": "",
+    "weight": 0
   }
 ]
