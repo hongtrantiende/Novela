@@ -96,6 +96,30 @@ object ThemeConfig {
         postEvent(EventBus.RECREATE, false)
     }
 
+    var bgImageBookDetailLight by prefDelegate<String?>(PreferKey.bgImageBookDetail, null) {
+        postEvent(EventBus.RECREATE, false)
+    }
+
+    var bgImageBookDetailDark by prefDelegate<String?>(PreferKey.bgImageBookDetailN, null) {
+        postEvent(EventBus.RECREATE, false)
+    }
+
+    var enableBookInfoCoverTheme by prefDelegate(PreferKey.enableBookInfoCoverTheme, true) {
+        postEvent(EventBus.RECREATE, "")
+    }
+
+    var bookDetailHeaderStyle by prefDelegate(PreferKey.bookDetailHeaderStyle, "3") {
+        postEvent(EventBus.RECREATE, "")
+    }
+
+    var bgImageBookDetailCardLight by prefDelegate<String?>(PreferKey.bgImageBookDetailCard, null) {
+        postEvent(EventBus.RECREATE, false)
+    }
+
+    var bgImageBookDetailCardDark by prefDelegate<String?>(PreferKey.bgImageBookDetailCardN, null) {
+        postEvent(EventBus.RECREATE, false)
+    }
+
     var bgImageBlurring by prefDelegate(PreferKey.bgImageBlurring, 0)
 
     var bgImageNBlurring by prefDelegate(PreferKey.bgImageNBlurring, 0)

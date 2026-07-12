@@ -345,5 +345,11 @@
 		<item>@string/backup_to_network</item>
 	</string-array>
 
+	<string-array name="book_detail_header_style">
+		<item>Transparent (Type 1)</item>
+		<item>Card Frame (Type 2)</item>
+		<item>Default (Type 3)</item>
+	</string-array>
+
 	<string name="all_version">All Version</string>
 </resources>

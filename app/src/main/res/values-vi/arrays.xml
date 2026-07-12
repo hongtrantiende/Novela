@@ -344,5 +344,11 @@
 		<item>@string/backup_to_network</item>
 	</string-array>
 
+	<string-array name="book_detail_header_style">
+		<item>Trong suốt (Loại 1)</item>
+		<item>Khung nền hộp (Loại 2)</item>
+		<item>Mặc định (Loại 3)</item>
+	</string-array>
+
 	<string name="all_version">Tất cả phiên bản</string>
 </resources>

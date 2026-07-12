@@ -841,6 +841,14 @@
     <string name="pre_download_s">Tải trước %s chương</string>
     <string name="is_enabled">Đã bật</string>
     <string name="background_image">Ảnh nền</string>
+    <string name="bg_image_book_detail">Hình nền chi tiết truyện</string>
+    <string name="book_detail_settings">Cài đặt chi tiết truyện</string>
+    <string name="enable_book_info_cover_theme">Lấy màu từ bìa truyện</string>
+    <string name="enable_book_info_cover_theme_summary">Tự động phân tích ảnh bìa để đổi màu tông chính cho chi tiết truyện</string>
+    <string name="book_detail_header_style">Kiểu khung chi tiết truyện</string>
+    <string name="book_detail_header_style_1">Trong suốt lấy ảnh bìa nền làm chủ (Loại 1)</string>
+    <string name="book_detail_header_style_2">Thêm nền cho khung bìa truyện (Loại 2)</string>
+    <string name="book_detail_header_style_3">Mặc định lúc như cũ (Loại 3)</string>
     <string name="background_image_blurring">Làm mờ ảnh nền</string>
     <string name="background_image_blurring_radius">Bán kính làm mờ</string>
     <string name="background_image_hint">Tắt khi là 0, phạm vi bật từ 1 đến 25\nBán kính càng lớn, hiệu ứng làm mờ càng mạnh</string>
@@ -2836,4 +2844,7 @@
     <string name="about_open_github">Mở GitHub</string>
     <string name="edit_menu_items">Chỉnh sửa các mục menu</string>
     <string name="edit_select_menu">Chỉnh sửa menu chọn văn bản</string>
+    <string name="bg_image_book_detail_card">Hình nền khung chi tiết truyện</string>
+    <string name="export_card_frame_template">Xuất ảnh mẫu khung chi tiết</string>
+    <string name="export_card_template_success">Đã xuất ảnh mẫu khung vào thư mục: %s</string>
 </resources>

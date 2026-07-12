@@ -7,6 +7,8 @@ import io.legado.app.ui.main.MainActivity
 import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.utils.startActivity
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import androidx.core.graphics.drawable.toDrawable
+import io.legado.app.utils.windowSize
 
 class BookInfoActivity : BaseComposeActivity(), VariableDialog.Callback {
 
@@ -14,6 +16,17 @@ class BookInfoActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+    }
+
+    override fun upBackgroundImage() {
+        try {
+            val bgImage = io.legado.app.help.config.ThemeConfigStore.getBookDetailBgImage(this, windowManager.windowSize)
+            if (bgImage != null) {
+                window.setBackgroundDrawable(bgImage.toDrawable(resources))
+            } else {
+                super.upBackgroundImage()
+            }
+        } catch (_: Exception) {}
     }
 
     @Composable

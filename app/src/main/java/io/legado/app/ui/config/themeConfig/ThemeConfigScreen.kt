@@ -114,6 +114,8 @@ fun ThemeConfigScreen(
 ) {
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     var manageKey by remember { mutableStateOf<Boolean?>(null) }
+    var manageBookDetailKey by remember { mutableStateOf<Boolean?>(null) }
+    var manageBookDetailCardKey by remember { mutableStateOf<Boolean?>(null) }
     val context = LocalContext.current
 
     var selectedThemeMode by remember { mutableStateOf(ThemeConfig.themeMode) }
@@ -732,6 +734,15 @@ fun ThemeConfigScreen(
                             }
                         )
                     }
+
+                    val hasBookDetailLightBg = !ThemeConfig.bgImageBookDetailLight.isNullOrBlank()
+                    ClickableSettingItem(
+                        title = stringResource(R.string.bg_image_book_detail),
+                        description = if (hasBookDetailLightBg) stringResource(R.string.click_to_delete) else stringResource(
+                            R.string.select_image
+                        ),
+                        onClick = { manageBookDetailKey = false }
+                    )
                 }
 
                 SplicedColumnGroup(title = stringResource(R.string.night)) {
@@ -753,6 +764,78 @@ fun ThemeConfigScreen(
                             steps = 99,
                             onValueChange = {
                                 ThemeConfig.bgImageNBlurring = it.toInt()
+                            }
+                        )
+                    }
+
+                    val hasBookDetailDarkBg = !ThemeConfig.bgImageBookDetailDark.isNullOrBlank()
+                    ClickableSettingItem(
+                        title = stringResource(R.string.bg_image_book_detail),
+                        description = if (hasBookDetailDarkBg) stringResource(R.string.click_to_delete) else stringResource(
+                            R.string.select_image
+                        ),
+                        onClick = { manageBookDetailKey = true }
+                    )
+                }
+            }
+
+            // Book detail settings
+            item {
+                SplicedColumnGroup(title = stringResource(R.string.book_detail_settings)) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.enable_book_info_cover_theme),
+                        description = stringResource(R.string.enable_book_info_cover_theme_summary),
+                        checked = ThemeConfig.enableBookInfoCoverTheme,
+                        onCheckedChange = { ThemeConfig.enableBookInfoCoverTheme = it }
+                    )
+                    var selectedHeaderStyle by remember { mutableStateOf(ThemeConfig.bookDetailHeaderStyle) }
+                    DropdownListSettingItem(
+                        title = stringResource(R.string.book_detail_header_style),
+                        selectedValue = selectedHeaderStyle,
+                        displayEntries = stringArrayResource(R.array.book_detail_header_style),
+                        entryValues = stringArrayResource(R.array.book_detail_header_style_v),
+                        onValueChange = { style ->
+                            selectedHeaderStyle = style
+                            ThemeConfig.bookDetailHeaderStyle = style
+                        }
+                    )
+                    if (selectedHeaderStyle == "2") {
+                        val hasCardLightBg = !ThemeConfig.bgImageBookDetailCardLight.isNullOrBlank()
+                        ClickableSettingItem(
+                            title = stringResource(R.string.bg_image_book_detail_card) + " (${stringResource(R.string.day)})",
+                            description = if (hasCardLightBg) stringResource(R.string.click_to_delete) else stringResource(R.string.select_image),
+                            onClick = {
+                                if (hasCardLightBg) {
+                                    viewModel.removeBookDetailCardBackground(false)
+                                } else {
+                                    manageBookDetailCardKey = false
+                                }
+                            }
+                        )
+
+                        val hasCardDarkBg = !ThemeConfig.bgImageBookDetailCardDark.isNullOrBlank()
+                        ClickableSettingItem(
+                            title = stringResource(R.string.bg_image_book_detail_card) + " (${stringResource(R.string.night)})",
+                            description = if (hasCardDarkBg) stringResource(R.string.click_to_delete) else stringResource(R.string.select_image),
+                            onClick = {
+                                if (hasCardDarkBg) {
+                                    viewModel.removeBookDetailCardBackground(true)
+                                } else {
+                                    manageBookDetailCardKey = true
+                                }
+                            }
+                        )
+
+                        ClickableSettingItem(
+                            title = stringResource(R.string.export_card_frame_template),
+                            description = stringResource(R.string.export),
+                            onClick = {
+                                val path = viewModel.exportCardFrameTemplate()
+                                if (path != null) {
+                                    context.toastOnUi(context.getString(R.string.export_card_template_success, path))
+                                } else {
+                                    context.toastOnUi("Xuất ảnh mẫu thất bại!")
+                                }
                             }
                         )
                     }
@@ -870,6 +953,16 @@ fun ThemeConfigScreen(
     BackgroundImageManageSheet(
         isDarkTheme = manageKey,
         onDismissRequest = { manageKey = null }
+    )
+
+    BookDetailBackgroundImageManageSheet(
+        isDarkTheme = manageBookDetailKey,
+        onDismissRequest = { manageBookDetailKey = null }
+    )
+
+    BookDetailCardBackgroundImageManageSheet(
+        isDarkTheme = manageBookDetailCardKey,
+        onDismissRequest = { manageBookDetailCardKey = null }
     )
 
     NavIconManageSheet(

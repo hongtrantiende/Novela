@@ -5,8 +5,11 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.asImageBitmap
+import io.legado.app.ui.widget.components.card.NormalCard
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +23,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -37,6 +41,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -53,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
@@ -74,6 +80,10 @@ import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.help.config.AppConfig
+import android.view.WindowManager
+import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.utils.windowSize
+import io.legado.app.ui.config.themeConfig.ThemeConfig
 import io.legado.app.ui.config.coverConfig.CoverConfig
 import io.legado.app.ui.main.homepage.modules.BannerModule
 import io.legado.app.ui.theme.LegadoTheme
@@ -160,11 +170,22 @@ private fun BookInfoScreenContent(
     val listState = rememberLazyListState()
     var showMenu by rememberSaveable { mutableStateOf(false) }
     val systemSurfaceColor = LegadoTheme.colorScheme.surface
+    val context = LocalContext.current
+    val windowManager = remember(context) { context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager }
+    val hasBgImage = remember(context) {
+        ThemeConfigStore.getBookDetailBgImage(context, windowManager.windowSize) != null ||
+        ThemeConfigStore.getBgImage(context, windowManager.windowSize) != null
+    }
+    val useTransparentBg = hasBgImage && ThemeConfig.bookDetailHeaderStyle != "3"
+    val isFixedHeader = ThemeConfig.bookDetailHeaderStyle == "1" || ThemeConfig.bookDetailHeaderStyle == "2"
 
     AppScaffold(
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+            .then(
+                if (isFixedHeader) Modifier
+                else Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+            ),
         topBar = {
             BookInfoColorTheme(theme = bookColorTheme) {
                 BookInfoTransparentTopAppBar(
@@ -207,39 +228,65 @@ private fun BookInfoScreenContent(
                     onRefresh = { onIntent(BookInfoIntent.MenuAction(BookInfoMenuAction.Refresh)) },
                     topPadding = paddingValues.calculateTopPadding()
                 ) {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            top = paddingValues.calculateTopPadding() + 8.dp,
-                            bottom = paddingValues.calculateBottomPadding() + 88.dp,
-                        ),
-                    ) {
-                        item {
-                            BookInfoColorTheme(theme = bookColorTheme) {
-                                BookInfoHeader(
-                                    book = book,
-                                    kindLabels = state.kindLabels,
-                                    groupNames = state.groupNames,
-                                    systemSurfaceColor = systemSurfaceColor,
-                                    onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
-                                    onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
-                                    onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
-                                    onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
-                                    onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
-                                    onKindClick = { onIntent(BookInfoIntent.KindClick(it)) },
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    sharedCoverKey = sharedCoverKey,
-                                )
+                    val style = ThemeConfig.bookDetailHeaderStyle
+                    val isFixedHeader = style == "1" || style == "2"
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (isFixedHeader) {
+                            Box(modifier = Modifier.statusBarsPadding()) {
+                                BookInfoColorTheme(theme = bookColorTheme) {
+                                    BookInfoHeader(
+                                        book = book,
+                                        kindLabels = state.kindLabels,
+                                        groupNames = state.groupNames,
+                                        systemSurfaceColor = systemSurfaceColor,
+                                        onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
+                                        onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
+                                        onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
+                                        onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
+                                        onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
+                                        onKindClick = { onIntent(BookInfoIntent.KindClick(it)) },
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        sharedCoverKey = sharedCoverKey,
+                                    )
+                                }
                             }
                         }
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(
+                                top = if (isFixedHeader) 8.dp else (paddingValues.calculateTopPadding() + 8.dp),
+                                bottom = paddingValues.calculateBottomPadding() + 88.dp,
+                            ),
+                        ) {
+                            if (!isFixedHeader) {
+                                item {
+                                    BookInfoColorTheme(theme = bookColorTheme) {
+                                        BookInfoHeader(
+                                            book = book,
+                                            kindLabels = state.kindLabels,
+                                            groupNames = state.groupNames,
+                                            systemSurfaceColor = systemSurfaceColor,
+                                            onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
+                                            onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
+                                            onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
+                                            onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
+                                            onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
+                                            onKindClick = { onIntent(BookInfoIntent.KindClick(it)) },
+                                            sharedTransitionScope = sharedTransitionScope,
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            sharedCoverKey = sharedCoverKey,
+                                        )
+                                    }
+                                }
+                            }
                         item {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .background(
-                                        color = LegadoTheme.colorScheme.surface
+                                        color = if (useTransparentBg) Color.Transparent else LegadoTheme.colorScheme.surface
                                     )
                                     .padding(bottom = 24.dp)
                             ) {
@@ -277,6 +324,7 @@ private fun BookInfoScreenContent(
                     }
                 }
             }
+        }
         }
     }
 
@@ -431,6 +479,7 @@ private fun BookInfoTransparentTopAppBar(
 
 @Composable
 private fun rememberBookInfoColorTheme(book: BookInfoBookUi?): ThemeOverrideState? {
+    if (!ThemeConfig.enableBookInfoCoverTheme) return null
     val useDefaultCover = AppConfig.useDefaultCover || book?.coverPath == "use_default_cover"
     if (useDefaultCover) return null
 
@@ -494,6 +543,10 @@ private fun BookInfoBackdrop(
     book: BookInfoBookUi,
     systemSurfaceColor: Color,
 ) {
+    if (ThemeConfig.bookDetailHeaderStyle != "3") {
+        return
+    }
+
     val backdropState = remember(
         book.name,
         book.author,
@@ -649,6 +702,145 @@ private fun BookInfoOverflowMenu(
 }
 
 @Composable
+private fun BookInfoHeaderContent(
+    book: BookInfoBookUi,
+    kindLabels: List<String>,
+    groupNames: String?,
+    onCoverClick: () -> Unit,
+    onCoverLongClick: () -> Unit,
+    onAuthorClick: (Boolean) -> Unit,
+    onBookNameClick: (Boolean) -> Unit,
+    onOriginClick: () -> Unit,
+    onKindClick: (String) -> Unit,
+    sharedTransitionScope: SharedTransitionScope?,
+    animatedVisibilityScope: AnimatedVisibilityScope?,
+    sharedCoverKey: String?,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.Top,
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(112.dp)
+                    .combinedClickable(onClick = onCoverClick, onLongClick = onCoverLongClick)
+            ) {
+                CoilBookCover(
+                    name = book.name,
+                    author = book.author,
+                    path = book.coverPath,
+                    sourceOrigin = book.origin,
+                    modifier = Modifier
+                        .width(112.dp)
+                        .aspectRatio(5f / 7f),
+                    showLoadingPlaceholder = sharedCoverKey == null,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    sharedCoverKey = sharedCoverKey
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .align(Alignment.CenterVertically)
+                    .padding(top = 8.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                var showTitleMenu by remember { mutableStateOf(false) }
+                var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
+                val translatedBookName by io.legado.app.utils.translateAsState(book.name)
+                Box {
+                    AppText(
+                        text = translatedBookName,
+                        style = LegadoTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = if (isTitleExpanded) Int.MAX_VALUE else 2,
+                        modifier = Modifier.combinedClickable(
+                            onClick = { onBookNameClick(false) },
+                            onLongClick = { showTitleMenu = true }
+                        )
+                    )
+                    RoundDropdownMenu(
+                        expanded = showTitleMenu,
+                        onDismissRequest = { showTitleMenu = false }
+                    ) {
+                        RoundDropdownMenuItem(
+                            text = stringResource(R.string.search),
+                            onClick = {
+                                showTitleMenu = false
+                                onBookNameClick(true)
+                            }
+                        )
+                        RoundDropdownMenuItem(
+                            text = stringResource(if (isTitleExpanded) R.string.collapse else R.string.expand),
+                            onClick = {
+                                showTitleMenu = false
+                                isTitleExpanded = !isTitleExpanded
+                            }
+                        )
+                    }
+                }
+                val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor)
+                AppText(
+                    text = stringResource(R.string.author_show, translatedAuthor),
+                    style = LegadoTheme.typography.bodyLarge,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.combinedClickable(
+                        onClick = { onAuthorClick(false) },
+                        onLongClick = { onAuthorClick(true) }
+                    )
+                )
+                AppText(
+                    text = stringResource(R.string.origin_show, book.originName),
+                    style = LegadoTheme.typography.labelMedium,
+                    color = LegadoTheme.colorScheme.primary,
+                    modifier = Modifier.clickable(onClick = onOriginClick)
+                )
+            }
+        }
+        if (kindLabels.isNotEmpty() || !groupNames.isNullOrBlank()) {
+            val kindListState = rememberLazyListState()
+            LazyRow(
+                state = kindListState,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fadingEdge(kindListState),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                groupNames?.takeIf { it.isNotBlank() }?.let {
+                    item(key = "group-$it") {
+                        val translatedGroupName by io.legado.app.utils.translateAsState(it)
+                        TextCard(
+                            text = stringResource(R.string.group_s, translatedGroupName),
+                            textStyle = LegadoTheme.typography.labelLargeEmphasized,
+                            backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
+                            contentColor = LegadoTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
+                itemsIndexed(
+                    items = kindLabels,
+                    key = { index, label -> "kind-$index-$label" }
+                ) { _, label ->
+                    val translatedLabel by io.legado.app.utils.translateAsState(label)
+                    TextCard(
+                        text = translatedLabel,
+                        textStyle = LegadoTheme.typography.labelLargeEmphasized,
+                        backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
+                        contentColor = LegadoTheme.colorScheme.onSurface,
+                        onClick = { onKindClick(label) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun BookInfoHeader(
     book: BookInfoBookUi,
     kindLabels: List<String>,
@@ -664,142 +856,249 @@ private fun BookInfoHeader(
     animatedVisibilityScope: AnimatedVisibilityScope?,
     sharedCoverKey: String?,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        lerp(systemSurfaceColor, LegadoTheme.seedColor, 0.08f)
-                            .copy(alpha = 0.5f),
-                        systemSurfaceColor,
-                    )
-                )
-            )
-            .padding(top = 16.dp, bottom = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.Top,
+    val context = LocalContext.current
+    val windowManager = remember(context) { context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager }
+    val hasBgImage = remember(context) {
+        ThemeConfigStore.getBookDetailBgImage(context, windowManager.windowSize) != null ||
+        ThemeConfigStore.getBgImage(context, windowManager.windowSize) != null
+    }
+
+    val style = ThemeConfig.bookDetailHeaderStyle
+
+    when (style) {
+        "1" -> {
+            // Option 1: Transparent (trong suốt lấy ảnh bìa nền làm chủ, như ảnh số 1)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 64.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .width(112.dp)
-                        .combinedClickable(onClick = onCoverClick, onLongClick = onCoverLongClick)
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    CoilBookCover(
-                        name = book.name,
-                        author = book.author,
-                        path = book.coverPath,
-                        sourceOrigin = book.origin,
-                        modifier = Modifier
-                            .width(112.dp)
-                            .aspectRatio(5f / 7f),
-                        showLoadingPlaceholder = sharedCoverKey == null,
+                    BookInfoHeaderContent(
+                        book = book,
+                        kindLabels = kindLabels,
+                        groupNames = groupNames,
+                        onCoverClick = onCoverClick,
+                        onCoverLongClick = onCoverLongClick,
+                        onAuthorClick = onAuthorClick,
+                        onBookNameClick = onBookNameClick,
+                        onOriginClick = onOriginClick,
+                        onKindClick = onKindClick,
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         sharedCoverKey = sharedCoverKey
                     )
                 }
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .align(Alignment.CenterVertically)
-                        .padding(top = 8.dp, bottom = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            }
+        }
+        "2" -> {
+            // Option 2: Card frame container (thêm nền cho khung bìa truyện như ảnh số 2)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                val isDark = LegadoTheme.isDark
+                val cardBgPath = if (isDark) ThemeConfig.bgImageBookDetailCardDark
+                                 else ThemeConfig.bgImageBookDetailCardLight
+                val cardBgBitmap = remember(cardBgPath) {
+                    if (!cardBgPath.isNullOrBlank()) {
+                        try {
+                            android.graphics.BitmapFactory.decodeFile(cardBgPath)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else null
+                }
+
+                NormalCard(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp),
+                    cornerRadius = 16.dp,
+                    containerColor = if (cardBgBitmap != null) Color.Transparent
+                                     else (if (isDark) LegadoTheme.colorScheme.surfaceContainerHigh
+                                           else Color.White.copy(alpha = 0.85f)),
+                    border = if (cardBgBitmap != null) null
+                             else BorderStroke(
+                                 width = 1.dp,
+                                 color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                             )
                 ) {
-                    var showTitleMenu by remember { mutableStateOf(false) }
-                    var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
-                    val translatedBookName by io.legado.app.utils.translateAsState(book.name)
-                    Box {
-                        AppText(
-                            text = translatedBookName,
-                            style = LegadoTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = if (isTitleExpanded) Int.MAX_VALUE else 2,
-                            modifier = Modifier.combinedClickable(
-                                onClick = { onBookNameClick(false) },
-                                onLongClick = { showTitleMenu = true }
+                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp)) {
+                        if (cardBgBitmap != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = cardBgBitmap.asImageBitmap(),
+                                contentDescription = null,
+                                modifier = Modifier.matchParentSize(),
+                                contentScale = androidx.compose.ui.layout.ContentScale.FillBounds
                             )
-                        )
-                        RoundDropdownMenu(
-                            expanded = showTitleMenu,
-                            onDismissRequest = { showTitleMenu = false }
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 64.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(20.dp),
+                            verticalAlignment = Alignment.Top,
                         ) {
-                            RoundDropdownMenuItem(
-                                text = stringResource(R.string.search),
-                                onClick = {
-                                    showTitleMenu = false
-                                    onBookNameClick(true)
+                            Box(
+                                modifier = Modifier
+                                    .width(132.dp)
+                                    .combinedClickable(onClick = onCoverClick, onLongClick = onCoverLongClick)
+                            ) {
+                                CoilBookCover(
+                                    name = book.name,
+                                    author = book.author,
+                                    path = book.coverPath,
+                                    sourceOrigin = book.origin,
+                                    modifier = Modifier
+                                        .width(132.dp)
+                                        .aspectRatio(5f / 7f),
+                                    showLoadingPlaceholder = sharedCoverKey == null,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    sharedCoverKey = sharedCoverKey
+                                )
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .align(Alignment.CenterVertically)
+                                    .padding(top = 12.dp, bottom = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                var showTitleMenu by remember { mutableStateOf(false) }
+                                var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
+                                val translatedBookName by io.legado.app.utils.translateAsState(book.name)
+                                Box {
+                                    AppText(
+                                        text = translatedBookName,
+                                        style = LegadoTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = if (isTitleExpanded) Int.MAX_VALUE else 2,
+                                        modifier = Modifier.combinedClickable(
+                                            onClick = { onBookNameClick(false) },
+                                            onLongClick = { showTitleMenu = true }
+                                        )
+                                    )
+                                    RoundDropdownMenu(
+                                        expanded = showTitleMenu,
+                                        onDismissRequest = { showTitleMenu = false }
+                                    ) {
+                                        RoundDropdownMenuItem(
+                                            text = stringResource(R.string.search),
+                                            onClick = {
+                                                showTitleMenu = false
+                                                onBookNameClick(true)
+                                            }
+                                        )
+                                        RoundDropdownMenuItem(
+                                            text = stringResource(if (isTitleExpanded) R.string.collapse else R.string.expand),
+                                            onClick = {
+                                                showTitleMenu = false
+                                                isTitleExpanded = !isTitleExpanded
+                                            }
+                                        )
+                                    }
                                 }
-                            )
-                            RoundDropdownMenuItem(
-                                text = stringResource(if (isTitleExpanded) R.string.collapse else R.string.expand),
-                                onClick = {
-                                    showTitleMenu = false
-                                    isTitleExpanded = !isTitleExpanded
-                                }
+                                val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor)
+                                AppText(
+                                    text = stringResource(R.string.author_show, translatedAuthor),
+                                    style = LegadoTheme.typography.bodyLarge,
+                                    color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.combinedClickable(
+                                        onClick = { onAuthorClick(false) },
+                                        onLongClick = { onAuthorClick(true) }
+                                    )
+                                )
+                                AppText(
+                                    text = stringResource(R.string.origin_show, book.originName),
+                                    style = LegadoTheme.typography.labelMedium,
+                                    color = LegadoTheme.colorScheme.primary,
+                                    modifier = Modifier.clickable(onClick = onOriginClick)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Tags go outside card
+                if (kindLabels.isNotEmpty() || !groupNames.isNullOrBlank()) {
+                    val kindListState = rememberLazyListState()
+                    LazyRow(
+                        state = kindListState,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fadingEdge(kindListState),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        groupNames?.takeIf { it.isNotBlank() }?.let {
+                            item(key = "group-$it") {
+                                val translatedGroupName by io.legado.app.utils.translateAsState(it)
+                                TextCard(
+                                    text = stringResource(R.string.group_s, translatedGroupName),
+                                    textStyle = LegadoTheme.typography.labelLargeEmphasized,
+                                    backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        itemsIndexed(
+                            items = kindLabels,
+                            key = { index, label -> "kind-$index-$label" }
+                        ) { _, label ->
+                            val translatedLabel by io.legado.app.utils.translateAsState(label)
+                            TextCard(
+                                text = translatedLabel,
+                                textStyle = LegadoTheme.typography.labelLargeEmphasized,
+                                backgroundColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                onClick = { onKindClick(label) }
                             )
                         }
                     }
-                    val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor)
-                    AppText(
-                        text = stringResource(R.string.author_show, translatedAuthor),
-                        style = LegadoTheme.typography.bodyLarge,
-                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.combinedClickable(
-                            onClick = { onAuthorClick(false) },
-                            onLongClick = { onAuthorClick(true) }
-                        )
-                    )
-                    AppText(
-                        text = stringResource(R.string.origin_show, book.originName),
-                        style = LegadoTheme.typography.labelMedium,
-                        color = LegadoTheme.colorScheme.primary,
-                        modifier = Modifier.clickable(onClick = onOriginClick)
-                    )
                 }
             }
-            if (kindLabels.isNotEmpty() || !groupNames.isNullOrBlank()) {
-                val kindListState = rememberLazyListState()
-                LazyRow(
-                    state = kindListState,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .fadingEdge(kindListState),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    groupNames?.takeIf { it.isNotBlank() }?.let {
-                        item(key = "group-$it") {
-                            val translatedGroupName by io.legado.app.utils.translateAsState(it)
-                            TextCard(
-                                text = stringResource(R.string.group_s, translatedGroupName),
-                                textStyle = LegadoTheme.typography.labelLargeEmphasized,
-                                backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
-                                contentColor = LegadoTheme.colorScheme.onSurface,
+        }
+        else -> {
+            // Option 3: Default (Mặc định lúc như cũ nhé)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                lerp(systemSurfaceColor, LegadoTheme.seedColor, 0.08f)
+                                    .copy(alpha = 0.5f),
+                                systemSurfaceColor,
                             )
-                        }
-                    }
-                    itemsIndexed(
-                        items = kindLabels,
-                        key = { index, label -> "kind-$index-$label" }
-                    ) { _, label ->
-                        val translatedLabel by io.legado.app.utils.translateAsState(label)
-                        TextCard(
-                            text = translatedLabel,
-                            textStyle = LegadoTheme.typography.labelLargeEmphasized,
-                            backgroundColor = LegadoTheme.colorScheme.surfaceContainer,
-                            contentColor = LegadoTheme.colorScheme.onSurface,
-                            onClick = { onKindClick(label) }
                         )
-                    }
+                    )
+                    .padding(top = 16.dp, bottom = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    BookInfoHeaderContent(
+                        book = book,
+                        kindLabels = kindLabels,
+                        groupNames = groupNames,
+                        onCoverClick = onCoverClick,
+                        onCoverLongClick = onCoverLongClick,
+                        onAuthorClick = onAuthorClick,
+                        onBookNameClick = onBookNameClick,
+                        onOriginClick = onOriginClick,
+                        onKindClick = onKindClick,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        sharedCoverKey = sharedCoverKey
+                    )
                 }
             }
         }
@@ -846,10 +1145,17 @@ private fun BookInfoActions(
         else -> stringResource(R.string.add_to_bookshelf)
     }
 
+    val context = LocalContext.current
+    val windowManager = remember(context) { context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager }
+    val hasBgImage = remember(context) {
+        ThemeConfigStore.getBookDetailBgImage(context, windowManager.windowSize) != null ||
+        ThemeConfigStore.getBgImage(context, windowManager.windowSize) != null
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(LegadoTheme.colorScheme.surface)
+            .background(if (hasBgImage) Color.Transparent else LegadoTheme.colorScheme.surface)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -952,10 +1258,17 @@ private fun BookInfoSummary(
     hasChapters: Boolean,
     onRemarkClick: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val windowManager = remember(context) { context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager }
+    val hasBgImage = remember(context) {
+        ThemeConfigStore.getBookDetailBgImage(context, windowManager.windowSize) != null ||
+        ThemeConfigStore.getBgImage(context, windowManager.windowSize) != null
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(LegadoTheme.colorScheme.surface)
+            .background(if (hasBgImage) Color.Transparent else LegadoTheme.colorScheme.surface)
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {

@@ -91,6 +91,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import io.legado.app.data.appDb
 import io.legado.app.ui.theme.LegadoTheme
+import android.view.WindowManager
+import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.utils.windowSize
 
 
 
@@ -659,10 +662,12 @@ fun ReadBookRouteScreen(
         }
         
         if (showLoadingOverlay) {
+            val windowManager = remember(context) { context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager }
+            val hasBgImage = remember(context) { ThemeConfigStore.getBgImage(context, windowManager.windowSize) != null }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
+                    .background(if (hasBgImage) Color.Transparent else MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) {
                 Column(

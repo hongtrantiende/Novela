@@ -80,6 +80,16 @@ object ThemeConfigStore {
         return bgImage?.stackBlur(bgCfg.second)
     }
 
+    fun getBookDetailBgImage(context: Context, metrics: DisplayMetrics): Bitmap? {
+        val bgPath = when (getTheme()) {
+            Theme.Light -> ThemeConfig.bgImageBookDetailLight
+            Theme.Dark -> ThemeConfig.bgImageBookDetailDark
+            else -> null
+        } ?: return null
+        if (bgPath.isNullOrBlank()) return null
+        return BitmapUtils.decodeBitmap(bgPath, metrics.widthPixels, metrics.heightPixels)
+    }
+
     fun upConfig() {
         getConfigs()?.forEach { config ->
             addConfig(config)

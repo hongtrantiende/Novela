@@ -81,6 +81,7 @@ import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.transaction
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import io.legado.app.utils.windowSize
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -286,13 +287,22 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         }
 
         // Apply colors programmatically
-        binding.root.setBackgroundColor(background)
-        binding.titleBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        
-        binding.tabLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        
-        binding.recyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-        binding.selectActionBar.setBackgroundColor(background)
+        val hasBgImage = io.legado.app.help.config.ThemeConfigStore.getBgImage(this, windowManager.windowSize) != null
+        if (hasBgImage) {
+            binding.root.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            binding.titleBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            binding.titleBar.toolbar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            binding.tabLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            binding.recyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            binding.selectActionBar.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        } else {
+            binding.root.setBackgroundColor(background)
+            binding.titleBar.setBackgroundColor(background)
+            binding.titleBar.toolbar.setBackgroundColor(background)
+            binding.tabLayout.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            binding.recyclerView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            binding.selectActionBar.setBackgroundColor(background)
+        }
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
@@ -430,42 +440,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         binding.recyclerView.adapter = adapter
         binding.recyclerView.recycledViewPool.setMaxRecycledViews(0, 15)
 
-        // 1. Add Installed List Header
-        val headerBinding = io.legado.app.databinding.ItemComposeHeaderBinding.inflate(layoutInflater, binding.recyclerView, false)
-        headerBinding.composeView.apply {
-            setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                io.legado.app.ui.theme.AppTheme {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        io.legado.app.ui.widget.components.text.AppText(
-                            text = "Cài đặt",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = io.legado.app.ui.theme.LegadoTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = io.legado.app.ui.theme.LegadoTheme.colorScheme.secondaryContainer
-                        ) {
-                            io.legado.app.ui.widget.components.text.AppText(
-                                text = "${installedCountState.value}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = io.legado.app.ui.theme.LegadoTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-        adapter.addHeaderView { headerBinding }
+        // 1. Add Installed List Header (Removed empty header to prevent empty layout space at the top of book source list)
 
         // 2. Add Legado Store List Footer
         val footerBinding = io.legado.app.databinding.ItemComposeFooterBinding.inflate(layoutInflater, binding.recyclerView, false)

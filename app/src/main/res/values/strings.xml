@@ -1014,6 +1014,17 @@
     <string name="pre_download_s">Download %s chapters in advance</string>
     <string name="is_enabled">Is enabled</string>
     <string name="background_image">Background Image</string>
+    <string name="bg_image_book_detail">Book Detail Background Image</string>
+    <string name="book_detail_settings">Book Detail Settings</string>
+    <string name="enable_book_info_cover_theme">Extract color from cover</string>
+    <string name="enable_book_info_cover_theme_summary">Dynamically extract theme color from book cover image</string>
+    <string name="book_detail_header_style">Book detail header style</string>
+    <string name="book_detail_header_style_1">Transparent (Type 1)</string>
+    <string name="book_detail_header_style_2">Card Frame (Type 2)</string>
+    <string name="bg_image_book_detail_card">Book detail card background image</string>
+    <string name="export_card_frame_template">Export card frame template</string>
+    <string name="export_card_template_success">Card template exported to: %s</string>
+    <string name="book_detail_header_style_3">Default (Type 3)</string>
     <string name="background_image_blurring">Background image blurring</string>
     <string name="background_image_blurring_radius">Blurring radius</string>
     <string name="background_image_hint">Disabled when 0, enable range from 1 to 25\nThe greater the radius, the stronger the effect of blurring</string>
