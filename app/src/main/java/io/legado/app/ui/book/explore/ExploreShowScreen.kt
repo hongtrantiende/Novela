@@ -463,7 +463,7 @@ fun ExploreShowScreen(
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(LegadoTheme.colorScheme.background)
+                        .background(Color.Transparent)
                         .padding(vertical = 8.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -897,7 +897,7 @@ private fun ExploreShowContent(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(LegadoTheme.colorScheme.background),
+                    .background(Color.Transparent),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
