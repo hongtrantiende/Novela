@@ -239,8 +239,8 @@ class ThemeConfigViewModel(
 
     fun exportCardFrameTemplate(): String? {
         try {
-            val width = 800
-            val height = 400
+            val width = 1000
+            val height = 600
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             
@@ -255,19 +255,26 @@ class ThemeConfigViewModel(
             val borderPaint = Paint().apply {
                 color = android.graphics.Color.parseColor("#D5C29D")
                 style = Paint.Style.STROKE
-                strokeWidth = 10f
+                strokeWidth = 12f
             }
-            canvas.drawRect(5f, 5f, width.toFloat() - 5f, height.toFloat() - 5f, borderPaint)
+            canvas.drawRect(6f, 6f, width.toFloat() - 6f, height.toFloat() - 6f, borderPaint)
             
             // Draw a label text
             val textPaint = Paint().apply {
                 color = android.graphics.Color.parseColor("#8C7247")
-                textSize = 36f
+                textSize = 44f
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
             }
-            canvas.drawText("Mau khung chi tiet truyen (800x400)", (width / 2).toFloat(), (height / 2).toFloat(), textPaint)
-            canvas.drawText("Ban co the thiet ke de len file nay", (width / 2).toFloat(), (height / 2).toFloat() + 50f, textPaint)
+            canvas.drawText("Mau khung chi tiet truyen (1000x600)", (width / 2).toFloat(), (height / 2).toFloat(), textPaint)
+            
+            val subtitlePaint = Paint().apply {
+                color = android.graphics.Color.parseColor("#8C7247")
+                textSize = 34f
+                isAntiAlias = true
+                textAlign = Paint.Align.CENTER
+            }
+            canvas.drawText("Ban co the thiet ke de len file nay", (width / 2).toFloat(), (height / 2).toFloat() + 60f, subtitlePaint)
 
             // Save to public Downloads directory
             val fileName = "book_detail_card_template.png"

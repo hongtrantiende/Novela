@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -232,7 +231,7 @@ private fun BookInfoScreenContent(
                     val isFixedHeader = style == "1" || style == "2"
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (isFixedHeader) {
-                            Box(modifier = Modifier.statusBarsPadding()) {
+                            Box(modifier = Modifier.padding(top = paddingValues.calculateTopPadding())) {
                                 BookInfoColorTheme(theme = bookColorTheme) {
                                     BookInfoHeader(
                                         book = book,
@@ -871,7 +870,7 @@ private fun BookInfoHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 64.dp, bottom = 8.dp),
+                    .padding(top = 16.dp, bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Column(
@@ -900,7 +899,7 @@ private fun BookInfoHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 val isDark = LegadoTheme.isDark
@@ -917,7 +916,7 @@ private fun BookInfoHeader(
                 }
 
                 NormalCard(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp),
                     cornerRadius = 16.dp,
                     containerColor = if (cardBgBitmap != null) Color.Transparent
                                      else (if (isDark) LegadoTheme.colorScheme.surfaceContainerHigh
@@ -928,7 +927,7 @@ private fun BookInfoHeader(
                                  color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                              )
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 260.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp)) {
                         if (cardBgBitmap != null) {
                             androidx.compose.foundation.Image(
                                 bitmap = cardBgBitmap.asImageBitmap(),
@@ -940,7 +939,7 @@ private fun BookInfoHeader(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 64.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
+                                .padding(20.dp),
                             horizontalArrangement = Arrangement.spacedBy(20.dp),
                             verticalAlignment = Alignment.Top,
                         ) {
