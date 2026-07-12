@@ -172,11 +172,15 @@ inline fun <reified T : BroadcastReceiver> Context.broadcastPendingIntent(
     return getBroadcast(this, 0, intent, flags)
 }
 
+inline fun <reified T : Service> Context.startForegroundServiceCompat(configIntent: Intent.() -> Unit = {}) {
+    startForegroundServiceCompat(Intent(this, T::class.java).apply(configIntent))
+}
+
 fun Context.startForegroundServiceCompat(intent: Intent) {
     try {
-        ContextCompat.startForegroundService(this, intent)
-    } catch (e: Exception) {
         startService(intent)
+    } catch (e: Exception) {
+        ContextCompat.startForegroundService(this, intent)
     }
 }
 

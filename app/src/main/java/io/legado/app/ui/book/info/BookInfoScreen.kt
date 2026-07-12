@@ -127,16 +127,15 @@ fun BookInfoScreen(
 ) {
     val bookColorTheme = rememberBookInfoColorTheme(state.book)
 
-    BookInfoColorTheme(theme = bookColorTheme) {
-        BookInfoScreenContent(
-            state = state,
-            onIntent = onIntent,
-            onBack = onBack,
-            sharedTransitionScope = sharedTransitionScope,
-            animatedVisibilityScope = animatedVisibilityScope,
-            sharedCoverKey = sharedCoverKey,
-        )
-    }
+    BookInfoScreenContent(
+        state = state,
+        onIntent = onIntent,
+        onBack = onBack,
+        sharedTransitionScope = sharedTransitionScope,
+        animatedVisibilityScope = animatedVisibilityScope,
+        sharedCoverKey = sharedCoverKey,
+        bookColorTheme = bookColorTheme,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class,
@@ -150,6 +149,7 @@ private fun BookInfoScreenContent(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     sharedCoverKey: String?,
+    bookColorTheme: ThemeOverrideState?,
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val scrollBehavior = if (isMiuix) {
@@ -159,20 +159,23 @@ private fun BookInfoScreenContent(
     }
     val listState = rememberLazyListState()
     var showMenu by rememberSaveable { mutableStateOf(false) }
+    val systemSurfaceColor = LegadoTheme.colorScheme.surface
 
     AppScaffold(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            BookInfoTransparentTopAppBar(
-                state = state,
-                showMenu = showMenu,
-                onShowMenuChange = { showMenu = it },
-                onMenuAction = { onIntent(BookInfoIntent.MenuAction(it)) },
-                onBackPressed = onBack,
-                scrollBehavior = scrollBehavior,
-            )
+            BookInfoColorTheme(theme = bookColorTheme) {
+                BookInfoTransparentTopAppBar(
+                    state = state,
+                    showMenu = showMenu,
+                    onShowMenuChange = { showMenu = it },
+                    onMenuAction = { onIntent(BookInfoIntent.MenuAction(it)) },
+                    onBackPressed = onBack,
+                    scrollBehavior = scrollBehavior,
+                )
+            }
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -192,9 +195,12 @@ private fun BookInfoScreenContent(
             }
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
-                BookInfoBackdrop(
-                    book = book,
-                )
+                BookInfoColorTheme(theme = bookColorTheme) {
+                    BookInfoBackdrop(
+                        book = book,
+                        systemSurfaceColor = systemSurfaceColor,
+                    )
+                }
                 AppPullToRefresh(
                     modifier = Modifier.fillMaxSize(),
                     isRefreshing = state.isTocLoading,
@@ -210,20 +216,23 @@ private fun BookInfoScreenContent(
                         ),
                     ) {
                         item {
-                            BookInfoHeader(
-                                book = book,
-                                kindLabels = state.kindLabels,
-                                groupNames = state.groupNames,
-                                onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
-                                onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
-                                onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
-                                onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
-                                onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
-                                onKindClick = { onIntent(BookInfoIntent.KindClick(it)) },
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                sharedCoverKey = sharedCoverKey,
-                            )
+                            BookInfoColorTheme(theme = bookColorTheme) {
+                                BookInfoHeader(
+                                    book = book,
+                                    kindLabels = state.kindLabels,
+                                    groupNames = state.groupNames,
+                                    systemSurfaceColor = systemSurfaceColor,
+                                    onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
+                                    onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
+                                    onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
+                                    onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
+                                    onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
+                                    onKindClick = { onIntent(BookInfoIntent.KindClick(it)) },
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    sharedCoverKey = sharedCoverKey,
+                                )
+                            }
                         }
                         item {
                             Column(
@@ -483,6 +492,7 @@ private fun BookInfoTopBarActions(
 @Composable
 private fun BookInfoBackdrop(
     book: BookInfoBookUi,
+    systemSurfaceColor: Color,
 ) {
     val backdropState = remember(
         book.name,
@@ -539,9 +549,9 @@ private fun BookInfoBackdrop(
                             0f to Color.Transparent,
                             0.20f to seedOverlay.copy(alpha = 0.10f),
                             0.40f to seedOverlay.copy(alpha = 0.18f),
-                            0.60f to LegadoTheme.colorScheme.surface.copy(alpha = 0.85f),
-                            0.80f to LegadoTheme.colorScheme.surface,
-                            1f to LegadoTheme.colorScheme.surface,
+                            0.60f to systemSurfaceColor.copy(alpha = 0.85f),
+                            0.80f to systemSurfaceColor,
+                            1f to systemSurfaceColor,
                         )
                     )
                 )
@@ -643,6 +653,7 @@ private fun BookInfoHeader(
     book: BookInfoBookUi,
     kindLabels: List<String>,
     groupNames: String?,
+    systemSurfaceColor: Color,
     onCoverClick: () -> Unit,
     onCoverLongClick: () -> Unit,
     onAuthorClick: (Boolean) -> Unit,
@@ -660,9 +671,9 @@ private fun BookInfoHeader(
                 Brush.verticalGradient(
                     colors = listOf(
                         Color.Transparent,
-                        lerp(LegadoTheme.colorScheme.surface, LegadoTheme.seedColor, 0.08f)
+                        lerp(systemSurfaceColor, LegadoTheme.seedColor, 0.08f)
                             .copy(alpha = 0.5f),
-                        LegadoTheme.colorScheme.surface,
+                        systemSurfaceColor,
                     )
                 )
             )

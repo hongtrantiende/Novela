@@ -18,6 +18,7 @@ import io.legado.app.utils.stackTraceStr
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CancellationException
 import splitties.init.appCtx
+import io.legado.app.domain.model.BookContentProcessEngine
 import java.lang.ref.WeakReference
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.regex.Pattern
@@ -200,6 +201,11 @@ class ContentProcessor private constructor(
             }
             useHtmlMap.forEach { (placeholder, originalContent) ->
                 mContent = mContent.replace(placeholder, originalContent)
+            }
+            val processes = appDb.bookContentProcessDao.getForChapterSync(book.bookUrl, chapter.index)
+            if (processes.isNotEmpty()) {
+                val applyResult = BookContentProcessEngine.apply(mContent, processes)
+                mContent = applyResult.text
             }
         }
         if (includeTitle) {

@@ -61,12 +61,14 @@ enum class HomepageModuleType(val key: String, val title: String) {
     Banner("banner", "Băng chuyền trượt"),
     Ranking("ranking", "Danh sách xếp hạng"),
     GridRanking("gridRanking", "Bảng xếp hạng dạng lưới"),
-    Grid("grid", "lưới"),
-    Card("card", "Thẻ được đề xuất"),
-    InfiniteGrid("infiniteGrid", "lưới vô hạn"),
-    ButtonGroup("buttonGroup", "nhóm nút"),
-    Waterfall("waterfall", "Dòng thác sai hướng"),
-    Unknown("", "không rõ");
+    Grid("grid", "Lưới ngang"),
+    Card("card", "Thẻ đề xuất"),
+    InfiniteGrid("infiniteGrid", "Lưới cuộn vô hạn"),
+    ButtonGroup("buttonGroup", "Nhóm nút thể loại"),
+    Waterfall("waterfall", "Bố cục thác nước"),
+    Spotlight("spotlight", "Nổi bật"),
+    CoverFlow("coverFlow", "Triển lãm bìa"),
+    Unknown("", "Không rõ");
 
     companion object {
         fun fromKey(key: String?): HomepageModuleType =

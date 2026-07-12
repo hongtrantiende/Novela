@@ -6,9 +6,9 @@ fun Long.toTimeAgo(): String {
     val curTime = System.currentTimeMillis()
     val time = this
     val seconds = abs(System.currentTimeMillis() - time) / 1000f
-    val end = if (time < curTime) "phía trước" else "mặt sau"
+    val suffix = if (time < curTime) " trước" else " sau"
 
-    val start = when {
+    val timeText = when {
         seconds < 60 -> "${seconds.toInt()} giây"
         seconds < 3600 -> {
             val minutes = seconds / 60f
@@ -24,16 +24,16 @@ fun Long.toTimeAgo(): String {
         }
         seconds < 2_628_000 -> {
             val weeks = seconds / 604800f
-            "${weeks.toInt()}tuần"
+            "${weeks.toInt()} tuần"
         }
         seconds < 31_536_000 -> {
             val months = seconds / 2_628_000f
-            "${months.toInt()}tháng"
+            "${months.toInt()} tháng"
         }
         else -> {
             val years = seconds / 31_536_000f
-            "${years.toInt()}năm"
+            "${years.toInt()} năm"
         }
     }
-    return start + end
+    return timeText + suffix
 }

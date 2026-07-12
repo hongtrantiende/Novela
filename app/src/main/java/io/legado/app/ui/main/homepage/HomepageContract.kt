@@ -19,7 +19,6 @@ data class HomepageBookItemUi(
 data class HomepageUiState(
     val modules: ImmutableList<HomepageModuleUi> = persistentListOf(),
     val isManageMode: Boolean = false,
-    val isConfigMode: Boolean = false,
     val isRefreshing: Boolean = false,
     val manageState: HomepageManageUiState = HomepageManageUiState()
 )
@@ -41,6 +40,8 @@ data class HomepageManageActions(
     val onJoinModule: (String, String?, ModuleDef) -> Unit = { _, _, _ -> },
     val onAddCustomModule: (String, String?, ModuleDef) -> Unit = { _, _, _ -> },
     val onAddButtonGroupFromKinds: (String, String?, String, List<String>) -> Unit = { _, _, _, _ -> },
+    val onAddRankingFromKinds: (String, String?, String, String, List<String>) -> Unit =
+        { _, _, _, _, _ -> },
     val onGetExploreKinds: (String) -> List<Pair<String, String>> = { emptyList() },
     val onUpdateModule: (String, ModuleDef) -> Unit = { _, _ -> },
     val onDeleteModule: (String) -> Unit = {},
@@ -51,6 +52,16 @@ data class HomepageManageActions(
     val onRenameCustomSet: (String, String) -> Unit = { _, _ -> },
     val onDeleteCustomSet: (String) -> Unit = {},
     val onAssignModuleToCustomSet: (String, String?) -> Unit = { _, _ -> },
+)
+
+@Stable
+data class HomepageFeedActions(
+    val onModuleHeaderClick: (String, String?, String?) -> Unit,
+    val onRetryModule: (String) -> Unit,
+    val onLoadMoreModule: (String) -> Unit,
+    val onBookClick: (SearchBook, String?) -> Unit,
+    val onKindUrlClick: (String, String, String) -> Unit,
+    val onRefreshButtonGroup: (String) -> Unit,
 )
 
 @Stable
@@ -110,5 +121,17 @@ sealed interface ModuleLoadState {
     data class Buttons(val kinds: ImmutableList<ExploreKind>) : ModuleLoadState
 
     @Stable
+    data class Rankings(
+        val sources: ImmutableList<HomepageRankingSourceUi>
+    ) : ModuleLoadState
+
+    @Stable
     data class Error(val message: String) : ModuleLoadState
 }
+
+@Stable
+data class HomepageRankingSourceUi(
+    val title: String,
+    val url: String?,
+    val state: ModuleLoadState,
+)

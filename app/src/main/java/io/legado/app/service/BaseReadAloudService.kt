@@ -131,7 +131,13 @@ abstract class BaseReadAloudService : BaseService(),
     private var dsJob: Job? = null
     private var upNotificationJob: Coroutine<*>? = null
     private var cover: Bitmap =
-        BitmapFactory.decodeResource(appCtx.resources, R.drawable.image_legado)
+        runCatching {
+            BitmapFactory.decodeResource(appCtx.resources, R.drawable.image_legado)
+                ?: BitmapFactory.decodeResource(appCtx.resources, R.drawable.ic_launcher3)
+                ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }.getOrElse {
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
     var pageChanged = false
     private var toLast = false
     var paragraphStartPos = 0
@@ -773,13 +779,15 @@ abstract class BaseReadAloudService : BaseService(),
      * 更新通知
      */
     override fun startForegroundNotification() {
-        try {
-            val notification = createNotification()
-            startForeground(NotificationId.ReadAloudService, notification.build())
-        } catch (e: Exception) {
-            AppLog.put("Lỗi tạo thông báo đọc to, ${e.localizedMessage}", e, true)
-            //创建通知出错不结束服务就会崩溃,服务必须绑定通知
-            stopSelf()
+        execute {
+            try {
+                val notification = createNotification()
+                startForeground(NotificationId.ReadAloudService, notification.build())
+            } catch (e: Exception) {
+                AppLog.put("Lỗi tạo thông báo đọc to, ${e.localizedMessage}", e, true)
+                //创建通知出错不结束服务就会崩溃,服务必须绑定通知
+                stopSelf()
+            }
         }
     }
 

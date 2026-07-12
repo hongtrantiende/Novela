@@ -193,6 +193,53 @@ fun ExploreScreen(
     val scope = rememberCoroutineScope()
     val exploreKindUseCase: ExploreKindUiUseCase = koinInject()
 
+    val onHeaderClick = remember(viewModel, onOpenExploreShow) {
+        { item: BookSourcePart ->
+            if (item.bookSourceUrl.startsWith("ext_")) {
+                onOpenExploreShow(item.bookSourceName, item.bookSourceUrl, null)
+            } else {
+                viewModel.toggleExpand(item)
+            }
+        }
+    }
+    val onHeaderInstall = remember(viewModel, context) {
+        { item: BookSourcePart ->
+            if (item.bookSourceUrl.startsWith("ext_online_")) {
+                viewModel.installExtensionBySlug(item.bookSourceUrl.substringAfter("ext_online_"))
+            } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
+                val id = item.bookSourceUrl.substringAfter("online_yckceo_").substringBefore("_")
+                val jsonUrl = "https://www.yckceo.com/yuedu/shuyuan/json/id/${id}.json"
+                (context as? AppCompatActivity)?.showDialogFragment(ImportBookSourceDialog(jsonUrl))
+            }
+        }
+    }
+    val onHeaderTop = remember(viewModel) { { item: BookSourcePart -> viewModel.topSource(item) } }
+    val onHeaderEdit = remember(context) {
+        { item: BookSourcePart ->
+            context.startActivity<BookSourceEditActivity> {
+                putExtra("sourceUrl", item.bookSourceUrl)
+            }
+        }
+    }
+    val onHeaderSearch = remember(context) {
+        { item: BookSourcePart ->
+            context.startActivity<SearchActivity> {
+                putExtra("searchScope", SearchScope(item).toString())
+            }
+        }
+    }
+    val onHeaderLogin = remember(context) {
+        { item: BookSourcePart ->
+            context.startActivity<SourceLoginActivity> {
+                putExtra("type", "bookSource")
+                putExtra("key", item.bookSourceUrl)
+            }
+        }
+    }
+    val onHeaderRefresh = remember(viewModel) { { item: BookSourcePart -> viewModel.refreshExploreKinds(item) } }
+    val onHeaderDelete = remember { { item: BookSourcePart -> sourceToDeleteUrl = item.bookSourceUrl } }
+    val onHeaderGenerate = remember(viewModel) { { item: BookSourcePart -> viewModel.startGeneration(item.bookSourceUrl) } }
+
     LaunchedEffect(viewModel, activity, exploreKindUseCase) {
         viewModel.effects.collect { effect ->
             when (effect) {
@@ -211,12 +258,16 @@ fun ExploreScreen(
         }
     }
 
-    val stickyHeaderSource by remember(listItems, uiState.items) {
+    // Pre-build map for O(1) lookup instead of O(n) find every scroll frame
+    val sourceUrlMap = remember(uiState.items) {
+        uiState.items.associateBy { it.bookSourceUrl }
+    }
+    val stickyHeaderSource by remember(listItems, sourceUrlMap) {
         derivedStateOf {
             val firstIndex = listState.firstVisibleItemIndex
             val item = listItems.getOrNull(firstIndex)
             if (item is ExploreListItem.KindRow) {
-                uiState.items.find { it.bookSourceUrl == item.sourceUrl }
+                sourceUrlMap[item.sourceUrl]
             } else {
                 null
             }
@@ -292,11 +343,12 @@ fun ExploreScreen(
                     )
                 }
 
+                val subTabScrollState = rememberScrollState()
                 if (isVip && currentExploreTab == 1) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState())
+                            .horizontalScroll(subTabScrollState)
                             .padding(horizontal = 16.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -361,42 +413,15 @@ fun ExploreScreen(
                             loadingKinds = if (isExpanded) uiState.loadingKinds else false,
                             installedSearchUrls = uiState.installedSearchUrls,
                             installedSourceTypes = uiState.installedSourceTypes,
-                            onClick = {
-                                if (item.bookSourceUrl.startsWith("ext_")) {
-                                    onOpenExploreShow(item.bookSourceName, item.bookSourceUrl, null)
-                                } else {
-                                    viewModel.toggleExpand(item)
-                                }
-                            },
-                            onInstall = {
-                                if (item.bookSourceUrl.startsWith("ext_online_")) {
-                                    viewModel.installExtensionBySlug(item.bookSourceUrl.substringAfter("ext_online_"))
-                                } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
-                                    val id = item.bookSourceUrl.substringAfter("online_yckceo_").substringBefore("_")
-                                    val jsonUrl = "https://www.yckceo.com/yuedu/shuyuan/json/id/${id}.json"
-                                    (context as? AppCompatActivity)?.showDialogFragment(ImportBookSourceDialog(jsonUrl))
-                                }
-                            },
-                            onTop = { viewModel.topSource(item) },
-                            onEdit = {
-                                context.startActivity<BookSourceEditActivity> {
-                                    putExtra("sourceUrl", item.bookSourceUrl)
-                                }
-                            },
-                            onSearch = {
-                                context.startActivity<SearchActivity> {
-                                    putExtra("searchScope", SearchScope(item).toString())
-                                }
-                            },
-                            onLogin = {
-                                context.startActivity<SourceLoginActivity> {
-                                    putExtra("type", "bookSource")
-                                    putExtra("key", item.bookSourceUrl)
-                                }
-                            },
-                            onRefresh = { viewModel.refreshExploreKinds(item) },
-                            onDelete = { sourceToDeleteUrl = item.bookSourceUrl },
-                            onGenerateExtension = { viewModel.startGeneration(item.bookSourceUrl) },
+                            onClick = onHeaderClick,
+                            onInstall = onHeaderInstall,
+                            onTop = onHeaderTop,
+                            onEdit = onHeaderEdit,
+                            onSearch = onHeaderSearch,
+                            onLogin = onHeaderLogin,
+                            onRefresh = onHeaderRefresh,
+                            onDelete = onHeaderDelete,
+                            onGenerateExtension = onHeaderGenerate,
                             isMiuix = composeEngine
                         )
                         }
@@ -531,15 +556,15 @@ fun ExploreSourceHeader(
     loadingKinds: Boolean,
     installedSearchUrls: Map<String, Boolean> = emptyMap(),
     installedSourceTypes: Map<String, Int> = emptyMap(),
-    onClick: () -> Unit,
-    onInstall: () -> Unit = {},
-    onTop: () -> Unit,
-    onEdit: () -> Unit,
-    onSearch: () -> Unit,
-    onLogin: () -> Unit,
-    onRefresh: () -> Unit,
-    onDelete: () -> Unit,
-    onGenerateExtension: () -> Unit = {},
+    onClick: (BookSourcePart) -> Unit,
+    onInstall: (BookSourcePart) -> Unit = {},
+    onTop: (BookSourcePart) -> Unit,
+    onEdit: (BookSourcePart) -> Unit,
+    onSearch: (BookSourcePart) -> Unit,
+    onLogin: (BookSourcePart) -> Unit,
+    onRefresh: (BookSourcePart) -> Unit,
+    onDelete: (BookSourcePart) -> Unit,
+    onGenerateExtension: (BookSourcePart) -> Unit = {},
     isMiuix: Boolean,
 ) {
     var showMenu by remember { mutableStateOf(false) }
@@ -609,7 +634,7 @@ fun ExploreSourceHeader(
         ListItem(
             modifier = Modifier
                 .combinedClickable(
-                    onClick = onClick,
+                    onClick = { if (isInstalled) onClick(item) else onInstall(item) },
                     onLongClick = { if (isInstalled && !item.bookSourceUrl.startsWith("ext_")) showMenu = true }
                 )
                 .fillMaxWidth(),
@@ -742,7 +767,7 @@ fun ExploreSourceHeader(
             trailingContent = {
                 if (!isInstalled) {
                     Button(
-                        onClick = onInstall,
+                        onClick = { onInstall(item) },
                         enabled = !isInstalling,
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -792,29 +817,29 @@ fun ExploreSourceHeader(
                         RoundDropdownMenuItem(
                             leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
                             text = stringResource(R.string.to_top),
-                            onClick = { onTop(); showMenu = false }
+                            onClick = { onTop(item); showMenu = false }
                         )
                         RoundDropdownMenuItem(
                             leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
                             text = stringResource(R.string.edit),
-                            onClick = { onEdit(); showMenu = false }
+                            onClick = { onEdit(item); showMenu = false }
                         )
                         RoundDropdownMenuItem(
                             leadingIcon = { MenuItemIcon(Icons.Default.Search) },
                             text = stringResource(R.string.search),
-                            onClick = { onSearch(); showMenu = false }
+                            onClick = { onSearch(item); showMenu = false }
                         )
                         if (item.hasLoginUrl) {
                             RoundDropdownMenuItem(
                                 leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
                                 text = stringResource(R.string.login),
-                                onClick = { onLogin(); showMenu = false }
+                                onClick = { onLogin(item); showMenu = false }
                             )
                         }
                         RoundDropdownMenuItem(
                             leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
                             text = stringResource(R.string.refresh),
-                            onClick = { onRefresh(); showMenu = false }
+                            onClick = { onRefresh(item); showMenu = false }
                         )
                         RoundDropdownMenuItem(
                             leadingIcon = {
@@ -825,7 +850,7 @@ fun ExploreSourceHeader(
                             },
                             text = stringResource(R.string.delete),
                             color = LegadoTheme.colorScheme.error,
-                            onClick = { onDelete(); showMenu = false }
+                            onClick = { onDelete(item); showMenu = false }
                         )
                     }
                 }
@@ -1386,7 +1411,14 @@ fun AiExtensionWorkspaceDialog(
                             Text("Chưa có mã nguồn nào được sinh ra.\nHãy tạo Bước 1, Bước 2 hoặc Bước 3 trước.", style = LegadoTheme.typography.bodyMedium, color = LegadoTheme.colorScheme.onSurfaceVariant)
                         }
                     } else {
-                        var selectedFile by remember(fileList) { mutableStateOf(fileList.firstOrNull()) }
+                        var selectedFile by remember { mutableStateOf<CodeFileItem?>(null) }
+                        
+                        LaunchedEffect(fileList) {
+                            val current = selectedFile
+                            val found = fileList.find { it.name == current?.name && it.step == current?.step }
+                            selectedFile = found ?: fileList.firstOrNull()
+                        }
+                        
                         var editedCode by remember(selectedFile) { mutableStateOf(selectedFile?.content.orEmpty()) }
                         
                         Column(

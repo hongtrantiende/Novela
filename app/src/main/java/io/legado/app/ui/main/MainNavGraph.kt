@@ -129,6 +129,9 @@ fun MainActivity.mainEntryProvider(
             onNavigateToBookCacheManage = {
                 onNavigateToRoute(MainRouteBookCacheManage)
             },
+            onNavigateToBackupSettings = {
+                onNavigateToRoute(MainRouteSettingsBackup)
+            },
             onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
                 onNavigateToRoute(
                     MainRouteBookInfo(
@@ -392,7 +395,7 @@ fun MainActivity.mainEntryProvider(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(io.legado.app.ui.theme.LegadoTheme.colorScheme.background),
+                    .background(androidx.compose.ui.graphics.Color(0xFF121212)),
                 contentAlignment = Alignment.Center
             ) {
                 AppContainedLoadingIndicator()

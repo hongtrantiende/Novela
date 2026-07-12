@@ -382,19 +382,44 @@ fun ThemeConfigScreen(
 
                 SplicedColumnGroup(title = stringResource(R.string.main_activity)) {
                     SwitchSettingItem(
+                        title = stringResource(R.string.show_home),
+                        checked = ThemeConfig.showHome,
+                        onCheckedChange = {
+                            ThemeConfig.showHome = it
+                            postEvent(EventBus.NOTIFY_MAIN, true)
+                        }
+                    )
+                    SwitchSettingItem(
                         title = stringResource(R.string.show_discovery),
                         checked = ThemeConfig.showDiscovery,
-                        onCheckedChange = { ThemeConfig.showDiscovery = it }
+                        onCheckedChange = {
+                            ThemeConfig.showDiscovery = it
+                            postEvent(EventBus.NOTIFY_MAIN, true)
+                        }
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.rss),
+                        checked = ThemeConfig.showRss,
+                        onCheckedChange = {
+                            ThemeConfig.showRss = it
+                            postEvent(EventBus.NOTIFY_MAIN, true)
+                        }
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.show_updates),
                         checked = ThemeConfig.showUpdates,
-                        onCheckedChange = { ThemeConfig.showUpdates = it }
+                        onCheckedChange = {
+                            ThemeConfig.showUpdates = it
+                            postEvent(EventBus.NOTIFY_MAIN, true)
+                        }
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.read_record),
                         checked = ThemeConfig.showReadRecord,
-                        onCheckedChange = { ThemeConfig.showReadRecord = it }
+                        onCheckedChange = {
+                            ThemeConfig.showReadRecord = it
+                            postEvent(EventBus.NOTIFY_MAIN, true)
+                        }
                     )
                     SwitchSettingItem(
                         title = stringResource(R.string.show_status),

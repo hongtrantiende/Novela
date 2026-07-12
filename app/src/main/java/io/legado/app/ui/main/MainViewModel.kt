@@ -149,7 +149,7 @@ data class MainUiState(
 )
 
 private fun MainViewModel.readMainUiState(): MainUiState {
-    val destinations = MainDestination.mainDestinations.filter {
+    var destinations = MainDestination.mainDestinations.filter {
         when (it) {
             MainDestination.Explore -> ThemeConfig.showDiscovery
             MainDestination.Home -> ThemeConfig.showHome
@@ -158,9 +158,21 @@ private fun MainViewModel.readMainUiState(): MainUiState {
             MainDestination.ReadRecord -> ThemeConfig.showReadRecord
             else -> true
         }
-    }.toImmutableList()
+    }
+    if (ThemeConfig.showHome) {
+        val homeIndex = destinations.indexOf(MainDestination.Home)
+        if (homeIndex != -1) {
+            val list = destinations.toMutableList()
+            list.remove(MainDestination.Home)
+            list.remove(MainDestination.Bookshelf)
+            list.add(0, MainDestination.Home)
+            list.add(1, MainDestination.Bookshelf)
+            destinations = list
+        }
+    }
+    val destinationsImmutable = destinations.toImmutableList()
     return MainUiState(
-        destinations = destinations,
+        destinations = destinationsImmutable,
         defaultHomePage = ThemeConfig.defaultHomePage,
         showBottomView = ThemeConfig.showBottomView,
         useFloatingBottomBar = ThemeConfig.useFloatingBottomBar,

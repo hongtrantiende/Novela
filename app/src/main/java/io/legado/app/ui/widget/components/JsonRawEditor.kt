@@ -17,6 +17,8 @@ import com.google.gson.JsonParser
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
 import io.legado.app.ui.widget.components.text.AppText
+import androidx.compose.ui.platform.LocalContext
+import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.GSON
 
 @Composable
@@ -26,6 +28,7 @@ fun JsonRawEditor(
     label: String,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
     Column(modifier = modifier) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -39,9 +42,18 @@ fun JsonRawEditor(
             Row {
                 SmallPlainButton(
                     onClick = {
-                        runCatching {
+                        if (value.isBlank()) {
+                            context.toastOnUi("JSON đang trống!")
+                            return@SmallPlainButton
+                        }
+                        val result = runCatching {
                             val jsonElement = JsonParser.parseString(value)
                             onValueChange(GSON.toJson(jsonElement))
+                        }
+                        if (result.isSuccess) {
+                            context.toastOnUi("Định dạng JSON thành công!")
+                        } else {
+                            context.toastOnUi("JSON không hợp lệ!")
                         }
                     },
                     icon = Icons.Default.AutoFixHigh,
@@ -49,10 +61,19 @@ fun JsonRawEditor(
                 )
                 SmallPlainButton(
                     onClick = {
-                        runCatching {
+                        if (value.isBlank()) {
+                            context.toastOnUi("JSON đang trống!")
+                            return@SmallPlainButton
+                        }
+                        val result = runCatching {
                             val jsonElement = JsonParser.parseString(value)
                             val compactGson = GsonBuilder().create()
                             onValueChange(compactGson.toJson(jsonElement))
+                        }
+                        if (result.isSuccess) {
+                            context.toastOnUi("Nén JSON thành công!")
+                        } else {
+                            context.toastOnUi("JSON không hợp lệ!")
                         }
                     },
                     icon = Icons.Default.Compress,

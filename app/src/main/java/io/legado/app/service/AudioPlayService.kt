@@ -117,7 +117,13 @@ class AudioPlayService : BaseService(),
     private var upPlayProgressJob: Job? = null
     private var playSpeed: Float = 1f
     private var cover: Bitmap =
-        BitmapFactory.decodeResource(appCtx.resources, R.drawable.image_legado)!!
+        runCatching {
+            BitmapFactory.decodeResource(appCtx.resources, R.drawable.image_legado)
+                ?: BitmapFactory.decodeResource(appCtx.resources, R.drawable.ic_launcher3)
+                ?: Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }.getOrElse {
+            Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
+        }
 
     override fun onCreate() {
         super.onCreate()
@@ -128,7 +134,6 @@ class AudioPlayService : BaseService(),
         initBroadcastReceiver()
         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
         doDs()
-        upAudioPlayNotification()
         execute {
             ImageLoader
                 .loadBitmap(this@AudioPlayService, AudioPlay.book?.getDisplayCover())
@@ -654,13 +659,15 @@ class AudioPlayService : BaseService(),
      * 更新通知
      */
     override fun startForegroundNotification() {
-        try {
-            val notification = createNotification()
-            startForeground(NotificationId.AudioPlayService, notification.build())
-        } catch (e: Exception) {
-            AppLog.put("Lỗi tạo thông báo phát lại âm thanh, ${e.localizedMessage}", e, true)
-            //创建通知出错不结束服务就会崩溃,服务必须绑定通知
-            stopSelf()
+        execute {
+            try {
+                val notification = createNotification()
+                startForeground(NotificationId.AudioPlayService, notification.build())
+            } catch (e: Exception) {
+                AppLog.put("Lỗi tạo thông báo phát lại âm thanh, ${e.localizedMessage}", e, true)
+                //创建通知出错不结束服务就会崩溃,服务必须绑定通知
+                stopSelf()
+            }
         }
     }
 

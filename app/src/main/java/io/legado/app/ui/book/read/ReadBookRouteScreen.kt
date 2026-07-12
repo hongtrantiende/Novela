@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -132,16 +133,27 @@ private fun ReadBookChapterListOverlay(
     val bookUrl = book?.bookUrl ?: ""
     BackHandler { onDismiss() }
 
-    val chapters = remember(bookUrl) {
-        if (bookUrl.isNotEmpty()) appDb.bookChapterDao.getChapterList(bookUrl)
-        else emptyList()
+    var chapters by remember { mutableStateOf<List<io.legado.app.data.entities.BookChapter>>(emptyList()) }
+    LaunchedEffect(bookUrl) {
+        if (bookUrl.isNotEmpty()) {
+            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                appDb.bookChapterDao.getChapterList(bookUrl)
+            }
+            chapters = list
+        } else {
+            chapters = emptyList()
+        }
     }
 
-    val cachedFiles = remember(chapters, book) {
+    var cachedFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(chapters, book) {
         if (book != null) {
-            io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
+            val files = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
+            }
+            cachedFiles = files
         } else {
-            emptySet()
+            cachedFiles = emptySet()
         }
     }
 
@@ -650,7 +662,7 @@ fun ReadBookRouteScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(io.legado.app.ui.theme.LegadoTheme.colorScheme.background),
+                    .background(MaterialTheme.colorScheme.background),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -660,7 +672,7 @@ fun ReadBookRouteScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = if (!state.msg.isNullOrBlank()) state.msg!! else "Đang tải...",
-                        color = io.legado.app.ui.theme.LegadoTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                         fontSize = 14.sp
                     )
                 }

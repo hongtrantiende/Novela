@@ -1,5 +1,6 @@
 package io.legado.app.di
 
+import java.time.Clock
 import android.os.Build
 import coil.ImageLoader
 import coil.decode.GifDecoder
@@ -55,6 +56,12 @@ import io.legado.app.domain.gateway.LocalBookGateway
 import io.legado.app.domain.gateway.ReadingProgressGateway
 import io.legado.app.domain.gateway.TranslationCacheGateway
 import io.legado.app.domain.gateway.WebDavBackupGateway
+import io.legado.app.data.repository.HomeDashboardRepository
+import io.legado.app.domain.gateway.HomeDashboardGateway
+import io.legado.app.domain.usecase.HomeDashboardUseCase
+import io.legado.app.data.repository.BackupRestoreRepository
+import io.legado.app.domain.gateway.BackupRestoreGateway
+import io.legado.app.domain.usecase.BackupRestoreUseCase
 import io.legado.app.domain.repository.BookDomainRepository
 import io.legado.app.domain.usecase.AddBookUseCase
 import io.legado.app.domain.usecase.AddToBookshelfUseCase
@@ -130,6 +137,7 @@ import io.legado.app.ui.main.MainViewModel
 import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.bookshelf.BookUpdatesViewModel
 import io.legado.app.ui.main.explore.ExploreViewModel
+import io.legado.app.ui.main.home.HomeViewModel
 import io.legado.app.ui.main.homepage.HomepageViewModel
 import io.legado.app.ui.main.my.MyViewModel
 import io.legado.app.ui.main.rss.RssViewModel
@@ -237,6 +245,10 @@ val appModule = module {
     single<BookSourceCallbackGateway> { BookSourceCallbackRepository(get(), get()) }
     single<LocalBookGateway> { LocalBookRepository(get()) }
     single<DatabaseMaintenanceGateway> { DatabaseMaintenanceRepository(get()) }
+    single<HomeDashboardGateway> { HomeDashboardRepository(get(), get()) }
+    single { HomeDashboardUseCase(get(), Clock.systemDefaultZone()) }
+    singleOf(::BackupRestoreUseCase)
+    single<BackupRestoreGateway> { BackupRestoreRepository() }
     single<WebDavBackupGateway> { WebDavBackupRepository() }
     single<ReadingProgressGateway> { WebDavReadingProgressRepository() }
     single<HomepageModulesGateway> { HomepageModulesRepository(get(), get()) }
@@ -295,6 +307,7 @@ val appModule = module {
     viewModelOf(::BookshelfViewModel)
     viewModelOf(::BookUpdatesViewModel)
     viewModelOf(::MainViewModel)
+    viewModelOf(::HomeViewModel)
     viewModelOf(::HomepageViewModel)
     viewModelOf(::AboutViewModel)
     viewModelOf(::GroupViewModel)

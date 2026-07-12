@@ -79,7 +79,7 @@ import io.legado.app.ui.main.bookshelf.BookshelfViewModel
 import io.legado.app.ui.main.bookshelf.BookUpdatesScreen
 import io.legado.app.ui.main.bookshelf.toLightBook
 import io.legado.app.ui.main.explore.ExploreScreen
-import io.legado.app.ui.main.homepage.HomepageScreen
+import io.legado.app.ui.main.home.HomeRouteScreen
 import io.legado.app.ui.main.my.MyScreen
 import io.legado.app.ui.main.my.PrefClickEvent
 import io.legado.app.ui.main.rss.RssScreen
@@ -121,6 +121,7 @@ fun MainScreen(
     onNavigateToLocalImport: () -> Unit,
     onNavigateToCache: (Long) -> Unit,
     onNavigateToBookCacheManage: () -> Unit,
+    onNavigateToBackupSettings: () -> Unit,
     onNavigateToBookInfo: (name: String, author: String, bookUrl: String, origin: String?, coverPath: String?, sharedCoverKey: String?) -> Unit,
     onNavigateToExploreShow: (title: String?, sourceUrl: String, exploreUrl: String?) -> Unit,
     onNavigateToRssSort: (sourceUrl: String, sortUrl: String?, key: String?) -> Unit,
@@ -378,24 +379,28 @@ fun MainScreen(
                                 }
                             ),
                         userScrollEnabled = true,
-                        beyondViewportPageCount = 4
+                        beyondViewportPageCount = 1
                     ) { page ->
                         val destination = destinations.getOrNull(page) ?: return@HorizontalPager
                         when (destination) {
-                            MainDestination.Home -> HomepageScreen(
-                                onBookClick = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
+                            MainDestination.Home -> HomeRouteScreen(
+                                onOpenBook = { book ->
+                                    context.startActivityForBook(book)
+                                },
+                                onNavigateToBookInfo = { name, author, bookUrl, origin, coverPath, sharedCoverKey ->
                                     onNavigateToBookInfo(
                                         name ?: "",
                                         author ?: "",
                                         bookUrl,
                                         origin,
                                         coverPath,
-                                        sharedCoverKey
+                                        sharedCoverKey,
                                     )
                                 },
-                                onModuleHeaderClick = { title, sourceUrl, exploreUrl ->
-                                    onNavigateToExploreShow(title, sourceUrl, exploreUrl)
-                                },
+                                onOpenExploreShow = onNavigateToExploreShow,
+                                onOpenBackupSettings = onNavigateToBackupSettings,
+                                onNavigateToReadRecord = onNavigateToReadRecord,
+                                onNavigateToReadRecordOverview = onNavigateToReadRecordOverview,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = animatedVisibilityScope,
                             )

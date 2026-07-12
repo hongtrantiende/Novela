@@ -21,7 +21,7 @@ import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.service.AudioPlayService
 import io.legado.app.utils.postEvent
-import io.legado.app.utils.startService
+import io.legado.app.utils.startForegroundServiceCompat
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
@@ -206,7 +206,7 @@ object AudioPlay : CoroutineScope by MainScope() {
      * 播放当前章节
      */
     fun play() {
-        context.startService<AudioPlayService> {
+        context.startForegroundServiceCompat<AudioPlayService> {
             action = IntentAction.play
         }
     }
@@ -215,7 +215,7 @@ object AudioPlay : CoroutineScope by MainScope() {
      * 从头播放新章节
      */
     private fun playNew() {
-        context.startService<AudioPlayService> {
+        context.startForegroundServiceCompat<AudioPlayService> {
             action = IntentAction.playNew
         }
     }
@@ -235,7 +235,7 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     fun pause(context: Context) {
         if (AudioPlayService.isRun) {
-            context.startService<AudioPlayService> {
+            context.startForegroundServiceCompat<AudioPlayService> {
                 action = IntentAction.pause
             }
         }
@@ -243,7 +243,7 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     fun resume(context: Context) {
         if (AudioPlayService.isRun) {
-            context.startService<AudioPlayService> {
+            context.startForegroundServiceCompat<AudioPlayService> {
                 action = IntentAction.resume
             }
         }
@@ -251,7 +251,7 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     fun stop() {
         if (AudioPlayService.isRun) {
-            context.startService<AudioPlayService> {
+            context.startForegroundServiceCompat<AudioPlayService> {
                 action = IntentAction.stop
             }
         }
@@ -259,7 +259,7 @@ object AudioPlay : CoroutineScope by MainScope() {
 
     fun adjustSpeed(adjust: Float) {
         if (AudioPlayService.isRun) {
-            context.startService<AudioPlayService> {
+            context.startForegroundServiceCompat<AudioPlayService> {
                 action = IntentAction.adjustSpeed
                 putExtra("adjust", adjust)
             }
@@ -270,7 +270,7 @@ object AudioPlay : CoroutineScope by MainScope() {
         durChapterPos = position
         saveRead()
         if (AudioPlayService.isRun) {
-            context.startService<AudioPlayService> {
+            context.startForegroundServiceCompat<AudioPlayService> {
                 action = IntentAction.adjustProgress
                 putExtra("position", position)
             }
@@ -339,7 +339,7 @@ object AudioPlay : CoroutineScope by MainScope() {
             val intent = Intent(context, AudioPlayService::class.java)
             intent.action = IntentAction.setTimer
             intent.putExtra("minute", minute)
-            context.startService(intent)
+            context.startForegroundServiceCompat(intent)
         } else {
             AudioPlayService.timeMinute = minute
             postEvent(EventBus.AUDIO_DS, minute)
@@ -349,12 +349,12 @@ object AudioPlay : CoroutineScope by MainScope() {
     fun addTimer() {
         val intent = Intent(context, AudioPlayService::class.java)
         intent.action = IntentAction.addTimer
-        context.startService(intent)
+        context.startForegroundServiceCompat(intent)
     }
 
     fun stopPlay() {
         if (AudioPlayService.isRun) {
-            context.startService<AudioPlayService> {
+            context.startForegroundServiceCompat<AudioPlayService> {
                 action = IntentAction.stopPlay
             }
         }

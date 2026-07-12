@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -398,6 +399,63 @@ fun HomepageModuleSkeleton(
 
         HomepageModuleType.ButtonGroup -> {
             // ButtonGroup loads instantly (no network), no skeleton needed
+        }
+
+        HomepageModuleType.Spotlight -> {
+            Column(
+                modifier = modifier,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Hero placeholder
+                SkeletonBox(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                )
+                // 3 small items below
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    repeat(3) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            SkeletonBox(
+                                modifier = Modifier
+                                    .size(70.dp, 95.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            SkeletonBox(
+                                modifier = Modifier
+                                    .width(60.dp)
+                                    .height(12.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        HomepageModuleType.CoverFlow -> {
+            LazyRow(
+                modifier = modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy((-8).dp),
+                userScrollEnabled = false,
+            ) {
+                items(5) {
+                    SkeletonBox(
+                        modifier = Modifier
+                            .width(110.dp)
+                            .height(155.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                    )
+                }
+            }
         }
 
         HomepageModuleType.Unknown -> {}

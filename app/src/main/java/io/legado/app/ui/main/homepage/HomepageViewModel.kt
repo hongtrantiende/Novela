@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.entities.BookSource
+import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.data.repository.BookSourceRepository
 import io.legado.app.data.repository.SearchRepository
@@ -25,8 +26,14 @@ import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.stackTraceStr
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.runBlocking
+import io.legado.app.vbookextension.data.entity.cleanName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,6 +58,8 @@ class HomepageViewModel(
     private val saveSearchBooksUseCase: SaveSearchBooksUseCase,
     private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
+    private val extensionDao: io.legado.app.vbookextension.data.dao.ExtensionDao,
+    private val exploreRepository: io.legado.app.data.repository.ExploreRepository,
 ) : BaseViewModel(application) {
 
     private val _bookshelf = MutableStateFlow<Set<BookShelfKey>>(emptySet())
@@ -92,15 +101,15 @@ class HomepageViewModel(
     val effects = _effects.asSharedFlow()
 
     private val loadJobs = ConcurrentHashMap<String, Job>()
-    private val exploreSourcesFlow = bookSourceRepository.flowExploreSources()
+    private val exploreSourcePartsFlow = bookSourceRepository.flowExploreSourceParts()
 
     // 1. 基础原始状态
     private val _isRefreshing = MutableStateFlow(false)
     private val _isManageMode = MutableStateFlow(false)
-    private val _isConfigMode = MutableStateFlow(false)
     private val _configVersion = MutableStateFlow(0L)
     private val _moduleContentStates = MutableStateFlow<Map<String, ModuleLoadState>>(emptyMap())
     private val _bookSourcesCache = MutableStateFlow<Map<String, BookSource>>(emptyMap())
+    private val _bookSourcePartsCache = MutableStateFlow<Map<String, BookSourcePart>>(emptyMap())
     private val _layoutConfigCache = MutableStateFlow<Map<String, Map<String, String>>>(emptyMap())
     private val _pendingEnabled = MutableStateFlow<Map<String, Boolean>>(emptyMap())
     private val _pendingUserModules = MutableStateFlow<List<ModuleItem>>(emptyList())
@@ -127,41 +136,54 @@ class HomepageViewModel(
         val moduleCountsBySet =
             allModules.mapNotNull { it.customSetId }.groupBy { it }.mapValues { it.value.size }
 
-        customSets.sortedBy { it.sortOrder }.map { set ->
-            HomepageSourceManageUi(
-                sourceUrl = customSetUrl(set.id),
-                sourceName = set.name,
-                sourceGroup = null,
-                isSelected = customSetUrl(set.id) !in hiddenSourceUrls,
-                moduleCount = moduleCountsBySet[set.id] ?: 0,
-                isCustomSet = true,
-            )
-        }.toImmutableList()
+        customSets.sortedBy { it.sortOrder }
+            .filter { it.id.startsWith("cs_") }
+            .map { set ->
+                HomepageSourceManageUi(
+                    sourceUrl = customSetUrl(set.id),
+                    sourceName = set.name,
+                    sourceGroup = null,
+                    isSelected = customSetUrl(set.id) !in hiddenSourceUrls,
+                    moduleCount = moduleCountsBySet[set.id] ?: 0,
+                    isCustomSet = true,
+                )
+            }.toImmutableList()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
 
-    val browseSourcesFlow = exploreSourcesFlow.map { sources ->
-        sources.map { source ->
+    val browseSourcesFlow = combine(
+        exploreSourcePartsFlow,
+        extensionDao.getInstalledExtensions()
+    ) { sources, extensions ->
+        val bookSourceList = sources.map { source ->
             HomepageSourceManageUi(
                 sourceUrl = source.bookSourceUrl,
                 sourceName = source.bookSourceName,
                 sourceGroup = source.bookSourceGroup,
             )
-        }.toImmutableList()
+        }
+        val extensionList = extensions.filter { it.isEnabled }.map { ext ->
+            HomepageSourceManageUi(
+                sourceUrl = "ext_${ext.id}",
+                sourceName = ext.cleanName,
+                sourceGroup = "Extension",
+            )
+        }
+        (bookSourceList + extensionList).toImmutableList()
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), persistentListOf())
 
     // 4. 聚合层
     private val uiFlagsFlow =
-        combine(_isRefreshing, _isManageMode, _isConfigMode) { refreshing, manage, config ->
-            HomepageUiFlags(refreshing, manage, config)
+        combine(_isRefreshing, _isManageMode) { refreshing, manage ->
+            HomepageUiFlags(refreshing, manage)
         }
 
     private val manageStateFlow = combine(
         setsFlow,
         browseSourcesFlow,
         allModulesCache,
-        _bookSourcesCache,
+        _bookSourcePartsCache,
         _pendingEnabled
-    ) { sets, browseSources, allModules, sourcesCache, pendingEnabled ->
+    ) { sets, browseSources, allModules, sourcePartsCache, pendingEnabled ->
         HomepageManageUiState(
             sets = sets,
             browseSources = browseSources,
@@ -181,17 +203,25 @@ class HomepageViewModel(
                     originalTitle = module.title,
                 )
             }.toImmutableList(),
-            sourceNames = sourcesCache.mapValues { it.value.bookSourceName }
+            sourceNames = sourcePartsCache.mapValues { it.value.bookSourceName }
         )
+    }
+
+    private val sourceCachesFlow = combine(
+        _bookSourcePartsCache,
+        _bookSourcesCache
+    ) { sourceParts, sources ->
+        sourceParts to sources
     }
 
     private val rawModulesFlow = combine(
         orderedModuleDefsFlow,
         _moduleContentStates,
-        _bookSourcesCache,
+        sourceCachesFlow,
         customSetsFlow,
         _layoutConfigCache
-    ) { grouped, contentStates, sourcesCache, customSets, configCache ->
+    ) { grouped, contentStates, sourceCaches, customSets, configCache ->
+        val (sourcePartsCache, sourcesCache) = sourceCaches
         val setNames = customSets.associate { it.id to it.name }
         val sortedSetIds = customSets.sortedBy { it.sortOrder }.map { it.id }
 
@@ -200,7 +230,9 @@ class HomepageViewModel(
             val mods = grouped[setUrl] ?: emptyList()
             mods.map { module ->
                 val source = sourcesCache[module.sourceUrl]
-                val sourceName = source?.bookSourceName ?: module.sourceUrl
+                val sourcePart = sourcePartsCache[module.sourceUrl]
+                val sourceName =
+                    source?.bookSourceName ?: sourcePart?.bookSourceName ?: module.sourceUrl
                 val setName = module.customSetId?.let { setNames[it] } ?: sourceName
                 val exploreUrl = module.url ?: source?.exploreUrl
                 val configMap = configCache[module.id] ?: emptyMap()
@@ -227,15 +259,11 @@ class HomepageViewModel(
     ) { modules, bookshelf ->
         if (bookshelf.isEmpty()) {
             modules.map { module ->
-                val state = module.state
-                if (state is ModuleLoadState.Loaded) {
-                    module.copy(state = state.copy(
-                        books = state.books.map { item ->
-                            if (item.shelfState == BookShelfState.NOT_IN_SHELF) item
-                            else item.copy(shelfState = BookShelfState.NOT_IN_SHELF)
-                        }.toImmutableList()
-                    ))
-                } else module
+                val state = module.state.mapBooks { item ->
+                    if (item.shelfState == BookShelfState.NOT_IN_SHELF) item
+                    else item.copy(shelfState = BookShelfState.NOT_IN_SHELF)
+                }
+                if (state === module.state) module else module.copy(state = state)
             }.toImmutableList()
         } else {
             val exactKeys = HashSet<Triple<String, String, String?>>(bookshelf.size)
@@ -245,22 +273,19 @@ class HomepageViewModel(
                 nameAuthorKeys.add(key.name to key.author)
             }
             modules.map { module ->
-                val state = module.state
-                if (state is ModuleLoadState.Loaded) {
-                    module.copy(state = state.copy(
-                        books = state.books.map { item ->
-                            val bookTriple = Triple(item.book.name, item.book.author, item.book.bookUrl)
-                            val newShelfState = when {
-                                bookTriple in exactKeys -> BookShelfState.IN_SHELF
-                                (item.book.name to item.book.author) in nameAuthorKeys ->
-                                    BookShelfState.SAME_NAME_AUTHOR
-                                else -> BookShelfState.NOT_IN_SHELF
-                            }
-                            if (item.shelfState == newShelfState) item
-                            else item.copy(shelfState = newShelfState)
-                        }.toImmutableList()
-                    ))
-                } else module
+                val state = module.state.mapBooks { item ->
+                    val bookTriple = Triple(item.book.name, item.book.author, item.book.bookUrl)
+                    val newShelfState = when {
+                        bookTriple in exactKeys -> BookShelfState.IN_SHELF
+                        (item.book.name to item.book.author) in nameAuthorKeys ->
+                            BookShelfState.SAME_NAME_AUTHOR
+
+                        else -> BookShelfState.NOT_IN_SHELF
+                    }
+                    if (item.shelfState == newShelfState) item
+                    else item.copy(shelfState = newShelfState)
+                }
+                if (state === module.state) module else module.copy(state = state)
             }.toImmutableList()
         }
     }
@@ -275,7 +300,6 @@ class HomepageViewModel(
             modules = modules,
             isRefreshing = flags.isRefreshing,
             isManageMode = flags.isManageMode,
-            isConfigMode = flags.isConfigMode,
             manageState = manageState
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomepageUiState())
@@ -291,7 +315,12 @@ class HomepageViewModel(
                         val json = GSON.fromJson(configStr, Map::class.java)
                         if (json != null) {
                             val map = mutableMapOf<String, String>()
-                            json.forEach { (k, v) -> map["layout_$k"] = v.toString() }
+                            json.forEach { (k, v) ->
+                                map["layout_$k"] = when (v) {
+                                    is Double -> if (v % 1.0 == 0.0) v.toLong().toString() else v.toString()
+                                    else -> v.toString()
+                                }
+                            }
                             cache[module.id] = map
                         }
                     } catch (_: Exception) {
@@ -302,7 +331,13 @@ class HomepageViewModel(
         }
 
         viewModelScope.launch {
-            exploreSourcesFlow.collect { sources ->
+            exploreSourcePartsFlow.collect { sources ->
+                _bookSourcePartsCache.value = sources.associateBy { it.bookSourceUrl }
+            }
+        }
+
+        viewModelScope.launch {
+            bookSourceRepository.flowHomepageModules().collect { sources ->
                 _bookSourcesCache.value = sources.associateBy { it.bookSourceUrl }
             }
         }
@@ -343,8 +378,14 @@ class HomepageViewModel(
                 val isSrcSet = setId.startsWith("src_")
                 if (isSrcSet && gateway.getCustomSetById(setId) == null) {
                     val sourceUrl = setId.removePrefix("src_")
-                    val source = bookSourceRepository.getBookSource(sourceUrl)
-                    if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
+                    if (sourceUrl.startsWith("ext_")) {
+                        val extId = sourceUrl.removePrefix("ext_")
+                        val ext = extensionDao.getExtensionById(extId)
+                        if (ext != null) ensureSetForSource(sourceUrl, ext.name)
+                    } else {
+                        val source = bookSourceRepository.getBookSource(sourceUrl)
+                        if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
+                    }
                 }
             }
         }
@@ -410,12 +451,88 @@ class HomepageViewModel(
 
     private fun loadModule(module: ModuleItem) {
         loadJobs[module.id]?.cancel()
+        val rankingKindTitles = module.rankingKindTitles()
+        if (rankingKindTitles != null) {
+            loadJobs[module.id] = viewModelScope.launch {
+                kotlin.runCatching {
+                    val source = bookSourceRepository.getBookSource(module.sourceUrl)
+                    if (source == null && !module.sourceUrl.startsWith("ext_")) {
+                        throw Exception("Source not found")
+                    }
+                    val allKinds = withContext(Dispatchers.IO) {
+                        if (module.sourceUrl.startsWith("ext_")) {
+                            exploreRepository.getSourceExploreKinds(module.sourceUrl)
+                        } else {
+                            source?.exploreKinds() ?: emptyList()
+                        }
+                    }
+                    val selectedKinds = rankingKindTitles.mapNotNull { title ->
+                        allKinds.find { it.title == title }
+                    }
+                    if (selectedKinds.isEmpty() && !module.sourceUrl.startsWith("ext_")) throw Exception("Ranking kinds not found")
+
+                    val shelf = _bookshelf.value
+                    coroutineScope {
+                        selectedKinds.map { kind ->
+                            async {
+                                val state = kotlin.runCatching {
+                                    exploreBooksUseCase.executeForRanking(
+                                        module.sourceUrl,
+                                        kind.url,
+                                        null
+                                    )
+                                }.fold(
+                                    onSuccess = { books ->
+                                        ModuleLoadState.Loaded(
+                                            books = books.map { book ->
+                                                HomepageBookItemUi(
+                                                    book = book,
+                                                    shelfState = resolveBookShelfStateUseCase.execute(
+                                                        name = book.name,
+                                                        author = book.author,
+                                                        url = book.bookUrl,
+                                                        shelf = shelf
+                                                    )
+                                                )
+                                            }.toImmutableList()
+                                        )
+                                    },
+                                    onFailure = { ModuleLoadState.Error(it.stackTraceStr) }
+                                )
+                                HomepageRankingSourceUi(
+                                    title = kind.title,
+                                    url = kind.url,
+                                    state = state,
+                                )
+                            }
+                        }.awaitAll().toImmutableList()
+                    }
+                }.onSuccess { sources ->
+                    _moduleContentStates.update {
+                        it + (module.id to ModuleLoadState.Rankings(sources))
+                    }
+                }.onFailure { e ->
+                    _moduleContentStates.update {
+                        it + (module.id to ModuleLoadState.Error(e.stackTraceStr))
+                    }
+                }
+            }.also { it.invokeOnCompletion { loadJobs.remove(module.id) } }
+            return
+        }
         if (module.type == HomepageModuleType.ButtonGroup.key) {
             loadJobs[module.id] = viewModelScope.launch {
                 kotlin.runCatching {
                     val source = bookSourceRepository.getBookSource(module.sourceUrl)
-                        ?: throw Exception("Source not found")
-                    val allKinds = withContext(Dispatchers.IO) { source.exploreKinds() }
+                    if (source == null && !module.sourceUrl.startsWith("ext_")) {
+                        throw Exception("Source not found")
+                    }
+                    val allKinds = withContext(Dispatchers.IO) {
+                        if (module.sourceUrl.startsWith("ext_")) {
+                            exploreRepository.getSourceExploreKinds(module.sourceUrl)
+                        } else {
+                            source?.exploreKinds() ?: emptyList()
+                        }
+                    }
                     val selectedTitles =
                         module.args?.let { GSON.fromJsonArray<String>(it).getOrNull() }
                     if (selectedTitles.isNullOrEmpty()) allKinds.take(
@@ -550,7 +667,6 @@ class HomepageViewModel(
     }
 
     fun toggleManageMode() = _isManageMode.update { !it }
-    fun toggleConfigMode() = _isConfigMode.update { !it }
 
     fun setModuleVisible(id: String, visible: Boolean) {
         _pendingEnabled.update { it + (id to visible) }
@@ -579,19 +695,24 @@ class HomepageViewModel(
         notifyConfigChanged()
     }
 
-    fun setLayoutMode(mode: Int) {
-        HomepageConfig.homepageLayoutMode = mode
-        notifyConfigChanged()
-    }
-
     private suspend fun ensureSetForSource(sourceUrl: String, sourceName: String): String {
         val setId = "src_$sourceUrl"
-        if (gateway.getCustomSetById(setId) == null) gateway.upsertCustomSet(
-            CustomSetItem(
-                id = setId,
-                name = sourceName
+        if (gateway.getCustomSetById(setId) == null) {
+            gateway.upsertCustomSet(
+                CustomSetItem(
+                    id = setId,
+                    name = sourceName
+                )
             )
-        )
+            // Ẩn bộ nguồn mặc định khỏi Trang chủ — người dùng cần tạo Bộ tùy chỉnh riêng
+            val hidden = GSON.fromJsonArray<String>(HomepageConfig.homepageSourceHidden)
+                .getOrDefault(emptyList()).toMutableSet()
+            val url = customSetUrl(setId)
+            if (url !in hidden) {
+                hidden.add(url)
+                HomepageConfig.homepageSourceHidden = GSON.toJson(hidden.toList())
+            }
+        }
         return setId
     }
 
@@ -624,15 +745,31 @@ class HomepageViewModel(
             isUserCreated = true, customSetId = setId, syncedAt = System.currentTimeMillis()
         )
         viewModelScope.launch {
-            val source = bookSourceRepository.getBookSource(sourceUrl)
-            if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
+            if (sourceUrl.startsWith("ext_")) {
+                val extId = sourceUrl.removePrefix("ext_")
+                val ext = extensionDao.getExtensionById(extId)
+                if (ext != null) {
+                    ensureSetForSource(sourceUrl, ext.name)
+                }
+            } else {
+                val source = bookSourceRepository.getBookSource(sourceUrl)
+                if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
+            }
             gateway.upsertAll(listOf(module))
             _pendingUserModules.update { list -> if (list.any { it.id == id }) list else list + module }
             notifyConfigChanged()
         }
     }
 
-    fun getSourceExploreKinds(sourceUrl: String): List<Pair<String, String>> = emptyList()
+    fun getSourceExploreKinds(sourceUrl: String): List<Pair<String, String>> {
+        var kinds = emptyList<Pair<String, String>>()
+        runBlocking {
+            kinds = exploreRepository.getSourceExploreKinds(sourceUrl).mapNotNull { kind ->
+                kind.url?.let { kind.title to it }
+            }
+        }
+        return kinds
+    }
 
     fun updateModule(globalId: String, def: ModuleDef) {
         viewModelScope.launch {
@@ -720,8 +857,19 @@ class HomepageViewModel(
         allModulesCache.value.distinctBy { it.sourceUrl to it.moduleKey }.map { uiFromModule(it) }
             .groupBy { it.sourceUrl }
 
-    fun getSourceName(sourceUrl: String): String =
-        _bookSourcesCache.value[sourceUrl]?.bookSourceName ?: sourceUrl
+    fun getSourceName(sourceUrl: String): String {
+        if (sourceUrl.startsWith("ext_")) {
+            val extId = sourceUrl.removePrefix("ext_")
+            var name: String? = null
+            runBlocking {
+                name = extensionDao.getExtensionById(extId)?.name
+            }
+            if (name != null) return name
+        }
+        return _bookSourcePartsCache.value[sourceUrl]?.bookSourceName
+            ?: _bookSourcesCache.value[sourceUrl]?.bookSourceName
+            ?: sourceUrl
+    }
 
     fun assignModuleToCustomSet(moduleId: String, customSetId: String?) {
         viewModelScope.launch {
@@ -815,10 +963,90 @@ class HomepageViewModel(
             syncedAt = System.currentTimeMillis(),
         )
         viewModelScope.launch {
-            val source = bookSourceRepository.getBookSource(sourceUrl)
-            if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
+            if (sourceUrl.startsWith("ext_")) {
+                val extId = sourceUrl.removePrefix("ext_")
+                val ext = extensionDao.getExtensionById(extId)
+                if (ext != null) ensureSetForSource(sourceUrl, ext.name)
+            } else {
+                val source = bookSourceRepository.getBookSource(sourceUrl)
+                if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
+            }
             gateway.upsertAll(listOf(module))
             _pendingUserModules.update { list -> if (list.any { it.id == id }) list else list + module }
+            notifyConfigChanged()
+        }
+    }
+
+    fun addRankingFromKinds(
+        sourceUrl: String,
+        targetSetId: String?,
+        title: String,
+        type: String,
+        kindTitles: List<String>
+    ) {
+        if (
+            kindTitles.isEmpty() ||
+            (type != HomepageModuleType.Ranking.key &&
+                    type != HomepageModuleType.GridRanking.key)
+        ) {
+            return
+        }
+        viewModelScope.launch {
+            val allKinds = withContext(Dispatchers.IO) {
+                exploreRepository.getSourceExploreKinds(sourceUrl)
+            }
+            val selectedKinds = kindTitles.mapNotNull { selectedTitle ->
+                allKinds.find { it.title == selectedTitle }
+            }
+            if (selectedKinds.isEmpty()) return@launch
+
+            val setId = if (targetSetId != null) {
+                targetSetId
+            } else {
+                if (sourceUrl.startsWith("ext_")) {
+                    val extId = sourceUrl.removePrefix("ext_")
+                    val ext = extensionDao.getExtensionById(extId)
+                    if (ext != null) ensureSetForSource(sourceUrl, ext.name)
+                    else ensureSetForSource(sourceUrl, sourceUrl)
+                } else {
+                    val source = bookSourceRepository.getBookSource(sourceUrl)
+                    if (source != null) ensureSetForSource(sourceUrl, source.bookSourceName)
+                    else ensureSetForSource(sourceUrl, sourceUrl)
+                }
+            }
+            val isGroup = selectedKinds.size > 1
+            val key = if (isGroup) {
+                "${type}_${jsonHash(GSON.toJson(kindTitles)).take(12)}"
+            } else {
+                selectedKinds.first().title
+            }
+            val id = ModuleDef.globalIdOf(sourceUrl, key, setId)
+            val module = ModuleItem(
+                id = id,
+                sourceUrl = sourceUrl,
+                moduleKey = key,
+                type = type,
+                title = title,
+                args = if (isGroup) {
+                    GSON.toJson(
+                        RankingKindsArgs(
+                            isHomepageRankingGroup = true,
+                            kindTitles = selectedKinds.map { it.title }
+                        )
+                    )
+                } else {
+                    null
+                },
+                url = if (isGroup) null else selectedKinds.first().url,
+                isEnabled = true,
+                isUserCreated = true,
+                customSetId = setId,
+                syncedAt = System.currentTimeMillis(),
+            )
+            gateway.upsertAll(listOf(module))
+            _pendingUserModules.update { pending ->
+                if (pending.any { it.id == id }) pending else pending + module
+            }
             notifyConfigChanged()
         }
     }
@@ -872,6 +1100,12 @@ class HomepageViewModel(
     fun onAddToShelf(book: SearchBook) {
         execute {
             addToBookshelfUseCase.execute(book)
+        }
+    }
+
+    fun saveSearchBook(book: SearchBook) {
+        viewModelScope.launch {
+            saveSearchBooksUseCase.save(book)
         }
     }
 
@@ -940,6 +1174,42 @@ class HomepageViewModel(
 
 private data class HomepageUiFlags(
     val isRefreshing: Boolean,
-    val isManageMode: Boolean,
-    val isConfigMode: Boolean
+    val isManageMode: Boolean
 )
+
+private data class RankingKindsArgs(
+    val isHomepageRankingGroup: Boolean = false,
+    val kindTitles: List<String> = emptyList()
+)
+
+private fun ModuleItem.rankingKindTitles(): List<String>? {
+    if (
+        type != HomepageModuleType.Ranking.key &&
+        type != HomepageModuleType.GridRanking.key
+    ) {
+        return null
+    }
+    val rankingArgs = args ?: return null
+    return runCatching {
+        GSON.fromJson(rankingArgs, RankingKindsArgs::class.java)
+            ?.takeIf { it.isHomepageRankingGroup }
+            ?.kindTitles
+            ?.takeIf { it.size > 1 }
+    }.getOrNull()
+}
+
+private fun ModuleLoadState.mapBooks(
+    transform: (HomepageBookItemUi) -> HomepageBookItemUi
+): ModuleLoadState = when (this) {
+    is ModuleLoadState.Loaded -> copy(
+        books = books.map(transform).toImmutableList()
+    )
+
+    is ModuleLoadState.Rankings -> copy(
+        sources = sources.map { source ->
+            source.copy(state = source.state.mapBooks(transform))
+        }.toImmutableList()
+    )
+
+    else -> this
+}

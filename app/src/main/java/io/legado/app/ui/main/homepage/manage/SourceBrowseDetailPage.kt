@@ -60,7 +60,7 @@ fun SourceBrowseDetailPage(
     onReorderModules: (List<String>) -> Unit,
     onEditModule: (HomepageModuleManageUi) -> Unit,
     onAddDialogPrefill: (AddDialogPrefill?) -> Unit,
-    onShowAddButtonGroupDialog: () -> Unit,
+    onShowAddKindGroupDialog: () -> Unit,
     browseTab: Int,
     onBrowseTabChange: (Int) -> Unit,
     browseModuleType: String,
@@ -281,6 +281,9 @@ fun SourceBrowseDetailPage(
             2 -> {
                 val effectiveTargetSetId = currentSetId
                 val isButtonGroup = browseModuleType == "buttonGroup"
+                val isRanking = browseModuleType == HomepageModuleType.Ranking.key ||
+                        browseModuleType == HomepageModuleType.GridRanking.key
+                val supportsMultipleKinds = isButtonGroup || isRanking
                 Column {
                     val typeList = remember(canSelectInfiniteGlobal) {
                         HomepageModuleType.entries.filter {
@@ -321,21 +324,21 @@ fun SourceBrowseDetailPage(
 
                     SelectionItemCard(
                         title = stringResource(R.string.homepage_select_from_kinds),
-                        subtitle = if (isButtonGroup) {
+                        subtitle = if (supportsMultipleKinds) {
                             if (selectedKindTitles.isEmpty()) stringResource(R.string.homepage_select_multiple_kinds)
                             else stringResource(
                                 R.string.homepage_n_selected,
                                 selectedKindTitles.size
                             )
                         } else {
-                            stringResource(R.string.homepage_select_one_kind)
+                            "Chọn một hoặc nhiều danh mục"
                         },
                         containerColor = LegadoTheme.colorScheme.onSheetContent,
                         onToggleSelection = { showKindSelect = true },
                         trailingAction = {
-                            if (isButtonGroup && selectedKindTitles.isNotEmpty()) {
+                            if (supportsMultipleKinds && selectedKindTitles.isNotEmpty()) {
                                 SmallPlainButton(
-                                    onClick = { onShowAddButtonGroupDialog() },
+                                    onClick = { onShowAddKindGroupDialog() },
                                     icon = Icons.Default.Check
                                 )
                             }
@@ -346,10 +349,10 @@ fun SourceBrowseDetailPage(
                         show = showKindSelect,
                         onDismissRequest = { showKindSelect = false },
                         sourceUrl = browseUrl,
-                        multiple = isButtonGroup,
+                        multiple = supportsMultipleKinds,
                         initialSelectedTitles = selectedKindTitles.toList(),
                         onSelected = { kinds ->
-                            if (isButtonGroup) {
+                            if (supportsMultipleKinds) {
                                 onSelectedKindTitlesChange(kinds.map { it.title }.toSet())
                             } else {
                                 kinds.firstOrNull()?.let { kind ->
