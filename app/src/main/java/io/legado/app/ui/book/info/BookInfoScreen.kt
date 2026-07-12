@@ -231,7 +231,7 @@ private fun BookInfoScreenContent(
                     val isFixedHeader = style == "1" || style == "2"
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (isFixedHeader) {
-                            Box(modifier = Modifier.padding(top = paddingValues.calculateTopPadding())) {
+                            Box(modifier = Modifier.padding(top = paddingValues.calculateTopPadding() - 65.dp)) {
                                 BookInfoColorTheme(theme = bookColorTheme) {
                                     BookInfoHeader(
                                         book = book,
@@ -247,6 +247,7 @@ private fun BookInfoScreenContent(
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         sharedCoverKey = sharedCoverKey,
+                                        topPadding = 65.dp,
                                     )
                                 }
                             }
@@ -854,6 +855,7 @@ private fun BookInfoHeader(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     sharedCoverKey: String?,
+    topPadding: androidx.compose.ui.unit.Dp = 0.dp,
 ) {
     val context = LocalContext.current
     val windowManager = remember(context) { context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager }
@@ -870,7 +872,7 @@ private fun BookInfoHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp, bottom = 8.dp),
+                    .padding(top = topPadding + 16.dp, bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Column(
@@ -899,7 +901,7 @@ private fun BookInfoHeader(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 8.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 val isDark = LegadoTheme.isDark
@@ -916,7 +918,7 @@ private fun BookInfoHeader(
                 }
 
                 NormalCard(
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp + topPadding),
                     cornerRadius = 16.dp,
                     containerColor = if (cardBgBitmap != null) Color.Transparent
                                      else (if (isDark) LegadoTheme.colorScheme.surfaceContainerHigh
@@ -927,7 +929,7 @@ private fun BookInfoHeader(
                                  color = LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                              )
                 ) {
-                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 240.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp + topPadding)) {
                         if (cardBgBitmap != null) {
                             androidx.compose.foundation.Image(
                                 bitmap = cardBgBitmap.asImageBitmap(),
@@ -939,7 +941,12 @@ private fun BookInfoHeader(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(20.dp),
+                                .padding(
+                                    top = topPadding + 20.dp,
+                                    bottom = 20.dp,
+                                    start = 20.dp,
+                                    end = 20.dp
+                                ),
                             horizontalArrangement = Arrangement.spacedBy(20.dp),
                             verticalAlignment = Alignment.Top,
                         ) {

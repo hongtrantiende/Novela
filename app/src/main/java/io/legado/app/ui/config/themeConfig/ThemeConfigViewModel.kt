@@ -239,7 +239,7 @@ class ThemeConfigViewModel(
 
     fun exportCardFrameTemplate(): String? {
         try {
-            val width = 1000
+            val width = 800
             val height = 600
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
@@ -255,26 +255,19 @@ class ThemeConfigViewModel(
             val borderPaint = Paint().apply {
                 color = android.graphics.Color.parseColor("#D5C29D")
                 style = Paint.Style.STROKE
-                strokeWidth = 12f
+                strokeWidth = 10f
             }
-            canvas.drawRect(6f, 6f, width.toFloat() - 6f, height.toFloat() - 6f, borderPaint)
+            canvas.drawRect(5f, 5f, width.toFloat() - 5f, height.toFloat() - 5f, borderPaint)
             
             // Draw a label text
             val textPaint = Paint().apply {
                 color = android.graphics.Color.parseColor("#8C7247")
-                textSize = 44f
+                textSize = 36f
                 isAntiAlias = true
                 textAlign = Paint.Align.CENTER
             }
-            canvas.drawText("Mau khung chi tiet truyen (1000x600)", (width / 2).toFloat(), (height / 2).toFloat(), textPaint)
-            
-            val subtitlePaint = Paint().apply {
-                color = android.graphics.Color.parseColor("#8C7247")
-                textSize = 34f
-                isAntiAlias = true
-                textAlign = Paint.Align.CENTER
-            }
-            canvas.drawText("Ban co the thiet ke de len file nay", (width / 2).toFloat(), (height / 2).toFloat() + 60f, subtitlePaint)
+            canvas.drawText("Mau khung chi tiet truyen (800x600)", (width / 2).toFloat(), (height / 2).toFloat(), textPaint)
+            canvas.drawText("Ban co the thiet ke de len file nay", (width / 2).toFloat(), (height / 2).toFloat() + 50f, textPaint)
 
             // Save to public Downloads directory
             val fileName = "book_detail_card_template.png"
