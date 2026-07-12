@@ -113,6 +113,13 @@ class ExtensionRepository(
                 // ignore
             }
         }
+        val statusVal = obj["status"]?.safeString()
+            ?: obj["state"]?.safeString()
+            ?: obj["bookStatus"]?.safeString()
+            ?: ""
+        if (statusVal.isNotBlank()) {
+            genresList.add(cleanHtmlText(statusVal))
+        }
         val kind = genresList.joinToString(",")
 
         val latestChapter = cleanHtmlText(obj["latestChapter"]?.safeString() ?: obj["lastChapter"]?.safeString() ?: "")
