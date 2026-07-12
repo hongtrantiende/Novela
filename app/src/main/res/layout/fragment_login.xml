@@ -17,44 +17,60 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center_horizontal"
+            android:gravity="center"
             android:paddingHorizontal="24dp"
             android:paddingTop="48dp"
             android:paddingBottom="32dp">
 
-            <!-- Logo centered at top -->
-            <com.google.android.material.imageview.ShapeableImageView
-                android:id="@+id/iv_logo"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
-                android:src="@drawable/ic_launcher3"
-                android:scaleType="centerCrop"
-                app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
-                app:cornerSize="20dp"
-                android:elevation="8dp"
-                android:layout_marginBottom="16dp" />
-
-            <!-- App Name -->
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Header layout: Logo + Text next to each other -->
+            <LinearLayout
+                android:id="@+id/ll_header"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Novela"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="?attr/colorPrimary"
-                android:fontFamily="sans-serif-medium"
-                android:letterSpacing="0.05"
-                android:layout_marginBottom="4dp" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="28dp">
 
-            <!-- Mode Title -->
-            <TextView
-                android:id="@+id/tv_mode_title"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Chào mừng trở lại"
-                android:textSize="15sp"
-                android:textColor="?android:attr/textColorSecondary"
-                android:layout_marginBottom="32dp" />
+                <!-- Logo -->
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/iv_logo"
+                    android:layout_width="68dp"
+                    android:layout_height="68dp"
+                    android:src="@drawable/ic_launcher3"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
+
+                <!-- Text Container (slides out to the right) -->
+                <LinearLayout
+                    android:id="@+id/ll_header_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginStart="18dp">
+
+                    <!-- App Name -->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Novela"
+                        android:textSize="30sp"
+                        android:textStyle="bold"
+                        android:textColor="?attr/colorPrimary"
+                        android:fontFamily="sans-serif-medium"
+                        android:letterSpacing="0.03" />
+
+                    <!-- Mode Title -->
+                    <TextView
+                        android:id="@+id/tv_mode_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Chào mừng trở lại"
+                        android:textSize="15sp"
+                        android:textColor="?android:attr/textColorSecondary"
+                        android:layout_marginTop="2dp" />
+
+                </LinearLayout>
+            </LinearLayout>
 
             <!-- Mode Summary (hidden by default, shown in updateUiMode) -->
             <TextView
@@ -180,7 +196,7 @@
                     android:background="@drawable/bg_gradient_button"
                     app:backgroundTint="@null"
                     android:text="Đăng nhập"
-                    android:textColor="#1A130B"
+                    android:textColor="?attr/colorOnPrimary"
                     android:textSize="16sp"
                     android:textStyle="bold"
                     app:cornerRadius="14dp" />
@@ -208,7 +224,7 @@
                 android:layout_gravity="center_horizontal"
                 android:clickable="true"
                 android:focusable="true"
-                android:layout_marginTop="16dp" />
+                android:layout_marginTop="24dp" />
 
             <!-- Divider -->
             <LinearLayout
@@ -217,28 +233,28 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="8dp">
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp">
 
                 <View
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_weight="1"
-                    android:background="#12FFFFFF" />
+                    android:background="?attr/colorOutlineVariant" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="hoặc"
                     android:textSize="12sp"
-                    android:textColor="#66FFFFFF"
+                    android:textColor="?android:attr/textColorSecondary"
                     android:layout_marginHorizontal="16dp" />
 
                 <View
                     android:layout_width="0dp"
                     android:layout_height="1dp"
                     android:layout_weight="1"
-                    android:background="#12FFFFFF" />
+                    android:background="?attr/colorOutlineVariant" />
             </LinearLayout>
 
             <!-- Discord Community -->
@@ -251,7 +267,7 @@
                 android:background="@drawable/bg_login_input"
                 android:paddingHorizontal="20dp"
                 android:paddingVertical="12dp"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="16dp"
                 android:clickable="true"
                 android:focusable="true">
 

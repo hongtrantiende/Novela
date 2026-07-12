@@ -914,7 +914,7 @@ class DragSelectTouchHelper(
          * @param position item position to be judged.
          * @return item's identity.
          */
-        abstract fun getItemId(position: Int): T
+        abstract fun getItemId(position: Int): T?
 
         /**
          * Update the selection status of the position.

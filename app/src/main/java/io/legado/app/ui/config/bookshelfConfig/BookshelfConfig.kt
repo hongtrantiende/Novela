@@ -43,13 +43,6 @@ object BookshelfConfig {
     val showUnreadState: State<Boolean> get() = _showUnread.state
 
     /**
-     * 是否显示书籍状态标签 (Hoàn thành / Còn tiếp / Tạm ngưng)
-     */
-    private val _showBookStatus = prefStateDelegate("showBookStatus", true)
-    var showBookStatus by _showBookStatus
-    val showBookStatusState: State<Boolean> get() = _showBookStatus.state
-
-    /**
      * 是否显示新未读标志(小圆点)
      */
     private val _showUnreadNew = prefStateDelegate(PreferKey.showUnreadNew, true)

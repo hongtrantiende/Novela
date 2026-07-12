@@ -679,7 +679,6 @@ fun BookItem(
                 badgeText = if (layoutMode != 0) unreadText else null,
                 showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew,
                 leftBottomText = matchedSourceLabel ?: bookTypeLabel,
-                statusText = book.getBookStatus(),
                 showLoadingPlaceholder = true,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,

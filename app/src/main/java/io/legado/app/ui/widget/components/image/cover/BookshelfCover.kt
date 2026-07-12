@@ -15,11 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
-import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -33,7 +31,6 @@ fun BookshelfCover(
     badgeText: String? = null,
     showBadgeDot: Boolean = false,
     leftBottomText: String? = null,
-    statusText: String? = null,
     sourceOrigin: String? = null,
     onLoadFinish: (() -> Unit)? = null,
     showLoadingPlaceholder: Boolean = true,
@@ -66,28 +63,6 @@ fun BookshelfCover(
                 }
             } else Modifier
         )
-
-        if (BookshelfConfig.showBookStatus && !statusText.isNullOrEmpty()) {
-            val statusColor = when (statusText) {
-                "Hoàn thành" -> Color(0xFF2E7D32)
-                "Còn tiếp" -> Color(0xFF1976D2)
-                "Tạm ngưng" -> Color(0xFFE65100)
-                else -> LegadoTheme.colorScheme.primary
-            }
-            TextCard(
-                text = statusText,
-                backgroundColor = statusColor,
-                contentColor = Color.White,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(2.dp)
-                    .then(overlayModifier),
-                cornerRadius = 4.dp,
-                horizontalPadding = 4.dp,
-                verticalPadding = 2.dp,
-                textStyle = LegadoTheme.typography.labelSmallEmphasized
-            )
-        }
 
         if (!badgeText.isNullOrEmpty()) {
             TextCard(

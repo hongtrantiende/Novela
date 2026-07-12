@@ -12,7 +12,7 @@ import io.legado.app.help.config.LocalConfig
 import io.legado.app.ui.main.MainActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
-class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
+class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>(imageBg = false) {
 
     override val binding by viewBinding(ActivityWelcomeBinding::inflate)
 
@@ -23,6 +23,7 @@ class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        delegate.localNightMode = androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
         super.onCreate(savedInstanceState)
 
         onBackPressedDispatcher.addCallback(this) {
@@ -88,6 +89,13 @@ class WelcomeActivity : BaseActivity<ActivityWelcomeBinding>() {
                 }
             }
         }
+    }
+
+    override fun setupSystemBar() {
+        super.setupSystemBar()
+        val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+        insetsController.isAppearanceLightStatusBars = true
+        insetsController.isAppearanceLightNavigationBars = true
     }
 
     private fun updateProgress(position: Int) {

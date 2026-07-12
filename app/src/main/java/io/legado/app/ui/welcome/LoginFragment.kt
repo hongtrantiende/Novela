@@ -38,15 +38,52 @@ class LoginFragment : BaseFragment(R.layout.fragment_login) {
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         updateUiMode(AuthMode.LOGIN)
 
-        // Smooth entrance animation for the login container
-        view.alpha = 0f
-        view.translationY = 80f
-        view.animate()
+        // Logo entrance animation (fade in & scale)
+        binding.ivLogo.alpha = 0f
+        binding.ivLogo.scaleX = 0.6f
+        binding.ivLogo.scaleY = 0.6f
+        binding.ivLogo.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(500)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+
+        // Text horizontal slide out from the logo
+        binding.llHeaderText.alpha = 0f
+        binding.llHeaderText.translationX = -120f
+        binding.llHeaderText.animate()
+            .alpha(1f)
+            .translationX(0f)
+            .setDuration(700)
+            .setStartDelay(100)
+            .setInterpolator(DecelerateInterpolator())
+            .start()
+
+        // Login Card slide up
+        binding.llCard.alpha = 0f
+        binding.llCard.translationY = 100f
+        binding.llCard.animate()
             .alpha(1f)
             .translationY(0f)
             .setDuration(600)
+            .setStartDelay(180)
             .setInterpolator(DecelerateInterpolator())
             .start()
+
+        // Toggle signup link, divider & Discord button slide up together
+        listOf(binding.tvToggleSignup, binding.llDivider, binding.llDiscordCommunity).forEach { animView ->
+            animView.alpha = 0f
+            animView.translationY = 80f
+            animView.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .setDuration(600)
+                .setStartDelay(260)
+                .setInterpolator(DecelerateInterpolator())
+                .start()
+        }
 
         binding.btnAction.setOnClickListener {
             handleAction()

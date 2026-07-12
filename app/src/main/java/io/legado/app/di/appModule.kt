@@ -153,6 +153,7 @@ import io.legado.app.ui.rss.subscription.RuleSubViewModel
 import io.legado.app.vbookextension.ui.ExtensionViewModel
 import io.legado.app.vbookextension.ui.LegadoStoreViewModel
 import io.legado.app.ui.book.video.VideoReaderViewModel
+import io.legado.app.help.config.ThemePackageManager
 import io.legado.app.ui.config.themeManage.ThemeManageViewModel
 import io.legado.app.ui.config.ai.AiConfigViewModel
 import io.legado.app.ui.config.ai.summary.AiSummaryConfigViewModel
@@ -184,6 +185,7 @@ val appModule = module {
     singleOf(::GenerateChapterSummaryUseCase)
     singleOf(::SaveBookContentProcessUseCase)
     singleOf(::CoverAlbumUseCase)
+    singleOf(::ThemePackageManager)
 
 
     single { get<AppDatabase>().readRecordDao }

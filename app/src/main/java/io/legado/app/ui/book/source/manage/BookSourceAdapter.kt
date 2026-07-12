@@ -514,8 +514,8 @@ class BookSourceAdapter(
                 return selected
             }
 
-            override fun getItemId(position: Int): BookSourcePart {
-                return getItem(position)!!
+            override fun getItemId(position: Int): BookSourcePart? {
+                return getItem(position)
             }
 
             override fun updateSelectState(position: Int, isSelected: Boolean): Boolean {
