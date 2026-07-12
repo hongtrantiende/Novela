@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.progressIndicator.AppLinearProgressIndicator
+import io.legado.app.ui.config.bookshelfConfig.BookshelfConfig
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -66,7 +67,7 @@ fun BookshelfCover(
             } else Modifier
         )
 
-        if (!statusText.isNullOrEmpty()) {
+        if (BookshelfConfig.showBookStatus && !statusText.isNullOrEmpty()) {
             val statusColor = when (statusText) {
                 "Hoàn thành" -> Color(0xFF2E7D32)
                 "Còn tiếp" -> Color(0xFF1976D2)

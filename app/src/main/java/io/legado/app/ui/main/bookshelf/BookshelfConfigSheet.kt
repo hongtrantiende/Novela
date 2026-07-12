@@ -456,6 +456,13 @@ fun BookshelfConfigSheet(
             )
 
             CompactSwitchSettingItem(
+                title = stringResource(R.string.show_book_status),
+                checked = BookshelfConfig.showBookStatus,
+                color = LegadoTheme.colorScheme.surface,
+                onCheckedChange = { BookshelfConfig.showBookStatus = it }
+            )
+
+            CompactSwitchSettingItem(
                 title = stringResource(R.string.show_unread_new),
                 checked = BookshelfConfig.showUnreadNew,
                 color = LegadoTheme.colorScheme.surface,
