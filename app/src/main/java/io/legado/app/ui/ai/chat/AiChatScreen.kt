@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,8 +25,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -405,8 +409,7 @@ fun AiChatScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .imePadding()
-                        .navigationBarsPadding()
+                        .windowInsetsPadding(WindowInsets.navigationBars.union(WindowInsets.ime))
                 ) {
                     Box(
                         modifier = Modifier
@@ -755,11 +758,11 @@ private fun formatRelativeTime(timestamp: Long): String {
     val hours = TimeUnit.MILLISECONDS.toHours(diff)
     val days = TimeUnit.MILLISECONDS.toDays(diff)
     return when {
-        minutes < 1 -> "刚刚"
-        minutes < 60 -> "${minutes}分钟前"
-        hours < 24 -> "${hours}小时前"
-        days < 7 -> "${days}天前"
-        days < 30 -> "${days / 7}周前"
+        minutes < 1 -> "Vừa xong"
+        minutes < 60 -> "${minutes} phút trước"
+        hours < 24 -> "${hours} giờ trước"
+        days < 7 -> "${days} ngày trước"
+        days < 30 -> "${days / 7} tuần trước"
         else -> {
             val sdf = SimpleDateFormat("MM/dd", Locale.getDefault())
             sdf.format(Date(timestamp))
@@ -840,8 +843,8 @@ private fun ChatInputBar(
         AiReasoningLevel.XHIGH -> "Max"
     }
     val isThinkingOn = reasoningLevel != AiReasoningLevel.OFF
-    val isKeyboardVisible =
-        WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
+    @OptIn(ExperimentalLayoutApi::class)
+    val isKeyboardVisible = WindowInsets.isImeVisible
     val horizontalPadding by animateDpAsState(
         targetValue = if (isKeyboardVisible) 16.dp else 46.dp,
         animationSpec = tween(durationMillis = 250),

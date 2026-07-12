@@ -187,11 +187,11 @@ object ThemeConfig {
 
     var showReadRecord by prefDelegate(PreferKey.showReadRecord, true)
 
-    var showUpdates by prefDelegate(PreferKey.showUpdates, true)
+    var showUpdates by prefDelegate(PreferKey.showUpdates, false)
 
     var showRss by prefDelegate(PreferKey.showRss, false)
 
-    var showStatusBar by prefDelegate(PreferKey.showStatusBar, true)
+    var showStatusBar by prefDelegate(PreferKey.showStatusBar, false)
 
     var swipeAnimation by prefDelegate(PreferKey.swipeAnimation, true)
 

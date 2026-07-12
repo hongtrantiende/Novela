@@ -124,11 +124,11 @@ class AiChatGenerationUseCase(
         val preset = aiProfileGateway.getTaskPreset(AiTaskType.CHAT)
             ?: error("No AI model configured")
         val prompt = """
-            请根据以下对话内容，生成一个简短的中文标题（不超过20个字）。
-            只输出标题，不要任何解释或前缀。
+            Hãy dựa vào nội dung cuộc đối thoại dưới đây để tạo một tiêu đề tiếng Việt ngắn gọn (không quá 20 chữ).
+            Chỉ xuất ra duy nhất tiêu đề, không kèm theo bất kỳ lời giải thích hay tiền tố nào.
 
-            用户：${userContent.take(500)}
-            助手：${assistantContent.take(500)}
+            Người dùng: ${userContent.take(500)}
+            Trợ lý: ${assistantContent.take(500)}
         """.trimIndent()
         val request = AiGenerateRequest(
             model = preset.model,

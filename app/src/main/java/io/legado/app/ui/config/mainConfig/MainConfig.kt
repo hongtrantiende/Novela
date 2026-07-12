@@ -20,7 +20,7 @@ object MainConfig {
     var webServiceAutoStart by prefDelegate(PreferKey.webServiceAutoStart, false)
     var autoRefreshBook by prefDelegate(PreferKey.autoRefresh, false)
     var autoCheckNewBackup by prefDelegate(PreferKey.autoCheckNewBackup, true)
-    var showStatusBar by prefDelegate(PreferKey.showStatusBar, true)
+    var showStatusBar by prefDelegate(PreferKey.showStatusBar, false)
     var navIconBookshelf by prefDelegate(PreferKey.navIconBookshelf, "")
     var navIconExplore by prefDelegate(PreferKey.navIconExplore, "")
     var navIconRss by prefDelegate(PreferKey.navIconRss, "")
