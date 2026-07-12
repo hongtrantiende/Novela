@@ -607,7 +607,7 @@ fun ExtensionDetailDialog(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(LegadoTheme.colorScheme.background)
+                .background(Color.Transparent)
         ) {
             AppScaffold(
                 topBar = {
@@ -624,7 +624,7 @@ fun ExtensionDetailDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(LegadoTheme.colorScheme.background)
+                        .background(Color.Transparent)
                         .padding(contentPadding)
                         .padding(horizontal = 24.dp)
                         .verticalScroll(rememberScrollState()),

@@ -219,7 +219,7 @@ fun ExploreShowScreen(
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val isGridMode = state.layoutState == 1
     val hazeState = remember { HazeState() }
-    val showLoadMoreFooter = !state.isRefreshing &&
+    val showLoadMoreFooter = books.isNotEmpty() && !state.isRefreshing &&
         (state.isLoading || state.errorMsg != null || state.isEnd)
 
     AppModalBottomSheet(
