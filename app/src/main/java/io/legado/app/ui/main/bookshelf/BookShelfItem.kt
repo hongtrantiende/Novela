@@ -37,7 +37,7 @@ data class BookShelfItem(
 
     fun getBookStatus(): String? {
         val kindStr = kind?.trim()?.lowercase() ?: return null
-        val tags = kindStr.split(Regex("[,\\n\\s]")).map { it.trim() }.filter { it.isNotEmpty() }
+        val tags = kindStr.split(Regex("[,\\n\\s，、·/\\\\|\\-_\\.]")).map { it.trim() }.filter { it.isNotEmpty() }
         for (tag in tags) {
             if (tag == "完结" || tag == "已完结" || tag == "已完成" || tag == "完" || tag.contains("hoàn thành") || tag.contains("hoàn tất") || tag.contains("đã hoàn thành") || tag == "completed" || tag == "done") {
                 return "Hoàn thành"
