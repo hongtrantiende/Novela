@@ -35,6 +35,32 @@ data class BookShelfItem(
 ) {
     fun getDisplayCover() = if (customCoverUrl.isNullOrEmpty()) coverUrl else customCoverUrl
 
+    fun getBookStatus(): String? {
+        val kindStr = kind?.trim()?.lowercase() ?: return null
+        val tags = kindStr.split(Regex("[,\\n\\s]")).map { it.trim() }.filter { it.isNotEmpty() }
+        for (tag in tags) {
+            if (tag == "完结" || tag == "已完结" || tag == "已完成" || tag == "完" || tag.contains("hoàn thành") || tag.contains("hoàn tất") || tag.contains("đã hoàn thành") || tag == "completed" || tag == "done") {
+                return "Hoàn thành"
+            }
+            if (tag == "连载" || tag == "连载中" || tag.contains("còn tiếp") || tag.contains("đang ra") || tag.contains("đang tiến hành") || tag.contains("liên tải") || tag == "ongoing" || tag == "serial") {
+                return "Còn tiếp"
+            }
+            if (tag == "暂停" || tag == "停更" || tag.contains("tạm ngưng") || tag.contains("tạm dừng") || tag == "paused" || tag == "suspended") {
+                return "Tạm ngưng"
+            }
+        }
+        if (kindStr.contains("完结") || kindStr.contains("已完结") || kindStr.contains("已完成") || kindStr.contains("hoàn thành") || kindStr.contains("hoàn tất")) {
+            return "Hoàn thành"
+        }
+        if (kindStr.contains("连载") || kindStr.contains("còn tiếp") || kindStr.contains("đang ra") || kindStr.contains("đang tiến hành") || kindStr.contains("liên tải")) {
+            return "Còn tiếp"
+        }
+        if (kindStr.contains("暂停") || kindStr.contains("tạm ngưng") || kindStr.contains("tạm dừng")) {
+            return "Tạm ngưng"
+        }
+        return null
+    }
+
     val isLocal: Boolean get() = (type and BookType.local) > 0
 
     val isAudio: Boolean get() = (type and BookType.audio) > 0
