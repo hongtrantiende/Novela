@@ -117,7 +117,7 @@ fun ExtensionScreens(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(LegadoTheme.colorScheme.background)
+            .background(Color.Transparent)
     ) {
 
         if (error != null) {
