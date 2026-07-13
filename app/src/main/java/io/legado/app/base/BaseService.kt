@@ -18,7 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import org.koin.java.KoinJavaComponent.get
 import kotlin.coroutines.CoroutineContext
@@ -44,19 +44,20 @@ abstract class BaseService : LifecycleService() {
         startForegroundNotification()
         isForeground = true
         LifecycleHelp.onServiceCreate(this)
-        val localPreferencesRepository: LocalPreferencesRepository = get(LocalPreferencesRepository::class.java)
-        val checked: Boolean = runBlocking {
-            localPreferencesRepository.getPreference(
+        // Permission check moved to background to avoid ANR on slow devices (Helio chips)
+        lifecycleScope.launch(Dispatchers.IO) {
+            val localPreferencesRepository: LocalPreferencesRepository = get(LocalPreferencesRepository::class.java)
+            val checked: Boolean = localPreferencesRepository.getPreference(
                 LocalPreferencesKeys.PERMISSION_CHECKED, false
             ).first()
-        }
-        if (!checked) {
-            runBlocking {
+            if (!checked) {
                 localPreferencesRepository.updatePreference(
                     LocalPreferencesKeys.PERMISSION_CHECKED, true
                 )
+                launch(Dispatchers.Main) {
+                    checkPermission()
+                }
             }
-            checkPermission()
         }
     }
 

@@ -58,7 +58,7 @@ fun CoverFlowModule(
         state = listState,
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 48.dp),
-        horizontalArrangement = Arrangement.spacedBy((-8).dp),
+        horizontalArrangement = Arrangement.spacedBy(0.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         itemsIndexed(

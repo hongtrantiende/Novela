@@ -20,7 +20,7 @@ object DatabaseMigrations {
             migration_31_32, migration_32_33, migration_33_34, migration_34_35,
             migration_35_36, migration_36_37, migration_37_38, migration_38_39,
             migration_39_40, migration_40_41, migration_41_42, migration_42_43,
-            migration_82_83, migration_91_92, migration_92_93,
+            migration_82_83, migration_91_92, migration_92_93, migration_93_94,
         )
     }
 
@@ -487,13 +487,42 @@ object DatabaseMigrations {
         override fun migrate(database: SupportSQLiteDatabase) {
             database.execSQL("CREATE TABLE IF NOT EXISTS `ai_provider_profiles` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `protocol` TEXT NOT NULL, `baseUrl` TEXT NOT NULL, `modelsUrl` TEXT, `apiKey` TEXT NOT NULL, `authType` TEXT NOT NULL, `secretRef` TEXT, `headersJson` TEXT, `chatPath` TEXT, `responsesPath` TEXT, `messagesPath` TEXT, `modelsPath` TEXT, `customHeadersJson` TEXT, `enabled` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))")
             database.execSQL("CREATE TABLE IF NOT EXISTS `ai_model_profiles` (`id` TEXT NOT NULL, `providerId` TEXT NOT NULL, `displayName` TEXT NOT NULL, `modelId` TEXT NOT NULL, `contextWindow` INTEGER NOT NULL, `maxOutputTokens` INTEGER NOT NULL, `capabilities` TEXT NOT NULL, `defaultParamsJson` TEXT, `enabled` INTEGER NOT NULL, `sortNumber` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_model_profiles_providerId` ON `ai_model_profiles` (`providerId`)")
             database.execSQL("CREATE TABLE IF NOT EXISTS `ai_task_presets` (`id` TEXT NOT NULL, `taskType` TEXT NOT NULL, `name` TEXT NOT NULL, `modelProfileId` TEXT NOT NULL, `promptTemplate` TEXT NOT NULL, `paramsJson` TEXT, `chunkPolicyJson` TEXT, `enabled` INTEGER NOT NULL, `isDefault` INTEGER NOT NULL, `sortNumber` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_task_presets_taskType` ON `ai_task_presets` (`taskType`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_task_presets_modelProfileId` ON `ai_task_presets` (`modelProfileId`)")
             database.execSQL("CREATE TABLE IF NOT EXISTS `ai_artifacts` (`id` TEXT NOT NULL, `taskType` TEXT NOT NULL, `bookUrl` TEXT NOT NULL, `chapterIndex` INTEGER, `contentHash` TEXT NOT NULL, `promptHash` TEXT NOT NULL, `modelProfileId` TEXT NOT NULL, `status` INTEGER NOT NULL, `output` TEXT, `errorMessage` TEXT, `schemaVersion` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_artifacts_bookUrl_chapterIndex_taskType` ON `ai_artifacts` (`bookUrl`, `chapterIndex`, `taskType`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_artifacts_contentHash_promptHash_modelProfileId` ON `ai_artifacts` (`contentHash`, `promptHash`, `modelProfileId`)")
             database.execSQL("CREATE TABLE IF NOT EXISTS `ai_chat_conversations` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `reasoningLevel` TEXT NOT NULL, `modelProfileId` TEXT, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))")
             database.execSQL("CREATE TABLE IF NOT EXISTS `ai_chat_messages` (`id` TEXT NOT NULL, `conversationId` TEXT NOT NULL, `role` TEXT NOT NULL, `partsJson` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `branchIndex` INTEGER NOT NULL, `isSelected` INTEGER NOT NULL, `parentMessageId` TEXT, `thinkingDuration` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_chat_messages_conversationId_createdAt` ON `ai_chat_messages` (`conversationId`, `createdAt`)")
             database.execSQL("CREATE TABLE IF NOT EXISTS `ai_memory` (`conversationId` TEXT NOT NULL, `key` TEXT NOT NULL, `value` TEXT NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`conversationId`, `key`))")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_memory_conversationId` ON `ai_memory` (`conversationId`)")
             database.execSQL("CREATE TABLE IF NOT EXISTS `book_content_processes` (`id` TEXT NOT NULL, `bookUrl` TEXT NOT NULL, `chapterIndex` INTEGER, `kind` TEXT NOT NULL, `stage` TEXT NOT NULL, `target` TEXT NOT NULL, `anchorJson` TEXT NOT NULL, `actionJson` TEXT NOT NULL, `styleJson` TEXT, `source` TEXT NOT NULL, `aiArtifactId` TEXT, `sourceContentHash` TEXT, `enabled` INTEGER NOT NULL, `sortOrder` INTEGER NOT NULL, `status` INTEGER NOT NULL, `schemaVersion` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_book_content_processes_bookUrl_chapterIndex_enabled_sortOrder` ON `book_content_processes` (`bookUrl`, `chapterIndex`, `enabled`, `sortOrder`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_book_content_processes_bookUrl_kind` ON `book_content_processes` (`bookUrl`, `kind`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_book_content_processes_aiArtifactId` ON `book_content_processes` (`aiArtifactId`)")
             database.execSQL("CREATE TABLE IF NOT EXISTS `ai_prompt_presets` (`id` TEXT NOT NULL, `taskType` TEXT NOT NULL, `name` TEXT NOT NULL, `instruction` TEXT NOT NULL, `enabled` INTEGER NOT NULL, `builtIn` INTEGER NOT NULL, `sortNumber` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_prompt_presets_taskType_enabled_sortNumber` ON `ai_prompt_presets` (`taskType`, `enabled`, `sortNumber`)")
+        }
+    }
+
+    // Repair migration: creates missing indices for users who already migrated 92→93
+    // without the index statements. Uses IF NOT EXISTS so it's safe if indices already exist.
+    private val migration_93_94 = object : Migration(93, 94) {
+        override fun migrate(database: SupportSQLiteDatabase) {
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_model_profiles_providerId` ON `ai_model_profiles` (`providerId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_task_presets_taskType` ON `ai_task_presets` (`taskType`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_task_presets_modelProfileId` ON `ai_task_presets` (`modelProfileId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_artifacts_bookUrl_chapterIndex_taskType` ON `ai_artifacts` (`bookUrl`, `chapterIndex`, `taskType`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_artifacts_contentHash_promptHash_modelProfileId` ON `ai_artifacts` (`contentHash`, `promptHash`, `modelProfileId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_chat_messages_conversationId_createdAt` ON `ai_chat_messages` (`conversationId`, `createdAt`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_memory_conversationId` ON `ai_memory` (`conversationId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_book_content_processes_bookUrl_chapterIndex_enabled_sortOrder` ON `book_content_processes` (`bookUrl`, `chapterIndex`, `enabled`, `sortOrder`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_book_content_processes_bookUrl_kind` ON `book_content_processes` (`bookUrl`, `kind`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_book_content_processes_aiArtifactId` ON `book_content_processes` (`aiArtifactId`)")
+            database.execSQL("CREATE INDEX IF NOT EXISTS `index_ai_prompt_presets_taskType_enabled_sortNumber` ON `ai_prompt_presets` (`taskType`, `enabled`, `sortNumber`)")
         }
     }
 

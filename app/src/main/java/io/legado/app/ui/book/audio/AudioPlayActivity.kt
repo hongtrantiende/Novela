@@ -70,7 +70,6 @@ import io.legado.app.utils.startAnimation
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
@@ -504,7 +503,8 @@ class AudioPlayActivity :
                     .into(binding.ivBg)
             }
         }
-        addColorScheme(binding.ivCover.drawable)
+        // addColorScheme is called only in onLoadFinish callback
+        // to avoid crash when drawable is not yet loaded (null/placeholder bitmap)
     }
 
     private fun playButton() {
@@ -517,12 +517,15 @@ class AudioPlayActivity :
 
     private fun addColorScheme(drawable: Drawable?) {
         currentJob?.cancel()
-        currentJob = CoroutineScope(Dispatchers.Default).launch {
+        currentJob = lifecycleScope.launch(Dispatchers.Default) {
             val bitmap = when (drawable) {
                 is BitmapDrawable -> drawable.bitmap
                 is TransitionDrawable -> (drawable.getDrawable(1) as? BitmapDrawable)?.bitmap
                 else -> null
             } ?: return@launch
+
+            // Guard: skip recycled or zero-size bitmaps to avoid IllegalArgumentException
+            if (bitmap.isRecycled || bitmap.width == 0 || bitmap.height == 0) return@launch
 
             val colorAccuracy = true
             val targetWidth = if (colorAccuracy) (bitmap.width / 4).coerceAtMost(256) else 16
@@ -533,12 +536,17 @@ class AudioPlayActivity :
                 .setContentBasedSource(scaledBitmap)
                 .build()
 
-            wrappedContext = DynamicColors.wrapContextIfAvailable(
-                this@AudioPlayActivity,
-                options
-            ).apply {
-                resources.configuration.uiMode =
-                    this@AudioPlayActivity.resources.configuration.uiMode
+            try {
+                wrappedContext = DynamicColors.wrapContextIfAvailable(
+                    this@AudioPlayActivity,
+                    options
+                ).apply {
+                    resources.configuration.uiMode =
+                        this@AudioPlayActivity.resources.configuration.uiMode
+                }
+            } catch (e: Exception) {
+                // DynamicColors may not be supported on some devices/OS versions
+                return@launch
             }
 
             withContext(Dispatchers.Main) {
@@ -756,6 +764,8 @@ class AudioPlayActivity :
 
         observeEventSticky<Int>(EventBus.AUDIO_PROGRESS) { progress ->
             val slider = binding.playerProgress
+            // Guard: skip if slider range is not yet initialized (AUDIO_SIZE not received)
+            if (slider.valueTo <= slider.valueFrom) return@observeEventSticky
             val safeValue = progress.toFloat().coerceIn(slider.valueFrom, slider.valueTo)
             if (!adjustProgress) slider.value = safeValue
             binding.tvDurTime.text = progressTimeFormat.format(progress.toLong())
