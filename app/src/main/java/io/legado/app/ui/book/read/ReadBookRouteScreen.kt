@@ -619,7 +619,8 @@ fun ReadBookRouteScreen(
     // Keep the dark loading overlay visible until the content is fully ready to display
     // (i.e. pages are loaded and do not contain the placeholder "Đang tải dữ liệu...")
     // and there are no ongoing messages/errors. Once shown, do not show again.
-    val showLoadingOverlay = !hasShownContent && currentLoading
+    // Also, do not show it if the Read Aloud overlay is currently displayed.
+    val showLoadingOverlay = !hasShownContent && currentLoading && !showReadAloudOverlay
 
     Box(Modifier.fillMaxSize()) {
         key(controller) {

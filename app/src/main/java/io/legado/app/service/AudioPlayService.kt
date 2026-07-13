@@ -45,6 +45,7 @@ import io.legado.app.utils.postEvent
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.servicePendingIntent
 import io.legado.app.utils.toastOnUi
+import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -226,18 +227,19 @@ class AudioPlayService : BaseService(),
         if (!requestFocus()) {
             return
         }
-        execute(context = Main) {
-            AudioPlay.status = Status.STOP
-            postEvent(EventBus.AUDIO_STATE, Status.STOP)
-            upPlayProgressJob?.cancel()
-            val analyzeUrl = AnalyzeUrl(
+        execute(context = IO) {
+            AnalyzeUrl(
                 url,
                 source = AudioPlay.bookSource,
                 ruleData = AudioPlay.book,
                 chapter = AudioPlay.durChapter,
                 coroutineContext = coroutineContext
-            )
-            exoPlayer.setMediaItem(analyzeUrl.getMediaItem())
+            ).getMediaItem()
+        }.onSuccess { mediaItem ->
+            AudioPlay.status = Status.STOP
+            postEvent(EventBus.AUDIO_STATE, Status.STOP)
+            upPlayProgressJob?.cancel()
+            exoPlayer.setMediaItem(mediaItem)
             exoPlayer.playWhenReady = true
             exoPlayer.seekTo(position.toLong())
             exoPlayer.prepare()
@@ -661,7 +663,15 @@ class AudioPlayService : BaseService(),
     override fun startForegroundNotification() {
         try {
             val notification = createNotification()
-            startForeground(NotificationId.AudioPlayService, notification.build())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NotificationId.AudioPlayService,
+                    notification.build(),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(NotificationId.AudioPlayService, notification.build())
+            }
         } catch (e: Exception) {
             AppLog.put("Lỗi tạo thông báo phát lại âm thanh, ${e.localizedMessage}", e, true)
             //创建通知出错不结束服务就会崩溃,服务必须绑定通知

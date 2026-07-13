@@ -91,6 +91,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.ui.text.font.FontWeight
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.service.BaseReadAloudService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -111,9 +112,17 @@ fun ReadAloudContent(
     val context = LocalContext.current
     var showChapterList by remember { mutableStateOf(false) }
 
+    // Đợi transition Bottom Sheet chạy xong mượt mà, sau đó mới load các logic nặng chạy ngầm
+    var isUiReady by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(400)
+        isUiReady = true
+    }
+
     // Load chapter list from DB asynchronously only when needed
     var chapters by remember { mutableStateOf<List<io.legado.app.data.entities.BookChapter>>(emptyList()) }
-    LaunchedEffect(showChapterList, state.book?.bookUrl) {
+    LaunchedEffect(showChapterList, state.book?.bookUrl, isUiReady) {
+        if (!isUiReady) return@LaunchedEffect
         if (showChapterList && chapters.isEmpty()) {
             state.book?.bookUrl?.let { bookUrl ->
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -128,7 +137,8 @@ fun ReadAloudContent(
     val ttsSpeechRate = state.readAloudTtsSpeechRate
 
     var serviceState by remember { mutableStateOf(AloudProgressState()) }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(isUiReady) {
+        if (!isUiReady) return@LaunchedEffect
         while (true) {
             serviceState = withContext(Dispatchers.IO) { getServiceState() }
             delay(1000)
@@ -139,7 +149,8 @@ fun ReadAloudContent(
     var localSpeechRate by remember(ttsSpeechRate) { mutableFloatStateOf(ttsSpeechRate.toFloat()) }
 
     var fallbackContentList by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(state.curTextChapter, state.readAloudByPage) {
+    LaunchedEffect(state.curTextChapter, state.readAloudByPage, isUiReady) {
+        if (!isUiReady) return@LaunchedEffect
         fallbackContentList = withContext(Dispatchers.Default) {
             state.curTextChapter?.getNeedReadAloud(0, state.readAloudByPage, 0)
                 ?.split("\n")?.filter { it.isNotEmpty() } ?: emptyList()
@@ -177,6 +188,18 @@ fun ReadAloudContent(
 
     // Use app theme background color — fully opaque, no see-through
     val appBgColor = LegadoTheme.colorScheme.surfaceContainerHigh.copy(alpha = 1f)
+
+    if (!isUiReady) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(appBgColor),
+            contentAlignment = Alignment.Center
+        ) {
+            AppContainedLoadingIndicator()
+        }
+        return
+    }
 
     // Full screen background
     Box(
@@ -314,8 +337,8 @@ fun ReadAloudContent(
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                 ) {
-                    ReadAloudSlider(
-                        value = localProgress,
+                    AppSlider(
+                        value = localProgress.coerceIn(0f, (totalParagraphs - 1).toFloat().coerceAtLeast(1f)),
                         onValueChange = { localProgress = it },
                         onValueChangeFinished = {
                             if (BaseReadAloudService.instance != null) {
@@ -327,8 +350,6 @@ fun ReadAloudContent(
                             }
                         },
                         valueRange = 0f..(totalParagraphs - 1).toFloat().coerceAtLeast(1f),
-                        bufferedValue = serviceState.cachedIndices.size.toFloat(),
-                        playButtonColor = playButtonColor,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Row(
@@ -455,12 +476,12 @@ fun ReadAloudContent(
                     }
                 }
 
-                // Main Play/Pause — large cream flower shape (ảnh 3 style)
+                // Main Play/Pause — large cream flower shape (đã khôi phục và tối ưu hóa shadow)
                 Box(
                     modifier = Modifier
                         .size(68.dp)
                         .graphicsLayer { rotationZ = playRotation.value }
-                        .shadow(12.dp, flowerShape, ambientColor = playButtonColor.copy(alpha = 0.3f))
+                        .shadow(12.dp, androidx.compose.foundation.shape.CircleShape, ambientColor = playButtonColor.copy(alpha = 0.3f))
                         .clip(flowerShape)
                         .background(playButtonColor)
                         .combinedClickable(
@@ -752,17 +773,29 @@ private data class AloudProgressState(
 )
 
 private fun getServiceState(): AloudProgressState {
-    val service = BaseReadAloudService.instance ?: return AloudProgressState()
-    val contentList = service.contentList.toList()
-    val nowSpeak = service.nowSpeak
-    val cached = mutableSetOf<Int>()
-    val downloading = mutableSetOf<Int>()
-    contentList.indices.forEach { i ->
-        if (service.isParagraphCached(i)) cached.add(i)
-        if (service.isParagraphDownloading(i)) downloading.add(i)
+    try {
+        val service = BaseReadAloudService.instance ?: return AloudProgressState()
+        val contentList = service.contentList.toList()
+        val nowSpeak = service.nowSpeak
+        val cached = mutableSetOf<Int>()
+        val downloading = mutableSetOf<Int>()
+        
+        if (service.javaClass.name.contains("HttpReadAloudService")) {
+            val start = (nowSpeak - 5).coerceAtLeast(0)
+            val end = (nowSpeak + 20).coerceAtLeast(0).coerceAtMost(contentList.lastIndex)
+            if (start <= end && end < contentList.size) {
+                for (i in start..end) {
+                    if (service.isParagraphCached(i)) cached.add(i)
+                    if (service.isParagraphDownloading(i)) downloading.add(i)
+                }
+            }
+        }
+        return AloudProgressState(contentList, nowSpeak, cached, downloading)
+    } catch (e: Exception) {
+        return AloudProgressState()
     }
-    return AloudProgressState(contentList, nowSpeak, cached, downloading)
 }
+
 
 @Composable
 private fun SegmentedProgressBar(
@@ -994,127 +1027,4 @@ private fun AudioChapterListOverlay(
     }
 }
 
-@Composable
-fun ReadAloudSlider(
-    value: Float,
-    onValueChange: (Float) -> Unit,
-    onValueChangeFinished: (() -> Unit)?,
-    valueRange: ClosedFloatingPointRange<Float>,
-    bufferedValue: Float,
-    modifier: Modifier = Modifier,
-    playButtonColor: Color = Color(0xFFF0D9B5)
-) {
-    val rangeLength = valueRange.endInclusive - valueRange.start
-    val fraction = if (rangeLength > 0f) (value - valueRange.start) / rangeLength else 0f
-    val bufferedFraction = if (rangeLength > 0f) (bufferedValue - valueRange.start) / rangeLength else 0f
 
-    var isDragging by remember { mutableStateOf(false) }
-
-    val thumbRadius by animateDpAsState(
-        targetValue = if (isDragging) 8.dp else 5.dp,
-        animationSpec = tween(150),
-        label = "thumb_size"
-    )
-
-    val trackHeight by animateDpAsState(
-        targetValue = if (isDragging) 6.dp else 4.dp,
-        animationSpec = tween(150),
-        label = "track_size"
-    )
-
-    val density = androidx.compose.ui.platform.LocalDensity.current
-    val inactiveTrackColor = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        val widthPx = constraints.maxWidth.toFloat()
-        val thumbRadiusPx = with(density) { thumbRadius.toPx() }
-        val trackHeightPx = with(density) { trackHeight.toPx() }
-
-        val dragModifier = Modifier
-            .pointerInput(rangeLength, widthPx) {
-                detectTapGestures(
-                    onPress = { offset ->
-                        isDragging = true
-                        val newValue = (offset.x / widthPx) * rangeLength + valueRange.start
-                        onValueChange(newValue.coerceIn(valueRange))
-                        tryAwaitRelease()
-                        isDragging = false
-                        onValueChangeFinished?.invoke()
-                    }
-                )
-            }
-            .pointerInput(rangeLength, widthPx) {
-                detectHorizontalDragGestures(
-                    onDragStart = { isDragging = true },
-                    onDragEnd = {
-                        isDragging = false
-                        onValueChangeFinished?.invoke()
-                    },
-                    onDragCancel = {
-                        isDragging = false
-                    },
-                    onHorizontalDrag = { change, dragAmount ->
-                        change.consume()
-                        val deltaFraction = dragAmount / widthPx
-                        val newValue = value + deltaFraction * rangeLength
-                        onValueChange(newValue.coerceIn(valueRange))
-                    }
-                )
-            }
-
-        Canvas(
-            modifier = Modifier
-                .fillMaxSize()
-                .then(dragModifier)
-        ) {
-            val centerY = size.height / 2f
-
-            // 1. Inactive track (nền nâu xám rất mờ, mỏng)
-            drawRoundRect(
-                color = inactiveTrackColor,
-                topLeft = Offset(0f, centerY - trackHeightPx / 2f),
-                size = Size(size.width, trackHeightPx),
-                cornerRadius = CornerRadius(trackHeightPx / 2f, trackHeightPx / 2f)
-            )
-
-            // 2. Buffered progress track (đã tải về máy)
-            if (bufferedFraction > 0f) {
-                drawRoundRect(
-                    color = playButtonColor.copy(alpha = 0.22f),
-                    topLeft = Offset(0f, centerY - trackHeightPx / 2f),
-                    size = Size(size.width * bufferedFraction.coerceIn(0f, 1f), trackHeightPx),
-                    cornerRadius = CornerRadius(trackHeightPx / 2f, trackHeightPx / 2f)
-                )
-            }
-
-            // 3. Active progress track (đã đọc)
-            drawRoundRect(
-                color = playButtonColor,
-                topLeft = Offset(0f, centerY - trackHeightPx / 2f),
-                size = Size(size.width * fraction.coerceIn(0f, 1f), trackHeightPx),
-                cornerRadius = CornerRadius(trackHeightPx / 2f, trackHeightPx / 2f)
-            )
-
-            // 4. Thumb (núm trượt tròn màu kem)
-            val thumbCenterX = size.width * fraction.coerceIn(0f, 1f)
-
-            // Hiệu ứng phát sáng mờ xung quanh thumb
-            drawCircle(
-                color = playButtonColor.copy(alpha = 0.22f),
-                radius = thumbRadiusPx + 4.dp.toPx(),
-                center = Offset(thumbCenterX, centerY)
-            )
-
-            drawCircle(
-                color = playButtonColor,
-                radius = thumbRadiusPx,
-                center = Offset(thumbCenterX, centerY)
-            )
-        }
-    }
-}

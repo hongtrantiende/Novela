@@ -18,10 +18,12 @@ import io.legado.app.model.ReadBook
 import io.legado.app.utils.GSON
 import io.legado.app.utils.LogUtils
 import io.legado.app.utils.fromJsonObject
+import androidx.lifecycle.lifecycleScope
 import io.legado.app.utils.servicePendingIntent
 import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.launch
 
 /**
  * 本地朗读
@@ -33,6 +35,7 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
     private val ttsUtteranceListener = TTSUtteranceListener()
     private var speakJob: Coroutine<*>? = null
     private val TAG = "TTSReadAloudService"
+    private var ttsRetryCount = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -122,12 +125,17 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
 
     override fun onInit(status: Int) {
         if (status == TextToSpeech.SUCCESS) {
+            ttsRetryCount = 0
             textToSpeech?.let { tts ->
-                val sampleText = contentList.take(5).joinToString(" ")
-                setupLanguageAndVoice(tts, sampleText)
-                tts.setOnUtteranceProgressListener(ttsUtteranceListener)
-                ttsInitFinish = true
-                play()
+                lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    val sampleText = contentList.take(5).joinToString(" ")
+                    setupLanguageAndVoice(tts, sampleText)
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        tts.setOnUtteranceProgressListener(ttsUtteranceListener)
+                        ttsInitFinish = true
+                        play()
+                    }
+                }
             }
         } else {
             toastOnUi(R.string.tts_init_failed)
@@ -187,9 +195,17 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                 TextToSpeech.ERROR
             }
             if (result == TextToSpeech.ERROR) {
-                AppLog.put("lỗi tts hãy thử khởi tạo lại")
-                clearTTS()
-                initTts()
+                if (ttsRetryCount < 2) {
+                    ttsRetryCount++
+                    AppLog.put("lỗi tts hãy thử khởi tạo lại, lần thử lại: $ttsRetryCount")
+                    clearTTS()
+                    initTts()
+                } else {
+                    AppLog.put("Không thể khởi chạy công cụ đọc thành tiếng sau nhiều lần thử lại")
+                    toastOnUi("Lỗi công cụ TTS của hệ thống, vui lòng kiểm tra cài đặt TTS trên máy")
+                    playStop()
+                    stopSelf()
+                }
             }
         }.onError {
             AppLog.put("lỗi đọc tts\n${it.localizedMessage}", it, true)
@@ -222,9 +238,17 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                 TextToSpeech.ERROR
             }
             if (result == TextToSpeech.ERROR) {
-                AppLog.put("lỗi tts hãy thử khởi tạo lại")
-                clearTTS()
-                initTts()
+                if (ttsRetryCount < 2) {
+                    ttsRetryCount++
+                    AppLog.put("lỗi tts hãy thử khởi tạo lại, lần thử lại: $ttsRetryCount")
+                    clearTTS()
+                    initTts()
+                } else {
+                    AppLog.put("Không thể khởi chạy công cụ đọc thành tiếng sau nhiều lần thử lại")
+                    toastOnUi("Lỗi công cụ TTS của hệ thống, vui lòng kiểm tra cài đặt TTS trên máy")
+                    playStop()
+                    stopSelf()
+                }
             }
         }.onError {
             AppLog.put("lỗi đọc tts\n${it.localizedMessage}", it, true)

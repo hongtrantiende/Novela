@@ -25,16 +25,8 @@ import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.putPrefStringSync
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import splitties.init.appCtx
-import java.io.IOException
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
 
@@ -54,66 +46,22 @@ fun <T> prefDelegate(
     sync: Boolean = false,
     onValueChange: ((T) -> Unit)? = null
 ): PrefDelegate<T> {
-    return object : PrefDelegate<T>, DefaultLifecycleObserver {
+    return object : PrefDelegate<T> {
         private var _value: MutableState<T>
         override val state: State<T> get() = _value
 
         @Volatile
         private var currentValue: T = defaultValue
-        private val scope = CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
-        private var dsObserverJob: Job? = null
 
         init {
-            // 同步从 DataStore 读取初始值，确保构造完成后即为最新值
-            val initialValue = runBlocking { readFromDs() } ?: defaultValue
+            // 优先从 SP 读取初始值（SP 是内存缓存，速度极快且是同步的，避免阻塞主线程）
+            val initialValue = readFromSp() ?: defaultValue
             _value = mutableStateOf(initialValue)
             currentValue = initialValue
-
-            // 观察 DataStore 变化，用于跨实例同步
-            dsObserverJob = scope.launch {
-                appCtx.dataStore.data
-                    .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-                    .map { prefs ->
-                        val strVal = runCatching { prefs[stringPreferencesKey(key)] }.getOrNull()
-                        @Suppress("UNCHECKED_CAST")
-                        when {
-                            defaultValue is String || defaultValue == null ->
-                                strVal as T?
-                            defaultValue is Int ->
-                                (runCatching { prefs[intPreferencesKey(key)] }.getOrNull()
-                                    ?: strVal?.toIntOrNull()) as T?
-                            defaultValue is Boolean ->
-                                (runCatching { prefs[booleanPreferencesKey(key)] }.getOrNull()
-                                    ?: strVal?.toBooleanStrictOrNull()) as T?
-                            defaultValue is Long ->
-                                (runCatching { prefs[longPreferencesKey(key)] }.getOrNull()
-                                    ?: strVal?.toLongOrNull()) as T?
-                            defaultValue is Float ->
-                                (runCatching { prefs[floatPreferencesKey(key)] }.getOrNull()
-                                    ?: strVal?.toFloatOrNull()) as T?
-                            else -> null
-                        }
-                    }
-                    .distinctUntilChanged()
-                    .collect { dsValue ->
-                        if (dsValue != null && currentValue != dsValue) {
-                            updateValue(dsValue)
-                            onValueChange?.invoke(dsValue)
-                        }
-                    }
-            }
-            // 注册生命周期观察者（如果有）
-            if (lifecycleOwner != null) {
-                lifecycleOwner.lifecycle.addObserver(this)
-            }
-        }
-
-        override fun onDestroy(owner: LifecycleOwner) {
-            dispose()
         }
 
         override fun dispose() {
-            dsObserverJob?.cancel()
+            // 不需要再做任何清理工作，因为移除了 DataStore 观察协程
         }
 
         override fun getValue(thisRef: Any?, property: KProperty<*>): T {
@@ -131,7 +79,7 @@ fun <T> prefDelegate(
                     is Long -> appCtx.putPrefLong(key, value)
                     is Float -> appCtx.putPrefFloat(key, value)
                 }
-                // 同步写入 DataStore，确保持久化后再返回
+                // 同步写入 DataStore，确保持久化
                 runCatching {
                     runBlocking {
                         when (value) {
@@ -148,41 +96,11 @@ fun <T> prefDelegate(
         }
 
         /**
-         * 从 DataStore 读取当前值，DS 读不到时回退到 SP 并补写入 DS。
+         * 从 SharedPreferences 同步读取初始值。
          */
         @Suppress("UNCHECKED_CAST")
-        private suspend fun readFromDs(): T? {
-            val dsValue = try {
-                appCtx.dataStore.data
-                    .catch { if (it is IOException) emit(emptyPreferences()) else throw it }
-                    .map { prefs ->
-                        val strVal = runCatching { prefs[stringPreferencesKey(key)] }.getOrNull()
-                        when {
-                            defaultValue is String || defaultValue == null ->
-                                strVal as T?
-                            defaultValue is Int ->
-                                (runCatching { prefs[intPreferencesKey(key)] }.getOrNull()
-                                    ?: strVal?.toIntOrNull()) as T?
-                            defaultValue is Boolean ->
-                                (runCatching { prefs[booleanPreferencesKey(key)] }.getOrNull()
-                                    ?: strVal?.toBooleanStrictOrNull()) as T?
-                            defaultValue is Long ->
-                                (runCatching { prefs[longPreferencesKey(key)] }.getOrNull()
-                                    ?: strVal?.toLongOrNull()) as T?
-                            defaultValue is Float ->
-                                (runCatching { prefs[floatPreferencesKey(key)] }.getOrNull()
-                                    ?: strVal?.toFloatOrNull()) as T?
-                            else -> null
-                        }
-                    }
-                    .first()
-            } catch (e: Exception) {
-                null
-            }
-            // DS 有值，直接返回
-            if (dsValue != null) return dsValue
-            // DS 无值，回退到 SP（迁移遗漏时的补偿）
-            val spValue: T? = when {
+        private fun readFromSp(): T? {
+            return when {
                 defaultValue is String || defaultValue == null ->
                     appCtx.getPrefString(key, defaultValue as String?) as T?
                 defaultValue is Int ->
@@ -195,19 +113,6 @@ fun <T> prefDelegate(
                     appCtx.getPrefFloat(key, defaultValue) as T
                 else -> null
             }
-            // DS 无值时，将 SP 值补写入 DS（修复迁移遗漏）
-            if (spValue != null) {
-                runCatching {
-                    when (spValue) {
-                        is String? -> DsSync.putString(key, spValue)
-                        is Int -> DsSync.putInt(key, spValue)
-                        is Boolean -> DsSync.putBoolean(key, spValue)
-                        is Long -> DsSync.putLong(key, spValue)
-                        is Float -> DsSync.putFloat(key, spValue)
-                    }
-                }
-            }
-            return spValue
         }
 
         private fun updateValue(value: T) {

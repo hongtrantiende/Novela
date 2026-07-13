@@ -12,6 +12,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioManager
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.support.v4.media.MediaMetadataCompat
@@ -781,7 +782,15 @@ abstract class BaseReadAloudService : BaseService(),
     override fun startForegroundNotification() {
         try {
             val notification = createNotification()
-            startForeground(NotificationId.ReadAloudService, notification.build())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(
+                    NotificationId.ReadAloudService,
+                    notification.build(),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+                )
+            } else {
+                startForeground(NotificationId.ReadAloudService, notification.build())
+            }
         } catch (e: Exception) {
             AppLog.put("Lỗi tạo thông báo đọc to, ${e.localizedMessage}", e, true)
             //创建通知出错不结束服务就会崩溃,服务必须绑定通知

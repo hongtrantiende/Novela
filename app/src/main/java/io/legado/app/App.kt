@@ -141,6 +141,13 @@ class App : Application(), ImageLoaderFactory {
             kotlin.runCatching {
                 get<SettingsRepository>().postMigrationSync()
             }
+            // Reset tts v1 làm mặc định đúng 1 lần duy nhất cho bản cập nhật này
+            if (!getPrefBoolean("tts_v1_default_reset", false)) {
+                defaultSharedPreferences.edit()
+                    .putString(PreferKey.ttsEngine, null)
+                    .putBoolean("tts_v1_default_reset", true)
+                    .apply()
+            }
             //预下载Cronet so
             Cronet.preDownload()
             createNotificationChannels()
