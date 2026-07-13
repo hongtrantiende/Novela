@@ -23,6 +23,9 @@ import kotlinx.collections.immutable.persistentSetOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -37,12 +40,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import coil.ImageLoader
-import coil.request.ImageRequest
-import splitties.init.appCtx
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(
@@ -52,7 +50,6 @@ class SearchViewModel(
     private val exploreBooksUseCase: ExploreBooksUseCase,
     private val addToBookshelfUseCase: AddToBookshelfUseCase,
     private val localPreferencesRepository: LocalPreferencesRepository,
-    private val imageLoader: ImageLoader,
 ) : ViewModel() {
 
     val searchLayoutMode = localPreferencesRepository
@@ -91,10 +88,15 @@ class SearchViewModel(
     private var persistedSearchScopeRaw = ""
     private var hasTemporaryScope = false
     private val searchScope = SearchScope("")
+    private val searchScopeReady = CompletableDeferred<Unit>()
     private val preferenceWriteScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val searchControl = BookSearchControl()
     private val searchResultBooks = LinkedHashMap<SearchResultKey, SearchBook>()
 
+    private var initializeJob: Job? = null
+    private var lastInitializedKey: String? = null
+    private var lastInitializedScopeRaw: String? = null
+    private var hasInitialized = false
     private var searchJob: Job? = null
     private var currentSearchPage = 1
     private var resultCountBeforeCurrentPage = 0
@@ -327,6 +329,23 @@ class SearchViewModel(
     }
 
     private fun initialize(key: String?, scopeRaw: String?) {
+        initializeJob?.cancel()
+        initializeJob = viewModelScope.launch {
+            searchScopeReady.await()
+            initializeAfterScopeLoaded(key, scopeRaw)
+        }
+    }
+
+    private fun initializeAfterScopeLoaded(key: String?, scopeRaw: String?) {
+        val normalizedKey = key?.trim()
+        val normalizedScopeRaw = scopeRaw?.takeIf { it.isNotBlank() }
+        val isSameRequest = hasInitialized &&
+                lastInitializedKey == normalizedKey &&
+                lastInitializedScopeRaw == normalizedScopeRaw
+        lastInitializedKey = normalizedKey
+        lastInitializedScopeRaw = normalizedScopeRaw
+        hasInitialized = true
+
         val temporaryScope = scopeRaw?.takeIf { it.isNotBlank() }
         if (temporaryScope != null) {
             hasTemporaryScope = true
@@ -343,11 +362,11 @@ class SearchViewModel(
         // This happens when returning from BookInfo — the LaunchedEffect
         // re-fires but we must not wipe the existing results.
         val hasActiveSearch = _uiState.value.committedQuery.isNotEmpty()
-        if (hasActiveSearch) return
+        if (isSameRequest && hasActiveSearch) return
 
         clearSearchResults()
 
-        val initKey = key?.trim().orEmpty()
+        val initKey = normalizedKey.orEmpty()
         if (initKey.isNotEmpty()) {
             updateQuery(initKey, showSuggestions = false)
             submitSearch(initKey)
@@ -523,6 +542,7 @@ class SearchViewModel(
             } catch (exception: CancellationException) {
                 throw exception
             } catch (exception: Throwable) {
+                wasSearching = false
                 _uiState.update { it.copy(isSearching = false) }
                 exception.localizedMessage
                     ?.takeIf { it.isNotBlank() }
@@ -549,10 +569,10 @@ class SearchViewModel(
                         totalSources = event.totalSources,
                     )
                 }
-                preloadBookCovers(event.upsertBooks)
             }
 
             is SearchRunEvent.Finished -> {
+                wasSearching = false
                 _uiState.update { state ->
                     val emptyAction = if (searchResultBooks.isEmpty() && event.isEmpty && !searchScope.isAll()) {
                         SearchEmptyScopeAction(
@@ -737,6 +757,7 @@ class SearchViewModel(
                         searchScope.update(scopeRaw, postValue = false)
                         syncScopeState()
                     }
+                    searchScopeReady.complete(Unit)
                 }
         }
     }
@@ -812,7 +833,6 @@ class SearchViewModel(
                         expandedSourcePage = page + 1,
                     )
                 }
-                preloadBookCovers(newBooks)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(
@@ -829,11 +849,24 @@ class SearchViewModel(
     }
 
     private fun mergeSearchResults(books: List<SearchBook>) {
+        val bookUrlIndex = HashMap<String, SearchResultKey>()
+        searchResultBooks.forEach { (key, book) ->
+            bookUrlIndex[book.bookUrl] = key
+        }
         books.forEach { book ->
             val key = SearchResultKey(book.name, book.author)
+            val existingUrlKey = bookUrlIndex[book.bookUrl]
+            if (existingUrlKey != null && existingUrlKey != key) {
+                val existingBook = searchResultBooks[existingUrlKey]
+                if (existingBook != null) {
+                    existingBook.addOrigin(book.origin)
+                    return@forEach
+                }
+            }
             val currentBook = searchResultBooks[key]
             if (currentBook == null) {
                 searchResultBooks[key] = book
+                bookUrlIndex[book.bookUrl] = key
             } else {
                 book.origins.forEach { origin -> currentBook.addOrigin(origin) }
             }
@@ -876,24 +909,6 @@ class SearchViewModel(
         val name: String,
         val author: String,
     )
-
-    private fun preloadBookCovers(books: List<SearchBook>) {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            books.take(30).forEach { book ->
-                val coverUrl = book.coverUrl
-                if (!coverUrl.isNullOrBlank()) {
-                    val request = io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest(
-                        context = appCtx,
-                        data = coverUrl,
-                        sourceOrigin = book.origin,
-                        loadOnlyWifi = io.legado.app.ui.config.coverConfig.CoverConfig.loadCoverOnlyWifi,
-                        memoryCacheKey = coverUrl
-                    )
-                    imageLoader.enqueue(request)
-                }
-            }
-        }
-    }
 
     private companion object {
         const val EXACT_SEARCH_SINGLE_PAGE_RESULT_THRESHOLD = 3

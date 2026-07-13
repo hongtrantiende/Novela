@@ -71,7 +71,6 @@ class BookSearchControl {
 
 class SearchBooksUseCase(
     private val gateway: BookSearchGateway,
-    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository,
 ) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -84,43 +83,25 @@ class SearchBooksUseCase(
 
         val sourceParts = gateway.getBookSourceParts(request.scope)
         if (sourceParts.isEmpty()) {
-            throw NoStackTraceException("Bật nguồn sách trống")
+            throw NoStackTraceException("启用书源为空")
         }
 
         val searchableSources = coroutineScope {
             sourceParts.map { part ->
                 async(Dispatchers.IO) {
-                    val isExt = part.bookSourceUrl.startsWith("ext_")
-                    if (isExt) {
-                        if (!io.legado.app.help.MemberManager.isVip) {
-                            return@async null
-                        }
-                        val sourceExtType = when (part.bookSourceGroup?.lowercase()) {
-                            "novel" -> 0
-                            "comic" -> 2
-                            "audio" -> 1
-                            "movie", "video" -> 4
-                            else -> 0
-                        }
-                        if (request.types != null && !request.types.contains(sourceExtType)) {
-                            return@async null
-                        }
-                        SearchableSource(part, null)
-                    } else {
-                        val source = gateway.getBookSource(part.bookSourceUrl) ?: return@async null
-                        if (source.searchUrl.isNullOrBlank()) {
-                            return@async null
-                        }
-                        if (request.types != null && !request.types.contains(source.bookSourceType)) {
-                            return@async null
-                        }
-                        SearchableSource(part, source)
+                    val source = gateway.getBookSource(part.bookSourceUrl) ?: return@async null
+                    if (source.searchUrl.isNullOrBlank()) {
+                        return@async null
                     }
+                    if (request.types != null && !request.types.contains(source.bookSourceType)) {
+                        return@async null
+                    }
+                    SearchableSource(part, source)
                 }
             }.awaitAll().filterNotNull()
         }
         if (searchableSources.isEmpty()) {
-            throw NoStackTraceException("Nguồn sách có thể tìm kiếm trống")
+            throw NoStackTraceException("可搜索书源为空")
         }
 
         val merger = SearchResultMerger(keyword, request.matchMode)
@@ -166,7 +147,7 @@ class SearchBooksUseCase(
                         if (firstFailureMessage.isNullOrBlank()) {
                             firstFailureMessage = result.throwable.localizedMessage
                         }
-                        AppLog.put("Lỗi tìm kiếm nguồn sách\n${result.throwable.localizedMessage}", result.throwable)
+                        AppLog.put("书源搜索出错\n${result.throwable.localizedMessage}", result.throwable)
                         emit(
                             SearchRunEvent.Progress(
                                 upsertBooks = emptyList(),
@@ -181,7 +162,7 @@ class SearchBooksUseCase(
             }
 
         if (merger.count == 0 && failedSources == searchableSources.size) {
-            val error = firstFailureMessage?.takeIf { it.isNotBlank() } ?: "Tất cả tìm kiếm nguồn sách đều không thành công"
+            val error = firstFailureMessage?.takeIf { it.isNotBlank() } ?: "全部书源搜索失败"
             throw NoStackTraceException(error)
         }
 
@@ -201,27 +182,22 @@ class SearchBooksUseCase(
     ): SourceSearchResult {
         return try {
             val source = searchableSource.source
-            val isExt = searchableSource.part.bookSourceUrl.startsWith("ext_")
-            val supportsSearchPage = if (isExt) true else source?.supportsSearchPage() ?: false
+            val supportsSearchPage = source.supportsSearchPage()
             if (page > 1 && !supportsSearchPage) {
                 return SourceSearchResult.Found(emptyList())
             }
             val books = withTimeout(30000L) {
-                if (isExt) {
-                    extensionRepository.searchBooks(searchableSource.part.bookSourceUrl, keyword, page)
-                } else {
-                    WebBook.searchBookAwait(
-                        source!!,
-                        keyword,
-                        page,
-                        filter = { name, author, kind ->
-                            matchMode == MatchMode.DEFAULT ||
-                                name.contains(keyword, ignoreCase = true) ||
-                                author.contains(keyword, ignoreCase = true) ||
-                                kind?.contains(keyword, ignoreCase = true) == true
-                        }
-                    )
-                }
+                WebBook.searchBookAwait(
+                    source,
+                    keyword,
+                    page,
+                    filter = { name, author, kind ->
+                        matchMode == MatchMode.DEFAULT ||
+                            name.contains(keyword, ignoreCase = true) ||
+                            author.contains(keyword, ignoreCase = true) ||
+                            kind?.contains(keyword, ignoreCase = true) == true
+                    }
+                )
             }
             SourceSearchResult.Found(books, supportsSearchPage)
         } catch (exception: Throwable) {
@@ -235,7 +211,7 @@ class SearchBooksUseCase(
 
     private data class SearchableSource(
         val part: BookSourcePart,
-        val source: BookSource?,
+        val source: BookSource,
     )
     private sealed interface SourceSearchResult {
         data class Found(
@@ -258,21 +234,15 @@ class SearchBooksUseCase(
         private val tagsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
         private val containsBooks = LinkedHashMap<SearchBookKey, SearchBook>()
         private val otherBooks = LinkedHashMap<SearchBookKey, SearchBook>()
+        private val bookUrlIndex = HashMap<String, SearchBookKey>()
         var resultLimitReached = false
             private set
 
         val count: Int
             get() = equalBooks.size + tagsBooks.size + containsBooks.size + otherBooks.size
 
-        private suspend fun getNormalizedKey(name: String, author: String): SearchBookKey {
-            val normName = io.legado.app.utils.TranslateUtils.translateMeta(name)
-                .lowercase()
-                .replace(Regex("[\\p{Punct}\\s]"), "")
-            val normAuthor = io.legado.app.utils.TranslateUtils.translateMeta(author)
-                .lowercase()
-                .replace(Regex("[\\p{Punct}\\s]"), "")
-            return SearchBookKey(normName, normAuthor)
-        }
+        private fun allBuckets(): Sequence<Map.Entry<SearchBookKey, SearchBook>> =
+            sequenceOf(equalBooks, tagsBooks, containsBooks, otherBooks).flatMap { it.entries }
 
         suspend fun merge(newBooks: List<SearchBook>): SearchBookChange {
             if (newBooks.isEmpty()) return SearchBookChange()
@@ -282,11 +252,26 @@ class SearchBooksUseCase(
             val touchedBuckets = linkedSetOf<LinkedHashMap<SearchBookKey, SearchBook>>()
             newBooks.forEach { newBook ->
                 coroutineContext.ensureActive()
+                val existingKey = bookUrlIndex[newBook.bookUrl]
+                if (existingKey != null) {
+                    val existingEntry = allBuckets().firstOrNull { it.key == existingKey }
+                    val existingBook = existingEntry?.value
+                    if (existingBook != null) {
+                        existingBook.addOrigin(newBook.origin)
+                        upsertBooks.add(existingBook)
+                        val existingBucket = findBucket(existingKey)
+                        if (existingBucket != null) {
+                            touchedBuckets.add(existingBucket)
+                        }
+                        return@forEach
+                    }
+                }
                 val bucket = classifyBucket(newBook) ?: return@forEach
-                val key = getNormalizedKey(newBook.name, newBook.author)
+                val key = SearchBookKey(newBook.name, newBook.author)
                 val currentBook = bucket[key]
                 if (currentBook == null) {
                     bucket[key] = newBook
+                    bookUrlIndex[newBook.bookUrl] = key
                     upsertBooks.add(newBook)
                 } else {
                     currentBook.addOrigin(newBook.origin)
@@ -295,6 +280,7 @@ class SearchBooksUseCase(
                 touchedBuckets.add(bucket)
                 trimSearchBooks()?.let { removed ->
                     removedBookUrls.add(removed.bookUrl)
+                    bookUrlIndex.remove(removed.bookUrl)
                     upsertBooks.removeAll { it.bookUrl == removed.bookUrl }
                 }
             }
@@ -312,80 +298,28 @@ class SearchBooksUseCase(
          * - containsBooks: 书名或作者包含搜索词（非精确匹配）
          * - otherBooks:  其他结果（仅 DEFAULT 模式保留）
          */
-        private fun String.containsChinese(): Boolean {
-            for (char in this) {
-                val block = Character.UnicodeBlock.of(char)
-                if (block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS ||
-                    block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS ||
-                    block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A ||
-                    block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B
-                ) {
-                    return true
-                }
-            }
-            return false
-        }
-
-        private suspend fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
-            val rawKeyword = keyword.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
-            val rawBookName = book.name.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
-            val rawBookAuthor = book.author.lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
-
-            val matchesEqualRaw = rawBookName == rawKeyword || rawBookAuthor == rawKeyword
-            val matchesContainsRaw = rawBookName.contains(rawKeyword) || rawBookAuthor.contains(rawKeyword)
-
-            val kindMatchesRaw = book.kind?.let { kind ->
-                kind.lowercase().contains(rawKeyword)
-            } ?: false
-
-            if (matchesEqualRaw) {
-                return equalBooks
-            }
-
-            // Check if we need translation to match
-            val keywordHasChinese = keyword.containsChinese()
-            val nameHasChinese = book.name.containsChinese()
-            val authorHasChinese = book.author.containsChinese()
-
-            val needTranslation = keywordHasChinese || nameHasChinese || authorHasChinese
-
-            if (!needTranslation) {
-                // If no Chinese characters, raw matches are final
-                return when {
-                    matchesContainsRaw -> {
-                        if (matchMode == MatchMode.EXACT) null else containsBooks
-                    }
-                    kindMatchesRaw -> {
-                        if (matchMode != MatchMode.DEFAULT) null else tagsBooks
-                    }
-                    else -> null
-                }
-            }
-
-            // Perform translation for comparison
-            val normKeyword = io.legado.app.utils.TranslateUtils.translateMeta(keyword)
-                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
-            val normBookName = io.legado.app.utils.TranslateUtils.translateMeta(book.name)
-                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
-            val normBookAuthor = io.legado.app.utils.TranslateUtils.translateMeta(book.author)
-                .lowercase().replace(Regex("[\\p{Punct}\\s]"), "")
-
-            val matchesEqualNorm = normBookName == normKeyword || normBookAuthor == normKeyword
-            val matchesContainsNorm = normBookName.contains(normKeyword) || normBookAuthor.contains(normKeyword)
-
-            val kindMatchesNorm = book.kind?.let { kind ->
-                val normKind = io.legado.app.utils.TranslateUtils.translateMeta(kind).lowercase()
-                normKind.contains(normKeyword)
-            } ?: false
-
+        private fun classifyBucket(book: SearchBook): LinkedHashMap<SearchBookKey, SearchBook>? {
             return when {
-                matchesEqualNorm -> equalBooks
-                matchesContainsNorm -> {
-                    if (matchMode == MatchMode.EXACT) null else containsBooks
-                }
-                kindMatchesNorm -> {
+                book.name.equals(keyword, ignoreCase = true) ||
+                    book.author.equals(keyword, ignoreCase = true) -> equalBooks
+                book.kind?.contains(keyword, ignoreCase = true) == true -> {
                     if (matchMode != MatchMode.DEFAULT) null else tagsBooks
                 }
+                book.name.contains(keyword, ignoreCase = true) ||
+                    book.author.contains(keyword, ignoreCase = true) -> {
+                    if (matchMode == MatchMode.EXACT) null else containsBooks
+                }
+                matchMode != MatchMode.DEFAULT -> null
+                else -> otherBooks
+            }
+        }
+
+        private fun findBucket(key: SearchBookKey): LinkedHashMap<SearchBookKey, SearchBook>? {
+            return when {
+                key in equalBooks -> equalBooks
+                key in tagsBooks -> tagsBooks
+                key in containsBooks -> containsBooks
+                key in otherBooks -> otherBooks
                 else -> null
             }
         }
