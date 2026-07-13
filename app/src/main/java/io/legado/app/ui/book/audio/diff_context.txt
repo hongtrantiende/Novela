@@ -1,0 +1,127 @@
+=== Differences between Local ContextExtensions and Upstream ContextExtensions ===
+--- Local ContextExtensions
++++ Upstream ContextExtensions
+@@ -36,6 +36,7 @@
+ import androidx.core.content.FileProvider
+ import androidx.core.content.edit
+ import androidx.core.net.toUri
++import androidx.datastore.preferences.preferencesDataStore
+ import androidx.preference.PreferenceManager
+ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
+ import io.legado.app.R
+@@ -46,10 +47,9 @@
+ import io.legado.app.help.book.isImage
+ import io.legado.app.help.book.isLocal
+ import io.legado.app.help.config.AppConfig
+-import io.legado.app.ui.config.readMangaConfig.ReadMangaConfig
+ import io.legado.app.ui.book.audio.AudioPlayActivity
+ import io.legado.app.ui.book.manga.ReadMangaActivity
+-import io.legado.app.ui.main.MainActivity
++import io.legado.app.ui.book.read.ReadBookActivity
+ import io.legado.app.ui.main.bookshelf.BookShelfItem
+ import splitties.systemservices.clipboardManager
+ import splitties.systemservices.connectivityManager
+@@ -69,16 +69,14 @@
+     book: Book,
+     configIntent: Intent.() -> Unit = {},
+ ) {
+-    val intent = when {
+-        book.isAudio -> Intent(this, AudioPlayActivity::class.java)
+-        book.isImage -> Intent(this, ReadMangaActivity::class.java)
+-
+-        else -> MainActivity.createReadBookIntent(this, book.bookUrl)
+-    }
++    val cls = when {
++        book.isAudio -> AudioPlayActivity::class.java
++        !book.isLocal && book.isImage && AppConfig.showMangaUi -> ReadMangaActivity::class.java
++        else -> ReadBookActivity::class.java
++    }
++    val intent = Intent(this, cls)
+     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+-    if (book.isAudio || book.isImage) {
+-        intent.putExtra("bookUrl", book.bookUrl)
+-    }
++    intent.putExtra("bookUrl", book.bookUrl)
+     intent.apply(configIntent)
+     startActivity(intent)
+ }
+@@ -87,16 +85,14 @@
+     book: BookShelfItem,
+     configIntent: Intent.() -> Unit = {},
+ ) {
+-    val intent = when {
+-        book.isAudio -> Intent(this, AudioPlayActivity::class.java)
+-        book.isImage -> Intent(this, ReadMangaActivity::class.java)
+-
+-        else -> MainActivity.createReadBookIntent(this, book.bookUrl)
+-    }
++    val cls = when {
++        book.isAudio -> AudioPlayActivity::class.java
++        !book.isLocal && book.isImage && AppConfig.showMangaUi -> ReadMangaActivity::class.java
++        else -> ReadBookActivity::class.java
++    }
++    val intent = Intent(this, cls)
+     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+-    if (book.isAudio || book.isImage) {
+-        intent.putExtra("bookUrl", book.bookUrl)
+-    }
++    intent.putExtra("bookUrl", book.bookUrl)
+     intent.apply(configIntent)
+     startActivity(intent)
+ }
+@@ -174,9 +170,9 @@
+ 
+ fun Context.startForegroundServiceCompat(intent: Intent) {
+     try {
++        startService(intent)
++    } catch (e: IllegalStateException) {
+         ContextCompat.startForegroundService(this, intent)
+-    } catch (e: Exception) {
+-        startService(intent)
+     }
+ }
+ 
+@@ -226,9 +222,6 @@
+ 
+ fun Context.putPrefString(key: String, value: String?) =
+     defaultSharedPreferences.edit { putString(key, value) }
+-
+-fun Context.putPrefStringSync(key: String, value: String?) =
+-    defaultSharedPreferences.edit(commit = true) { putString(key, value) }
+ 
+ fun Context.getPrefStringSet(
+     key: String,
+@@ -352,19 +345,9 @@
+ }
+ 
+ fun Context.sendToClip(text: String) {
+-    try {
+-        val maxClipLength = 500_000 // ~500KB, well under Android's 1MB Binder limit
+-        val clippedText = if (text.length > maxClipLength) {
+-            text.take(maxClipLength) + "\n\n... [Truncated: ${text.length} chars total]"
+-        } else {
+-            text
+-        }
+-        val clipData = ClipData.newPlainText(null, clippedText)
+-        clipboardManager.setPrimaryClip(clipData)
+-        longToastOnUi(R.string.copy_complete)
+-    } catch (e: Exception) {
+-        toastOnUi("Copy failed: ${e.localizedMessage}")
+-    }
++    val clipData = ClipData.newPlainText(null, text)
++    clipboardManager.setPrimaryClip(clipData)
++    longToastOnUi(R.string.copy_complete)
+ }
+ 
+ fun Context.getClipText(): String? {
+@@ -472,6 +455,8 @@
+ val Context.isDebuggable: Boolean
+     get() = applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0
+ 
++val Context.dataStore by preferencesDataStore(name = "settings")
++
+ val Context.bookshelfLayoutMode: Int
+     get() = if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+         AppConfig.bookshelfLayoutModeLandscape
+
+

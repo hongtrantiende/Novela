@@ -90,7 +90,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material3.Surface
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.animation.animateColorAsState
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.service.BaseReadAloudService
 import kotlinx.coroutines.Dispatchers
@@ -888,6 +892,126 @@ private fun SegmentedProgressBar(
     }
 }
 
+@Composable
+private fun ChapterListItem(
+    modifier: Modifier = Modifier,
+    title: String,
+    isCurrent: Boolean,
+    isVip: Boolean,
+    isPay: Boolean,
+    tag: String?,
+    wordCount: String?,
+    isDownloaded: Boolean,
+    onClick: () -> Unit,
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = when {
+            isCurrent -> LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            else -> Color.Transparent
+        }, label = "BgColor"
+    )
+
+    val textColor by animateColorAsState(
+        targetValue = when {
+            isCurrent -> LegadoTheme.colorScheme.primary
+            else -> LegadoTheme.colorScheme.onSurface
+        }, label = "TextColor"
+    )
+
+    val detailColor by animateColorAsState(
+        targetValue = when {
+            isCurrent -> LegadoTheme.colorScheme.primary
+            else -> LegadoTheme.colorScheme.onSurfaceVariant
+        }, label = "DetailColor"
+    )
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isVip && !isPay) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = LegadoTheme.colorScheme.error,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .padding(end = 4.dp)
+                        )
+                    }
+
+                    Text(
+                        text = title,
+                        style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
+                        color = textColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (!tag.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = tag,
+                        style = LegadoTheme.typography.labelSmallEmphasized,
+                        color = detailColor.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Right side: Word Count Card & Status Indicator
+            val showStatus = isCurrent || isDownloaded || !wordCount.isNullOrEmpty()
+            if (showStatus) {
+                Row(
+                    modifier = Modifier.padding(start = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!wordCount.isNullOrEmpty() && isDownloaded) {
+                        Surface(
+                            shape = MaterialTheme.shapes.extraSmall,
+                            color = if (isCurrent) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer,
+                            modifier = Modifier.padding(end = 6.dp)
+                        ) {
+                            Text(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                text = wordCount,
+                                style = LegadoTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                color = if (isCurrent) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    if (isCurrent) {
+                        Icon(
+                            imageVector = Icons.Rounded.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = LegadoTheme.colorScheme.secondary
+                        )
+                    } else if (isDownloaded) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = LegadoTheme.colorScheme.secondary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 /**
  * Chapter list overlay inside audio player
  */
@@ -984,44 +1108,16 @@ private fun AudioChapterListOverlay(
                 val isDownloaded = remember(chapter.index, cachedFiles) {
                     chapter.getFileName() in cachedFiles
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (isCurrent) Modifier.background(
-                                LegadoTheme.colorScheme.primary.copy(alpha = 0.12f)
-                            ) else Modifier
-                        )
-                        .clickable { onChapterClick(index) }
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = chapter.getDisplayTitle(),
-                        style = LegadoTheme.typography.bodyMedium,
-                        color = if (isCurrent) LegadoTheme.colorScheme.primary
-                            else LegadoTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (isCurrent) {
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Đang phát",
-                            style = LegadoTheme.typography.labelSmall,
-                            color = LegadoTheme.colorScheme.primary
-                        )
-                    } else if (isDownloaded) {
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Đã tải",
-                            tint = LegadoTheme.colorScheme.secondary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
+                ChapterListItem(
+                    title = chapter.getDisplayTitle(),
+                    isCurrent = isCurrent,
+                    isVip = chapter.isVip,
+                    isPay = chapter.isPay,
+                    tag = chapter.tag,
+                    wordCount = chapter.wordCount,
+                    isDownloaded = isDownloaded,
+                    onClick = { onChapterClick(index) }
+                )
             }
         }
     }

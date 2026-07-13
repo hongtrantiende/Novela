@@ -1,0 +1,435 @@
+=== Differences between Local BaseReadAloudService and Upstream BaseReadAloudService ===
+--- Local BaseReadAloudService
++++ Upstream BaseReadAloudService
+@@ -36,7 +36,6 @@
+ import io.legado.app.constant.Status
+ import io.legado.app.help.MediaHelp
+ import io.legado.app.help.config.AppConfig
+-import io.legado.app.ui.config.readConfig.ReadConfig
+ import io.legado.app.help.coroutine.Coroutine
+ import io.legado.app.help.glide.ImageLoader
+ import io.legado.app.lib.permission.Permissions
+@@ -44,8 +43,8 @@
+ import io.legado.app.model.ReadAloud
+ import io.legado.app.model.ReadBook
+ import io.legado.app.receiver.MediaButtonReceiver
++import io.legado.app.ui.book.read.ReadBookActivity
+ import io.legado.app.ui.book.read.page.entities.TextChapter
+-import io.legado.app.ui.main.MainActivity
+ import io.legado.app.utils.LogUtils
+ import io.legado.app.utils.activityPendingIntent
+ import io.legado.app.utils.getPrefBoolean
+@@ -85,10 +84,6 @@
+         var timeMinute: Int = 0
+             private set
+ 
+-        @JvmStatic
+-        var instance: BaseReadAloudService? = null
+-            private set
+-
+         fun isPlay(): Boolean {
+             return isRun && !pause
+         }
+@@ -97,7 +92,7 @@
+ 
+     }
+ 
+-    private val useWakeLock = ReadConfig.readAloudWakeLock
++    private val useWakeLock = appCtx.getPrefBoolean(PreferKey.readAloudWakeLock, false)
+     private val wakeLock by lazy {
+         powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "legado:ReadAloudService")
+             .apply {
+@@ -131,7 +126,7 @@
+     private var dsJob: Job? = null
+     private var upNotificationJob: Coroutine<*>? = null
+     private var cover: Bitmap =
+-        BitmapFactory.decodeResource(appCtx.resources, R.drawable.image_legado)
++        BitmapFactory.decodeResource(appCtx.resources, R.drawable.ic_launcher)
+     var pageChanged = false
+     private var toLast = false
+     var paragraphStartPos = 0
+@@ -149,7 +144,6 @@
+     @SuppressLint("WakelockTimeout")
+     override fun onCreate() {
+         super.onCreate()
+-        instance = this
+         isRun = true
+         pause = false
+         observeLiveBus()
+@@ -157,11 +151,10 @@
+         initBroadcastReceiver()
+         initPhoneStateListener()
+         upMediaSessionPlaybackState(PlaybackStateCompat.STATE_PLAYING)
+-        setTimer(ReadConfig.ttsTimer)
+-        if (ReadConfig.ttsTimer > 0) {
+-            toastOnUi("Bộ đếm thời gian đọc ${ReadConfig.ttsTimer} phút")
+-        }
+-        upReadAloudNotification()
++        setTimer(AppConfig.ttsTimer)
++        if (AppConfig.ttsTimer > 0) {
++            toastOnUi("朗读定时 ${AppConfig.ttsTimer} 分钟")
++        }
+         execute {
+             ImageLoader
+                 .loadBitmap(this@BaseReadAloudService, ReadBook.book?.getDisplayCover())
+@@ -175,15 +168,12 @@
+             }
+         }
+     }
++
+     fun observeLiveBus() {
+         observeEvent<Bundle>(EventBus.READ_ALOUD_PLAY) {
+             val play = it.getBoolean("play")
+             val pageIndex = it.getInt("pageIndex")
+             val startPos = it.getInt("startPos")
+-            if (isRun && !pause && pageIndex == this.pageIndex && startPos == 0 && textChapter == ReadBook.curTextChapter) {
+-                LogUtils.d(TAG, "Ignore READ_ALOUD_PLAY event because pageIndex is same ($pageIndex)")
+-                return@observeEvent
+-            }
+             newReadAloud(play, pageIndex, startPos)
+         }
+         observeSharedPreferences { _, key ->
+@@ -198,7 +188,6 @@
+ 
+     override fun onDestroy() {
+         super.onDestroy()
+-        instance = null
+         if (useWakeLock) {
+             wakeLock.release()
+             wifiLock?.release()
+@@ -218,21 +207,13 @@
+         }
+     }
+ 
+-    open fun isParagraphCached(index: Int): Boolean = false
+-    open fun isParagraphDownloading(index: Int): Boolean = false
+-
+     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+         when (intent?.action) {
+-            IntentAction.play -> {
+-                val play = intent.getBooleanExtra("play", true)
+-                val pageIndex = intent.getIntExtra("pageIndex", ReadBook.durPageIndex)
+-                val startPos = intent.getIntExtra("startPos", 0)
+-                if (isRun && !pause && pageIndex == this.pageIndex && startPos == 0 && textChapter == ReadBook.curTextChapter) {
+-                    LogUtils.d(TAG, "Ignore IntentAction.play because pageIndex is same ($pageIndex)")
+-                } else {
+-                    newReadAloud(play, pageIndex, startPos)
+-                }
+-            }
++            IntentAction.play -> newReadAloud(
++                intent.getBooleanExtra("play", true),
++                intent.getIntExtra("pageIndex", ReadBook.durPageIndex),
++                intent.getIntExtra("startPos", 0)
++            )
+ 
+             IntentAction.pause -> pauseReadAloud()
+             IntentAction.resume -> resumeReadAloud()
+@@ -257,7 +238,7 @@
+                 return@execute
+             }
+             readAloudNumber = textChapter.getReadLength(pageIndex) + startPos
+-            readAloudByPage = ReadConfig.readAloudByPage
++            readAloudByPage = getPrefBoolean(PreferKey.readAloudByPage)
+             contentList = textChapter.getNeedReadAloud(0, readAloudByPage, 0)
+                 .split("\n")
+                 .filter { it.isNotEmpty() }
+@@ -290,7 +271,7 @@
+                 if (play) play() else pageChanged = true
+             }
+         }.onError {
+-            AppLog.put("Lỗi bắt đầu đọc to\n${it.localizedMessage}", it, true)
++            AppLog.put("启动朗读出错\n${it.localizedMessage}", it, true)
+         }
+     }
+ 
+@@ -399,33 +380,6 @@
+         } else {
+             nextChapter()
+         }
+-    }
+-
+-    fun seekToParagraph(index: Int) {
+-        val target = index.coerceIn(contentList.indices)
+-        if (target == nowSpeak) return
+-        playStop()
+-        var targetReadAloudNumber = 0
+-        for (i in 0 until target) {
+-            targetReadAloudNumber += contentList[i].length + 1
+-        }
+-        readAloudNumber = targetReadAloudNumber
+-        paragraphStartPos = 0
+-        nowSpeak = target
+-        textChapter?.let {
+-            for (p in 0 until it.pageSize) {
+-                if (readAloudNumber >= it.getReadLength(p) && (p == it.pageSize - 1 || readAloudNumber < it.getReadLength(p + 1))) {
+-                    if (pageIndex != p) {
+-                        pageIndex = p
+-                        ReadBook.skipToPage(p)
+-                    }
+-                    break
+-                }
+-            }
+-        }
+-        upTtsProgress(readAloudNumber + 1)
+-        upMediaMetadata(showContent = true)
+-        play()
+     }
+ 
+     private fun setTimer(minute: Int) {
+@@ -475,13 +429,13 @@
+      * @return 音频焦点
+      */
+     fun requestFocus(): Boolean {
+-        if (ReadConfig.ignoreAudioFocus) {
++        if (AppConfig.ignoreAudioFocus) {
+             return true
+         }
+         val requestFocus = MediaHelp.requestFocus(mFocusRequest)
+         if (!requestFocus) {
+             pauseReadAloud(false)
+-            toastOnUi("Không lấy được tiêu điểm âm thanh")
++            toastOnUi("未获取到音频焦点")
+         }
+         return requestFocus
+     }
+@@ -500,7 +454,7 @@
+         mediaSessionCompat.setPlaybackState(
+             PlaybackStateCompat.Builder()
+                 .setActions(MediaHelp.MEDIA_SESSION_ACTIONS)
+-                .setState(state, nowSpeak.toLong() * 1000, 1f)
++                .setState(state, nowSpeak.toLong(), 1f)
+                 // 为系统媒体控件添加定时按钮
+ //                .addCustomAction(
+ //                    PlaybackStateCompat.CustomAction.Builder(
+@@ -529,7 +483,6 @@
+             .putText(MediaMetadataCompat.METADATA_KEY_ARTIST, textChapter?.title ?: "")
+             .putText(MediaMetadataCompat.METADATA_KEY_ALBUM, ReadBook.book?.author ?: "")
+             .putText(MediaMetadataCompat.METADATA_KEY_DISPLAY_SUBTITLE, currentContent ?: "")
+-            .putLong(MediaMetadataCompat.METADATA_KEY_DURATION, contentList.size.toLong() * 1000)
+             .build()
+         mediaSessionCompat.setMetadata(metadata)
+     }
+@@ -542,7 +495,7 @@
+      */
+     @SuppressLint("UnspecifiedImmutableFlag")
+     private fun initMediaSession() {
+-        if (ReadConfig.systemMediaControlCompatibilityChange) {
++        if (AppConfig.systemMediaControlCompatibilityChange) {
+             mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
+                 override fun onPlay() {
+                     resumeReadAloud()
+@@ -553,7 +506,7 @@
+                 }
+ 
+                 override fun onSkipToNext() {
+-                    if (ReadConfig.mediaButtonPerNext) {
++                    if (getPrefBoolean("mediaButtonPerNext", false)) {
+                         nextChapter()
+                     } else {
+                         nextP()
+@@ -561,7 +514,7 @@
+                 }
+ 
+                 override fun onSkipToPrevious() {
+-                    if (ReadConfig.mediaButtonPerNext) {
++                    if (getPrefBoolean("mediaButtonPerNext", false)) {
+                         prevChapter()
+                     } else {
+                         prevP()
+@@ -572,10 +525,6 @@
+                     stopSelf()
+                 }
+ 
+-                override fun onSeekTo(pos: Long) {
+-                    seekToParagraph((pos / 1000).toInt())
+-                }
+-
+                 override fun onCustomAction(action: String, extras: Bundle?) {
+                     if (action == "ACTION_ADD_TIMER") addTimer()
+                 }
+@@ -588,38 +537,6 @@
+             })
+         } else {
+             mediaSessionCompat.setCallback(object : MediaSessionCompat.Callback() {
+-                override fun onPlay() {
+-                    resumeReadAloud()
+-                }
+-
+-                override fun onPause() {
+-                    pauseReadAloud()
+-                }
+-
+-                override fun onSkipToNext() {
+-                    if (ReadConfig.mediaButtonPerNext) {
+-                        nextChapter()
+-                    } else {
+-                        nextP()
+-                    }
+-                }
+-
+-                override fun onSkipToPrevious() {
+-                    if (ReadConfig.mediaButtonPerNext) {
+-                        prevChapter()
+-                    } else {
+-                        prevP()
+-                    }
+-                }
+-
+-                override fun onStop() {
+-                    stopSelf()
+-                }
+-
+-                override fun onSeekTo(pos: Long) {
+-                    seekToParagraph((pos / 1000).toInt())
+-                }
+-
+                 override fun onMediaButtonEvent(mediaButtonEvent: Intent): Boolean {
+                     return MediaButtonReceiver.handleIntent(
+                         this@BaseReadAloudService, mediaButtonEvent
+@@ -641,27 +558,27 @@
+      * 音频焦点变化
+      */
+     override fun onAudioFocusChange(focusChange: Int) {
+-        if (ReadConfig.ignoreAudioFocus) {
+-            AppLog.put("Bỏ qua việc xử lý tiêu điểm âm thanh (TTS)")
++        if (AppConfig.ignoreAudioFocus) {
++            AppLog.put("忽略音频焦点处理(TTS)")
+             return
+         }
+         when (focusChange) {
+             AudioManager.AUDIOFOCUS_GAIN -> {
+                 if (needResumeOnAudioFocusGain) {
+-                    AppLog.put("Đã thu được tiêu điểm âm thanh, tiếp tục đọc")
++                    AppLog.put("音频焦点获得,继续朗读")
+                     resumeReadAloud()
+                 } else {
+-                    AppLog.put("Đã đạt được tiêu điểm âm thanh")
++                    AppLog.put("音频焦点获得")
+                 }
+             }
+ 
+             AudioManager.AUDIOFOCUS_LOSS -> {
+-                AppLog.put("Mất tiêu điểm âm thanh, tạm dừng đọc")
++                AppLog.put("音频焦点丢失,暂停朗读")
+                 pauseReadAloud()
+             }
+ 
+             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+-                AppLog.put("Tiêu điểm âm thanh tạm thời bị mất và sẽ sớm lấy lại được, hãy tạm dừng đọc")
++                AppLog.put("音频焦点暂时丢失并会很快再次获得,暂停朗读")
+                 if (!pause) {
+                     needResumeOnAudioFocusGain = true
+                     pauseReadAloud(false)
+@@ -670,7 +587,7 @@
+ 
+             AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                 // 短暂丢失焦点，这种情况是被其他应用申请了短暂的焦点希望其他声音能压低音量（或者关闭声音）凸显这个声音（比如短信提示音），
+-                AppLog.put("Tiêu điểm âm thanh tạm thời bị mất và không có quá trình xử lý nào được thực hiện.")
++                AppLog.put("音频焦点短暂丢失,不做处理")
+             }
+         }
+     }
+@@ -681,7 +598,7 @@
+                 val notification = createNotification()
+                 notificationManager.notify(NotificationId.ReadAloudService, notification.build())
+             } catch (e: Exception) {
+-                AppLog.put("Lỗi tạo thông báo đọc to, ${e.localizedMessage}", e, true)
++                AppLog.put("创建朗读通知出错,${e.localizedMessage}", e, true)
+             }
+         }
+     }
+@@ -689,7 +606,7 @@
+     private fun choiceMediaStyle(): androidx.media.app.NotificationCompat.MediaStyle {
+         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
+             .setShowActionsInCompactView(1, 2, 4)
+-        if (ReadConfig.systemMediaControlCompatibilityChange) {
++        if (AppConfig.systemMediaControlCompatibilityChange) {
+             //fix #4090 android 14 can not show play control in lock screen
+             mediaStyle.setMediaSession(mediaSessionCompat.sessionToken)
+         }
+@@ -722,10 +639,7 @@
+             .setContentTitle(nTitle)
+             .setContentText(nSubtitle)
+             .setContentIntent(
+-                activityPendingIntent(
+-                    MainActivity.createReadBookIntent(this, readAloud = true),
+-                    "activity"
+-                )
++                activityPendingIntent<ReadBookActivity>("activity")
+             )
+             .setVibrate(null)
+             .setSound(null)
+@@ -773,13 +687,15 @@
+      * 更新通知
+      */
+     override fun startForegroundNotification() {
+-        try {
+-            val notification = createNotification()
+-            startForeground(NotificationId.ReadAloudService, notification.build())
+-        } catch (e: Exception) {
+-            AppLog.put("Lỗi tạo thông báo đọc to, ${e.localizedMessage}", e, true)
+-            //创建通知出错不结束服务就会崩溃,服务必须绑定通知
+-            stopSelf()
++        execute {
++            try {
++                val notification = createNotification()
++                startForeground(NotificationId.ReadAloudService, notification.build())
++            } catch (e: Exception) {
++                AppLog.put("创建朗读通知出错,${e.localizedMessage}", e, true)
++                //创建通知出错不结束服务就会崩溃,服务必须绑定通知
++                stopSelf()
++            }
+         }
+     }
+ 
+@@ -793,7 +709,7 @@
+ 
+     open fun nextChapter() {
+         ReadBook.upReadTime()
+-        AppLog.putDebug("${ReadBook.curTextChapter?.chapter?.title} Kết thúc việc đọc và chuyển sang chương tiếp theo và đọc to")
++        AppLog.putDebug("${ReadBook.curTextChapter?.chapter?.title} 朗读结束跳转下一章并朗读")
+         resumeReadAloudInternal()
+         if (!ReadBook.moveToNextChapter(true)) {
+             stopSelf()
+@@ -801,7 +717,7 @@
+     }
+ 
+     private fun initPhoneStateListener() {
+-        val needRegister = ReadConfig.ignoreAudioFocus && ReadConfig.pauseReadAloudWhilePhoneCalls
++        val needRegister = AppConfig.ignoreAudioFocus && AppConfig.pauseReadAloudWhilePhoneCalls
+         if (needRegister && registeredPhoneStateListener) {
+             return
+         }
+@@ -853,25 +769,25 @@
+             when (state) {
+                 TelephonyManager.CALL_STATE_IDLE -> {
+                     if (needResumeOnCallStateIdle) {
+-                        AppLog.put("Kết thúc cuộc gọi, tiếp tục đọc")
++                        AppLog.put("来电结束,继续朗读")
+                         resumeReadAloud()
+                     } else {
+-                        AppLog.put("Kết thúc cuộc gọi")
++                        AppLog.put("来电结束")
+                     }
+                 }
+ 
+                 TelephonyManager.CALL_STATE_RINGING -> {
+                     if (!pause) {
+-                        AppLog.put("Đổ chuông khi có cuộc gọi đến, tạm dừng đọc")
++                        AppLog.put("来电响铃,暂停朗读")
+                         needResumeOnCallStateIdle = true
+                         pauseReadAloud()
+                     } else {
+-                        AppLog.put("Đổ chuông khi có cuộc gọi đến")
++                        AppLog.put("来电响铃")
+                     }
+                 }
+ 
+                 TelephonyManager.CALL_STATE_OFFHOOK -> {
+-                    AppLog.put("Trả lời cuộc gọi đến mà không xử lý chúng")
++                    AppLog.put("来电接听,不做处理")
+                 }
+             }
+         }
+
+
