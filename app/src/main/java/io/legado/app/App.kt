@@ -134,15 +134,19 @@ class App : Application(), ImageLoaderFactory {
         registerActivityLifecycleCallbacks(LifecycleHelp)
         defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
         Coroutine.async {
-            AppWebDav.upConfig()
-        }
-        Coroutine.async {
             LogUtils.init(this@App)
             LogUtils.d("App", "onCreate")
             LogUtils.logDeviceInfo()
             // 确保 DataStore 迁移后 SP 中的主题配置值未丢失
             kotlin.runCatching {
                 get<SettingsRepository>().postMigrationSync()
+            }
+            // Reset tts v1 làm mặc định đúng 1 lần duy nhất cho bản cập nhật này
+            if (!getPrefBoolean("tts_v1_default_reset", false)) {
+                defaultSharedPreferences.edit()
+                    .putString(PreferKey.ttsEngine, null)
+                    .putBoolean("tts_v1_default_reset", true)
+                    .apply()
             }
             //预下载Cronet so
             Cronet.preDownload()
@@ -184,7 +188,6 @@ class App : Application(), ImageLoaderFactory {
             SourceHelp.adjustSortNumber()
             //同步阅读记录
             if (AppConfig.syncBookProgress) {
-                AppWebDav.upConfig()
                 AppWebDav.downloadAllBookProgress()
             }
         }

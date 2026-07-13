@@ -1,19 +1,20 @@
 package io.legado.app.ui.book.read
 
-import android.content.Context
 import android.content.Intent
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.view.KeyEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,13 +22,18 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -35,7 +41,6 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import io.legado.app.R
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.BookType
 import io.legado.app.constant.ReadMenuBlurMode
 import io.legado.app.help.IntentHelp
 import io.legado.app.model.ReadBook
@@ -43,10 +48,9 @@ import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.page.ContentTextView
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
-import io.legado.app.ui.book.read.sheet.TextSelectMenuConfigSheet
 import io.legado.app.ui.book.searchContent.SearchContentResult
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
-import io.legado.app.ui.book.toc.TocActivityResult
+import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.replace.ReplaceEditRoute
@@ -54,15 +58,48 @@ import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.onSubscription
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import io.legado.app.ui.book.read.sheet.ReadAloudContent
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.animation.animateColorAsState
+import io.legado.app.data.appDb
+import io.legado.app.ui.theme.LegadoTheme
+import android.view.WindowManager
+import io.legado.app.help.config.ThemeConfigStore
+import io.legado.app.utils.windowSize
+
 
 
 data class ReadBookViewRefs(
@@ -89,6 +126,255 @@ interface ReadBookRouteHost :
     )
 }
 
+@Composable
+private fun ChapterListItem(
+    modifier: Modifier = Modifier,
+    title: String,
+    isCurrent: Boolean,
+    isVip: Boolean,
+    isPay: Boolean,
+    tag: String?,
+    wordCount: String?,
+    isDownloaded: Boolean,
+    onClick: () -> Unit,
+) {
+    val backgroundColor by animateColorAsState(
+        targetValue = when {
+            isCurrent -> LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            else -> Color.Transparent
+        }, label = "BgColor"
+    )
+
+    val textColor by animateColorAsState(
+        targetValue = when {
+            isCurrent -> LegadoTheme.colorScheme.primary
+            else -> LegadoTheme.colorScheme.onSurface
+        }, label = "TextColor"
+    )
+
+    val detailColor by animateColorAsState(
+        targetValue = when {
+            isCurrent -> LegadoTheme.colorScheme.primary
+            else -> LegadoTheme.colorScheme.onSurfaceVariant
+        }, label = "DetailColor"
+    )
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        color = backgroundColor
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isVip && !isPay) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = LegadoTheme.colorScheme.error,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .padding(end = 4.dp)
+                        )
+                    }
+
+                    Text(
+                        text = title,
+                        style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
+                        color = textColor,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (!tag.isNullOrEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = tag,
+                        style = LegadoTheme.typography.labelSmallEmphasized,
+                        color = detailColor.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            // Right side: Word Count Card & Status Indicator
+            val showStatus = isCurrent || isDownloaded || !wordCount.isNullOrEmpty()
+            if (showStatus) {
+                Row(
+                    modifier = Modifier.padding(start = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (!wordCount.isNullOrEmpty() && isDownloaded) {
+                        Surface(
+                            shape = MaterialTheme.shapes.extraSmall,
+                            color = if (isCurrent) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer,
+                            modifier = Modifier.padding(end = 6.dp)
+                        ) {
+                            Text(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                text = wordCount,
+                                style = LegadoTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                color = if (isCurrent) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    if (isCurrent) {
+                        Icon(
+                            imageVector = Icons.Rounded.LocationOn,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = LegadoTheme.colorScheme.secondary
+                        )
+                    } else if (isDownloaded) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = LegadoTheme.colorScheme.secondary
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Full-screen chapter list overlay that slides up from the bottom.
+ * Replaces TocActivity when the user taps "Danh sách chương" while reading.
+ * Mirrors AudioChapterListOverlay in ReadAloudSheet for a consistent UX.
+ */
+@Composable
+private fun ReadBookChapterListOverlay(
+    book: io.legado.app.data.entities.Book?,
+    currentChapterIndex: Int,
+    onChapterClick: (Int) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val bookUrl = book?.bookUrl ?: ""
+    BackHandler { onDismiss() }
+
+    var chapters by remember { mutableStateOf<List<io.legado.app.data.entities.BookChapter>>(emptyList()) }
+    LaunchedEffect(bookUrl) {
+        if (bookUrl.isNotEmpty()) {
+            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                appDb.bookChapterDao.getChapterList(bookUrl)
+            }
+            chapters = list
+        } else {
+            chapters = emptyList()
+        }
+    }
+
+    var cachedFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(chapters, book) {
+        if (book != null) {
+            val files = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
+            }
+            cachedFiles = files
+        } else {
+            cachedFiles = emptySet()
+        }
+    }
+
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = (currentChapterIndex - 3).coerceAtLeast(0)
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(LegadoTheme.colorScheme.surfaceContainerHigh)
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+    ) {
+        // Header row with Book Cover and Title
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            io.legado.app.ui.widget.components.image.cover.BookCoverImage(
+                name = book?.name,
+                author = book?.author,
+                path = book?.getDisplayCover(),
+                modifier = Modifier
+                    .size(width = 44.dp, height = 60.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book?.name ?: "",
+                    style = LegadoTheme.typography.titleMedium,
+                    color = LegadoTheme.colorScheme.onSurface,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Danh sách chương (${chapters.size})",
+                    style = LegadoTheme.typography.bodySmall,
+                    color = LegadoTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Close button
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(LegadoTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                    .clickable { onDismiss() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Đóng",
+                    tint = LegadoTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        // Chapter items
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            items(
+                items = chapters,
+                key = { it.index }
+            ) { chapter ->
+                val isCurrent = chapter.index == currentChapterIndex
+                val isDownloaded = remember(chapter.index, cachedFiles) {
+                    chapter.getFileName() in cachedFiles
+                }
+                ChapterListItem(
+                    title = chapter.getDisplayTitle(),
+                    isCurrent = isCurrent,
+                    isVip = chapter.isVip,
+                    isPay = chapter.isPay,
+                    tag = chapter.tag,
+                    wordCount = chapter.wordCount,
+                    isDownloaded = isDownloaded,
+                    onClick = { onChapterClick(chapter.index) }
+                )
+            }
+        }
+    }
+}
 /**
  * Narrow interface for hardware input delegation from Activity.
  * MainActivity holds this instead of the full bridge/controller.
@@ -112,10 +398,10 @@ fun ReadBookRouteScreen(
     controller: ReadBookController,
     onEffectsReady: () -> Unit = {},
     onOpenSearch: (word: String?, bookUrl: String) -> Unit = { _, _ -> },
+    onNavigateToTranslationSettings: () -> Unit = {},
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val readPreferences by viewModel.readPreferences.collectAsStateWithLifecycle()
-    val textMenuState by controller.textMenuState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val effectsReady = remember(viewModel) { CompletableDeferred<Unit>() }
@@ -128,17 +414,12 @@ fun ReadBookRouteScreen(
                             state.menuConfig.readMenuBottomBarBlurMode == ReadMenuBlurMode.LiquidGlass
                     )
 
-    LaunchedEffect(state.menuVisible) {
-        controller.onMenuVisibilityChanged(state.menuVisible)
-    }
-
     // ── ActivityResult Launchers ──────────────────────────────────────
 
-    val tocLauncher = rememberLauncherForActivityResult(TocActivityResult()) { result ->
-        result?.let { (index, chapterPos, _) ->
-            viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
-        }
-    }
+    // Chapter list overlay state — replaces TocActivity launch
+    var showChapterListOverlay by remember { mutableStateOf(false) }
+    var showReadAloudOverlay by remember { mutableStateOf(false) }
+
 
     val sourceEditLauncher = rememberLauncherForActivityResult(
         StartActivityContract(BookSourceEditActivity::class.java)
@@ -175,14 +456,14 @@ fun ReadBookRouteScreen(
     }
 
     val readStyleImagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
+        ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let { viewModel.onIntent(ReadBookIntent.ReadStyleImageSelected(it)) }
     }
 
     var pendingReadStyleImageIsNight by remember { mutableStateOf(false) }
     val readStyleImagePickerForMode = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
+        ActivityResultContracts.OpenDocument()
     ) { uri ->
         uri?.let {
             viewModel.onIntent(ReadBookIntent.ReadStyleImageSelectedForMode(it, pendingReadStyleImageIsNight))
@@ -245,29 +526,11 @@ fun ReadBookRouteScreen(
         uri?.let { viewModel.onIntent(ReadBookIntent.ExportHttpTtsToFile(it)) }
     }
 
-    val importHighlightRulePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.HighlightRuleImportFileSelected(it)) }
-    }
-
-    val exportHighlightRulePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let { viewModel.onIntent(ReadBookIntent.ExportHighlightRulesToFile(it)) }
-    }
-
     val bookInfoLauncher = rememberLauncherForActivityResult(
         StartActivityContract(BookInfoActivity::class.java)
     ) { result ->
         viewModel.onIntent(ReadBookIntent.BookInfoResult(result.resultCode == android.app.Activity.RESULT_OK))
     }
-
-    AutoSuggestDayNightObserver(
-        viewModel = viewModel,
-        autoSuggestDayNight = readPreferences.autoSuggestDayNight,
-        lifecycleOwner = lifecycleOwner,
-    )
 
     // ── Effect collection: route handles launcher effects, rest goes to bridge ──
 
@@ -283,7 +546,10 @@ fun ReadBookRouteScreen(
                         when (effect) {
                             // Launcher-dependent effects — handled directly by route
                             is ReadBookEffect.OpenChapterList -> {
-                                tocLauncher.launch(effect.bookUrl)
+                                showChapterListOverlay = true
+                            }
+                            is ReadBookEffect.OpenReadAloud -> {
+                                showReadAloudOverlay = true
                             }
                             is ReadBookEffect.OpenSourceEdit -> {
                                 sourceEditLauncher.launch { putExtra("sourceUrl", effect.sourceUrl) }
@@ -298,7 +564,8 @@ fun ReadBookRouteScreen(
                             is ReadBookEffect.ShowLogin -> {
                                 context.startActivity(
                                     Intent(context, SourceLoginActivity::class.java).apply {
-                                        putExtra("bookType", BookType.text)
+                                        putExtra("type", "bookSource")
+                                        putExtra("key", effect.sourceUrl)
                                     }
                                 )
                             }
@@ -322,9 +589,7 @@ fun ReadBookRouteScreen(
                                     }
                                 )
                             }
-                            is ReadBookEffect.OpenSearchActivity -> {
-                                onOpenSearch(effect.word, effect.bookUrl)
-                            }
+
                             is ReadBookEffect.MenuSettingReplace -> {
                                 replaceLauncher.launch(Intent(context, ReplaceRuleActivity::class.java))
                             }
@@ -345,11 +610,7 @@ fun ReadBookRouteScreen(
                                 replaceLauncher.launch(ReplaceRuleActivity.startIntent(context, editRoute))
                             }
                             is ReadBookEffect.MenuTocRegex -> {
-                                val intent = Intent(
-                                    context,
-                                    io.legado.app.ui.book.toc.rule.preview.TxtTocRulePreviewActivity::class.java
-                                )
-                                intent.putExtra("bookUrl", effect.bookUrl)
+                                val intent = Intent(context, TxtTocRuleActivity::class.java)
                                 intent.putExtra("tocRegex", effect.tocRegex)
                                 txtTocRuleLauncher.launch(intent)
                             }
@@ -360,11 +621,11 @@ fun ReadBookRouteScreen(
                                 booksDirPicker.launch(null)
                             }
                             is ReadBookEffect.OpenReadStyleImagePicker -> {
-                                readStyleImagePicker.launch("image/*")
+                                readStyleImagePicker.launch(arrayOf("image/*"))
                             }
                             is ReadBookEffect.OpenReadStyleImagePickerForMode -> {
                                 pendingReadStyleImageIsNight = effect.isNight
-                                readStyleImagePickerForMode.launch("image/*")
+                                readStyleImagePickerForMode.launch(arrayOf("image/*"))
                             }
                             is ReadBookEffect.OpenReadStyleImport -> {
                                 readStyleImportPicker.launch(
@@ -401,24 +662,11 @@ fun ReadBookRouteScreen(
                                 exportHttpTtsPicker.launch("httpTTS.json")
                             }
 
-                            is ReadBookEffect.OpenHighlightRuleImportPicker -> {
-                                importHighlightRulePicker.launch(
-                                    arrayOf(
-                                        "application/json",
-                                        "text/plain"
-                                    )
-                                )
-                            }
-
-                            is ReadBookEffect.OpenHighlightRuleExportPicker -> {
-                                exportHighlightRulePicker.launch("highlightRule.json")
-                            }
-
                             // All other effects — delegate to bridge (View/Window/Activity operations)
                             else -> controller.handleEffect(effect)
                         }
                     } catch (e: Exception) {
-                        AppLog.put("ReadBook effect处理异常: ${effect::class.simpleName}", e)
+                        AppLog.put("Hiệu ứng ReadBook xử lý ngoại lệ: ${effect::class.simpleName}", e)
                     }
                 }
         }
@@ -453,72 +701,126 @@ fun ReadBookRouteScreen(
         }
     }
 
-    // ── View layer + Compose UI ───────────────────────────────────────
+    var hasShownContent by remember(state.book?.bookUrl) { mutableStateOf(false) }
 
-    var showSelectMenuConfigSheet by remember { mutableStateOf(false) }
+    val isPageLoading = state.curTextChapter == null || 
+            state.curTextChapter?.pages.isNullOrEmpty() ||
+            state.curTextChapter?.pages?.getOrNull(state.durPageIndex)?.text?.contains("Đang tải dữ liệu", ignoreCase = true) == true
+
+    val currentLoading = !state.isInitFinish || isPageLoading || !state.msg.isNullOrBlank()
+
+    if (!currentLoading && !hasShownContent) {
+        hasShownContent = true
+    }
+
+    // Keep the dark loading overlay visible until the content is fully ready to display
+    // (i.e. pages are loaded and do not contain the placeholder "Đang tải dữ liệu...")
+    // and there are no ongoing messages/errors. Once shown, do not show again.
+    // Also, do not show it if the Read Aloud overlay is currently displayed.
+    val showLoadingOverlay = !hasShownContent && currentLoading && !showReadAloudOverlay
 
     Box(Modifier.fillMaxSize()) {
         key(controller) {
             ReadBookViewLayer(
                 modifier = Modifier
+                    .graphicsLayer { alpha = if (showLoadingOverlay) 0f else 1f }
                     .then(if (useMenuHazeSource) Modifier.hazeSource(menuHazeState) else Modifier)
                     .layerBackdrop(menuBackdrop),
+                showLoadingOverlay = showLoadingOverlay,
                 onRefsReady = { controller.onRefsReady(it) },
                 onCursorTouch = controller,
                 readViewCallBack = controller,
                 contentTextViewCallBack = controller,
             )
         }
-        ReadBookColorTheme(
-            styleConfig = state.styleConfig,
-            preferences = readPreferences,
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = if (showLoadingOverlay) 0f else 1f }
         ) {
-            ReadBookMenuBar(
-                state = state,
+            ReadBookColorTheme(
+                styleConfig = state.styleConfig,
                 preferences = readPreferences,
-                onIntent = viewModel::onIntent,
-                backdrop = menuBackdrop,
-                hazeState = if (useMenuHazeSource) menuHazeState else null,
-            )
-            ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
-            ReadBookScreen(
-                state = state,
-                onIntent = viewModel::onIntent,
-                onBack = { controller.closeReadBook() },
-            )
-            TextActionSelectionMenu(
-                menuState = textMenuState,
-                expandTextMenu = readPreferences.expandTextMenu,
-                onDismiss = { controller.dismissTextActionMenu() },
-                onItemClick = { item -> controller.onTextMenuItemClick(item) },
-                onOpenManage = {
-                    controller.dismissTextActionMenu()
-                    controller.refs?.readView?.cancelSelect()
-                    showSelectMenuConfigSheet = true
-                }
-            )
-            var configItems by remember { mutableStateOf<List<ActionMenuItem>>(emptyList()) }
-            LaunchedEffect(showSelectMenuConfigSheet) {
-                if (showSelectMenuConfigSheet) {
-                    configItems = controller.getActionMenuItems()
-                } else {
-                    configItems = emptyList()
+            ) {
+                ReadBookMenuBar(
+                    state = state,
+                    onIntent = viewModel::onIntent,
+                    backdrop = menuBackdrop,
+                    hazeState = if (useMenuHazeSource) menuHazeState else null,
+                )
+                ReadBookSearchBar(state = state, onIntent = viewModel::onIntent)
+                ReadBookScreen(
+                    state = state,
+                    onIntent = viewModel::onIntent,
+                    onBack = { controller.closeReadBook() },
+                    onNavigateToTranslationSettings = onNavigateToTranslationSettings,
+                    onDownloadAiTtsModel = viewModel::downloadAiTtsModel,
+                )
+            }
+        }
+        
+        if (showLoadingOverlay) {
+            val windowManager = remember(context) { context.getSystemService(android.content.Context.WINDOW_SERVICE) as WindowManager }
+            val hasBgImage = remember(context) { ThemeConfigStore.getBgImage(context, windowManager.windowSize) != null }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(if (hasBgImage) Color.Transparent else MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    AppContainedLoadingIndicator()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = if (!state.msg.isNullOrBlank()) state.msg!! else "Đang tải...",
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                        fontSize = 14.sp
+                    )
                 }
             }
-            TextSelectMenuConfigSheet(
-                show = showSelectMenuConfigSheet,
-                items = configItems,
-                expandTextMenu = readPreferences.expandTextMenu,
-                showSelectMenuIcon = readPreferences.showSelectMenuIcon,
-                onExpandTextMenuChange = {
-                    viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ExpandTextMenu(it)))
+        }
+
+        // ── Inline chapter list overlay (replaces TocActivity) ──
+        AnimatedVisibility(
+            visible = showChapterListOverlay,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+        ) {
+            ReadBookChapterListOverlay(
+                book = state.book,
+                currentChapterIndex = state.durChapterIndex,
+                onChapterClick = { index ->
+                    showChapterListOverlay = false
+                    viewModel.onIntent(ReadBookIntent.OpenChapter(index))
                 },
-                onShowSelectMenuIconChange = {
-                    viewModel.onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.ShowSelectMenuIcon(it)))
-                    controller.refreshActionMenuItems()
+                onDismiss = { showChapterListOverlay = false },
+            )
+        }
+
+        // ── Inline read aloud overlay ──
+        AnimatedVisibility(
+            visible = showReadAloudOverlay,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+        ) {
+            BackHandler { showReadAloudOverlay = false }
+            ReadAloudContent(
+                state = state,
+                onIntent = viewModel::onIntent,
+                onDismissRequest = { showReadAloudOverlay = false },
+                onOpenChapterList = {
+                    showReadAloudOverlay = false
+                    showChapterListOverlay = true
                 },
-                onDismissRequest = { showSelectMenuConfigSheet = false },
-                onSaved = { items -> controller.saveMenuConfig(items) }
+                onGoToBackground = {
+                    viewModel.onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
+                },
+                onShowReadAloudConfig = {
+                    viewModel.onIntent(ReadBookIntent.ShowReadAloudConfig)
+                },
+                modifier = Modifier.fillMaxSize(),
             )
         }
     }
@@ -527,6 +829,7 @@ fun ReadBookRouteScreen(
 @Composable
 private fun ReadBookViewLayer(
     modifier: Modifier = Modifier,
+    showLoadingOverlay: Boolean,
     onRefsReady: (ReadBookViewRefs) -> Unit,
     onCursorTouch: View.OnTouchListener,
     readViewCallBack: ReadView.CallBack,
@@ -536,6 +839,10 @@ private fun ReadBookViewLayer(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
             FrameLayout(context).apply {
+                // Start invisible to prevent parchment/yellow background from flashing
+                // before the Compose loading overlay can render on top.
+                // INVISIBLE still allows layout so ReadView.onSizeChanged fires correctly.
+                visibility = View.INVISIBLE
                 val readView = ReadView(
                     context = context,
                     callBack = readViewCallBack,
@@ -600,58 +907,8 @@ private fun ReadBookViewLayer(
                 )
             }
         },
-    )
-}
-
-@Composable
-private fun AutoSuggestDayNightObserver(
-    viewModel: ReadBookViewModel,
-    autoSuggestDayNight: Boolean,
-    lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
-) {
-    val context = LocalContext.current
-    LaunchedEffect(autoSuggestDayNight) {
-        if (!autoSuggestDayNight) return@LaunchedEffect
-        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
-            val lightSensor = sensorManager?.getDefaultSensor(Sensor.TYPE_LIGHT)
-            if (sensorManager != null && lightSensor != null) {
-                while (isActive) {
-                    if (!viewModel.isDayNightSwitchCoolingDown()) {
-                        val finalLux = AtomicReference<Float?>(null)
-                        val listener = object : SensorEventListener {
-                            override fun onSensorChanged(event: SensorEvent?) {
-                                event?.values?.firstOrNull()?.let { lux ->
-                                    finalLux.set(lux)
-                                }
-                            }
-
-                            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
-                        }
-                        try {
-                            sensorManager.registerListener(
-                                listener,
-                                lightSensor,
-                                SensorManager.SENSOR_DELAY_NORMAL
-                            )
-                            delay(1.seconds)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (e: Exception) {
-                            AppLog.put("lightSensor收集异常", e)
-                        } finally {
-                            sensorManager.unregisterListener(listener)
-                        }
-
-                        finalLux.get()?.let { lux ->
-                            viewModel.onIntent(ReadBookIntent.CheckSwitchDayNight(lux))
-                        }
-
-                    }
-
-                    delay(15.minutes)
-                }
-            }
+        update = { view ->
+            view.visibility = if (showLoadingOverlay) View.INVISIBLE else View.VISIBLE
         }
-    }
+    )
 }
