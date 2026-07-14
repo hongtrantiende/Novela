@@ -959,14 +959,6 @@ class ReadBookController(
             }
         }
         when (keyCode) {
-            KeyEvent.KEYCODE_VOLUME_UP -> if (volumeKeyPage(PageDirection.PREV, longPress)) {
-                return true
-            }
-
-            KeyEvent.KEYCODE_VOLUME_DOWN -> if (volumeKeyPage(PageDirection.NEXT, longPress)) {
-                return true
-            }
-
             KeyEvent.KEYCODE_PAGE_UP -> {
                 handleKeyPage(PageDirection.PREV, longPress)
                 return true
@@ -996,13 +988,6 @@ class ReadBookController(
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        when (keyCode) {
-            KeyEvent.KEYCODE_VOLUME_UP, KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                if (volumeKeyPage(PageDirection.NONE, false)) {
-                    return true
-                }
-            }
-        }
         return false
     }
 

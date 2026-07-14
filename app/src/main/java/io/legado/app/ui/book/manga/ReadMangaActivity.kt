@@ -1142,35 +1142,6 @@ class ReadMangaActivity : VMBaseActivity<ActivityMangaBinding, ReadMangaViewMode
         }
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (!ReadMangaConfig.mangaVolumeKeyPage) {
-            return super.onKeyDown(keyCode, event)
-        }
-
-        val isReverse = ReadMangaConfig.reverseVolumeKeyPage
-
-        when (keyCode) {
-            KeyEvent.KEYCODE_VOLUME_UP -> {
-                if (isReverse) {
-                    scrollToNext()
-                } else {
-                    scrollToPrev()
-                }
-                return true
-            }
-
-            KeyEvent.KEYCODE_VOLUME_DOWN -> {
-                if (isReverse) {
-                    scrollToPrev()
-                } else {
-                    scrollToNext()
-                }
-                return true
-            }
-        }
-
-        return super.onKeyDown(keyCode, event)
-    }
 
     override fun addToBookshelf(book: Book, toc: List<BookChapter>) {
         viewModel.addToBookshelf(book, toc) {
