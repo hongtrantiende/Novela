@@ -42,9 +42,6 @@ import io.legado.app.ui.widget.components.card.SettingCard
 import io.legado.app.ui.widget.components.menuItem.RoundDropdownMenu
 import io.legado.app.ui.widget.components.text.AppText
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.material3.ripple
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -72,9 +69,6 @@ fun SettingItem(
     var showMenu by remember { mutableStateOf(false) }
     val isExpandable = expandContent != null && onExpandChange != null
 
-    var isClicked by remember { mutableStateOf(false) }
-    val coroutineScope = rememberCoroutineScope()
-
     SettingCard(
         modifier = modifier
             .fillMaxWidth(),
@@ -95,25 +89,12 @@ fun SettingItem(
                         enabled = enabled,
                         role = semanticRole,
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = ripple(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.15f)),
+                        indication = null,
                         onClick = {
-                            if (isClicked) return@combinedClickable
                             when {
                                 dropdownMenu != null -> showMenu = true
                                 isExpandable -> onExpandChange.invoke(!expanded)
-                                else -> {
-                                    if (onClick != null) {
-                                        isClicked = true
-                                        coroutineScope.launch {
-                                            kotlinx.coroutines.delay(100L)
-                                            try {
-                                                onClick.invoke()
-                                            } finally {
-                                                isClicked = false
-                                            }
-                                        }
-                                    }
-                                }
+                                else -> onClick?.invoke()
                             }
                         },
                         onLongClick = {
