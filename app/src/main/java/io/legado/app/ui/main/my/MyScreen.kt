@@ -13,6 +13,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.Surface
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,6 +49,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -60,6 +67,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -81,6 +90,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.legado.app.R
 import io.legado.app.help.SupabaseUser
+import io.legado.app.help.MemberManager
+import io.legado.app.ui.widget.components.dialog.TextListInputDialog
+import androidx.compose.material3.OutlinedButton
 import io.legado.app.ui.book.bookmark.AllBookmarkActivity
 import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
@@ -92,6 +104,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import io.legado.app.ui.theme.adaptiveContentPadding
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
 import io.legado.app.ui.widget.components.button.series.SmallPlainButton
@@ -120,6 +135,21 @@ fun MyScreen(
 
     var showAuthDialog by remember { mutableStateOf(false) }
     var authDialogMode by remember { mutableStateOf(MyAuthMode.LOGIN) }
+    var showEditNameDialog by remember { mutableStateOf(false) }
+    var showVipManagement by remember { mutableStateOf(false) }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.onIntent(MyIntent.RefreshUserStatus)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(uiState.isLoggedIn) {
         if (uiState.isLoggedIn) {
@@ -175,6 +205,9 @@ fun MyScreen(
                 },
                 onLogoutClick = {
                     viewModel.onIntent(MyIntent.Logout)
+                },
+                onEditProfileClick = {
+                    showEditNameDialog = true
                 }
             )
 
@@ -277,20 +310,7 @@ fun MyScreen(
                         onNavigate(PrefClickEvent.StartActivity(FileManageActivity::class.java))
                     }
                 )
-                if (uiState.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
-                    ClickableSettingItem(
-                        title = "Thành viên nội bộ",
-                        description = if (uiState.isVip) {
-                            "Đang hoạt động (Còn ${uiState.vipExpireDays} ngày)"
-                        } else {
-                            "Tài khoản thường (Bản dùng thử)"
-                        },
-                        imageVector = Icons.Default.Bookmark,
-                        onClick = {
-                            viewModel.onIntent(MyIntent.OpenSupabaseMembers)
-                        }
-                    )
-                }
+
                 ClickableSettingItem(
                     title = stringResource(R.string.about),
                     imageVector = Icons.Default.Info,
@@ -318,9 +338,28 @@ fun MyScreen(
         }
     }
 
-    SupabaseMembersDialog(
-        show = uiState.showSupabaseMembersDialog,
-        onDismissRequest = { viewModel.onIntent(MyIntent.CloseSupabaseMembers) },
+    EditUserProfileDialog(
+        show = showEditNameDialog,
+        initialDisplayName = uiState.userDisplayName ?: uiState.userEmail?.substringBefore("@") ?: "",
+        initialAvatar = uiState.userAvatar,
+        isSaving = uiState.isSavingProfile,
+        onDismissRequest = { showEditNameDialog = false },
+        onConfirm = { newName, oldPassword, newPassword, avatarBase64 ->
+            viewModel.onIntent(MyIntent.UpdateCurrentUserProfile(newName, oldPassword, newPassword, avatarBase64))
+            showEditNameDialog = false
+        },
+        isAdmin = uiState.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com",
+        onTabSelected = { index ->
+            if (index == 1) {
+                showEditNameDialog = false
+                showVipManagement = true
+            }
+        }
+    )
+
+    VipManagementFullScreenDialog(
+        show = showVipManagement,
+        onDismissRequest = { showVipManagement = false },
         serviceRoleKey = uiState.serviceRoleKey,
         onServiceRoleKeyChange = { viewModel.onIntent(MyIntent.UpdateServiceRoleKey(it)) },
         isFetchingUsers = uiState.isFetchingUsers,
@@ -328,7 +367,11 @@ fun MyScreen(
         userList = uiState.userList,
         searchEmailQuery = uiState.searchEmailQuery,
         onSearchEmailQueryChange = { viewModel.onIntent(MyIntent.UpdateSearchEmailQuery(it)) },
-        onUserClick = { viewModel.onIntent(MyIntent.StartEditingProfile(it)) }
+        onUserClick = { viewModel.onIntent(MyIntent.StartEditingProfile(it)) },
+        onBackToProfile = {
+            showVipManagement = false
+            showEditNameDialog = true
+        }
     )
 
     EditProfileDialog(
@@ -788,6 +831,55 @@ fun EditProfileDialog(
     )
 }
 
+@Composable
+private fun VipBadge(
+    modifier: Modifier = Modifier,
+    days: Long,
+    email: String? = null
+) {
+    val isLaoTo = (email?.lowercase()?.trim() == "nthanhnam@gmail.com") || (days > 200)
+    val rankText = if (isLaoTo) "Lão Tổ" else "Trưởng Lão"
+
+    Box(
+        modifier = modifier
+            .background(
+                brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                    colors = listOf(Color(0xFFD4AF37), Color(0xFFF3E5AB))
+                ),
+                shape = RoundedCornerShape(4.dp)
+            )
+            .border(
+                width = 0.5.dp,
+                color = Color(0xFFAA7C11),
+                shape = RoundedCornerShape(4.dp)
+            )
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "$rankText $days ngày",
+            color = Color(0xFF5C3A00),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.02.sp
+        )
+    }
+}
+
+@Composable
+private fun rememberBitmapFromBase64(base64Str: String?): androidx.compose.ui.graphics.ImageBitmap? {
+    if (base64Str.isNullOrBlank()) return null
+    return remember(base64Str) {
+        try {
+            val decodedBytes = android.util.Base64.decode(base64Str, android.util.Base64.DEFAULT)
+            val bitmap = android.graphics.BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
+            bitmap?.asImageBitmap()
+        } catch (e: Exception) {
+            null
+        }
+    }
+}
+
 private enum class MyAuthMode {
     LOGIN, REGISTER
 }
@@ -797,7 +889,8 @@ private fun ProfileHeader(
     uiState: MyUiState,
     onLoginClick: () -> Unit,
     onRegisterClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    onEditProfileClick: () -> Unit
 ) {
     if (!uiState.isLoggedIn) {
         Column(
@@ -827,8 +920,8 @@ private fun ProfileHeader(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFDFBA93),
-                        contentColor = Color.Black
+                        containerColor = LegadoTheme.colorScheme.primary,
+                        contentColor = LegadoTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text("Đăng nhập", fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -839,8 +932,8 @@ private fun ProfileHeader(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFDFBA93),
-                        contentColor = Color.Black
+                        containerColor = LegadoTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        contentColor = LegadoTheme.colorScheme.primary
                     )
                 ) {
                     Text("Đăng ký", fontWeight = FontWeight.Bold, fontSize = 15.sp)
@@ -848,61 +941,85 @@ private fun ProfileHeader(
             }
         }
     } else {
-        GlassCard(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            cornerRadius = 16.dp
+                .padding(vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+            val customAvatar = rememberBitmapFromBase64(uiState.userAvatar)
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .background(LegadoTheme.colorScheme.primary.copy(alpha = 0.1f))
+                    .border(
+                        width = 1.5.dp,
+                        color = if (uiState.isVip) Color(0xFFFFD700) else Color.Transparent,
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(LegadoTheme.colorScheme.primary.copy(alpha = 0.1f))
-                        .border(
-                            width = 1.5.dp,
-                            color = if (uiState.isVip) Color(0xFFFFD700) else LegadoTheme.colorScheme.primary.copy(alpha = 0.2f),
-                            shape = CircleShape
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val initials = uiState.userEmail?.take(2)?.uppercase() ?: "U"
-                    Text(
-                        text = initials,
-                        color = LegadoTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
+                if (customAvatar != null) {
+                    androidx.compose.foundation.Image(
+                        bitmap = customAvatar,
+                        contentDescription = "Ảnh đại diện",
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = uiState.userEmail ?: "Tài khoản",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = LegadoTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (uiState.isVip) "Thành viên VIP (Còn ${uiState.vipExpireDays} ngày)" else "Tài khoản thường",
-                        fontSize = 12.sp,
-                        color = if (uiState.isVip) Color(0xFFFFB300) else LegadoTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                IconButton(onClick = onLogoutClick) {
+                } else {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                        contentDescription = "Đăng xuất",
-                        tint = LegadoTheme.colorScheme.error
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = LegadoTheme.colorScheme.primary,
+                        modifier = Modifier.size(48.dp)
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val displayName = uiState.userDisplayName?.takeIf { it.isNotBlank() } ?: uiState.userEmail?.substringBefore("@") ?: "Tài khoản"
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = displayName,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp,
+                    color = LegadoTheme.colorScheme.onSurface
+                )
+                if (uiState.isVip) {
+                    VipBadge(days = uiState.vipExpireDays, email = uiState.userEmail)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = uiState.userEmail ?: "",
+                fontSize = 13.sp,
+                color = LegadoTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = onEditProfileClick,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, LegadoTheme.colorScheme.outline.copy(alpha = 0.5f)),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+                    contentColor = LegadoTheme.colorScheme.onSurface
+                ),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text(
+                    text = "Chỉnh sửa hồ sơ",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
         }
     }
@@ -1007,4 +1124,577 @@ private fun AuthDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditUserProfileDialog(
+    show: Boolean,
+    initialDisplayName: String,
+    initialAvatar: String?,
+    isSaving: Boolean,
+    onDismissRequest: () -> Unit,
+    onConfirm: (displayName: String, oldPassword: String?, newPassword: String?, avatarBase64: String?) -> Unit,
+    isAdmin: Boolean = false,
+    onTabSelected: (Int) -> Unit = {}
+) {
+    if (!show) return
+    val context = LocalContext.current
+    var displayName by remember(initialDisplayName) { mutableStateOf(initialDisplayName) }
+    var avatarBase64 by remember(show) { mutableStateOf(initialAvatar) }
+    var isChangingPassword by remember { mutableStateOf(false) }
+    var oldPassword by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
+    
+    var displayNameError by remember { mutableStateOf<String?>(null) }
+    var oldPasswordError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            val base64 = MemberManager.compressUriToBase64(context, it)
+            if (base64 != null) {
+                avatarBase64 = base64
+            }
+        }
+    }
+
+    AlertDialog(
+        onDismissRequest = { if (!isSaving) onDismissRequest() },
+        properties = androidx.compose.ui.window.DialogProperties(
+            usePlatformDefaultWidth = true
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp),
+        title = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Chỉnh sửa hồ sơ",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 24.sp,
+                    color = LegadoTheme.colorScheme.onSurface
+                )
+                if (isAdmin) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TabRow(selectedTabIndex = 0) {
+                        Tab(
+                            selected = true,
+                            onClick = { onTabSelected(0) },
+                            text = { Text("Hồ sơ") }
+                        )
+                        Tab(
+                            selected = false,
+                            onClick = { onTabSelected(1) },
+                            text = { Text("Quản lý VIP") }
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Cập nhật biệt danh hoặc thay đổi mật khẩu",
+                        fontSize = 12.sp,
+                        color = LegadoTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val bitmap = rememberBitmapFromBase64(avatarBase64)
+                    Box(
+                        modifier = Modifier
+                            .size(90.dp)
+                            .clip(CircleShape)
+                            .background(LegadoTheme.colorScheme.primary.copy(alpha = 0.1f))
+                            .clickable(enabled = !isSaving) {
+                                imagePickerLauncher.launch("image/*")
+                            }
+                            .border(
+                                width = 1.dp,
+                                color = LegadoTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (bitmap != null) {
+                            androidx.compose.foundation.Image(
+                                bitmap = bitmap,
+                                contentDescription = "Chọn ảnh đại diện",
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Person,
+                                contentDescription = null,
+                                tint = LegadoTheme.colorScheme.primary,
+                                modifier = Modifier.size(40.dp)
+                            )
+                        }
+                        
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(26.dp)
+                                .align(Alignment.BottomCenter)
+                                .background(Color.Black.copy(alpha = 0.5f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "ĐỔI",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                OutlinedTextField(
+                    value = displayName,
+                    onValueChange = {
+                        displayName = it
+                        displayNameError = null
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                    },
+                    label = { Text("Biệt danh (Nickname)") },
+                    singleLine = true,
+                    isError = displayNameError != null,
+                    supportingText = displayNameError?.let { { Text(it) } },
+                    enabled = !isSaving,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !isSaving) { isChangingPassword = !isChangingPassword }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    androidx.compose.material3.Checkbox(
+                        checked = isChangingPassword,
+                        onCheckedChange = { isChangingPassword = it },
+                        enabled = !isSaving
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Đổi mật khẩu tài khoản",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = LegadoTheme.colorScheme.onSurface
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = isChangingPassword,
+                    enter = androidx.compose.animation.expandVertically(),
+                    exit = androidx.compose.animation.shrinkVertically()
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = oldPassword,
+                            onValueChange = {
+                                oldPassword = it
+                                oldPasswordError = null
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            },
+                            label = { Text("Mật khẩu hiện tại (Cũ)") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            isError = oldPasswordError != null,
+                            supportingText = oldPasswordError?.let { { Text(it) } },
+                            enabled = !isSaving,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = password,
+                            onValueChange = {
+                                password = it
+                                passwordError = null
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            },
+                            label = { Text("Mật khẩu mới") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            isError = passwordError != null,
+                            supportingText = passwordError?.let { { Text(it) } },
+                            enabled = !isSaving,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        OutlinedTextField(
+                            value = confirmPassword,
+                            onValueChange = {
+                                confirmPassword = it
+                                confirmPasswordError = null
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                )
+                            },
+                            label = { Text("Xác nhận mật khẩu mới") },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            isError = confirmPasswordError != null,
+                            supportingText = confirmPasswordError?.let { { Text(it) } },
+                            enabled = !isSaving,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextButton(
+                    enabled = !isSaving,
+                    onClick = onDismissRequest
+                ) {
+                    Text("Hủy")
+                }
+
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                            color = LegadoTheme.colorScheme.primary
+                        )
+                    } else {
+                        androidx.compose.material3.FilledIconButton(
+                            onClick = {
+                                var hasError = false
+                                if (displayName.isBlank()) {
+                                    displayNameError = "Vui lòng nhập tên hiển thị"
+                                    hasError = true
+                                }
+                                if (isChangingPassword) {
+                                    if (oldPassword.isBlank()) {
+                                        oldPasswordError = "Vui lòng nhập mật khẩu cũ"
+                                        hasError = true
+                                    }
+                                    if (password.length < 6) {
+                                        passwordError = "Mật khẩu mới phải từ 6 ký tự"
+                                        hasError = true
+                                    }
+                                    if (password != confirmPassword) {
+                                        confirmPasswordError = "Mật khẩu xác nhận không khớp"
+                                        hasError = true
+                                    }
+                                }
+                                if (!hasError) {
+                                    onConfirm(
+                                        displayName.trim(),
+                                        oldPassword.takeIf { isChangingPassword },
+                                        password.takeIf { isChangingPassword },
+                                        avatarBase64
+                                    )
+                                }
+                            },
+                            modifier = Modifier.size(56.dp),
+                            colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                                containerColor = LegadoTheme.colorScheme.primary,
+                                contentColor = LegadoTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Lưu thay đổi",
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VipManagementFullScreenDialog(
+    show: Boolean,
+    onDismissRequest: () -> Unit,
+    serviceRoleKey: String,
+    onServiceRoleKeyChange: (String) -> Unit,
+    isFetchingUsers: Boolean,
+    onFetchUsers: () -> Unit,
+    userList: List<SupabaseUser>,
+    searchEmailQuery: String,
+    onSearchEmailQueryChange: (String) -> Unit,
+    onUserClick: (SupabaseUser) -> Unit,
+    onBackToProfile: () -> Unit
+) {
+    if (!show) return
+    var showKeyInput by remember { mutableStateOf(serviceRoleKey.isBlank() || userList.isEmpty()) }
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false
+        )
+    ) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = LegadoTheme.colorScheme.background
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(WindowInsets.safeDrawing.asPaddingValues())
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBackToProfile) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Quay lại"
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Quản lý thành viên VIP",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = LegadoTheme.colorScheme.onBackground,
+                        modifier = Modifier.weight(1f)
+                    )
+                    
+                    if (userList.isNotEmpty()) {
+                        TextButton(onClick = { showKeyInput = !showKeyInput }) {
+                            Text(if (showKeyInput) "Ẩn cấu hình" else "Đổi Key")
+                        }
+                    }
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    if (showKeyInput) {
+                        OutlinedTextField(
+                            value = serviceRoleKey,
+                            onValueChange = onServiceRoleKeyChange,
+                            label = { Text("Supabase Service Role Key") },
+                            placeholder = { Text("Nhập key service_role bí mật...") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Button(
+                            onClick = onFetchUsers,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (isFetchingUsers) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(18.dp),
+                                    color = LegadoTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Đang tải...")
+                            } else {
+                                Text("Tải danh sách tài khoản Supabase")
+                            }
+                        }
+                    }
+
+                    LaunchedEffect(userList.isNotEmpty(), isFetchingUsers) {
+                        if (userList.isNotEmpty() && !isFetchingUsers) {
+                            showKeyInput = false
+                        }
+                    }
+
+                    if (userList.isNotEmpty()) {
+                        OutlinedTextField(
+                            value = searchEmailQuery,
+                            onValueChange = onSearchEmailQueryChange,
+                            placeholder = { Text("Tìm theo Gmail hoặc tên...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            val filteredUsers = userList.filter {
+                                searchEmailQuery.isBlank() ||
+                                        it.email.contains(searchEmailQuery.trim(), ignoreCase = true) ||
+                                        it.displayName.contains(searchEmailQuery.trim(), ignoreCase = true)
+                            }
+
+                            if (filteredUsers.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("Không tìm thấy kết quả phù hợp", color = LegadoTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            } else {
+                                items(filteredUsers, key = { it.id }) { user ->
+                                    val isVip = user.vipExpire > System.currentTimeMillis()
+                                    val vipStatusText = if (isVip) {
+                                        val diff = user.vipExpire - System.currentTimeMillis()
+                                        val days = (diff / (1000 * 60 * 60 * 24)).coerceAtLeast(0) + 1
+                                        "VIP còn $days ngày"
+                                    } else {
+                                        "Thành viên thường"
+                                    }
+
+                                    GlassCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onUserClick(user) },
+                                        cornerRadius = 14.dp
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(44.dp)
+                                                    .clip(CircleShape)
+                                                    .background(LegadoTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                                    .border(
+                                                        width = 1.dp,
+                                                        color = if (isVip) Color(0xFFFFD700) else LegadoTheme.colorScheme.primary.copy(alpha = 0.2f),
+                                                        shape = CircleShape
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                val initials = if (user.displayName.isNotBlank()) {
+                                                    user.displayName.take(2).uppercase()
+                                                } else if (user.email.isNotBlank()) {
+                                                    user.email.take(2).uppercase()
+                                                } else "U"
+                                                Text(
+                                                    text = initials,
+                                                    color = LegadoTheme.colorScheme.primary,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 15.sp
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(14.dp))
+
+                                            Column(
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = if (user.displayName.isNotBlank()) user.displayName else "Chưa đặt tên",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 15.sp,
+                                                        color = LegadoTheme.colorScheme.onSurface
+                                                    )
+                                                    if (isVip) {
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        val diff = user.vipExpire - System.currentTimeMillis()
+                                                        val days = (diff / (1000 * 60 * 60 * 24)).coerceAtLeast(0) + 1
+                                                        VipBadge(days = days, email = user.email)
+                                                    }
+                                                }
+                                                Text(
+                                                    text = user.email,
+                                                    fontSize = 12.sp,
+                                                    color = LegadoTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                            Column(
+                                                horizontalAlignment = Alignment.End
+                                            ) {
+                                                if (!isVip) {
+                                                    Text(
+                                                        text = "Thành viên",
+                                                        fontSize = 12.sp,
+                                                        color = LegadoTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Icon(
+                                                    imageVector = Icons.Default.Edit,
+                                                    contentDescription = "Sửa",
+                                                    tint = LegadoTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

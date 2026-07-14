@@ -97,7 +97,7 @@ object ThemeResolver {
     }
 
     fun isMiuixEngine(composeEngine: String): Boolean {
-        return composeEngine.equals(COMPOSE_ENGINE_MIUIX, ignoreCase = true)
+        return false
     }
 
     fun resolveColorSpecVersion(colorSpec: ThemeColorSpec): ColorSpec.SpecVersion {

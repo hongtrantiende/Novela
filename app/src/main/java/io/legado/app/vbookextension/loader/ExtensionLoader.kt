@@ -407,15 +407,21 @@ class ExtensionLoader(
             if (repo.url == "https://raw.githubusercontent.com/hongtrantiende/APK-TTC/main/plugin.json") {
                 repositoryDao.delete(repo)
             }
+            if (repo.url == "https://raw.githubusercontent.com/hongtrantiende/Extransion-TTC/main/plugin.json") {
+                repositoryDao.delete(repo)
+            }
         }
 
-        repos.forEach { repo ->
+        val freshRepos = repositoryDao.getEnabledRepositories()
+
+        freshRepos.forEach { repo ->
             if (repo.url == "https://www.vbookext.me/api/plugin.json") {
                 repositoryDao.insert(repo.copy(url = DEFAULT_REPO_URL, name = "Thư viện Tiện ích (GitHub)"))
             }
         }
 
-        val hasDefault = repos.any { it.url == DEFAULT_REPO_URL }
+        val finalRepos = repositoryDao.getEnabledRepositories()
+        val hasDefault = finalRepos.any { it.url == DEFAULT_REPO_URL }
         if (!hasDefault) {
             repositoryDao.insert(
                 RepositoryEntity(

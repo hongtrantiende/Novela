@@ -18,78 +18,87 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:gravity="center"
-            android:paddingHorizontal="24dp"
-            android:paddingTop="48dp"
+            android:gravity="start"
+            android:paddingHorizontal="28dp"
+            android:paddingTop="36dp"
             android:paddingBottom="32dp">
 
-            <!-- Header layout: Logo + Text next to each other -->
+            <!-- Back Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_back"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                app:cornerRadius="24dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:padding="0dp"
+                app:icon="@drawable/ic_arrow_back"
+                app:iconSize="20dp"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconTint="?android:attr/textColorPrimary"
+                style="@style/Widget.Material3.Button.IconButton"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:layout_marginBottom="32dp" />
+
+            <!-- Header layout: Text & App Logo, left-aligned -->
             <LinearLayout
                 android:id="@+id/ll_header"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="28dp">
+                android:orientation="vertical"
+                android:gravity="start"
+                android:layout_marginBottom="32dp">
 
-                <!-- Logo -->
+                <!-- App Logo -->
                 <com.google.android.material.imageview.ShapeableImageView
                     android:id="@+id/iv_logo"
-                    android:layout_width="68dp"
-                    android:layout_height="68dp"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
                     android:src="@drawable/ic_launcher3"
-                    android:scaleType="centerCrop"
+                    android:layout_marginBottom="16dp"
                     app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full" />
 
-                <!-- Text Container (slides out to the right) -->
-                <LinearLayout
-                    android:id="@+id/ll_header_text"
+                <!-- App Name -->
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginStart="18dp">
+                    android:text="Novela"
+                    android:textSize="34sp"
+                    android:textStyle="bold"
+                    android:textColor="?android:attr/textColorPrimary"
+                    android:fontFamily="sans-serif-medium"
+                    android:letterSpacing="0.02" />
 
-                    <!-- App Name -->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Novela"
-                        android:textSize="30sp"
-                        android:textStyle="bold"
-                        android:textColor="?android:attr/textColorPrimary"
-                        android:fontFamily="sans-serif-medium"
-                        android:letterSpacing="0.03" />
+                <!-- Mode Title -->
+                <TextView
+                    android:id="@+id/tv_mode_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Chào mừng trở lại"
+                    android:textSize="17sp"
+                    android:textColor="?android:attr/textColorSecondary"
+                    android:layout_marginTop="4dp" />
 
-                    <!-- Mode Title -->
-                    <TextView
-                        android:id="@+id/tv_mode_title"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Chào mừng trở lại"
-                        android:textSize="15sp"
-                        android:textColor="?android:attr/textColorSecondary"
-                        android:layout_marginTop="2dp" />
-
-                </LinearLayout>
             </LinearLayout>
 
-            <!-- Mode Summary (hidden by default, shown in updateUiMode) -->
+            <!-- Mode Summary (hidden by default) -->
             <TextView
                 android:id="@+id/tv_mode_summary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textSize="12sp"
                 android:textColor="?android:attr/textColorSecondary"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:layout_marginBottom="16dp" />
 
-            <!-- Card Container -->
+            <!-- Borderless Container -->
             <LinearLayout
                 android:id="@+id/ll_card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_login_card"
-                android:padding="24dp">
+                android:padding="0dp">
 
                 <!-- Email Input -->
                 <com.google.android.material.textfield.TextInputLayout
@@ -175,7 +184,7 @@
                         android:singleLine="true" />
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Forgot Password (right-aligned, above button) -->
+                <!-- Forgot Password -->
                 <TextView
                     android:id="@+id/tv_forgot_password"
                     android:layout_width="wrap_content"
@@ -187,29 +196,42 @@
                     android:clickable="true"
                     android:focusable="true"
                     android:paddingVertical="4dp"
-                    android:layout_marginBottom="20dp" />
+                    android:layout_marginBottom="16dp" />
 
-                <!-- Action Button -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_action"
+                <!-- Action Section (Circular button & loading) -->
+                <RelativeLayout
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:background="@drawable/bg_gradient_button"
-                    app:backgroundTint="@null"
-                    android:text="Đăng nhập"
-                    android:textColor="?attr/colorOnPrimary"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="14dp" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp">
 
-                <!-- Progress Bar -->
-                <ProgressBar
-                    android:id="@+id/pb_loading"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_gravity="center_horizontal"
-                    android:visibility="gone"
-                    android:layout_marginTop="12dp" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_action"
+                        android:layout_width="56dp"
+                        android:layout_height="56dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        app:cornerRadius="28dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:padding="0dp"
+                        app:icon="@drawable/ic_arrow_right"
+                        app:iconSize="24dp"
+                        app:iconGravity="textStart"
+                        app:iconPadding="0dp"
+                        android:background="@drawable/bg_gradient_button"
+                        app:backgroundTint="@null"
+                        app:iconTint="?attr/colorOnPrimary" />
+
+                    <ProgressBar
+                        android:id="@+id/pb_loading"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="16dp"
+                        android:layout_toStartOf="@id/btn_action"
+                        android:layout_centerVertical="true"
+                        android:visibility="gone" />
+
+                </RelativeLayout>
 
             </LinearLayout>
 

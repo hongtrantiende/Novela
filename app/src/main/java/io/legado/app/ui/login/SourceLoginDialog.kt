@@ -72,20 +72,21 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
             callback = object : SourceLoginJsExtensions.Callback {
                 override fun upUiData(data: Map<String, Any?>?) {
                     activity?.runOnUiThread { // 在主线程中更新 UI
-                        handleUpUiData(data)
+                        @Suppress("UNCHECKED_CAST")
+                        handleUpUiData(data as? Map<String, String?>)
                     }
                 }
 
                 override fun reUiView(deltaUp: Boolean) {
                     activity?.runOnUiThread {
-                        handleReUiView(deltaUp)
+                        handleReUiView()
                     }
                 }
             }
         )
     }
 
-    private fun handleReUiView(deltaUp: Boolean = false) {
+    private fun handleReUiView() {
         val source = viewModel.source ?: return
         val loginUiStr = source.loginUi ?: return
         val codeStr = loginUiStr.let {
@@ -100,16 +101,18 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
             lifecycleScope.launch(Main) {
                 val loginUiJson = evalUiJs(codeStr)
                 rowUis = loginUi(loginUiJson)
-                rowUiBuilder(source, rowUis, deltaUp)
+                binding.flexbox.removeAllViews()
+                rowUiBuilder(source, rowUis)
             }
         } else {
             rowUis = loginUi(loginUiStr)
-            rowUiBuilder(source, rowUis, deltaUp)
+            binding.flexbox.removeAllViews()
+            rowUiBuilder(source, rowUis)
         }
     }
 
     @SuppressLint("SetTextI18n")
-    private fun handleUpUiData(data: Map<String, Any?>?) {
+    private fun handleUpUiData(data: Map<String, String?>?) {
         hasChange = true
         if (data == null) {
             val newLoginInfo: MutableMap<String, String> = mutableMapOf()
@@ -161,22 +164,22 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
             if (index != -1) {
                 when (val rowView = binding.root.findViewById<View>(index + 1000)) {
                     is TextInputLayout -> {
-                        val textValue = value?.toString() ?: run {
+                        val value = value ?: run {
                             val rowUi = rowUis?.getOrNull(index) ?: return@forEach
                             rowUi.default ?: ""
                         }
-                        rowView.editText?.setText(textValue)
+                        rowView.editText?.setText(value)
                     }
 
                     is TextView -> {
                         val rowUi = rowUis?.getOrNull(index) ?: return@forEach
                         when (rowUi.type) {
                             Type.button -> {
-                                rowView.text = value?.toString() ?: key
+                                rowView.text = value ?: key
                             }
 
                             Type.toggle -> {
-                                val char = value?.toString() ?: run {
+                                val char = value ?: run {
                                     val chars =
                                         rowUi.chars?.filterNotNull() ?: listOf("chars is null")
                                     chars.getOrNull(0) ?: ""
@@ -192,9 +195,8 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
                     is LinearLayout -> {
                         val rowUi = rowUis?.getOrNull(index) ?: return@forEach
                         val items = rowUi.chars?.filterNotNull() ?: listOf("chars", "is null")
-                        val strValue = value?.toString()
-                        val index = items.indexOf(strValue)
-                        loginInfo[rowUi.name] = strValue ?: run {
+                        val index = items.indexOf(value)
+                        loginInfo[rowUi.name] = value ?: run {
                             items.getOrNull(0) ?: ""
                         }
                         rowView.findViewById<AppCompatSpinner>(R.id.sp_type)
@@ -202,7 +204,7 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
                     }
                 }
             } else {
-                loginInfo[key] = value?.toString() ?: ""
+                loginInfo[key] = value ?: ""
             }
         }
     }
@@ -239,12 +241,9 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
     }
 
     @SuppressLint("SetTextI18n", "ClickableViewAccessibility")
-    private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?, deltaUp: Boolean = false) {
+    private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
         val loginInfo = viewModel.loginInfo
-        if (!deltaUp) {
-            binding.flexbox.removeAllViews()
-            rowUiName.clear()
-        }
+        rowUiName.clear()
         rowUis?.forEachIndexed { index, rowUi ->
             val type = rowUi.type
             val name = rowUi.name
@@ -590,7 +589,7 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
             when (item.itemId) {
                 R.id.menu_ok -> {
                     oKToClose = true
-                    val loginData = getLoginData(this@SourceLoginDialog.rowUis, true)
+                    val loginData = getLoginData(rowUis, true)
                     login(source, loginData)
                 }
 
@@ -677,7 +676,6 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
             when (rowUi.type) {
                 Type.text, Type.password -> {
                     val rowView = binding.root.findViewById<View>(index + 1000)
-                    rowView ?: return@forEachIndexed
                     ItemSourceEditBinding.bind(rowView).editText.text.let {
                         loginData[rowUi.name] =
                             it?.toString() ?: rowUi.default ?: "" //没文本的时候存空字符串,而不是删除loginInfo
@@ -708,8 +706,8 @@ class SourceLoginDialog : BaseBottomSheetDialogFragment(R.layout.dialog_login) {
                         dismiss()
                     }
                 } catch (e: Exception) {
-                    AppLog.put("登录出错\n${e.localizedMessage}", e)
-                    context?.toastOnUi("登录出错\n${e.localizedMessage}")
+                    AppLog.put("Lỗi đăng nhập\n${e.localizedMessage}", e)
+                    context?.toastOnUi("Lỗi đăng nhập\n${e.localizedMessage}")
                     e.printOnDebug()
                 }
             }

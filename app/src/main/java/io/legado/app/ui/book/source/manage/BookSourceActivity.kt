@@ -442,17 +442,19 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
         // 1. Add Installed List Header (Removed empty header to prevent empty layout space at the top of book source list)
 
-        // 2. Add Legado Store List Footer
-        val footerBinding = io.legado.app.databinding.ItemComposeFooterBinding.inflate(layoutInflater, binding.recyclerView, false)
-        footerBinding.composeView.apply {
-            setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                io.legado.app.ui.theme.AppTheme {
-                    io.legado.app.vbookextension.ui.LegadoStoreFooterSection(storeViewModel)
+        if (io.legado.app.help.MemberManager.isVip) {
+            // 2. Add Legado Store List Footer
+            val footerBinding = io.legado.app.databinding.ItemComposeFooterBinding.inflate(layoutInflater, binding.recyclerView, false)
+            footerBinding.composeView.apply {
+                setViewCompositionStrategy(androidx.compose.ui.platform.ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+                setContent {
+                    io.legado.app.ui.theme.AppTheme {
+                        io.legado.app.vbookextension.ui.LegadoStoreFooterSection(storeViewModel)
+                    }
                 }
             }
+            adapter.addFooterView { footerBinding }
         }
-        adapter.addFooterView { footerBinding }
 
         // When this page is opened, it is in selection mode
         val dragSelectTouchHelper =

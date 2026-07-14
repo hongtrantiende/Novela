@@ -60,9 +60,9 @@ object ThemeConfig {
     var paletteStyle by prefDelegate(PreferKey.paletteStyle, "tonalSpot")
 
     //m3 or miuix
-    var composeEngine by prefDelegate(PreferKey.composeEngine, "material") {
-        postEvent(EventBus.RECREATE, "")
-    }
+    var composeEngine: String
+        get() = "material"
+        set(value) {}
 
     var useMiuixMonet by prefDelegate(PreferKey.useMiuixMonet, false) {
         postEvent(EventBus.RECREATE, "")

@@ -12,6 +12,8 @@ data class MyUiState(
     // User status
     val isLoggedIn: Boolean = false,
     val userEmail: String? = null,
+    val userDisplayName: String? = null,
+    val userAvatar: String? = null,
     val isVip: Boolean = false,
     val vipExpireDays: Long = 0,
     
@@ -33,6 +35,7 @@ sealed interface MyIntent {
     data object RefreshUserStatus : MyIntent
     data class Login(val email: String, val pass: String) : MyIntent
     data class Register(val email: String, val pass: String) : MyIntent
+    data class UpdateCurrentUserProfile(val displayName: String, val oldPassword: String?, val newPassword: String?, val avatarBase64: String?) : MyIntent
     
     // Supabase member management
     data object OpenSupabaseMembers : MyIntent

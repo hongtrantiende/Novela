@@ -35,6 +35,7 @@ class MyViewModel(
             webServiceAddress = WebService.hostAddress,
             isLoggedIn = LocalConfig.isLoggedIn,
             userEmail = LocalConfig.userEmail,
+            userDisplayName = LocalConfig.userDisplayName,
             isVip = MemberManager.isVip,
             vipExpireDays = MemberManager.daysRemaining,
             serviceRoleKey = LocalConfig.supabaseServiceRoleKey ?: ""
@@ -75,10 +76,13 @@ class MyViewModel(
                 LocalConfig.userEmail = null
                 LocalConfig.accessToken = null
                 LocalConfig.vipExpireFromServer = 0L
+                LocalConfig.userAvatar = null
                 _uiState.update {
                     it.copy(
                         isLoggedIn = false,
                         userEmail = null,
+                        userDisplayName = null,
+                        userAvatar = null,
                         isVip = false,
                         vipExpireDays = 0
                     )
@@ -90,6 +94,8 @@ class MyViewModel(
                     it.copy(
                         isLoggedIn = LocalConfig.isLoggedIn,
                         userEmail = LocalConfig.userEmail,
+                        userDisplayName = LocalConfig.userDisplayName,
+                        userAvatar = LocalConfig.userAvatar,
                         isVip = MemberManager.isVip,
                         vipExpireDays = MemberManager.daysRemaining
                     )
@@ -127,6 +133,47 @@ class MyViewModel(
                                 _effects.tryEmit(MyEffect.ShowToast(error.localizedMessage ?: "Đăng ký thất bại"))
                             }
                         )
+                    }
+                }
+            }
+            is MyIntent.UpdateCurrentUserProfile -> {
+                val token = LocalConfig.accessToken
+                val email = LocalConfig.userEmail
+                if (token.isNullOrBlank() || email.isNullOrBlank()) {
+                    _effects.tryEmit(MyEffect.ShowToast("Bạn chưa đăng nhập!"))
+                    return
+                }
+                _uiState.update { it.copy(isSavingProfile = true) }
+                viewModelScope.launch(Dispatchers.IO) {
+                    val nameResult = MemberManager.updateCurrentUserData(token, intent.displayName.trim(), intent.avatarBase64)
+                    if (nameResult.isFailure) {
+                        withContext(Dispatchers.Main) {
+                            _uiState.update { it.copy(isSavingProfile = false) }
+                            _effects.tryEmit(MyEffect.ShowToast("Lỗi: ${nameResult.exceptionOrNull()?.localizedMessage}"))
+                        }
+                        return@launch
+                    }
+                    
+                    if (!intent.oldPassword.isNullOrBlank() && !intent.newPassword.isNullOrBlank()) {
+                        val passResult = MemberManager.updateCurrentUserPassword(token, email, intent.oldPassword, intent.newPassword)
+                        withContext(Dispatchers.Main) {
+                            _uiState.update { it.copy(isSavingProfile = false) }
+                            passResult.fold(
+                                onSuccess = {
+                                    _effects.tryEmit(MyEffect.ShowToast("Cập nhật biệt danh và đổi mật khẩu thành công!"))
+                                    onIntent(MyIntent.RefreshUserStatus)
+                                },
+                                onFailure = { error ->
+                                    _effects.tryEmit(MyEffect.ShowToast("Lỗi đổi mật khẩu: ${error.localizedMessage}"))
+                                }
+                            )
+                        }
+                    } else {
+                        withContext(Dispatchers.Main) {
+                            _uiState.update { it.copy(isSavingProfile = false) }
+                            _effects.tryEmit(MyEffect.ShowToast("Cập nhật thông tin thành công!"))
+                            onIntent(MyIntent.RefreshUserStatus)
+                        }
                     }
                 }
             }

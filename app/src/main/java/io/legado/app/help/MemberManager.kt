@@ -17,9 +17,6 @@ object MemberManager {
 
     val isVip: Boolean
         get() {
-            if (io.legado.app.BuildConfig.DEBUG) {
-                return true
-            }
             if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
                 return true
             }
@@ -36,9 +33,6 @@ object MemberManager {
 
     val daysRemaining: Long
         get() {
-            if (io.legado.app.BuildConfig.DEBUG) {
-                return 9999
-            }
             if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
                 return 9999
             }
@@ -53,9 +47,6 @@ object MemberManager {
 
     val expireDateString: String
         get() {
-            if (io.legado.app.BuildConfig.DEBUG) {
-                return "Vô hạn (Debug)"
-            }
             if (io.legado.app.help.config.LocalConfig.userEmail?.lowercase()?.trim() == "nthanhnam@gmail.com") {
                 return "Vô hạn (Admin)"
             }
@@ -271,6 +262,8 @@ object MemberManager {
                 val userId = jsonObject.optString("id", "")
                 val userMetadata = jsonObject.optJSONObject("user_metadata")
                 var vipExpire = userMetadata?.optLong("vip_expire", 0L) ?: 0L
+                val displayName = userMetadata?.optString("display_name", userMetadata.optString("name", "")) ?: ""
+                io.legado.app.help.config.LocalConfig.userDisplayName = displayName
 
                 if (userId.isNotBlank()) {
                     val profileRequest = okhttp3.Request.Builder()
@@ -346,12 +339,17 @@ object MemberManager {
                 val refreshToken = jsonObject.optString("refresh_token", "")
                 val user = jsonObject.getJSONObject("user")
                 val userEmail = user.getString("email").lowercase().trim()
+                val userMetadata = user.optJSONObject("user_metadata")
+                val displayName = userMetadata?.optString("display_name", userMetadata.optString("name", "")) ?: ""
+                val avatar = userMetadata?.optString("avatar", "") ?: ""
 
                 io.legado.app.help.config.LocalConfig.accessToken = accessToken
                 if (refreshToken.isNotBlank()) {
                     io.legado.app.help.config.LocalConfig.refreshToken = refreshToken
                 }
                 io.legado.app.help.config.LocalConfig.userEmail = userEmail
+                io.legado.app.help.config.LocalConfig.userDisplayName = displayName
+                io.legado.app.help.config.LocalConfig.userAvatar = avatar.takeIf { it.isNotBlank() }
                 io.legado.app.help.config.LocalConfig.isLoggedIn = true
 
                 // Sync VIP status
@@ -389,6 +387,116 @@ object MemberManager {
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    fun updateCurrentUserData(accessToken: String, displayName: String, avatarBase64: String? = null, password: String? = null): Result<Boolean> {
+        return try {
+            val apikey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8"
+            val json = org.json.JSONObject()
+            val meta = org.json.JSONObject()
+            meta.put("display_name", displayName)
+            if (avatarBase64 != null) {
+                meta.put("avatar", avatarBase64)
+            }
+            json.put("data", meta)
+            
+            if (!password.isNullOrBlank()) {
+                json.put("password", password)
+            }
+            
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val body = json.toString().toRequestBody(mediaType)
+            
+            val request = okhttp3.Request.Builder()
+                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
+                .header("apikey", apikey)
+                .header("Authorization", "Bearer $accessToken")
+                .put(body)
+                .build()
+
+            io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
+                if (!response.isSuccessful) {
+                    val errJson = org.json.JSONObject(responseBody ?: "{}")
+                    val msg = errJson.optString("msg", errJson.optString("error_description", "Lỗi cập nhật"))
+                    return Result.failure(Exception(msg))
+                }
+                io.legado.app.help.config.LocalConfig.userDisplayName = displayName
+                if (avatarBase64 != null) {
+                    io.legado.app.help.config.LocalConfig.userAvatar = avatarBase64
+                }
+                Result.success(true)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun updateCurrentUserPassword(accessToken: String, email: String, oldPass: String, newPass: String): Result<Boolean> {
+        val loginResult = login(email, oldPass)
+        if (loginResult.isFailure) {
+            return Result.failure(Exception("Mật khẩu cũ không chính xác"))
+        }
+        
+        val apikey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8"
+        return try {
+            val json = org.json.JSONObject()
+            json.put("password", newPass)
+            
+            val mediaType = "application/json; charset=utf-8".toMediaType()
+            val body = json.toString().toRequestBody(mediaType)
+            
+            val request = okhttp3.Request.Builder()
+                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
+                .header("apikey", apikey)
+                .header("Authorization", "Bearer $accessToken")
+                .put(body)
+                .build()
+
+            io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
+                if (!response.isSuccessful) {
+                    val errJson = org.json.JSONObject(responseBody ?: "{}")
+                    val msg = errJson.optString("msg", errJson.optString("error_description", "Lỗi đổi mật khẩu"))
+                    return Result.failure(Exception(msg))
+                }
+                Result.success(true)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun compressUriToBase64(context: android.content.Context, uri: android.net.Uri): String? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+            inputStream?.close()
+            if (originalBitmap == null) return null
+
+            val maxSize = 360
+            val width = originalBitmap.width
+            val height = originalBitmap.height
+            val bitmap = if (width > maxSize || height > maxSize) {
+                val ratio = width.toFloat() / height.toFloat()
+                val (newWidth, newHeight) = if (ratio > 1) {
+                    maxSize to (maxSize / ratio).toInt()
+                } else {
+                    (maxSize * ratio).toInt() to maxSize
+                }
+                android.graphics.Bitmap.createScaledBitmap(originalBitmap, newWidth, newHeight, true)
+            } else {
+                originalBitmap
+            }
+
+            val outputStream = java.io.ByteArrayOutputStream()
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, outputStream)
+            val bytes = outputStream.toByteArray()
+            android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
         }
     }
 }

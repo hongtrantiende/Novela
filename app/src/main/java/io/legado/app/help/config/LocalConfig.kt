@@ -189,4 +189,16 @@ by appCtx.getSharedPreferences("local", Context.MODE_PRIVATE) {
         set(value) {
             edit { putString("supabaseServiceRoleKey", value) }
         }
+
+    var userDisplayName: String?
+        get() = getString("userDisplayName", null)
+        set(value) {
+            edit { putString("userDisplayName", value) }
+        }
+
+    var userAvatar: String?
+        get() = getString("userAvatar", null)
+        set(value) {
+            edit { putString("userAvatar", value) }
+        }
 }

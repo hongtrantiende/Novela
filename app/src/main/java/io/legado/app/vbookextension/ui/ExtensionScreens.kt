@@ -55,6 +55,7 @@ import io.legado.app.vbookextension.data.entity.ExtensionEntity
 import io.legado.app.vbookextension.data.entity.RepositoryEntity
 import io.legado.app.vbookextension.model.ExtensionInfo
 import io.legado.app.ui.widget.components.image.sourceIcon.SourceIcon
+import io.legado.app.ui.widget.components.AppPullToRefresh
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -135,253 +136,260 @@ fun ExtensionScreens(
                 )
             }
         }
-        LazyColumn(
+        AppPullToRefresh(
+            isRefreshing = isLoading,
+            onRefresh = { viewModel.fetchAllExtensions(force = true) },
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .weight(1f)
         ) {
-            // Section 1: Cài đặt (Installed)
-            if (filteredInstalled.isNotEmpty()) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp, bottom = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AppText(
-                            text = "Cài đặt",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = LegadoTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = LegadoTheme.colorScheme.secondaryContainer
-                        ) {
-                            AppText(
-                                text = "${filteredInstalled.size}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = LegadoTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
- 
-                items(filteredInstalled, key = { "inst_" + it.id }) { ext ->
-                    val isPinned = pinnedExtIds.contains(ext.id)
-
-                    GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 12.dp
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .combinedClickable(
-                                    onClick = { activeDetailExtension = ext },
-                                    onLongClick = { activeDetailExtension = ext }
-                                )
-                                .padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            SourceIcon(
-                                path = ext.iconPath,
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    AppText(
-                                        text = ext.name,
-                                        style = LegadoTheme.typography.titleMedium,
-                                        color = LegadoTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f, fill = false)
-                                    )
-                                    if (isPinned) {
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        Icon(
-                                            Icons.Filled.PushPin,
-                                            contentDescription = "Đã ghim",
-                                            tint = LegadoTheme.colorScheme.primary,
-                                            modifier = Modifier.size(14.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = LegadoTheme.colorScheme.secondaryContainer,
-                                        modifier = Modifier.padding(vertical = 2.dp)
-                                    ) {
-                                        AppText(
-                                            text = "v${ext.version}",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = LegadoTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                AppText(
-                                    text = "Tác giả: ${ext.author}",
-                                    style = LegadoTheme.typography.bodySmall,
-                                    color = LegadoTheme.colorScheme.onSurfaceVariant
-                                )
-                                if (ext.description.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    AppText(
-                                        text = ext.description,
-                                        style = LegadoTheme.typography.bodySmall,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = LegadoTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(16.dp))
-
-                            IconButton(
-                                onClick = { showDeleteDialogFor = ext },
-                                modifier = Modifier
-                                    .background(LegadoTheme.colorScheme.errorContainer.copy(alpha = 0.2f), CircleShape)
-                                    .size(36.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = "Gỡ cài đặt",
-                                    tint = LegadoTheme.colorScheme.error,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Section 2: Tất cả (Uninstalled Available)
-            if (uninstalledExtensions.isNotEmpty()) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp, bottom = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AppText(
-                            text = "Tất cả",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp,
-                            color = LegadoTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = LegadoTheme.colorScheme.secondaryContainer
-                        ) {
-                            AppText(
-                                text = "${uninstalledExtensions.size}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = LegadoTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-
-                items(uninstalledExtensions, key = { "avail_" + it.name + "_" + it.version }) { info ->
-                    val slug = availableSlugs[info] ?: info.name.toSlug()
-                    val isInstalling = installingIds.contains(slug)
-
-                    GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 12.dp
-                    ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Section 1: Cài đặt (Installed)
+                if (filteredInstalled.isNotEmpty()) {
+                    item {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .combinedClickable(
-                                    onClick = {
-                                        if (!isInstalling) {
-                                            viewModel.installExtension(info)
-                                        }
-                                    }
-                                )
-                                .padding(16.dp),
+                                .padding(top = 12.dp, bottom = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            SourceIcon(
-                                path = info.icon,
-                                modifier = Modifier.size(40.dp)
+                            AppText(
+                                text = "Cài đặt",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = LegadoTheme.colorScheme.onSurface
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    AppText(
-                                        text = info.name,
-                                        style = LegadoTheme.typography.titleMedium,
-                                        color = LegadoTheme.colorScheme.onSurface,
-                                        modifier = Modifier.weight(1f, fill = false)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = LegadoTheme.colorScheme.secondaryContainer
+                            ) {
+                                AppText(
+                                    text = "${filteredInstalled.size}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LegadoTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+ 
+                    items(filteredInstalled, key = { "inst_" + it.id }) { ext ->
+                        val isPinned = pinnedExtIds.contains(ext.id)
+
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            cornerRadius = 12.dp
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = { activeDetailExtension = ext },
+                                        onLongClick = { viewModel.togglePinnedState(ext.id) }
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = LegadoTheme.colorScheme.secondaryContainer
-                                    ) {
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                SourceIcon(
+                                    path = ext.iconPath,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
                                         AppText(
-                                            text = "v${info.version}",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = LegadoTheme.colorScheme.onSecondaryContainer,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            text = ext.name,
+                                            style = LegadoTheme.typography.titleMedium,
+                                            color = LegadoTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                        if (isPinned) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Icon(
+                                                Icons.Filled.PushPin,
+                                                contentDescription = "Đã ghim",
+                                                tint = LegadoTheme.colorScheme.primary,
+                                                modifier = Modifier.size(14.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = LegadoTheme.colorScheme.secondaryContainer,
+                                            modifier = Modifier.padding(vertical = 2.dp)
+                                        ) {
+                                            AppText(
+                                                text = "v${ext.version}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = LegadoTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    AppText(
+                                        text = "Tác giả: ${ext.author}",
+                                        style = LegadoTheme.typography.bodySmall,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    if (ext.description.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        AppText(
+                                            text = ext.description,
+                                            style = LegadoTheme.typography.bodySmall,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            color = LegadoTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                AppText(
-                                    text = "Tác giả: ${info.author}",
-                                    style = LegadoTheme.typography.bodySmall,
-                                    color = LegadoTheme.colorScheme.onSurfaceVariant
-                                )
-                                if (info.description.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    AppText(
-                                        text = info.description,
-                                        style = LegadoTheme.typography.bodySmall,
-                                        color = LegadoTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                            }
 
-                            Spacer(modifier = Modifier.width(12.dp))
+                                Spacer(modifier = Modifier.width(16.dp))
 
-                            if (isInstalling) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp,
-                                    color = LegadoTheme.colorScheme.primary
-                                )
-                            } else {
                                 IconButton(
-                                    onClick = { viewModel.installExtension(info) },
+                                    onClick = { showDeleteDialogFor = ext },
                                     modifier = Modifier
-                                        .background(LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f), CircleShape)
+                                        .background(LegadoTheme.colorScheme.errorContainer.copy(alpha = 0.2f), CircleShape)
                                         .size(36.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Download,
-                                        contentDescription = "Cài đặt",
-                                        tint = LegadoTheme.colorScheme.primary,
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Gỡ cài đặt",
+                                        tint = LegadoTheme.colorScheme.error,
                                         modifier = Modifier.size(20.dp)
                                     )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Section 2: Tất cả (Uninstalled Available)
+                if (uninstalledExtensions.isNotEmpty()) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 12.dp, bottom = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AppText(
+                                text = "Tất cả",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = LegadoTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = LegadoTheme.colorScheme.secondaryContainer
+                            ) {
+                                AppText(
+                                    text = "${uninstalledExtensions.size}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = LegadoTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    items(uninstalledExtensions, key = { "avail_" + it.name + "_" + it.version }) { info ->
+                        val slug = availableSlugs[info] ?: info.name.toSlug()
+                        val isInstalling = installingIds.contains(slug)
+
+                        GlassCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            cornerRadius = 12.dp
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        onClick = {
+                                            if (!isInstalling) {
+                                                viewModel.installExtension(info)
+                                            }
+                                        }
+                                    )
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                SourceIcon(
+                                    path = info.icon,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        AppText(
+                                            text = info.name,
+                                            style = LegadoTheme.typography.titleMedium,
+                                            color = LegadoTheme.colorScheme.onSurface,
+                                            modifier = Modifier.weight(1f, fill = false)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = LegadoTheme.colorScheme.secondaryContainer
+                                        ) {
+                                            AppText(
+                                                text = "v${info.version}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = LegadoTheme.colorScheme.onSecondaryContainer,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    AppText(
+                                        text = "Tác giả: ${info.author}",
+                                        style = LegadoTheme.typography.bodySmall,
+                                        color = LegadoTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    if (info.description.isNotBlank()) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        AppText(
+                                            text = info.description,
+                                            style = LegadoTheme.typography.bodySmall,
+                                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.width(12.dp))
+
+                                if (isInstalling) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        strokeWidth = 2.dp,
+                                        color = LegadoTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    IconButton(
+                                        onClick = { viewModel.installExtension(info) },
+                                        modifier = Modifier
+                                            .background(LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f), CircleShape)
+                                            .size(36.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Download,
+                                            contentDescription = "Cài đặt",
+                                            tint = LegadoTheme.colorScheme.primary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

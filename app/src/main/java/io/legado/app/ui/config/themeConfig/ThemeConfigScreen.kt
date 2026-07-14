@@ -342,20 +342,7 @@ fun ThemeConfigScreen(
                             onClick = onNavigateToCustomTheme
                         )
                     }
-                    DropdownListSettingItem(
-                        title = stringResource(R.string.compose_engine),
-                        selectedValue = ThemeConfig.composeEngine,
-                        displayEntries = stringArrayResource(R.array.composeEngine),
-                        entryValues = stringArrayResource(R.array.composeEngine_value),
-                        onValueChange = {
-                            ThemeConfig.composeEngine = it
-                        }
-                    )
-                    ClickableSettingItem(
-                        title = stringResource(R.string.change_icon),
-                        description = stringResource(R.string.change_icon_summary),
-                        onClick = { showLauncherIconPicker = true }
-                    )
+
                     SwitchSettingItem(
                         title = stringResource(R.string.predictive_back),
                         description = stringResource(R.string.predictive_back_summary),
