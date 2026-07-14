@@ -88,7 +88,7 @@ fun SliderSettingItem(
 
     SplicedColumnDivider()
 
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    if (false) {
 
         Column(
             modifier = Modifier

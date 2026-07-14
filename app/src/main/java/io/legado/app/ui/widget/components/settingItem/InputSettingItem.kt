@@ -49,7 +49,7 @@ fun InputSettingItem(
     val composeEngine = LegadoTheme.composeEngine
     SplicedColumnDivider()
 
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    if (false) {
         Column(modifier = Modifier.fillMaxWidth()) {
             BasicComponent(
                 title = title,

@@ -35,7 +35,7 @@ fun SwitchSettingItem(
     )
     SplicedColumnDivider()
 
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    if (false) {
         SwitchPreference(
             title = title,
             summary = description,

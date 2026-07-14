@@ -28,7 +28,7 @@ fun DropdownListSettingItem(
     val composeEngine = LegadoTheme.composeEngine
     SplicedColumnDivider()
 
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    if (false) {
         val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
         val spinnerItems = displayEntries.map { display ->
             DropdownItem(title = display)

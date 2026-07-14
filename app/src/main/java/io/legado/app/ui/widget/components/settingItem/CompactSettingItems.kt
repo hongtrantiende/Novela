@@ -61,7 +61,7 @@ fun CompactDropdownSettingItem(
     shape: Shape = MaterialTheme.shapes.small,
     onValueChange: (String) -> Unit
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    if (false) {
         val selectedIndex = entryValues.indexOf(selectedValue).coerceAtLeast(0)
         val spinnerItems = displayEntries.toList()
 
@@ -145,7 +145,7 @@ fun CompactSliderSettingItem(
     var displayValue by remember(value) { mutableFloatStateOf(value) }
     val sliderAccessibilityValue = description ?: displayValue.toString()
 
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    if (false) {
         Column(modifier = Modifier.fillMaxWidth()) {
             BasicComponent(
                 title = title,
@@ -251,7 +251,7 @@ fun CompactSwitchSettingItem(
         if (checked) R.string.a11y_on else R.string.a11y_off
     )
 
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    if (false) {
         SwitchPreference(
             title = title,
             summary = description,
@@ -299,7 +299,7 @@ fun CompactClickableSettingItem(
     trailingContent: (@Composable () -> Unit)? = null,
     onClick: () -> Unit
 ) {
-    if (ThemeResolver.isMiuixEngine(composeEngine)) {
+    if (false) {
         ArrowPreference(
             title = title,
             summary = description,
