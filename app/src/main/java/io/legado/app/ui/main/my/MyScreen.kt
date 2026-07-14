@@ -75,6 +75,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -134,6 +137,14 @@ fun MyScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+
+    val coroutineScope = rememberCoroutineScope()
+    val navigateSmoothly = { action: () -> Unit ->
+        coroutineScope.launch {
+            delay(120)
+            action()
+        }
+    }
 
     var showAuthDialog by remember { mutableStateOf(false) }
     var authDialogMode by remember { mutableStateOf(MyAuthMode.LOGIN) }
@@ -276,13 +287,13 @@ fun MyScreen(
                 ClickableSettingItem(
                     title = stringResource(R.string.ai_chat),
                     imageVector = Icons.Default.AutoAwesome,
-                    onClick = onNavigateToChat
+                    onClick = { navigateSmoothly(onNavigateToChat) }
                 )
                 ClickableSettingItem(
                     title = stringResource(R.string.setting),
                     imageVector = Icons.Default.Settings,
                     onClick = {
-                        onOpenSettings()
+                        navigateSmoothly(onOpenSettings)
                     }
                 )
                 ClickableSettingItem(
@@ -296,14 +307,14 @@ fun MyScreen(
                     title = stringResource(R.string.read_record),
                     imageVector = Icons.Default.History,
                     onClick = {
-                        onNavigate(PrefClickEvent.OpenReadRecord)
+                        navigateSmoothly { onNavigate(PrefClickEvent.OpenReadRecord) }
                     }
                 )
                 ClickableSettingItem(
                     title = stringResource(R.string.cache_management),
                     imageVector = Icons.Default.Download,
                     onClick = {
-                        onNavigate(PrefClickEvent.OpenBookCacheManage)
+                        navigateSmoothly { onNavigate(PrefClickEvent.OpenBookCacheManage) }
                     }
                 )
                 ClickableSettingItem(
@@ -318,7 +329,7 @@ fun MyScreen(
                     title = stringResource(R.string.about),
                     imageVector = Icons.Default.Info,
                     onClick = {
-                        onNavigate(PrefClickEvent.OpenAbout)
+                        navigateSmoothly { onNavigate(PrefClickEvent.OpenAbout) }
                     }
                 )
                 if (uiState.isLoggedIn) {
