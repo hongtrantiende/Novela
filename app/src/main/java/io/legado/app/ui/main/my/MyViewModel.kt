@@ -95,6 +95,41 @@ class MyViewModel(
                     )
                 }
             }
+            is MyIntent.Login -> {
+                _uiState.update { it.copy(isAuthenticating = true) }
+                viewModelScope.launch(Dispatchers.IO) {
+                    val result = MemberManager.login(intent.email, intent.pass)
+                    withContext(Dispatchers.Main) {
+                        _uiState.update { it.copy(isAuthenticating = false) }
+                        result.fold(
+                            onSuccess = { msg ->
+                                _effects.tryEmit(MyEffect.ShowToast(msg))
+                                onIntent(MyIntent.RefreshUserStatus)
+                            },
+                            onFailure = { error ->
+                                _effects.tryEmit(MyEffect.ShowToast(error.localizedMessage ?: "Đăng nhập thất bại"))
+                            }
+                        )
+                    }
+                }
+            }
+            is MyIntent.Register -> {
+                _uiState.update { it.copy(isAuthenticating = true) }
+                viewModelScope.launch(Dispatchers.IO) {
+                    val result = MemberManager.signup(intent.email, intent.pass)
+                    withContext(Dispatchers.Main) {
+                        _uiState.update { it.copy(isAuthenticating = false) }
+                        result.fold(
+                            onSuccess = { msg ->
+                                _effects.tryEmit(MyEffect.ShowToast(msg))
+                            },
+                            onFailure = { error ->
+                                _effects.tryEmit(MyEffect.ShowToast(error.localizedMessage ?: "Đăng ký thất bại"))
+                            }
+                        )
+                    }
+                }
+            }
             MyIntent.OpenSupabaseMembers -> {
                 _uiState.update {
                     it.copy(

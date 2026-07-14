@@ -215,7 +215,7 @@ object ThemeConfig {
 
     var showRss by prefDelegate(PreferKey.showRss, false)
 
-    var showStatusBar by prefDelegate(PreferKey.showStatusBar, false)
+    var showStatusBar by prefDelegate(PreferKey.showStatusBar, true)
 
     var swipeAnimation by prefDelegate(PreferKey.swipeAnimation, true)
 
@@ -225,7 +225,7 @@ object ThemeConfig {
 
     var useFloatingBottomBarLiquidGlass by prefDelegate(
         PreferKey.useFloatingBottomBarLiquidGlass,
-        true
+        false
     )
 
     var tabletInterface by prefDelegate(PreferKey.tabletInterface, "auto")

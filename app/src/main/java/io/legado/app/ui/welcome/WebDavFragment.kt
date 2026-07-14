@@ -46,7 +46,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
 
     private val restoreDoc = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
-            waitDialog.setText("Đang phục hồi…")
+            waitDialog.setText("恢复中…")
             waitDialog.show()
             val task = Coroutine.async {
                 Restore.restore(appCtx, uri)
@@ -121,7 +121,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
                     restore()
                 } finally {
                     binding.progressRestore.gone()
-                    binding.btnRestore.text = "Nhận bản sao lưu"
+                    binding.btnRestore.text = "获取备份"
                 }
             }
         }
@@ -146,13 +146,13 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
             restoreJob = coroutineContext[Job]
             showRestoreDialog(requireContext())
         }.onError {
-            AppLog.put("Lỗi khôi phục bản sao lưu WebDavError\n${it.localizedMessage}", it)
+            AppLog.put("恢复备份出错WebDavError\n${it.localizedMessage}", it)
             if (context == null) {
                 return@onError
             }
             alert {
                 setTitle(R.string.restore)
-                setMessage("WebDavLỗi\n${it.localizedMessage}\nSẽ khôi phục từ bản sao lưu cục bộ.")
+                setMessage("WebDavError\n${it.localizedMessage}\n将从本地备份恢复。")
                 okButton {
                     restoreFromLocal()
                 }
@@ -166,7 +166,7 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
     private suspend fun showRestoreDialog(context: Context) {
         val names = withContext(IO) { webDavBackupUseCase.getBackupNames() }
         if (webDavBackupUseCase.isJianGuoYun && names.size > 700) {
-            context.toastOnUi("Vì Nut Cloud giới hạn số lượng tệp được liệt kê nên một số bản sao lưu có thể không được hiển thị. Hãy dọn dẹp các bản sao lưu cũ kịp thời.")
+            context.toastOnUi("由于坚果云限制列出文件数量，部分备份可能未显示，请及时清理旧备份")
         }
         if (names.isNotEmpty()) {
             coroutineContext.ensureActive()
@@ -186,13 +186,13 @@ class WebDavFragment : BaseFragment(R.layout.fragment_webdav_auth) {
     }
 
     private fun restoreWebDav(name: String) {
-        waitDialog.setText("Đang phục hồi…")
+        waitDialog.setText("恢复中…")
         waitDialog.show()
         val task = Coroutine.async {
             webDavBackupUseCase.restore(name)
         }.onError {
-            AppLog.put("Lỗi khôi phục WebDav\n${it.localizedMessage}", it)
-            appCtx.toastOnUi("Lỗi khôi phục WebDav\n${it.localizedMessage}")
+            AppLog.put("WebDav恢复出错\n${it.localizedMessage}", it)
+            appCtx.toastOnUi("WebDav恢复出错\n${it.localizedMessage}")
         }.onFinally {
             waitDialog.dismiss()
         }

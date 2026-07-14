@@ -168,13 +168,15 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
         super.onCreate(savedInstanceState)
 
         // Set default main screens tab visibility requested by user (run once on update/first startup)
-        val tabSetupKey = "first_run_setup_tabs_v3"
+        val tabSetupKey = "first_run_setup_tabs_v4"
         if (LocalConfig.getBoolean(tabSetupKey, true)) {
-            ThemeConfig.showHome = false
+            ThemeConfig.showHome = true
             ThemeConfig.showRss = false
             ThemeConfig.showReadRecord = true
             ThemeConfig.showDiscovery = true
-            ThemeConfig.showUpdates = true
+            ThemeConfig.showUpdates = false
+            ThemeConfig.showStatusBar = true
+            ThemeConfig.useFloatingBottomBarLiquidGlass = false
             LocalConfig.putBoolean(tabSetupKey, false)
         }
 
@@ -343,7 +345,7 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
     private fun checkStartupRoute(): Boolean {
         return when {
-            !LocalConfig.isLoggedIn -> {
+            LocalConfig.isFirstOpenApp -> {
                 startActivity<WelcomeActivity>()
                 finish()
                 true

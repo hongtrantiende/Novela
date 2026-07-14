@@ -46,9 +46,9 @@ Trước khi tải xuống, cài đặt hoặc sử dụng phần mềm này, vu
 
 2. Phần mềm này sẽ không chủ động thu thập, tải lên hoặc lưu trữ nội dung đọc, danh sách quy tắc, lịch sử duyệt web hoặc dữ liệu riêng tư cá nhân khác của người dùng.
 
-3. Để cải thiện tính ổn định và khả năng tương thích của phần mềm, phần mềm này có thể tích hợp dịch vụ phân tích sự cố hoặc thống kê của bên thứ ba (chẳng hạn như Firebase Crashlytics, v.v.) để thu thập nhật ký sự cố ẩn danh, thông tin hiệu suất và thông tin thiết bị cơ bản.
+3. Phần mềm này không tích hợp bất kỳ dịch vụ phân tích sự cố, thu thập dữ liệu lỗi hay thống kê hiệu suất nào của bên thứ ba. Không có thông tin cá nhân hoặc dữ liệu thiết bị nào được tự động gửi đi.
 
-4. Một số quyền về mạng, bộ nhớ hoặc đồng bộ hóa chỉ được sử dụng để thực hiện các tính năng sao lưu cục bộ, đồng bộ hóa WebDAV hoặc đồng bộ hóa dữ liệu trên nhiều thiết bị do người dùng chủ động kích hoạt.
+4. Một số quyền về mạng, bộ nhớ hoặc đồng bộ hóa chỉ được sử dụng để thực hiện các tính năng sao lưu cục bộ hoặc đồng bộ hóa dữ liệu qua Google Drive do người dùng chủ động kích hoạt.
 
 ---
 

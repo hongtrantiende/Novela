@@ -24,12 +24,15 @@ data class MyUiState(
     val editingProfile: SupabaseUser? = null,
     val isSavingProfile: Boolean = false,
     val vipUntilDate: String = "",
+    val isAuthenticating: Boolean = false,
 )
 
 sealed interface MyIntent {
     data object ToggleWebService : MyIntent
     data object Logout : MyIntent
     data object RefreshUserStatus : MyIntent
+    data class Login(val email: String, val pass: String) : MyIntent
+    data class Register(val email: String, val pass: String) : MyIntent
     
     // Supabase member management
     data object OpenSupabaseMembers : MyIntent

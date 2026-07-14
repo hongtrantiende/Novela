@@ -141,6 +141,11 @@
             android:enableOnBackInvokedCallback="true"
             android:exported="false"
             android:windowSoftInputMode="adjustPan|stateHidden" />
+        <activity
+            android:name=".ui.welcome.LoginActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:exported="false"
+            android:windowSoftInputMode="adjustPan|stateHidden" />
         <!-- 阅读漫画界面 -->
         <activity
             android:name=".ui.book.manga.ReadMangaActivity"

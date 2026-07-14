@@ -318,6 +318,79 @@ object MemberManager {
             Result.success(io.legado.app.help.config.LocalConfig.vipExpireFromServer)
         }
     }
+
+    fun login(email: String, password: String): Result<String> {
+        return try {
+            io.legado.app.help.config.LocalConfig.vipExpireFromServer = 0L
+            val apikey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8"
+            val json = org.json.JSONObject()
+            json.put("email", email)
+            json.put("password", password)
+            val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+            val request = okhttp3.Request.Builder()
+                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/token?grant_type=password")
+                .header("apikey", apikey)
+                .header("Authorization", "Bearer $apikey")
+                .post(body)
+                .build()
+
+            io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
+                if (!response.isSuccessful) {
+                    val errJson = org.json.JSONObject(responseBody ?: "{}")
+                    val msg = errJson.optString("error_description", errJson.optString("msg", "Lỗi đăng nhập"))
+                    return Result.failure(Exception(msg))
+                }
+                val jsonObject = org.json.JSONObject(responseBody!!)
+                val accessToken = jsonObject.getString("access_token")
+                val refreshToken = jsonObject.optString("refresh_token", "")
+                val user = jsonObject.getJSONObject("user")
+                val userEmail = user.getString("email").lowercase().trim()
+
+                io.legado.app.help.config.LocalConfig.accessToken = accessToken
+                if (refreshToken.isNotBlank()) {
+                    io.legado.app.help.config.LocalConfig.refreshToken = refreshToken
+                }
+                io.legado.app.help.config.LocalConfig.userEmail = userEmail
+                io.legado.app.help.config.LocalConfig.isLoggedIn = true
+
+                // Sync VIP status
+                checkVipStatus(accessToken)
+                
+                Result.success("Đăng nhập thành công!")
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    fun signup(email: String, password: String): Result<String> {
+        return try {
+            val apikey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8"
+            val json = org.json.JSONObject()
+            json.put("email", email)
+            json.put("password", password)
+            val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
+            val request = okhttp3.Request.Builder()
+                .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/signup")
+                .header("apikey", apikey)
+                .header("Authorization", "Bearer $apikey")
+                .post(body)
+                .build()
+
+            io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                val responseBody = response.body?.string()
+                if (!response.isSuccessful) {
+                    val errJson = org.json.JSONObject(responseBody ?: "{}")
+                    val msg = errJson.optString("error_description", errJson.optString("msg", "Lỗi đăng ký"))
+                    return Result.failure(Exception(msg))
+                }
+                Result.success("Đăng ký tài khoản thành công! Vui lòng xác thực email của bạn.")
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 
 data class SupabaseUser(

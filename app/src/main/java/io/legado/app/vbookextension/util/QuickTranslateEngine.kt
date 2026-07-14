@@ -557,6 +557,10 @@ object QuickTranslateEngine {
             }
             // Gọi force reload từ điển trong QuickTranslateEngine ngay lập tức để cập nhật RAM
             init(context, force = true)
+            // Clear VietPhrase TranslationLoader cache so new dict files are picked up
+            io.legado.app.model.TranslationLoader.clearCache()
+            io.legado.app.model.TranslationLoader.clearAllBinaryCache()
+            io.legado.app.utils.TranslateUtils.clearCache()
             true
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi giải nén từ điển từ assets: ${e.message}", e)
@@ -619,6 +623,10 @@ object QuickTranslateEngine {
             }
             tempZipFile.delete()
             init(context, force = true)
+            // Clear VietPhrase TranslationLoader cache so new dict files are picked up
+            io.legado.app.model.TranslationLoader.clearCache()
+            io.legado.app.model.TranslationLoader.clearAllBinaryCache()
+            io.legado.app.utils.TranslateUtils.clearCache()
             true
         } catch (e: Exception) {
             Log.e(TAG, "Lỗi tải và giải nén từ điển từ URL: ${e.message}", e)

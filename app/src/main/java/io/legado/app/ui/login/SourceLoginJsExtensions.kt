@@ -27,20 +27,22 @@ class SourceLoginJsExtensions(
 ) : RssJsExtensions(activity, source) {
     private val callbackRef: WeakReference<Callback> = WeakReference(callback)
     interface Callback {
-        fun upUiData(data: Map<String, String?>?)
-        fun reUiView()
+        fun upUiData(data: Map<String, Any?>?)
+        fun reUiView(deltaUp: Boolean = false)
     }
 
-    fun upLoginData(data: Map<String, String?>?) {
+    fun upLoginData(data: Map<String, Any?>?) {
         callbackRef.get()?.upUiData(data)
     }
 
-    fun reLoginView() {
-        callbackRef.get()?.reUiView()
+    @JvmOverloads
+    fun reLoginView(deltaUp: Boolean = false) {
+        callbackRef.get()?.reUiView(deltaUp)
     }
 
-    fun refreshExplore() {
-        callbackRef.get()?.reUiView()
+    @JvmOverloads
+    fun refreshExplore(deltaUp: Boolean = false) {
+        callbackRef.get()?.reUiView(deltaUp)
     }
 
     fun refreshBookInfo() {

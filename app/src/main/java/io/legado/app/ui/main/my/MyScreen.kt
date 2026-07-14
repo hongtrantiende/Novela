@@ -88,6 +88,9 @@ import io.legado.app.ui.dict.rule.DictRuleActivity
 import io.legado.app.ui.file.FileManageActivity
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.ui.theme.LegadoTheme
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
 import io.legado.app.ui.widget.components.SplicedColumnGroup
@@ -114,6 +117,15 @@ fun MyScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
+
+    var showAuthDialog by remember { mutableStateOf(false) }
+    var authDialogMode by remember { mutableStateOf(MyAuthMode.LOGIN) }
+
+    LaunchedEffect(uiState.isLoggedIn) {
+        if (uiState.isLoggedIn) {
+            showAuthDialog = false
+        }
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.onIntent(MyIntent.RefreshUserStatus)
@@ -153,6 +165,21 @@ fun MyScreen(
                     )
                 )
         ) {
+            ProfileHeader(
+                uiState = uiState,
+                onLoginClick = {
+                    io.legado.app.ui.welcome.LoginActivity.start(context, io.legado.app.ui.welcome.LoginActivity.MODE_LOGIN)
+                },
+                onRegisterClick = {
+                    io.legado.app.ui.welcome.LoginActivity.start(context, io.legado.app.ui.welcome.LoginActivity.MODE_REGISTER)
+                },
+                onLogoutClick = {
+                    viewModel.onIntent(MyIntent.Logout)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             SplicedColumnGroup(
                 title = ""
             ) {
@@ -314,6 +341,21 @@ fun MyScreen(
         onGrantDays = { viewModel.onIntent(MyIntent.GrantVipDays(it)) },
         onChangeExpirationDate = { viewModel.onIntent(MyIntent.ChangeVipExpirationDate(it)) }
     )
+
+    if (showAuthDialog) {
+        AuthDialog(
+            mode = authDialogMode,
+            isAuthenticating = uiState.isAuthenticating,
+            onDismiss = { showAuthDialog = false },
+            onSubmit = { email, password ->
+                if (authDialogMode == MyAuthMode.LOGIN) {
+                    viewModel.onIntent(MyIntent.Login(email, password))
+                } else {
+                    viewModel.onIntent(MyIntent.Register(email, password))
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -741,6 +783,227 @@ fun EditProfileDialog(
                 enabled = !isSaving
             ) {
                 Text("Đóng")
+            }
+        }
+    )
+}
+
+private enum class MyAuthMode {
+    LOGIN, REGISTER
+}
+
+@Composable
+private fun ProfileHeader(
+    uiState: MyUiState,
+    onLoginClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onLogoutClick: () -> Unit
+) {
+    if (!uiState.isLoggedIn) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            androidx.compose.foundation.Image(
+                painter = painterResource(id = R.drawable.ic_launcher3),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Button(
+                    onClick = onLoginClick,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFDFBA93),
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Text("Đăng nhập", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+
+                Button(
+                    onClick = onRegisterClick,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFDFBA93),
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Text("Đăng ký", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+            }
+        }
+    } else {
+        GlassCard(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            cornerRadius = 16.dp
+        ) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(LegadoTheme.colorScheme.primary.copy(alpha = 0.1f))
+                        .border(
+                            width = 1.5.dp,
+                            color = if (uiState.isVip) Color(0xFFFFD700) else LegadoTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val initials = uiState.userEmail?.take(2)?.uppercase() ?: "U"
+                    Text(
+                        text = initials,
+                        color = LegadoTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = uiState.userEmail ?: "Tài khoản",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = LegadoTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = if (uiState.isVip) "Thành viên VIP (Còn ${uiState.vipExpireDays} ngày)" else "Tài khoản thường",
+                        fontSize = 12.sp,
+                        color = if (uiState.isVip) Color(0xFFFFB300) else LegadoTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                IconButton(onClick = onLogoutClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                        contentDescription = "Đăng xuất",
+                        tint = LegadoTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AuthDialog(
+    mode: MyAuthMode,
+    isAuthenticating: Boolean,
+    onDismiss: () -> Unit,
+    onSubmit: (String, String) -> Unit
+) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = { if (!isAuthenticating) onDismiss() },
+        title = {
+            Text(
+                text = if (mode == MyAuthMode.LOGIN) "Đăng nhập" else "Đăng ký",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = LegadoTheme.colorScheme.onSurface
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {
+                        email = it
+                        emailError = null
+                    },
+                    label = { Text("Email") },
+                    placeholder = { Text("example@gmail.com") },
+                    singleLine = true,
+                    isError = emailError != null,
+                    supportingText = emailError?.let { { Text(it) } },
+                    enabled = !isAuthenticating,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        passwordError = null
+                    },
+                    label = { Text("Mật khẩu") },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    isError = passwordError != null,
+                    supportingText = passwordError?.let { { Text(it) } },
+                    enabled = !isAuthenticating,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = !isAuthenticating,
+                onClick = {
+                    var hasError = false
+                    if (email.isBlank()) {
+                        emailError = "Vui lòng nhập email"
+                        hasError = true
+                    }
+                    if (password.length < 6) {
+                        passwordError = "Mật khẩu phải từ 6 ký tự"
+                        hasError = true
+                    }
+                    if (!hasError) {
+                        onSubmit(email.trim(), password)
+                    }
+                }
+            ) {
+                if (isAuthenticating) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = LegadoTheme.colorScheme.primary
+                    )
+                } else {
+                    Text(if (mode == MyAuthMode.LOGIN) "Đăng nhập" else "Đăng ký")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                enabled = !isAuthenticating,
+                onClick = onDismiss
+            ) {
+                Text("Hủy")
             }
         }
     )

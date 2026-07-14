@@ -220,6 +220,10 @@ fun QuickTranslateSettingsScreen(
                                             isDownloading = false
                                             refreshTrigger++
                                             if (success) {
+                                                // Clear cached translation data so new dictionaries are loaded
+                                                io.legado.app.model.TranslationLoader.clearCache()
+                                                io.legado.app.model.TranslationLoader.clearAllBinaryCache()
+                                                io.legado.app.utils.TranslateUtils.clearCache()
                                                 Toast.makeText(context, "Tải từ điển hoàn thành!", Toast.LENGTH_SHORT).show()
                                             } else {
                                                 Toast.makeText(context, "Lỗi tải từ điển!", Toast.LENGTH_SHORT).show()
