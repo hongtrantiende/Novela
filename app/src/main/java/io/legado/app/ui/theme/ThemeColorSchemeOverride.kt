@@ -8,6 +8,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.updateTransition
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
@@ -88,6 +90,7 @@ fun ColorScheme.toLegadoColorScheme(): LegadoColorScheme {
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProvideColorSchemeOverride(
     colorScheme: ColorScheme,
@@ -150,7 +153,8 @@ fun ProvideColorSchemeOverride(
 
     CompositionLocalProvider(
         LocalLegadoThemeColors provides overrideThemeMode,
-        LocalLegadoColorScheme provides legadoColorScheme
+        LocalLegadoColorScheme provides legadoColorScheme,
+        LocalRippleConfiguration provides null
     ) {
         if (miuixController != null) {
             MiuixTheme(controller = miuixController) {

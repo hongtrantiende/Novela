@@ -5,6 +5,8 @@ import android.net.Uri
 import android.os.Build
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialExpressiveTheme
+import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -43,7 +45,7 @@ fun rememberCustomFont(fontPath: String?): FontFamily? {
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MiuixThemeWrapper(
     themeColors: LegadoThemeMode,
@@ -188,14 +190,15 @@ fun MiuixThemeWrapper(
 
         CompositionLocalProvider(
             LocalLegadoTypography provides legadoTypography,
-            LocalLegadoColorScheme provides mappedColorScheme
+            LocalLegadoColorScheme provides mappedColorScheme,
+            LocalRippleConfiguration provides null
         ) {
             AppBackground(darkTheme = darkTheme) { content() }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3ExpressiveApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MaterialThemeWrapper(
     themeColors: LegadoThemeMode,
@@ -258,7 +261,8 @@ fun MaterialThemeWrapper(
 
         CompositionLocalProvider(
             LocalLegadoTypography provides legadoTypography,
-            LocalLegadoColorScheme provides semanticColors
+            LocalLegadoColorScheme provides semanticColors,
+            LocalRippleConfiguration provides null
         ) {
             AppBackground(darkTheme = darkTheme) { content() }
         }
