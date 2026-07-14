@@ -281,24 +281,46 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 ),
                 sceneStrategies = listOf(SinglePaneSceneStrategy()),
                 transitionSpec = {
-                    slideIntoContainer(
+                    (slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
                         initialOffset = { fullWidth -> fullWidth }
-                    ) togetherWith ExitTransition.KeepUntilTransitionsFinished
+                    ) + fadeIn(
+                        animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing)
+                    )) togetherWith (
+                        slideOutOfContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            targetOffset = { 0 }
+                        )
+                    )
                 },
                 popTransitionSpec = {
-                    EnterTransition.None togetherWith slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.End,
-                        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
-                        targetOffset = { fullWidth -> fullWidth }
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                        initialOffset = { 0 }
+                    ) togetherWith (
+                        slideOutOfContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            targetOffset = { fullWidth -> fullWidth }
+                        ) + fadeOut(
+                            animationSpec = tween(durationMillis = 300, easing = LinearOutSlowInEasing)
+                        )
                     )
                 },
                 predictivePopTransitionSpec = { _ ->
-                    EnterTransition.None togetherWith slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
                         animationSpec = tween(easing = FastOutSlowInEasing),
-                        targetOffset = { fullWidth -> fullWidth }
+                        initialOffset = { 0 }
+                    ) togetherWith (
+                        slideOutOfContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = tween(easing = FastOutSlowInEasing),
+                            targetOffset = { fullWidth -> fullWidth }
+                        ) + fadeOut(animationSpec = tween())
                     )
                 },
                 onBack = { MainNavigator.navigateBack(this@MainActivity, backStack) },

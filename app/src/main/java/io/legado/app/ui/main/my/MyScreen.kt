@@ -138,13 +138,6 @@ fun MyScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
 
-    val coroutineScope = rememberCoroutineScope()
-    val navigateSmoothly = { action: () -> Unit ->
-        coroutineScope.launch {
-            delay(120)
-            action()
-        }
-    }
 
     var showAuthDialog by remember { mutableStateOf(false) }
     var authDialogMode by remember { mutableStateOf(MyAuthMode.LOGIN) }
@@ -287,14 +280,12 @@ fun MyScreen(
                 ClickableSettingItem(
                     title = stringResource(R.string.ai_chat),
                     imageVector = Icons.Default.AutoAwesome,
-                    onClick = { navigateSmoothly(onNavigateToChat) }
+                    onClick = onNavigateToChat
                 )
                 ClickableSettingItem(
                     title = stringResource(R.string.setting),
                     imageVector = Icons.Default.Settings,
-                    onClick = {
-                        navigateSmoothly(onOpenSettings)
-                    }
+                    onClick = onOpenSettings
                 )
                 ClickableSettingItem(
                     title = stringResource(R.string.bookmark),
@@ -307,14 +298,14 @@ fun MyScreen(
                     title = stringResource(R.string.read_record),
                     imageVector = Icons.Default.History,
                     onClick = {
-                        navigateSmoothly { onNavigate(PrefClickEvent.OpenReadRecord) }
+                        onNavigate(PrefClickEvent.OpenReadRecord)
                     }
                 )
                 ClickableSettingItem(
                     title = stringResource(R.string.cache_management),
                     imageVector = Icons.Default.Download,
                     onClick = {
-                        navigateSmoothly { onNavigate(PrefClickEvent.OpenBookCacheManage) }
+                        onNavigate(PrefClickEvent.OpenBookCacheManage)
                     }
                 )
                 ClickableSettingItem(
@@ -329,7 +320,7 @@ fun MyScreen(
                     title = stringResource(R.string.about),
                     imageVector = Icons.Default.Info,
                     onClick = {
-                        navigateSmoothly { onNavigate(PrefClickEvent.OpenAbout) }
+                        onNavigate(PrefClickEvent.OpenAbout)
                     }
                 )
                 if (uiState.isLoggedIn) {
