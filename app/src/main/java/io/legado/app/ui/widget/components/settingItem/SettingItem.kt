@@ -74,7 +74,7 @@ fun SettingItem(
             .fillMaxWidth(),
         shape = shape,
         colors = CardDefaults.cardColors(
-            containerColor = color ?: Color.Transparent
+            containerColor = color ?: MaterialTheme.colorScheme.surfaceContainerLow
         ),
     ) {
         Column {

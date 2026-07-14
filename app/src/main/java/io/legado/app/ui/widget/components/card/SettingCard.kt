@@ -40,7 +40,7 @@ fun SettingCard(
         )
     } else {
         val baseColors = colors ?: CardDefaults.cardColors(
-            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            containerColor = LegadoTheme.colorScheme.secondaryContainer,
             contentColor = LegadoTheme.colorScheme.onSecondaryContainer
         )
 
