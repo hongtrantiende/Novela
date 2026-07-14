@@ -39,6 +39,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -327,173 +328,172 @@ fun ExploreScreen(
         },
         contentWindowInsets = WindowInsets(0)
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = paddingValues.calculateTopPadding())
-        ) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                if (isVip) {
-                    AppTabRow(
-                        tabTitles = listOf("Nguồn sách", "Nguồn Extension"),
-                        selectedTabIndex = currentExploreTab,
-                        onTabSelected = { viewModel.setExploreTab(it) },
-                        isScrollable = false,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-
-                val subTabScrollState = rememberScrollState()
-                if (isVip && currentExploreTab == 1) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(subTabScrollState)
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val subTabs = listOf("Tất cả", "Truyện chữ Việt", "Truyện chữ Trung", "Truyện tranh", "Phim")
-                        subTabs.forEachIndexed { index, title ->
-                            val isSelected = uiState.extSubTab == index
-                            Surface(
-                                onClick = { viewModel.setExtSubTab(index) },
-                                shape = RoundedCornerShape(20.dp),
-                                color = if (isSelected) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                border = if (isSelected) null else androidx.compose.foundation.BorderStroke(0.5.dp, LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                            ) {
-                                AppText(
-                                    text = title,
-                                    fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-
-
-
-                Box(modifier = Modifier.weight(1f)) {
-                    if (uiState.items.isEmpty()) {
-                        EmptyMessage(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(bottom = paddingValues.calculateBottomPadding()),
-                            messageResId = R.string.explore_empty
+        CompositionLocalProvider(androidx.compose.material3.LocalRippleConfiguration provides null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = paddingValues.calculateTopPadding())
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    if (isVip) {
+                        AppTabRow(
+                            tabTitles = listOf("Nguồn sách", "Nguồn Extension"),
+                            selectedTabIndex = currentExploreTab,
+                            onTabSelected = { viewModel.setExploreTab(it) },
+                            isScrollable = false,
+                            modifier = Modifier.fillMaxWidth()
                         )
-                    } else {
-                        FastScrollLazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = adaptiveContentPadding(
-                                top = 8.dp,
-                                bottom = 120.dp
-                            )
+                    }
+
+                    val subTabScrollState = rememberScrollState()
+                    if (isVip && currentExploreTab == 1) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(subTabScrollState)
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                items(
-                    items = filteredListItems,
-                    key = { it.key }
-                ) { listItem ->
-                    when (listItem) {
-                        is ExploreListItem.Header -> {
-                            val item = listItem.source
-                            val isExpanded = uiState.expandedId == item.bookSourceUrl
-                            val isInstalled = !item.bookSourceUrl.startsWith("ext_online_") && !item.bookSourceUrl.startsWith("online_yckceo_")
-                            val isInstalling = uiState.installingIds.contains(item.bookSourceUrl.substringAfter("ext_online_"))
-                        ExploreSourceHeader(
-                            modifier = Modifier.animateItem(),
-                            item = item,
-                            isExpanded = isExpanded,
-                            isInstalled = isInstalled,
-                            isInstalling = isInstalling,
-                            loadingKinds = if (isExpanded) uiState.loadingKinds else false,
-                            installedSearchUrls = uiState.installedSearchUrls,
-                            installedSourceTypes = uiState.installedSourceTypes,
-                            onClick = onHeaderClick,
-                            onInstall = onHeaderInstall,
-                            onTop = onHeaderTop,
-                            onEdit = onHeaderEdit,
-                            onSearch = onHeaderSearch,
-                            onLogin = onHeaderLogin,
-                            onRefresh = onHeaderRefresh,
-                            onDelete = onHeaderDelete,
-                            onGenerateExtension = onHeaderGenerate,
-                            isMiuix = composeEngine
-                        )
-                        }
-
-                        is ExploreListItem.KindRow -> {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .animateItem()
-                                    .padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                listItem.rowItems.forEach { (kind, span) ->
-                                    ExploreKindMultiTypeItem(
-                                        kind = kind,
-                                        sourceUrl = listItem.sourceUrl,
-                                        onOpenUrl = { url ->
-                                            onOpenExploreShow(kind.title, listItem.sourceUrl, url)
-                                        },
-                                        modifier = Modifier.weight(span.toFloat()),
-                                        isMiuix = composeEngine,
-                                        displayNameOverride = uiState.kindDisplayNames[kind.title],
-                                        valueOverride = uiState.kindValues[kind.title],
-                                        onValueChange = { value ->
-                                            viewModel.updateKindValue(listItem.sourceUrl, kind, value)
-                                        },
-                                        onRunAction = {
-                                            viewModel.requestKindAction(listItem.sourceUrl, kind)
-                                        }
-                                    )
-                                }
-
-                                val totalSpan = listItem.rowItems.sumOf { it.second }
-                                if (totalSpan < 6) {
-                                    Spacer(
-                                        modifier = Modifier.weight((6 - totalSpan).toFloat())
+                            val subTabs = listOf("Tất cả", "Truyện chữ Việt", "Truyện chữ Trung", "Truyện tranh", "Phim")
+                            subTabs.forEachIndexed { index, title ->
+                                val isSelected = uiState.extSubTab == index
+                                Surface(
+                                    onClick = { viewModel.setExtSubTab(index) },
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = if (isSelected) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = if (isSelected) null else androidx.compose.foundation.BorderStroke(0.5.dp, LegadoTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                ) {
+                                    AppText(
+                                        text = title,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                     )
                                 }
                             }
                         }
                     }
-                }
-            }
 
-                        TopFloatingStickyItem(
-                            item = stickyHeaderSource,
-                            modifier = Modifier
-                                .align(Alignment.TopStart)
-                                .padding(top = 4.dp, start = 8.dp)
-                        ) { item ->
-                            val displayName = if (item.bookSourceUrl.startsWith("ext_")) {
-                                item.bookSourceName
-                            } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
-                                item.bookSourceUrl.substringAfter("online_yckceo_").substringAfter("_")
-                            } else {
-                                io.legado.app.utils.NetworkUtils.getDomain(item.bookSourceUrl)
-                            }
-                            TextCard(
-                                text = displayName,
-                                textStyle = LegadoTheme.typography.labelMediumEmphasized,
-                                cornerRadius = 12.dp,
-                                horizontalPadding = 12.dp,
-                                verticalPadding = 8.dp,
-                                onClick = {
-                                    scope.launch {
-                                        val index = listItems.indexOfFirst {
-                                            it is ExploreListItem.Header && it.source.bookSourceUrl == item.bookSourceUrl
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (uiState.items.isEmpty()) {
+                            EmptyMessage(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(bottom = paddingValues.calculateBottomPadding()),
+                                messageResId = R.string.explore_empty
+                            )
+                        } else {
+                            FastScrollLazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = adaptiveContentPadding(
+                                    top = 8.dp,
+                                    bottom = 120.dp
+                                )
+                            ) {
+                                items(
+                                    items = filteredListItems,
+                                    key = { it.key }
+                                ) { listItem ->
+                                    when (listItem) {
+                                        is ExploreListItem.Header -> {
+                                            val item = listItem.source
+                                            val isExpanded = uiState.expandedId == item.bookSourceUrl
+                                            val isInstalled = !item.bookSourceUrl.startsWith("ext_online_") && !item.bookSourceUrl.startsWith("online_yckceo_")
+                                            val isInstalling = uiState.installingIds.contains(item.bookSourceUrl.substringAfter("ext_online_"))
+                                            ExploreSourceHeader(
+                                                modifier = Modifier.animateItem(),
+                                                item = item,
+                                                isExpanded = isExpanded,
+                                                isInstalled = isInstalled,
+                                                isInstalling = isInstalling,
+                                                loadingKinds = if (isExpanded) uiState.loadingKinds else false,
+                                                installedSearchUrls = uiState.installedSearchUrls,
+                                                installedSourceTypes = uiState.installedSourceTypes,
+                                                onClick = onHeaderClick,
+                                                onInstall = onHeaderInstall,
+                                                onTop = onHeaderTop,
+                                                onEdit = onHeaderEdit,
+                                                onSearch = onHeaderSearch,
+                                                onLogin = onHeaderLogin,
+                                                onRefresh = onHeaderRefresh,
+                                                onDelete = onHeaderDelete,
+                                                onGenerateExtension = onHeaderGenerate,
+                                                isMiuix = composeEngine
+                                            )
                                         }
-                                        if (index >= 0) listState.animateScrollToItem(index)
+
+                                        is ExploreListItem.KindRow -> {
+                                            Row(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .animateItem()
+                                                    .padding(vertical = 4.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                listItem.rowItems.forEach { (kind, span) ->
+                                                    ExploreKindMultiTypeItem(
+                                                        kind = kind,
+                                                        sourceUrl = listItem.sourceUrl,
+                                                        onOpenUrl = { url ->
+                                                            onOpenExploreShow(kind.title, listItem.sourceUrl, url)
+                                                        },
+                                                        modifier = Modifier.weight(span.toFloat()),
+                                                        isMiuix = composeEngine,
+                                                        displayNameOverride = uiState.kindDisplayNames[kind.title],
+                                                        valueOverride = uiState.kindValues[kind.title],
+                                                        onValueChange = { value ->
+                                                            viewModel.updateKindValue(listItem.sourceUrl, kind, value)
+                                                        },
+                                                        onRunAction = {
+                                                            viewModel.requestKindAction(listItem.sourceUrl, kind)
+                                                        }
+                                                    )
+                                                }
+
+                                                val totalSpan = listItem.rowItems.sumOf { it.second }
+                                                if (totalSpan < 6) {
+                                                    Spacer(
+                                                        modifier = Modifier.weight((6 - totalSpan).toFloat())
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-                            )
+                            }
+
+                            TopFloatingStickyItem(
+                                item = stickyHeaderSource,
+                                modifier = Modifier
+                                    .align(Alignment.TopStart)
+                                    .padding(top = 4.dp, start = 8.dp)
+                            ) { item ->
+                                val displayName = if (item.bookSourceUrl.startsWith("ext_")) {
+                                    item.bookSourceName
+                                } else if (item.bookSourceUrl.startsWith("online_yckceo_")) {
+                                    item.bookSourceUrl.substringAfter("online_yckceo_").substringAfter("_")
+                                } else {
+                                    io.legado.app.utils.NetworkUtils.getDomain(item.bookSourceUrl)
+                                }
+                                TextCard(
+                                    text = displayName,
+                                    textStyle = LegadoTheme.typography.labelMediumEmphasized,
+                                    cornerRadius = 12.dp,
+                                    horizontalPadding = 12.dp,
+                                    verticalPadding = 8.dp,
+                                    onClick = {
+                                        scope.launch {
+                                            val index = listItems.indexOfFirst {
+                                                it is ExploreListItem.Header && it.source.bookSourceUrl == item.bookSourceUrl
+                                            }
+                                            if (index >= 0) listState.animateScrollToItem(index)
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }

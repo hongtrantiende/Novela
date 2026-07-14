@@ -656,42 +656,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteBookInfo>(
-        metadata = NavDisplay.transitionSpec {
-            val from = initialState.key
-            val fromStr = from.toString()
-            if (from is MainRouteHome || from is MainRouteExploreShow || from is MainRouteSearch ||
-                fromStr.startsWith("MainRouteHome") || fromStr.startsWith("MainRouteExploreShow") || fromStr.startsWith(
-                    "MainRouteSearch"
-                )
-            ) {
-                fadeIn(animationSpec = tween(300)) togetherWith
-                        fadeOut(animationSpec = tween(300))
-            } else null
-        } + NavDisplay.popTransitionSpec {
-            val to = targetState.key
-            val toStr = to.toString()
-            if (to is MainRouteHome || to is MainRouteExploreShow || to is MainRouteSearch ||
-                toStr.startsWith("MainRouteHome") || toStr.startsWith("MainRouteExploreShow") || toStr.startsWith(
-                    "MainRouteSearch"
-                )
-            ) {
-                fadeIn(animationSpec = tween(300)) togetherWith
-                        fadeOut(animationSpec = tween(300))
-            } else null
-        } + NavDisplay.predictivePopTransitionSpec { _ ->
-            val to = targetState.key
-            val toStr = to.toString()
-            if (to is MainRouteHome || to is MainRouteExploreShow || to is MainRouteSearch ||
-                toStr.startsWith("MainRouteHome") || toStr.startsWith("MainRouteExploreShow") || toStr.startsWith(
-                    "MainRouteSearch"
-                )
-            ) {
-                fadeIn(animationSpec = tween(300)) togetherWith
-                        fadeOut(animationSpec = tween(300))
-            } else null
-        }
-    ) { route ->
+    entry<MainRouteBookInfo> { route ->
         val bookInfoViewModel = koinViewModel<BookInfoViewModel>(key = "BookInfo:${route.bookUrl}")
         BookInfoRouteScreen(
             bookUrl = route.bookUrl,
@@ -729,18 +694,7 @@ fun MainActivity.mainEntryProvider(
         )
     }
 
-    entry<MainRouteExploreShow>(
-        metadata = NavDisplay.transitionSpec {
-            fadeIn(animationSpec = tween(220)) togetherWith
-                    fadeOut(animationSpec = tween(220))
-        } + NavDisplay.popTransitionSpec {
-            fadeIn(animationSpec = tween(220)) togetherWith
-                    fadeOut(animationSpec = tween(220))
-        } + NavDisplay.predictivePopTransitionSpec { _ ->
-            fadeIn(animationSpec = tween(220)) togetherWith
-                    fadeOut(animationSpec = tween(220))
-        }
-    ) { route ->
+    entry<MainRouteExploreShow> { route ->
         val exploreViewModel = koinViewModel<ExploreShowViewModel>()
 
         LaunchedEffect(route.sourceUrl, route.exploreUrl, exploreViewModel) {
