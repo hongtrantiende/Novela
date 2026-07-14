@@ -178,6 +178,53 @@ object MemberManager {
         }
     }
 
+    fun refreshAccessToken(): String? {
+        val apikey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8"
+        val refreshToken = io.legado.app.help.config.LocalConfig.refreshToken
+        if (refreshToken.isNullOrBlank()) return null
+        
+        val refreshJson = org.json.JSONObject()
+        refreshJson.put("refresh_token", refreshToken)
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+        val refreshBody = refreshJson.toString().toRequestBody(mediaType)
+        
+        val refreshRequest = okhttp3.Request.Builder()
+            .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/token?grant_type=refresh_token")
+            .header("apikey", apikey)
+            .header("Authorization", "Bearer $apikey")
+            .post(refreshBody)
+            .build()
+            
+        return try {
+            io.legado.app.help.http.okHttpClient.newCall(refreshRequest).execute().use { refreshResponse ->
+                if (refreshResponse.isSuccessful) {
+                    val refreshBodyStr = refreshResponse.body?.string()
+                    if (!refreshBodyStr.isNullOrBlank()) {
+                        val refreshJsonObj = org.json.JSONObject(refreshBodyStr)
+                        val newAccessToken = refreshJsonObj.getString("access_token")
+                        val newRefreshToken = refreshJsonObj.optString("refresh_token", "")
+                        
+                        io.legado.app.help.config.LocalConfig.accessToken = newAccessToken
+                        if (newRefreshToken.isNotBlank()) {
+                            io.legado.app.help.config.LocalConfig.refreshToken = newRefreshToken
+                        }
+                        newAccessToken
+                    } else null
+                } else {
+                    if (refreshResponse.code == 400) {
+                        io.legado.app.help.config.LocalConfig.accessToken = null
+                        io.legado.app.help.config.LocalConfig.refreshToken = null
+                        io.legado.app.help.config.LocalConfig.vipExpireFromServer = 0L
+                    }
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     fun checkVipStatus(accessToken: String): Result<Long> {
         return try {
             val apikey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8"
@@ -201,58 +248,20 @@ object MemberManager {
             }
 
             if (responseCode == 401) {
-                val refreshToken = io.legado.app.help.config.LocalConfig.refreshToken
-                if (!refreshToken.isNullOrBlank()) {
-                    val refreshJson = org.json.JSONObject()
-                    refreshJson.put("refresh_token", refreshToken)
-                    val mediaType = "application/json; charset=utf-8".toMediaType()
-                    val refreshBody = refreshJson.toString().toRequestBody(mediaType)
-                    
-                    val refreshRequest = okhttp3.Request.Builder()
-                        .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/token?grant_type=refresh_token")
+                val newAccessToken = refreshAccessToken()
+                if (newAccessToken != null) {
+                    activeToken = newAccessToken
+                    request = okhttp3.Request.Builder()
+                        .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
                         .header("apikey", apikey)
-                        .header("Authorization", "Bearer $apikey")
-                        .post(refreshBody)
+                        .header("Authorization", "Bearer $activeToken")
+                        .get()
                         .build()
                         
-                    try {
-                        io.legado.app.help.http.okHttpClient.newCall(refreshRequest).execute().use { refreshResponse ->
-                            if (refreshResponse.isSuccessful) {
-                                val refreshBodyStr = refreshResponse.body?.string()
-                                if (!refreshBodyStr.isNullOrBlank()) {
-                                    val refreshJsonObj = org.json.JSONObject(refreshBodyStr)
-                                    val newAccessToken = refreshJsonObj.getString("access_token")
-                                    val newRefreshToken = refreshJsonObj.optString("refresh_token", "")
-                                    
-                                    io.legado.app.help.config.LocalConfig.accessToken = newAccessToken
-                                    if (newRefreshToken.isNotBlank()) {
-                                        io.legado.app.help.config.LocalConfig.refreshToken = newRefreshToken
-                                    }
-                                    activeToken = newAccessToken
-                                    
-                                    request = okhttp3.Request.Builder()
-                                        .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
-                                        .header("apikey", apikey)
-                                        .header("Authorization", "Bearer $activeToken")
-                                        .get()
-                                        .build()
-                                        
-                                    io.legado.app.help.http.okHttpClient.newCall(request).execute().use { retryResponse ->
-                                        responseCode = retryResponse.code
-                                        responseBodyStr = retryResponse.body?.string() ?: ""
-                                        success = retryResponse.isSuccessful
-                                    }
-                                }
-                            } else {
-                                if (refreshResponse.code == 400) {
-                                    io.legado.app.help.config.LocalConfig.accessToken = null
-                                    io.legado.app.help.config.LocalConfig.refreshToken = null
-                                    io.legado.app.help.config.LocalConfig.vipExpireFromServer = 0L
-                                }
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    io.legado.app.help.http.okHttpClient.newCall(request).execute().use { retryResponse ->
+                        responseCode = retryResponse.code
+                        responseBodyStr = retryResponse.body?.string() ?: ""
+                        success = retryResponse.isSuccessful
                     }
                 }
             }
@@ -393,6 +402,7 @@ object MemberManager {
     fun updateCurrentUserData(accessToken: String, displayName: String, avatarBase64: String? = null, password: String? = null): Result<Boolean> {
         return try {
             val apikey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyc25ucXdjcXphcWhuZHhlbWd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzNDE3NTksImV4cCI6MjA5MzkxNzc1OX0.dvPw5jgvPGmDqqoHF5la_d7AAwxH5PhVLhVSP5ayWA8"
+            var activeToken = accessToken
             val json = org.json.JSONObject()
             val meta = org.json.JSONObject()
             meta.put("display_name", displayName)
@@ -408,26 +418,53 @@ object MemberManager {
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val body = json.toString().toRequestBody(mediaType)
             
-            val request = okhttp3.Request.Builder()
+            var request = okhttp3.Request.Builder()
                 .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
                 .header("apikey", apikey)
-                .header("Authorization", "Bearer $accessToken")
+                .header("Authorization", "Bearer $activeToken")
                 .put(body)
                 .build()
 
+            var responseCode = 0
+            var responseBody = ""
+            var success = false
+            
             io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
-                val responseBody = response.body?.string()
-                if (!response.isSuccessful) {
-                    val errJson = org.json.JSONObject(responseBody ?: "{}")
-                    val msg = errJson.optString("msg", errJson.optString("error_description", "Lỗi cập nhật"))
-                    return Result.failure(Exception(msg))
-                }
-                io.legado.app.help.config.LocalConfig.userDisplayName = displayName
-                if (avatarBase64 != null) {
-                    io.legado.app.help.config.LocalConfig.userAvatar = avatarBase64
-                }
-                Result.success(true)
+                responseCode = response.code
+                responseBody = response.body?.string() ?: ""
+                success = response.isSuccessful
             }
+
+            if (!success && (responseCode == 401 || responseCode == 400 || responseBody.contains("invalid JWT"))) {
+                val newAccessToken = refreshAccessToken()
+                if (newAccessToken != null) {
+                    activeToken = newAccessToken
+                    request = okhttp3.Request.Builder()
+                        .url("https://arsnnqwcqzaqhndxemgz.supabase.co/auth/v1/user")
+                        .header("apikey", apikey)
+                        .header("Authorization", "Bearer $activeToken")
+                        .put(body)
+                        .build()
+                        
+                    io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                        responseCode = response.code
+                        responseBody = response.body?.string() ?: ""
+                        success = response.isSuccessful
+                    }
+                }
+            }
+
+            if (!success) {
+                val errJson = org.json.JSONObject(responseBody)
+                val msg = errJson.optString("msg", errJson.optString("error_description", "Lỗi cập nhật"))
+                return Result.failure(Exception(msg))
+            }
+
+            io.legado.app.help.config.LocalConfig.userDisplayName = displayName
+            if (avatarBase64 != null) {
+                io.legado.app.help.config.LocalConfig.userAvatar = avatarBase64
+            }
+            Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)
         }

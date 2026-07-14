@@ -155,7 +155,7 @@ fun ExploreScreen(
     val listItems by remember(uiState.items, uiState.expandedId, uiState.exploreKinds) {
         derivedStateOf { viewModel.buildExploreListItems(uiState) }
     }
-    val isVip = io.legado.app.help.MemberManager.isVip
+    val isVip = uiState.isVip
     val currentExploreTab = if (isVip) uiState.exploreTab else 0
 
     LaunchedEffect(isVip) {

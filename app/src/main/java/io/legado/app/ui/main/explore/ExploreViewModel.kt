@@ -2,6 +2,8 @@ package io.legado.app.ui.main.explore
 
 import android.app.Application
 import android.content.Context
+import android.content.SharedPreferences
+import io.legado.app.help.config.LocalConfig
 import io.legado.app.vbookextension.data.entity.ExtensionEntity
 import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
@@ -36,6 +38,8 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import io.legado.app.ui.config.prefDelegate
@@ -104,12 +108,24 @@ class ExploreViewModel(
     private val _onlineExtensions = MutableStateFlow<List<ExtensionInfo>>(emptyList())
     private val _installingIds = MutableStateFlow<Set<String>>(emptySet())
 
+    private val configListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == "userEmail" || key == "vipExpireFromServer") {
+            _uiState.update { it.copy(isVip = io.legado.app.help.MemberManager.isVip) }
+        }
+    }
+
     init {
         observeGroups()
         observeExplore()
         observeInstalledStates()
         fetchOnlineBookSources()
         fetchOnlineExtensions()
+        LocalConfig.registerOnSharedPreferenceChangeListener(configListener)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        LocalConfig.unregisterOnSharedPreferenceChangeListener(configListener)
     }
 
     private fun observeGroups() {
@@ -261,54 +277,42 @@ class ExploreViewModel(
     private fun observeExplore() {
         exploreJob?.cancel()
         exploreJob = viewModelScope.launch {
-            val state = _uiState.value
-            val query = state.searchKey
-            val selectedGroup = state.selectedGroup
-            val hideUninstalled = state.hideUninstalled
+            val paramsFlow = combine(
+                _uiState.map { it.exploreTab }.distinctUntilChanged(),
+                _uiState.map { it.searchKey }.distinctUntilChanged(),
+                _uiState.map { it.selectedGroup }.distinctUntilChanged(),
+                _uiState.map { it.hideUninstalled }.distinctUntilChanged(),
+                _uiState.map { it.extSubTab }.distinctUntilChanged()
+            ) { tab, key, group, hide, subTab ->
+                ExploreParams(tab, key, group, hide, subTab)
+            }
 
-            if (state.exploreTab == 1) {
-                combine(
-                    extensionDao.getInstalledExtensions(),
-                    _onlineExtensions
-                ) { installedExts, onlineExts ->
-                    val prefs = getApplication<Application>().getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
-                    val installedSlugs = installedExts.map { it.id }.toSet()
-                    val items = mutableListOf<BookSourcePart>()
-                    
-                    val sortedExts = installedExts.sortedWith(compareByDescending<ExtensionEntity> {
-                        prefs.getBoolean("ext_pinned_${it.id}", false)
-                    }.thenBy { it.name })
-                    
-                    val installedItems = sortedExts.filter { it.isEnabled }.map { ext ->
-                        BookSourcePart(
-                            bookSourceUrl = "ext_${ext.id}",
-                            bookSourceName = ext.name,
-                            bookSourceGroup = "${ext.iconPath.orEmpty()}|${ext.type}|${ext.locale}",
-                            customOrder = 0,
-                            enabled = ext.isEnabled,
-                            enabledExplore = ext.isEnabled,
-                            hasLoginUrl = false,
-                            lastUpdateTime = 0,
-                            respondTime = 0,
-                            weight = 0,
-                            hasExploreUrl = true
-                        )
-                    }
-                    items.addAll(installedItems)
-                    
-                    if (!hideUninstalled) {
-                        val uninstalledOnline = onlineExts.filter { onlineItem ->
-                            val slug = onlineItem.name.toSlug()
-                            !installedSlugs.contains(slug) &&
-                            (query.isBlank() || onlineItem.name.contains(query, ignoreCase = true) || onlineItem.description.contains(query, ignoreCase = true))
-                        }.map { onlineItem ->
+            paramsFlow.collectLatest { params ->
+                val query = params.key
+                val selectedGroup = params.group
+                val hideUninstalled = params.hide
+
+                if (params.tab == 1) {
+                    combine(
+                        extensionDao.getInstalledExtensions(),
+                        _onlineExtensions
+                    ) { installedExts, onlineExts ->
+                        val prefs = getApplication<Application>().getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+                        val installedSlugs = installedExts.map { it.id }.toSet()
+                        val items = mutableListOf<BookSourcePart>()
+                        
+                        val sortedExts = installedExts.sortedWith(compareByDescending<ExtensionEntity> {
+                            prefs.getBoolean("ext_pinned_${it.id}", false)
+                        }.thenBy { it.name })
+                        
+                        val installedItems = sortedExts.filter { it.isEnabled }.map { ext ->
                             BookSourcePart(
-                                bookSourceUrl = "ext_online_${onlineItem.name.toSlug()}",
-                                bookSourceName = onlineItem.name,
-                                bookSourceGroup = "${onlineItem.icon}|${onlineItem.type}|${onlineItem.locale}",
+                                bookSourceUrl = "ext_${ext.id}",
+                                bookSourceName = ext.name,
+                                bookSourceGroup = "${ext.iconPath.orEmpty()}|${ext.type}|${ext.locale}",
                                 customOrder = 0,
-                                enabled = false,
-                                enabledExplore = false,
+                                enabled = ext.isEnabled,
+                                enabledExplore = ext.isEnabled,
                                 hasLoginUrl = false,
                                 lastUpdateTime = 0,
                                 respondTime = 0,
@@ -316,65 +320,88 @@ class ExploreViewModel(
                                 hasExploreUrl = true
                             )
                         }
-                        items.addAll(uninstalledOnline)
-                    }
-                    
-                    items.filter { item ->
-                        val queryMatched = query.isBlank() || item.bookSourceName.contains(query, ignoreCase = true)
-                        if (!queryMatched) return@filter false
-                        if (state.extSubTab == 0) return@filter true
-                        val group = item.bookSourceGroup.orEmpty()
-                        if (!group.contains("|")) return@filter false
-                        val parts = group.split("|")
-                        val type = parts.getOrNull(1).orEmpty().lowercase()
-                        val locale = parts.getOrNull(2).orEmpty().lowercase()
-                        when (state.extSubTab) {
-                            1 -> type == "novel" && locale.contains("vi")
-                            2 -> type == "novel" && (locale.contains("zh") || locale.contains("cn"))
-                            3 -> type == "comic"
-                            4 -> type == "movie" || type == "video"
-                            else -> true
+                        items.addAll(installedItems)
+                        
+                        if (!hideUninstalled) {
+                            val uninstalledOnline = onlineExts.filter { onlineItem ->
+                                val slug = onlineItem.name.toSlug()
+                                !installedSlugs.contains(slug) &&
+                                (query.isBlank() || onlineItem.name.contains(query, ignoreCase = true) || onlineItem.description.contains(query, ignoreCase = true))
+                            }.map { onlineItem ->
+                                BookSourcePart(
+                                    bookSourceUrl = "ext_online_${onlineItem.name.toSlug()}",
+                                    bookSourceName = onlineItem.name,
+                                    bookSourceGroup = "${onlineItem.icon}|${onlineItem.type}|${onlineItem.locale}",
+                                    customOrder = 0,
+                                    enabled = false,
+                                    enabledExplore = false,
+                                    hasLoginUrl = false,
+                                    lastUpdateTime = 0,
+                                    respondTime = 0,
+                                    weight = 0,
+                                    hasExploreUrl = true
+                                )
+                            }
+                            items.addAll(uninstalledOnline)
                         }
-                    }
-                }.flowOn(IO)
-                .collectLatest { mappedItems ->
-                    _uiState.update { it.copy(items = mappedItems.toImmutableList()) }
-                }
-            } else {
-                combine(
-                    exploreRepository.getExploreSources(query, selectedGroup),
-                    _onlineBookSources
-                ) { installedSources, onlineSources ->
-                    val installedUrls = installedSources.map { it.bookSourceUrl }.toSet()
-                    val items = mutableListOf<BookSourcePart>()
-                    
-                    items.addAll(installedSources)
-                    
-                    if (!hideUninstalled) {
-                        val uninstalledOnline = onlineSources.filter { onlineItem ->
-                            (query.isBlank() || onlineItem.name.contains(query, ignoreCase = true) || onlineItem.url.contains(query, ignoreCase = true)) &&
-                            !installedUrls.contains(onlineItem.url)
-                        }.map { onlineItem ->
-                            BookSourcePart(
-                                bookSourceUrl = "online_yckceo_${onlineItem.id}_${onlineItem.url}",
-                                bookSourceName = onlineItem.name,
-                                bookSourceGroup = "online_yckceo|${onlineItem.author}|${onlineItem.tags}|${onlineItem.downloads}|${onlineItem.time}",
-                                customOrder = 0,
-                                enabled = false,
-                                enabledExplore = false,
-                                hasLoginUrl = false,
-                                lastUpdateTime = 0,
-                                respondTime = 0,
-                                weight = 0,
-                                hasExploreUrl = false
-                            )
+                        
+                        items.filter { item ->
+                            val queryMatched = query.isBlank() || item.bookSourceName.contains(query, ignoreCase = true)
+                            if (!queryMatched) return@filter false
+                            if (params.subTab == 0) return@filter true
+                            val group = item.bookSourceGroup.orEmpty()
+                            if (!group.contains("|")) return@filter false
+                            val parts = group.split("|")
+                            val type = parts.getOrNull(1).orEmpty().lowercase()
+                            val locale = parts.getOrNull(2).orEmpty().lowercase()
+                            when (params.subTab) {
+                                1 -> type == "novel" && locale.contains("vi")
+                                2 -> type == "novel" && (locale.contains("zh") || locale.contains("cn"))
+                                3 -> type == "comic"
+                                4 -> type == "movie" || type == "video"
+                                else -> true
+                            }
                         }
-                        items.addAll(uninstalledOnline)
+                    }.flowOn(IO)
+                    .collectLatest { mappedItems ->
+                        _uiState.update { it.copy(items = mappedItems.toImmutableList()) }
                     }
-                    items.toList()
-                }.flowOn(IO)
-                .collectLatest { items ->
-                    _uiState.update { it.copy(items = items.toImmutableList()) }
+                } else {
+                    combine(
+                        exploreRepository.getExploreSources(query, selectedGroup),
+                        _onlineBookSources
+                    ) { installedSources, onlineSources ->
+                        val installedUrls = installedSources.map { it.bookSourceUrl }.toSet()
+                        val items = mutableListOf<BookSourcePart>()
+                        
+                        items.addAll(installedSources)
+                        
+                        if (!hideUninstalled) {
+                            val uninstalledOnline = onlineSources.filter { onlineItem ->
+                                (query.isBlank() || onlineItem.name.contains(query, ignoreCase = true) || onlineItem.url.contains(query, ignoreCase = true)) &&
+                                !installedUrls.contains(onlineItem.url)
+                            }.map { onlineItem ->
+                                BookSourcePart(
+                                    bookSourceUrl = "online_yckceo_${onlineItem.id}_${onlineItem.url}",
+                                    bookSourceName = onlineItem.name,
+                                    bookSourceGroup = "online_yckceo|${onlineItem.author}|${onlineItem.tags}|${onlineItem.downloads}|${onlineItem.time}",
+                                    customOrder = 0,
+                                    enabled = false,
+                                    enabledExplore = false,
+                                    hasLoginUrl = false,
+                                    lastUpdateTime = 0,
+                                    respondTime = 0,
+                                    weight = 0,
+                                    hasExploreUrl = false
+                                )
+                            }
+                            items.addAll(uninstalledOnline)
+                        }
+                        items.toList()
+                    }.flowOn(IO)
+                    .collectLatest { items ->
+                        _uiState.update { it.copy(items = items.toImmutableList()) }
+                    }
                 }
             }
         }
@@ -536,7 +563,8 @@ class ExploreViewModel(
         val lastStep3Response: String? = null,
         val isStep1Installed: Boolean = false,
         val isStep2Installed: Boolean = false,
-        val isStep3Installed: Boolean = false
+        val isStep3Installed: Boolean = false,
+        val isVip: Boolean = io.legado.app.help.MemberManager.isVip
     ) : ListUiState<BookSourcePart>
 
     fun buildExploreListItems(state: ExploreUiState): ImmutableList<ExploreListItem> {
@@ -1941,3 +1969,11 @@ sealed interface ExploreEffect {
         val kind: ExploreKind
     ) : ExploreEffect
 }
+
+private data class ExploreParams(
+    val tab: Int,
+    val key: String,
+    val group: String,
+    val hide: Boolean,
+    val subTab: Int
+)

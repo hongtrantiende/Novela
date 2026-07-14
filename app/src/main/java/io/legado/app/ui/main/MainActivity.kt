@@ -357,43 +357,8 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
      * 版本更新日志
      */
     private suspend fun upVersion() = suspendCoroutine<Unit?> { block ->
-        if (LocalConfig.versionCode == appInfo.versionCode) {
-            block.resume(null)
-            return@suspendCoroutine
-        }
         LocalConfig.versionCode = appInfo.versionCode
-        if (LocalConfig.isFirstOpenApp) {
-            val help = String(assets.open("web/help/md/appHelp.md").readBytes())
-            val dialog = TextDialog(getString(R.string.help), help, TextDialog.Mode.MD)
-            dialog.setOnDismissListener { block.resume(null) }
-            showDialogFragment(dialog)
-            return@suspendCoroutine
-        }
-        if (!BuildConfig.DEBUG) {
-            lifecycleScope.launch {
-                try {
-                    val info = AppUpdateGitHub.getReleaseByTag(BuildConfig.VERSION_NAME)
-                    if (info != null) {
-                        val dialog = UpdateDialog(info, UpdateDialog.Mode.VIEW_LOG)
-                        dialog.setOnDismissListener { block.resume(null) }
-                        showDialogFragment(dialog)
-                    } else {
-                        val fallback = String(assets.open("updateLog.md").readBytes())
-                        val dialog = TextDialog(getString(R.string.update_log), fallback, TextDialog.Mode.MD)
-                        dialog.setOnDismissListener { block.resume(null) }
-                        showDialogFragment(dialog)
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    val fallback = String(assets.open("updateLog.md").readBytes())
-                    val dialog = TextDialog(getString(R.string.update_log), fallback, TextDialog.Mode.MD)
-                    dialog.setOnDismissListener { block.resume(null) }
-                    showDialogFragment(dialog)
-                }
-            }
-        } else {
-            block.resume(null)
-        }
+        block.resume(null)
     }
 
     private fun checkAppUpdateOnStartup() {
