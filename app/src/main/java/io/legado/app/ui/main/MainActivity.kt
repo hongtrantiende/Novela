@@ -9,6 +9,8 @@ import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -279,50 +281,25 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
                 ),
                 sceneStrategies = listOf(SinglePaneSceneStrategy()),
                 transitionSpec = {
-                    (slideIntoContainer(
+                    slideIntoContainer(
                         towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
+                        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
                         initialOffset = { fullWidth -> fullWidth }
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 360,
-                            easing = LinearOutSlowInEasing
-                        )
-                    )) togetherWith (slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
-                        targetOffset = { fullWidth -> fullWidth / 4 }
-                    ) + fadeOut(
-                        animationSpec = tween(
-                            durationMillis = 360,
-                            easing = LinearOutSlowInEasing
-                        )
-                    ))
+                    ) togetherWith ExitTransition.KeepUntilTransitionsFinished
                 },
                 popTransitionSpec = {
-                    (slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
-                        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
-                        initialOffset = { fullWidth -> -fullWidth / 4 }
-                    ) + fadeIn(
-                        animationSpec = tween(
-                            durationMillis = 360,
-                            easing = LinearOutSlowInEasing
-                        )
-                    )) togetherWith (scaleOut(
-                        targetScale = 0.8f,
-                        animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween(durationMillis = 360)))
+                    EnterTransition.None togetherWith slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
+                        animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+                        targetOffset = { fullWidth -> fullWidth }
+                    )
                 },
                 predictivePopTransitionSpec = { _ ->
-                    (slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                    EnterTransition.None togetherWith slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.End,
                         animationSpec = tween(easing = FastOutSlowInEasing),
-                        initialOffset = { fullWidth -> -fullWidth / 4 }
-                    ) + fadeIn(animationSpec = tween(easing = LinearOutSlowInEasing))) togetherWith (scaleOut(
-                        targetScale = 0.8f,
-                        animationSpec = tween(easing = FastOutSlowInEasing)
-                    ) + fadeOut(animationSpec = tween()))
+                        targetOffset = { fullWidth -> fullWidth }
+                    )
                 },
                 onBack = { MainNavigator.navigateBack(this@MainActivity, backStack) },
                 entryProvider = mainEntryProvider(
