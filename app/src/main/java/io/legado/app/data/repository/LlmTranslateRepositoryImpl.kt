@@ -11,8 +11,10 @@ import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.postJson
 import io.legado.app.utils.GSON
+import io.legado.app.utils.TranslateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withPermit
 
 class LlmTranslateRepositoryImpl : LlmGateway {
 
@@ -50,7 +52,11 @@ class LlmTranslateRepositoryImpl : LlmGateway {
 
         try {
             when (provider) {
-                TranslationConstants.PROVIDER_GOOGLE -> translateWithGoogle(text, targetLanguage)
+                TranslationConstants.PROVIDER_GOOGLE -> {
+                    TranslateUtils.networkSemaphore.withPermit {
+                        translateWithGoogle(text, targetLanguage)
+                    }
+                }
                 TranslationConstants.PROVIDER_OPENAI -> translateWithOpenAI(
                     text,
                     targetLanguage,
@@ -87,7 +93,9 @@ class LlmTranslateRepositoryImpl : LlmGateway {
                     }
                 }
                 TranslationConstants.PROVIDER_SANGTACVIET -> {
-                    translateWithSangTacViet(text)
+                    TranslateUtils.networkSemaphore.withPermit {
+                        translateWithSangTacViet(text)
+                    }
                 }
 
                 else -> Result.failure(IllegalArgumentException("Unknown provider: $provider"))

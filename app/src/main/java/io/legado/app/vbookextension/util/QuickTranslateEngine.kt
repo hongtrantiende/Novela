@@ -636,11 +636,13 @@ object QuickTranslateEngine {
     }
 
     fun copyDictFromAssetsIfNeed(context: Context) {
-        val dictDir = File(context.filesDir, "dict")
-        val vietPhraseFile = File(dictDir, "VietPhrase.txt")
-        // Nếu chưa có từ điển hệ thống, hoặc từ điển quá nhỏ (bản mẫu cũ lỗi), tự động giải nén ngầm từ assets
-        if (!dictDir.exists() || !vietPhraseFile.exists() || vietPhraseFile.length() < 10240L) {
-            unzipDictFromAssets(context)
+        val prefs = context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+        val isInitialized = prefs.getBoolean("qt_system_dict_initialized_v2", false)
+        if (!isInitialized) {
+            val success = unzipDictFromAssets(context)
+            if (success) {
+                prefs.edit().putBoolean("qt_system_dict_initialized_v2", true).apply()
+            }
         }
     }
 }

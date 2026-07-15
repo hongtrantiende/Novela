@@ -758,7 +758,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         ?: run {
                             val isAiEngine = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
                                     io.legado.app.ui.config.translation.TranslationConfig.llmProvider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI
-                            if (!isAiEngine || index == durChapterIndex) {
+                            val shouldStartTrans = (index == durChapterIndex || index == durChapterIndex + 1)
+                            if (shouldStartTrans && (!isAiEngine || index == durChapterIndex)) {
                                 TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
                                     startTranslationObserver(taskFlow, book, chapter)
                                 }
@@ -807,7 +808,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                         ?: run {
                             val isAiEngine = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
                                     io.legado.app.ui.config.translation.TranslationConfig.llmProvider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI
-                            if (!isAiEngine || index == durChapterIndex) {
+                            val shouldStartTrans = (index == durChapterIndex || index == durChapterIndex + 1)
+                            if (shouldStartTrans && (!isAiEngine || index == durChapterIndex)) {
                                 TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
                                     startTranslationObserver(taskFlow, book, chapter)
                                 }
@@ -939,6 +941,16 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     TranslationChapterStatus.Translating -> {
                         state.mixedContent?.let { mixed ->
                             contentLoadFinish(book, chapter, mixed, upContent = true, resetPageOffset = false)
+                        }
+                    }
+                    TranslationChapterStatus.Translated -> {
+                        state.translatedContent?.let { translated ->
+                            contentLoadFinish(book, chapter, translated, upContent = true, resetPageOffset = false)
+                        } ?: run {
+                            val content = TranslationManager.getCachedTranslation(book, chapter)
+                            if (content != null) {
+                                contentLoadFinish(book, chapter, content, upContent = true, resetPageOffset = false)
+                            }
                         }
                     }
                     else -> {

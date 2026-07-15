@@ -148,8 +148,9 @@ fun ExploreScreen(
     var showAiConfigDialog by remember { mutableStateOf(false) }
     var showTranslateSourceDialog by remember { mutableStateOf(false) }
     val translationMode = when {
+        TranslationConfig.translationEnabled -> 1
         TranslationConfig.isGlobalTranslateEnabled -> 1
-        TranslationConfig.llmTranslateEnabled && TranslationConfig.llmProvider == "sangtacviet" -> 2
+        TranslationConfig.llmTranslateEnabled -> 2
         else -> 0
     }
     val listItems by remember(uiState.items, uiState.expandedId, uiState.exploreKinds) {

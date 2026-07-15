@@ -99,9 +99,14 @@ class TranslateChapterUseCase(
                 }
             }
 
+            val maxChars = when (provider) {
+                TranslationConstants.PROVIDER_SANGTACVIET,
+                TranslationConstants.PROVIDER_VIETPHRASE -> 15000
+                else -> TranslationConfig.llmMaxCharsPerChunk.coerceAtLeast(1000)
+            }
             val chunks = ContentChunker.chunk(
                 originalContent,
-                TranslationConfig.llmMaxCharsPerChunk.coerceAtLeast(1000)
+                maxChars
             )
             if (chunks.isEmpty()) {
                 return@withContext Result.failure(Exception("Failed to chunk content"))
@@ -318,6 +323,11 @@ class TranslateChapterUseCase(
             }
             lastError = result.exceptionOrNull() as? Exception
             lastRetryReason = parseRetryReason(lastError)
+            
+            // Add a backoff delay before retry to allow rate-limits to cool down
+            if (attempt < TranslationConfig.llmRetryCount.coerceIn(0, 5)) {
+                kotlinx.coroutines.delay(1500)
+            }
         }
         return Result.failure(lastError ?: Exception("Translation failed after retries"))
     }

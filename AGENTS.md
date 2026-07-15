@@ -34,7 +34,7 @@ Hướng dẫn tổng hợp cho AI agents (Antigravity, Codex, Claude) khi làm 
 ## 3. BUILD / TEST / DEPLOY (Windows PowerShell)
 
 > **QUAN TRỌNG**: Hệ điều hành Windows, Shell PowerShell. Luôn dùng `.\gradlew.bat` thay cho `./gradlew`.
-> - **KSP Multi-drive Bug**: Do dự án nằm ở ổ `C:` nhưng `GRADLE_USER_HOME` mặc định của hệ thống trỏ về ổ `D:`, KSP sẽ lỗi biên dịch (`different roots`). **BẮT BUỘC** chạy lệnh `$env:GRADLE_USER_HOME="C:\Users\bac5a\.gradle"` trước khi thực hiện các lệnh Gradle dưới đây.
+> - **KSP Multi-drive Bug**: Do dự án nằm ở ổ `C:` nhưng `GRADLE_USER_HOME` mặc định của hệ thống trỏ về ổ `D:`, KSP sẽ lỗi biên dịch (`different roots`). **BẮT BUỘC** chạy lệnh `$env:GRADLE_USER_HOME="$env:USERPROFILE\.gradle"` trước khi thực hiện các lệnh Gradle dưới đây.
 
 ### Build Commands
 ```powershell
@@ -71,11 +71,12 @@ app/build/outputs/apk/app/release/Novela-arm64-v8a-release.apk
 ### Deploy to Device (ADB)
 ```powershell
 # Kiểm tra thiết bị kết nối
-& "C:\Users\bac5a\AppData\Local\Android\Sdk\platform-tools\adb.exe" devices -l
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices -l
 
 # Cài debug APK vào điện thoại (Redmi Note 13 Pro+, device ID: PNAUU475TOYPLV7H)
-& "C:\Users\bac5a\AppData\Local\Android\Sdk\platform-tools\adb.exe" -s PNAUU475TOYPLV7H install -r -d "app/build/outputs/apk/app/debug/Novela-arm64-v8a-debug.apk"
+& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s PNAUU475TOYPLV7H install -r -d "app/build/outputs/apk/app/debug/Novela-arm64-v8a-debug.apk"
 ```
+
 
 ### Gradle Tips
 - Lọc output dài: thêm `2>&1 | Select-Object -Last 15` cuối lệnh.

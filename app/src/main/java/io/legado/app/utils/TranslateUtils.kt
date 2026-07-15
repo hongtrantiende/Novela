@@ -17,11 +17,16 @@ import kotlinx.coroutines.*
 import splitties.init.appCtx
 import java.util.regex.Pattern
 
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+
 /**
  * Translation utility for VietPhrase Chinese-Vietnamese translation
  * Ported from Dictionary.js logic
  */
 object TranslateUtils {
+    
+    val networkSemaphore = Semaphore(1)
     
     // Cache for translated texts (max 10MB worth of strings)
     private val translationCache = object : LruCache<String, String>(10 * 1024 * 1024) {
@@ -615,6 +620,7 @@ object TranslateUtils {
      */
     fun clearCache() {
         translationCache.evictAll()
+        translateStateCache.evictAll()
         TranslationLoader.clearCache()
     }
     
@@ -681,31 +687,33 @@ object TranslateUtils {
 
         return@withContext when (engine) {
             "STV", "Sáng Tác Việt" -> {
-                try {
-                    val formBody = okhttp3.FormBody.Builder()
-                        .add("sajax", "trans")
-                        .add("content", processedText)
-                        .build()
-                    val request = okhttp3.Request.Builder()
-                        .url("https://comic.sangtacvietcdn.xyz/tsm.php?cdn=/")
-                        .post(formBody)
-                        .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                        .build()
-                    io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
-                        if (response.isSuccessful) {
-                            val bodyStr = response.body?.string()
-                            if (!bodyStr.isNullOrEmpty()) {
-                                bodyStr
+                networkSemaphore.withPermit {
+                    try {
+                        val formBody = okhttp3.FormBody.Builder()
+                            .add("sajax", "trans")
+                            .add("content", processedText)
+                            .build()
+                        val request = okhttp3.Request.Builder()
+                            .url("https://comic.sangtacvietcdn.xyz/tsm.php?cdn=/")
+                            .post(formBody)
+                            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                            .build()
+                        io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                            if (response.isSuccessful) {
+                                val bodyStr = response.body?.string()
+                                if (!bodyStr.isNullOrEmpty()) {
+                                    bodyStr
+                                } else {
+                                    processedText
+                                }
                             } else {
                                 processedText
                             }
-                        } else {
-                            processedText
                         }
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        text ?: ""
                     }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    text
                 }
             }
             else -> { // QT

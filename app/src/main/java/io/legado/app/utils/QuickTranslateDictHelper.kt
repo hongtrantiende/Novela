@@ -228,7 +228,7 @@ object QuickTranslateDictHelper {
             }
             success
         } else {
-            false
+            true
         }
     }
 }

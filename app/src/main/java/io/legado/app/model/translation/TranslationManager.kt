@@ -91,11 +91,6 @@ object TranslationManager : KoinComponent {
             return null
         }
 
-        // Check if original content exists
-        if (BookHelp.getContent(book, chapter) == null) {
-            return null
-        }
-
         // Cancel existing job if running
         _runningJobs[key]?.cancel()
         _runningJobs.remove(key)
@@ -133,6 +128,25 @@ object TranslationManager : KoinComponent {
         val taskFlow = _taskStateFlows[key] ?: return@withContext
 
         taskFlow.update { it.copy(status = TranslationChapterStatus.Translating) }
+
+        // Wait for content to be downloaded if not present (up to 30 seconds)
+        var content = BookHelp.getContent(book, bookChapter)
+        var waitCount = 0
+        while (content == null && waitCount < 60) {
+            kotlinx.coroutines.delay(500)
+            content = BookHelp.getContent(book, bookChapter)
+            waitCount++
+        }
+
+        if (content == null) {
+            taskFlow.update {
+                it.copy(
+                    status = TranslationChapterStatus.Failed,
+                    errorMessage = "Original content not downloaded"
+                )
+            }
+            return@withContext
+        }
 
         val result = translateChapterUseCase.execute(
             book = book,

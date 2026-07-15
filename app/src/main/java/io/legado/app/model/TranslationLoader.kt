@@ -131,7 +131,7 @@ object TranslationLoader {
 
                 translationData = TranslationData(namesTrie, vietPhraseTrie, chinesePhienAm, luatNhan, pronounsTrie)
                 translationData
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 android.util.Log.e("TranslationLoader", "Error loading translation data", e)
                 null
             } finally {
@@ -244,9 +244,9 @@ object TranslationLoader {
                     if (!tmpFile.renameTo(binaryFile)) {
                         throw IllegalStateException("Failed to rename temp cache")
                     }
-                } catch (e: Exception) {
-                    try { tmpFile.delete() } catch (_: Exception) {}
-                    android.util.Log.w("TranslationLoader", "Failed to cache compiled trie", e)
+                } catch (e: Throwable) {
+                    try { tmpFile.delete() } catch (_: Throwable) {}
+                    android.util.Log.e("TranslationLoader", "Failed to cache compiled trie", e)
                 }
             }
             if (binaryFile.exists()) {
@@ -254,7 +254,7 @@ object TranslationLoader {
                 android.util.Log.d("TranslationLoader", "Compiled dict built+mapped: ${binaryFile.path}")
                 return@withContext true
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             android.util.Log.e("TranslationLoader", "Error compiling text dictionary: ${textFile.path}", e)
         }
         return@withContext false

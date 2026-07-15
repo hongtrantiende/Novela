@@ -262,13 +262,27 @@ class DoubleArrayTrie : ITrieDictionary {
             }
 
             val n = base.size
-            val baseBytes = ByteArray(n * 4)
-            ByteBuffer.wrap(baseBytes).order(ByteOrder.BIG_ENDIAN).asIntBuffer().put(base)
-            dos.write(baseBytes)
+            val chunkSize = 8192
+            val chunkBytes = ByteArray(chunkSize * 4)
+            val intBuffer = ByteBuffer.wrap(chunkBytes).order(ByteOrder.BIG_ENDIAN).asIntBuffer()
 
-            val checkBytes = ByteArray(n * 4)
-            ByteBuffer.wrap(checkBytes).order(ByteOrder.BIG_ENDIAN).asIntBuffer().put(check)
-            dos.write(checkBytes)
+            var offset = 0
+            while (offset < n) {
+                val len = minOf(chunkSize, n - offset)
+                intBuffer.clear()
+                intBuffer.put(base, offset, len)
+                dos.write(chunkBytes, 0, len * 4)
+                offset += len
+            }
+
+            offset = 0
+            while (offset < n) {
+                val len = minOf(chunkSize, n - offset)
+                intBuffer.clear()
+                intBuffer.put(check, offset, len)
+                dos.write(chunkBytes, 0, len * 4)
+                offset += len
+            }
 
             dos.writeInt(stringPool.size)
             dos.write(stringPool)

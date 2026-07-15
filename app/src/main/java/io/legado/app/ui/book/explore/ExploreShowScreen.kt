@@ -165,8 +165,9 @@ fun ExploreShowScreen(
         }
     }
     val translationMode = when {
+        TranslationConfig.translationEnabled -> 1
         TranslationConfig.isGlobalTranslateEnabled -> 1
-        TranslationConfig.llmTranslateEnabled && TranslationConfig.llmProvider == "sangtacviet" -> 2
+        TranslationConfig.llmTranslateEnabled -> 2
         else -> 0
     }
     var showTranslationDialog by remember { mutableStateOf(false) }

@@ -129,6 +129,8 @@ object TranslationConfig {
             isGlobalTranslateEnabled = false
             llmTranslateEnabled = false
         }
+        
+        io.legado.app.utils.TranslateUtils.clearCache()
     }
 
     // Delegate constants to domain layer
