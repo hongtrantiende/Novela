@@ -189,9 +189,25 @@ private fun BookInfoScreenContent(
     val useTransparentBg = hasBgImage && ThemeConfig.bookDetailHeaderStyle != "3"
     val isFixedHeader = ThemeConfig.bookDetailHeaderStyle == "1" || ThemeConfig.bookDetailHeaderStyle == "2"
 
+    val lockScrollUpConnection = remember {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(
+                available: Offset,
+                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+            ): Offset {
+                return if (available.y < 0) {
+                    Offset(0f, available.y)
+                } else {
+                    Offset.Zero
+                }
+            }
+        }
+    }
+
     AppScaffold(
         modifier = Modifier
             .fillMaxSize()
+            .nestedScroll(lockScrollUpConnection)
             .then(
                 if (isFixedHeader) Modifier
                 else Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
@@ -220,10 +236,18 @@ private fun BookInfoScreenContent(
         alwaysDrawBehindBars = true,
     ) { paddingValues ->
         val book = state.book
-        if (book == null || (state.isTocLoading && !state.hasChapters)) {
-            BookInfoSkeleton(paddingValues = paddingValues)
-        } else {
-            Box(modifier = Modifier.fillMaxSize()) {
+        val showSkeleton = book == null || (state.isTocLoading && !state.hasChapters)
+
+        Crossfade(
+            targetState = showSkeleton,
+            animationSpec = tween(durationMillis = 300),
+            label = "BookInfoContentTransition"
+        ) { targetShowSkeleton ->
+            if (targetShowSkeleton) {
+                BookInfoSkeleton(paddingValues = paddingValues)
+            } else {
+                if (book != null) {
+                    Box(modifier = Modifier.fillMaxSize()) {
                 BookInfoColorTheme(theme = bookColorTheme) {
                     BookInfoBackdrop(
                         book = book,
@@ -332,9 +356,11 @@ private fun BookInfoScreenContent(
                         }
                     }
                 }
+                }
             }
         }
-        }
+    }
+}
     }
 
     val currentSheet = state.sheet
@@ -1612,48 +1638,60 @@ private fun BookInfoSkeleton(
             .fillMaxSize()
             .padding(top = paddingValues.calculateTopPadding(), bottom = paddingValues.calculateBottomPadding())
             .padding(horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
         
-        // 1. Centered Cover Placeholder
-        SkeletonBox(
-            modifier = Modifier
-                .width(140.dp)
-                .aspectRatio(5f / 7f),
-            cornerRadius = 16.dp,
-            shimmerOffset = shimmerOffset
-        )
+        // 1. Header Row (Cover on Left, Title/Author/Source on Right)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Cover Image placeholder
+            SkeletonBox(
+                modifier = Modifier
+                    .width(112.dp)
+                    .aspectRatio(5f / 7f),
+                cornerRadius = 8.dp,
+                shimmerOffset = shimmerOffset
+            )
+            
+            // Text Column placeholders
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Title
+                SkeletonBox(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .height(24.dp),
+                    cornerRadius = 6.dp,
+                    shimmerOffset = shimmerOffset
+                )
+                // Author
+                SkeletonBox(
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .height(18.dp),
+                    cornerRadius = 4.dp,
+                    shimmerOffset = shimmerOffset
+                )
+                // Source
+                SkeletonBox(
+                    modifier = Modifier
+                        .fillMaxWidth(0.6f)
+                        .height(16.dp),
+                    cornerRadius = 4.dp,
+                    shimmerOffset = shimmerOffset
+                )
+            }
+        }
         
-        // 2. Title Placeholder
-        SkeletonBox(
-            modifier = Modifier
-                .width(180.dp)
-                .height(24.dp),
-            cornerRadius = 6.dp,
-            shimmerOffset = shimmerOffset
-        )
-        
-        // 3. Author Placeholder
-        SkeletonBox(
-            modifier = Modifier
-                .width(100.dp)
-                .height(16.dp),
-            cornerRadius = 4.dp,
-            shimmerOffset = shimmerOffset
-        )
-        
-        // 4. Source/Pill Placeholder
-        SkeletonBox(
-            modifier = Modifier
-                .width(120.dp)
-                .height(20.dp),
-            cornerRadius = 10.dp,
-            shimmerOffset = shimmerOffset
-        )
-        
-        // 5. Tags/Pills Row
+        // 2. Tags/Pills Row
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -1661,8 +1699,27 @@ private fun BookInfoSkeleton(
             repeat(3) {
                 SkeletonBox(
                     modifier = Modifier
-                        .width(70.dp)
-                        .height(24.dp),
+                        .width(72.dp)
+                        .height(26.dp),
+                    cornerRadius = 13.dp,
+                    shimmerOffset = shimmerOffset
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // 3. Action Cards Row (4 rectangular cards)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(4) {
+                SkeletonBox(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(64.dp),
                     cornerRadius = 12.dp,
                     shimmerOffset = shimmerOffset
                 )
@@ -1671,25 +1728,30 @@ private fun BookInfoSkeleton(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // 6. Action Buttons Row (5 circles)
-        Row(
+        // 4. Chapter Info Block
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            repeat(5) {
-                SkeletonBox(
-                    modifier = Modifier
-                        .size(48.dp),
-                    cornerRadius = 24.dp,
-                    shimmerOffset = shimmerOffset
-                )
-            }
+            SkeletonBox(
+                modifier = Modifier
+                    .width(140.dp)
+                    .height(20.dp),
+                cornerRadius = 4.dp,
+                shimmerOffset = shimmerOffset
+            )
+            SkeletonBox(
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(14.dp),
+                cornerRadius = 4.dp,
+                shimmerOffset = shimmerOffset
+            )
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         
-        // 7. Introduction Block
+        // 5. Introduction Block
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)

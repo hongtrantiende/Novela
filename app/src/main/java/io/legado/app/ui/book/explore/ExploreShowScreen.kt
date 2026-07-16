@@ -458,11 +458,12 @@ fun ExploreShowScreen(
                     pageCount = { tabs.size }
                 )
 
-                LaunchedEffect(pagerState.currentPage) {
-                    kotlinx.coroutines.delay(150)
-                    val targetKind = tabs.getOrNull(pagerState.currentPage)
-                    if (targetKind != null && targetKind.title != state.selectedKindTitle) {
-                        viewModel.onIntent(ExploreShowIntent.SwitchKind(targetKind))
+                LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress) {
+                    if (!pagerState.isScrollInProgress) {
+                        val targetKind = tabs.getOrNull(pagerState.currentPage)
+                        if (targetKind != null && targetKind.title != state.selectedKindTitle) {
+                            viewModel.onIntent(ExploreShowIntent.SwitchKind(targetKind))
+                        }
                     }
                 }
 
@@ -514,6 +515,7 @@ fun ExploreShowScreen(
                     }
                     val isCurrent = pageTab?.title == state.selectedKindTitle
                     val displayBooks: ImmutableList<ExploreBookItemUi> = if (isCurrent) books else pageBooks
+                    val isPageLoading = if (isCurrent) state.isLoading else (page == pagerState.currentPage && displayBooks.isEmpty())
 
                     ExploreShowContent(
                         books = displayBooks,
@@ -525,6 +527,7 @@ fun ExploreShowScreen(
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         showLoadMoreFooter = isCurrent && showLoadMoreFooter,
+                        isLoading = isPageLoading,
                         previewBookSetter = { previewBook = it },
                         previewSharedCoverKeySetter = { previewSharedCoverKey = it }
                     )
@@ -545,6 +548,7 @@ fun ExploreShowScreen(
                         sharedTransitionScope = sharedTransitionScope,
                         animatedVisibilityScope = animatedVisibilityScope,
                         showLoadMoreFooter = showLoadMoreFooter,
+                        isLoading = state.isLoading,
                         previewBookSetter = { previewBook = it },
                         previewSharedCoverKeySetter = { previewSharedCoverKey = it }
                     )
@@ -732,6 +736,7 @@ private fun ExploreShowContent(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     showLoadMoreFooter: Boolean,
+    isLoading: Boolean,
     previewBookSetter: (SearchBook?) -> Unit,
     previewSharedCoverKeySetter: (String?) -> Unit,
 ) {
@@ -785,128 +790,134 @@ private fun ExploreShowContent(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        AppPullToRefresh(
-            modifier = Modifier.fillMaxSize(),
-            isRefreshing = state.isRefreshing,
-            onRefresh = { viewModel.onIntent(ExploreShowIntent.Refresh) },
-            topPadding = 0.dp
-        ) {
-            Crossfade(
-                targetState = isGridMode,
-                animationSpec = tween(250),
-                label = "LayoutCrossfade"
-            ) { isGrid ->
-                if (isGrid) {
-                    LazyVerticalGrid(
-                        state = localGridState,
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        columns = GridCells.Fixed(state.gridCount),
-                        contentPadding = PaddingValues(
-                            top = 12.dp,
-                            bottom = paddingValues.calculateBottomPadding() + 12.dp,
-                            start = 12.dp,
-                            end = 12.dp
-                        ),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        itemsIndexed(
-                            items = books,
-                            key = { _, item -> item.book.bookUrl }
-                        ) { index, item ->
-                            val sharedCoverKey = bookCoverSharedElementKey(
-                                item.book.bookUrl,
-                                "explore:grid:$index"
-                            )
-                            ExploreBookGridItem(
-                                book = item.book,
-                                shelfState = item.shelfState,
-                                onClick = {
-                                    viewModel.onIntent(
-                                        ExploreShowIntent.OpenBook(
-                                            item.book,
-                                            sharedCoverKey
-                                        )
+        Crossfade(
+            targetState = books.isEmpty() && isLoading && state.errorMsg == null,
+            animationSpec = tween(300),
+            label = "ExploreContentCrossfade"
+        ) { showSkeleton ->
+            if (showSkeleton) {
+                ExploreShowSkeleton(isGridMode = isGridMode, gridCount = state.gridCount)
+            } else {
+                AppPullToRefresh(
+                    modifier = Modifier.fillMaxSize(),
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.onIntent(ExploreShowIntent.Refresh) },
+                    topPadding = 0.dp
+                ) {
+                    Crossfade(
+                        targetState = isGridMode,
+                        animationSpec = tween(250),
+                        label = "LayoutCrossfade"
+                    ) { isGrid ->
+                        if (isGrid) {
+                            LazyVerticalGrid(
+                                state = localGridState,
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                columns = GridCells.Fixed(state.gridCount),
+                                contentPadding = PaddingValues(
+                                    top = 12.dp,
+                                    bottom = paddingValues.calculateBottomPadding() + 12.dp,
+                                    start = 12.dp,
+                                    end = 12.dp
+                                ),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                itemsIndexed(
+                                    items = books,
+                                    key = { _, item -> item.book.bookUrl }
+                                ) { index, item ->
+                                    val sharedCoverKey = bookCoverSharedElementKey(
+                                        item.book.bookUrl,
+                                        "explore:grid:$index"
                                     )
-                                },
-                                onLongClick = { book, coverKey ->
-                                    previewBookSetter(book)
-                                    previewSharedCoverKeySetter(coverKey)
-                                },
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                sharedCoverKey = sharedCoverKey,
-                                shouldLoadCover = index < 12 || localGridState.firstVisibleItemIndex > 0,
-                            )
-                        }
+                                    ExploreBookGridItem(
+                                        book = item.book,
+                                        shelfState = item.shelfState,
+                                        onClick = {
+                                            viewModel.onIntent(
+                                                ExploreShowIntent.OpenBook(
+                                                    item.book,
+                                                    sharedCoverKey
+                                                )
+                                            )
+                                        },
+                                        onLongClick = { book, coverKey ->
+                                            previewBookSetter(book)
+                                            previewSharedCoverKeySetter(coverKey)
+                                        },
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        sharedCoverKey = sharedCoverKey,
+                                        shouldLoadCover = index < 12 || localGridState.firstVisibleItemIndex > 0,
+                                    )
+                                }
 
-                        if (showLoadMoreFooter) {
-                            item(span = { GridItemSpan(maxLineSpan) }) {
-                                ExploreShowLoadMoreFooter(
-                                    state = state,
-                                    onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
-                                    onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
-                                )
+                                if (showLoadMoreFooter) {
+                                    item(span = { GridItemSpan(maxLineSpan) }) {
+                                        ExploreShowLoadMoreFooter(
+                                            state = state,
+                                            onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                            onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                                        )
+                                    }
+                                }
                             }
-                        }
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize(),
-                        state = localListState,
-                        contentPadding = PaddingValues(
-                            top = 8.dp,
-                            bottom = paddingValues.calculateBottomPadding() + 16.dp
-                        )
-                    ) {
-                        itemsIndexed(
-                            items = books,
-                            key = { _, item -> item.book.bookUrl }
-                        ) { index, item ->
-                            val sharedCoverKey = bookCoverSharedElementKey(
-                                item.book.bookUrl,
-                                "explore:list:$index"
-                            )
-                            ExploreBookItem(
-                                book = item.book,
-                                shelfState = item.shelfState,
-                                onClick = {
-                                    viewModel.onIntent(
-                                        ExploreShowIntent.OpenBook(
-                                            item.book,
-                                            sharedCoverKey
-                                        )
-                                    )
-                                },
-                                onLongClick = { book, coverKey ->
-                                    previewBookSetter(book)
-                                    previewSharedCoverKeySetter(coverKey)
-                                },
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = animatedVisibilityScope,
-                                sharedCoverKey = sharedCoverKey,
-                                shouldLoadCover = index < 12 || localListState.firstVisibleItemIndex > 0,
-                            )
-                        }
-
-                        if (showLoadMoreFooter) {
-                            item {
-                                ExploreShowLoadMoreFooter(
-                                    state = state,
-                                    onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
-                                    onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize(),
+                                state = localListState,
+                                contentPadding = PaddingValues(
+                                    top = 8.dp,
+                                    bottom = paddingValues.calculateBottomPadding() + 16.dp
                                 )
+                            ) {
+                                itemsIndexed(
+                                    items = books,
+                                    key = { _, item -> item.book.bookUrl }
+                                ) { index, item ->
+                                    val sharedCoverKey = bookCoverSharedElementKey(
+                                        item.book.bookUrl,
+                                        "explore:list:$index"
+                                    )
+                                    ExploreBookItem(
+                                        book = item.book,
+                                        shelfState = item.shelfState,
+                                        onClick = {
+                                            viewModel.onIntent(
+                                                ExploreShowIntent.OpenBook(
+                                                    item.book,
+                                                    sharedCoverKey
+                                                )
+                                            )
+                                        },
+                                        onLongClick = { book, coverKey ->
+                                            previewBookSetter(book)
+                                            previewSharedCoverKeySetter(coverKey)
+                                        },
+                                        sharedTransitionScope = sharedTransitionScope,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        sharedCoverKey = sharedCoverKey,
+                                        shouldLoadCover = index < 12 || localListState.firstVisibleItemIndex > 0,
+                                    )
+                                }
+
+                                if (showLoadMoreFooter) {
+                                    item {
+                                        ExploreShowLoadMoreFooter(
+                                            state = state,
+                                            onRetry = { viewModel.onIntent(ExploreShowIntent.LoadMore) },
+                                            onLoadMore = { viewModel.onIntent(ExploreShowIntent.ForceLoadNext) },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-
-        if (books.isEmpty() && state.isLoading && state.errorMsg == null) {
-            ExploreShowSkeleton(isGridMode = isGridMode, gridCount = state.gridCount)
         }
     }
 }

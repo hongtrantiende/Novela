@@ -53,6 +53,12 @@ private data class ExploreShowDisplayState(
     val sheet: ExploreShowSheet = ExploreShowSheet.None,
 )
 
+private data class ExploreBooksState(
+    val url: String? = null,
+    val searchKey: String? = null,
+    val list: List<SearchBook> = emptyList(),
+)
+
 class ExploreShowViewModel(
     private val repository: ExploreRepository,
     private val resolveBookShelfStateUseCase: ResolveBookShelfStateUseCase,
@@ -65,7 +71,7 @@ class ExploreShowViewModel(
     private val imageLoader: ImageLoader,
 ) : ViewModel() {
 
-    private val _rawBooks = MutableStateFlow<List<SearchBook>>(emptyList())
+    private val _rawBooks = MutableStateFlow(ExploreBooksState())
     private val _bookshelf = MutableStateFlow<Set<BookShelfKey>>(emptySet())
     private val _loadState = MutableStateFlow(ExploreShowLoadState())
     private val _kindState = MutableStateFlow(ExploreShowKindState())
@@ -140,7 +146,7 @@ class ExploreShowViewModel(
                 _searchQuery.value = intent.query
                 page = 1
                 autoPageCount = 0
-                _rawBooks.value = emptyList()
+                _rawBooks.value = ExploreBooksState(searchKey = intent.query)
                 _loadState.update { it.copy(isEnd = false) }
                 loadMore(isRefresh = true)
             }
@@ -170,7 +176,7 @@ class ExploreShowViewModel(
                 _searchQuery,
                 _showSearchIcon,
             ) { array ->
-                val rawBooks = array[0] as List<SearchBook>
+                val rawBooksState = array[0] as ExploreBooksState
                 val bookshelf = array[1] as Set<BookShelfKey>
                 val loadState = array[2] as ExploreShowLoadState
                 val kindState = array[3] as ExploreShowKindState
@@ -182,16 +188,26 @@ class ExploreShowViewModel(
 
                 val showSearchIcon = bookSource != null || (extension != null && showSearchIconExt)
 
-                val books = rawBooks.map { item ->
-                    ExploreBookItemUi(
-                        book = item,
-                        shelfState = resolveBookShelfStateUseCase.execute(
-                            name = item.name,
-                            author = item.author,
-                            url = item.bookUrl,
-                            shelf = bookshelf,
+                val isMatching = if (searchQuery != null) {
+                    rawBooksState.searchKey == searchQuery
+                } else {
+                    rawBooksState.url == exploreUrl
+                }
+
+                val books = if (isMatching) {
+                    rawBooksState.list.map { item ->
+                        ExploreBookItemUi(
+                            book = item,
+                            shelfState = resolveBookShelfStateUseCase.execute(
+                                name = item.name,
+                                author = item.author,
+                                url = item.bookUrl,
+                                shelf = bookshelf,
+                            )
                         )
-                    )
+                    }
+                } else {
+                    emptyList()
                 }
 
                 ExploreShowUiState(
@@ -351,7 +367,7 @@ class ExploreShowViewModel(
         val cacheKey = "$incomingSourceUrl##$resolvedExploreUrl"
         val cachedBooks = ExploreShowCache.getBooks(cacheKey)
         if (cachedBooks != null) {
-            _rawBooks.value = cachedBooks
+            _rawBooks.value = ExploreBooksState(url = resolvedExploreUrl, list = cachedBooks)
             preloadBookCovers(cachedBooks)
             page = ExploreShowCache.getPage(cacheKey) ?: 1
             val cachedSelected = ExploreShowCache.getSelectedKind(cacheKey) ?: run {
@@ -376,7 +392,7 @@ class ExploreShowViewModel(
             _kindState.update { it.copy(selectedKindTitle = matchedKind?.title) }
             page = 1
             autoPageCount = 0
-            _rawBooks.value = emptyList()
+            _rawBooks.value = ExploreBooksState(url = resolvedExploreUrl)
             _loadState.update { it.copy(isLoading = false, isEnd = false, errorMsg = null) }
             loadMore(isRefresh = false, forceLoad = true)
         }
@@ -395,7 +411,7 @@ class ExploreShowViewModel(
             val cacheKey = "$source##$url"
             val cachedBooks = ExploreShowCache.getBooks(cacheKey)
             if (cachedBooks != null) {
-                _rawBooks.value = cachedBooks
+                _rawBooks.value = ExploreBooksState(url = url, list = cachedBooks)
                 preloadBookCovers(cachedBooks)
                 page = ExploreShowCache.getPage(cacheKey) ?: 1
                 val cachedIsEnd = ExploreShowCache.getIsEnd(cacheKey) ?: false
@@ -405,7 +421,7 @@ class ExploreShowViewModel(
                 loadMore(isRefresh = true, forceLoad = false, keepList = true)
             } else {
                 page = 1
-                _rawBooks.value = emptyList()
+                _rawBooks.value = ExploreBooksState(url = url)
                 _loadState.update { it.copy(isLoading = false, isEnd = false, errorMsg = null) }
                 loadMore(isRefresh = false, forceLoad = true)
             }
@@ -476,10 +492,10 @@ class ExploreShowViewModel(
             if (isRefresh) {
                 page = 1
                 autoPageCount = 0
-                if (!keepList) {
-                    _rawBooks.value = emptyList()
-                }
                 val query = _searchQuery.value
+                if (!keepList) {
+                    _rawBooks.value = ExploreBooksState(url = url, searchKey = query)
+                }
                 val cacheKey = if (query != null) {
                     "$source##search##$query"
                 } else {
@@ -505,7 +521,7 @@ class ExploreShowViewModel(
             }
             // Offload distinct, filtering and saving to background thread
             val (uniqueNewBooks, newBooksList) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                val currentList = if (page == 1) emptyList() else _rawBooks.value
+                val currentList = if (page == 1) emptyList() else _rawBooks.value.list
                 val existingUrls = currentList.map { it.bookUrl }.toSet()
                 val filtered = result.books
                     .filter { it.bookUrl !in existingUrls }
@@ -521,7 +537,7 @@ class ExploreShowViewModel(
             if (uniqueNewBooks.isEmpty()) {
                 fetchNextAutoPageOrFinish(sourceUrl, url)
             } else {
-                _rawBooks.value = newBooksList
+                _rawBooks.value = ExploreBooksState(url = url, searchKey = _searchQuery.value, list = newBooksList)
                 page++
                 autoPageCount = 0
                 _loadState.update { it.copy(isEnd = false) }
