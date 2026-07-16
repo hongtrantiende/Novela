@@ -7,6 +7,13 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +60,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -80,6 +89,8 @@ import io.legado.app.ui.widget.components.book.SearchBookGridItem
 import io.legado.app.ui.widget.components.book.SearchBookListItem
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.aspectRatio
 import io.legado.app.ui.widget.components.book.SearchBookPreviewSheet
 import io.legado.app.ui.widget.components.card.TextCard
 import io.legado.app.ui.widget.components.explore.ExploreKindSelectSheet
@@ -895,22 +906,155 @@ private fun ExploreShowContent(
         }
 
         if (books.isEmpty() && state.isLoading && state.errorMsg == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Transparent),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    AppContainedLoadingIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    AppText(
-                        text = "Đang tải dữ liệu...",
-                        color = LegadoTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                        style = LegadoTheme.typography.bodyMedium
+            ExploreShowSkeleton(isGridMode = isGridMode, gridCount = state.gridCount)
+        }
+    }
+}
+
+@Composable
+private fun rememberShimmerOffset(): Float {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val offset by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "shimmerOffset",
+    )
+    return offset
+}
+
+@Composable
+private fun SkeletonBox(
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = 8.dp,
+    shimmerOffset: Float,
+) {
+    val colorScheme = LegadoTheme.colorScheme
+    val colors = remember(colorScheme) {
+        listOf(
+            colorScheme.surfaceContainerHighest,
+            colorScheme.surfaceContainerHigh,
+            colorScheme.surfaceContainerHighest,
+        )
+    }
+
+    var positionInRoot by remember { mutableStateOf(Offset.Zero) }
+
+    val brush = remember(shimmerOffset, positionInRoot, colors) {
+        val globalOffset = shimmerOffset * 2000f
+        Brush.linearGradient(
+            colors = colors,
+            start = Offset(globalOffset - positionInRoot.x, globalOffset - positionInRoot.y),
+            end = Offset(globalOffset + 400f - positionInRoot.x, globalOffset + 400f - positionInRoot.y),
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                positionInRoot = coordinates.positionInRoot()
+            }
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(brush)
+    )
+}
+
+@Composable
+private fun ExploreShowSkeleton(
+    isGridMode: Boolean,
+    gridCount: Int,
+) {
+    val shimmerOffset = rememberShimmerOffset()
+    if (isGridMode) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            repeat(4) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    repeat(gridCount) {
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(4.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            SkeletonBox(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(5f / 7f),
+                                cornerRadius = 8.dp,
+                                shimmerOffset = shimmerOffset
+                            )
+                            SkeletonBox(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.8f)
+                                    .height(14.dp),
+                                cornerRadius = 4.dp,
+                                shimmerOffset = shimmerOffset
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            repeat(6) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SkeletonBox(
+                        modifier = Modifier
+                            .width(64.dp)
+                            .height(90.dp),
+                        cornerRadius = 8.dp,
+                        shimmerOffset = shimmerOffset
                     )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        SkeletonBox(
+                            modifier = Modifier
+                                .fillMaxWidth(0.6f)
+                                .height(16.dp),
+                            cornerRadius = 4.dp,
+                            shimmerOffset = shimmerOffset
+                        )
+                        SkeletonBox(
+                            modifier = Modifier
+                                .fillMaxWidth(0.4f)
+                                .height(12.dp),
+                            cornerRadius = 4.dp,
+                            shimmerOffset = shimmerOffset
+                        )
+                        SkeletonBox(
+                            modifier = Modifier
+                                .fillMaxWidth(0.9f)
+                                .height(12.dp),
+                            cornerRadius = 4.dp,
+                            shimmerOffset = shimmerOffset
+                        )
+                    }
                 }
             }
         }
     }
 }
+

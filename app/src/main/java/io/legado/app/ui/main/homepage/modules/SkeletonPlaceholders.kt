@@ -43,7 +43,7 @@ private fun rememberShimmerBrush(): Brush {
         initialValue = -1f,
         targetValue = 2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            animation = tween(durationMillis = 2000, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "shimmerOffset",
@@ -60,8 +60,8 @@ private fun rememberShimmerBrush(): Brush {
 
     return Brush.linearGradient(
         colors = colors,
-        start = Offset(offset * 300f, 0f),
-        end = Offset(offset * 300f + 300f, 0f),
+        start = Offset(offset * 1000f, offset * 1000f),
+        end = Offset(offset * 1000f + 300f, offset * 1000f + 300f),
     )
 }
 

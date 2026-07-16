@@ -5,6 +5,15 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -64,6 +73,8 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -209,10 +220,8 @@ private fun BookInfoScreenContent(
         alwaysDrawBehindBars = true,
     ) { paddingValues ->
         val book = state.book
-        if (book == null) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                AppCircularProgressIndicator()
-            }
+        if (book == null || (state.isTocLoading && !state.hasChapters)) {
+            BookInfoSkeleton(paddingValues = paddingValues)
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
                 BookInfoColorTheme(theme = bookColorTheme) {
@@ -1540,3 +1549,199 @@ private fun RelatedBooksBanner(
         )
     }
 }
+
+@Composable
+private fun rememberShimmerOffset(): Float {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val offset by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "shimmerOffset",
+    )
+    return offset
+}
+
+@Composable
+private fun SkeletonBox(
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = 8.dp,
+    shimmerOffset: Float,
+) {
+    val colorScheme = LegadoTheme.colorScheme
+    val colors = remember(colorScheme) {
+        listOf(
+            colorScheme.surfaceContainerHighest,
+            colorScheme.surfaceContainerHigh,
+            colorScheme.surfaceContainerHighest,
+        )
+    }
+
+    var positionInRoot by remember { mutableStateOf(Offset.Zero) }
+
+    val brush = remember(shimmerOffset, positionInRoot, colors) {
+        val globalOffset = shimmerOffset * 2000f
+        Brush.linearGradient(
+            colors = colors,
+            start = Offset(globalOffset - positionInRoot.x, globalOffset - positionInRoot.y),
+            end = Offset(globalOffset + 400f - positionInRoot.x, globalOffset + 400f - positionInRoot.y),
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                positionInRoot = coordinates.positionInRoot()
+            }
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(brush)
+    )
+}
+
+@Composable
+private fun BookInfoSkeleton(
+    paddingValues: PaddingValues,
+) {
+    val shimmerOffset = rememberShimmerOffset()
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = paddingValues.calculateTopPadding(), bottom = paddingValues.calculateBottomPadding())
+            .padding(horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // 1. Centered Cover Placeholder
+        SkeletonBox(
+            modifier = Modifier
+                .width(140.dp)
+                .aspectRatio(5f / 7f),
+            cornerRadius = 16.dp,
+            shimmerOffset = shimmerOffset
+        )
+        
+        // 2. Title Placeholder
+        SkeletonBox(
+            modifier = Modifier
+                .width(180.dp)
+                .height(24.dp),
+            cornerRadius = 6.dp,
+            shimmerOffset = shimmerOffset
+        )
+        
+        // 3. Author Placeholder
+        SkeletonBox(
+            modifier = Modifier
+                .width(100.dp)
+                .height(16.dp),
+            cornerRadius = 4.dp,
+            shimmerOffset = shimmerOffset
+        )
+        
+        // 4. Source/Pill Placeholder
+        SkeletonBox(
+            modifier = Modifier
+                .width(120.dp)
+                .height(20.dp),
+            cornerRadius = 10.dp,
+            shimmerOffset = shimmerOffset
+        )
+        
+        // 5. Tags/Pills Row
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(3) {
+                SkeletonBox(
+                    modifier = Modifier
+                        .width(70.dp)
+                        .height(24.dp),
+                    cornerRadius = 12.dp,
+                    shimmerOffset = shimmerOffset
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // 6. Action Buttons Row (5 circles)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(5) {
+                SkeletonBox(
+                    modifier = Modifier
+                        .size(48.dp),
+                    cornerRadius = 24.dp,
+                    shimmerOffset = shimmerOffset
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // 7. Introduction Block
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            SkeletonBox(
+                modifier = Modifier
+                    .width(80.dp)
+                    .height(20.dp),
+                cornerRadius = 4.dp,
+                shimmerOffset = shimmerOffset
+            )
+            
+            // Description card skeleton background
+            GlassCard(
+                modifier = Modifier.fillMaxWidth(),
+                containerColor = LegadoTheme.colorScheme.surfaceContainerLow,
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SkeletonBox(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(14.dp),
+                        cornerRadius = 4.dp,
+                        shimmerOffset = shimmerOffset
+                    )
+                    SkeletonBox(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(14.dp),
+                        cornerRadius = 4.dp,
+                        shimmerOffset = shimmerOffset
+                    )
+                    SkeletonBox(
+                        modifier = Modifier
+                            .fillMaxWidth(0.9f)
+                            .height(14.dp),
+                        cornerRadius = 4.dp,
+                        shimmerOffset = shimmerOffset
+                    )
+                    SkeletonBox(
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .height(14.dp),
+                        cornerRadius = 4.dp,
+                        shimmerOffset = shimmerOffset
+                    )
+                }
+            }
+        }
+    }
+}
+
