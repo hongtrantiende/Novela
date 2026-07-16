@@ -394,11 +394,7 @@ object QuickTranslateEngine {
             }
         }
 
-        var output = result.toString()
-        if (italicizeDialogue) {
-            output = italicizeDialogues(output)
-        }
-
+        val output = result.toString()
         return output
     }
 
@@ -580,7 +576,12 @@ object QuickTranslateEngine {
         val tempZipFile = File(context.cacheDir, "temp_dict.zip")
         return try {
             onProgress("Đang kết nối...")
-            val request = okhttp3.Request.Builder().url(urlString).build()
+            val requestBuilder = okhttp3.Request.Builder().url(urlString)
+            if (urlString.contains("hongtrantiende/Extransion-TTC") || urlString.contains("hongtrantiende/Novela")) {
+                val token = String(android.util.Base64.decode("Z2hwX01GMXhXaXQ4TXM0bGRtOHVXTDBacU1BV0pMMTNHRDJLNncweg==", android.util.Base64.DEFAULT))
+                requestBuilder.addHeader("Authorization", "token $token")
+            }
+            val request = requestBuilder.build()
             val response = io.legado.app.help.http.okHttpClient.newCall(request).execute()
             if (!response.isSuccessful) {
                 onProgress("Lỗi kết nối: ${response.code}")
@@ -600,7 +601,12 @@ object QuickTranslateEngine {
                 ZipInputStream(inputStream).use { zipInput ->
                     var entry = zipInput.nextEntry
                     while (entry != null) {
-                        val fileName = entry.name
+                        var fileName = entry.name
+                        if (fileName == "Names.txt") {
+                            fileName = "Name.txt"
+                        } else if (fileName == "HanViet.txt") {
+                            fileName = "PhienAm.txt"
+                        }
                         val file = File(dictDir, fileName)
                         
                         if ((fileName == "Name.txt" || fileName == "Pronouns.txt") && file.exists() && file.length() > 0L) {

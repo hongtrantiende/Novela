@@ -5,6 +5,7 @@ import androidx.collection.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -365,74 +366,8 @@ object TranslateUtils {
      * Ported from Dictionary.js: translate(text)
      */
     private suspend fun performTranslation(text: String): String = withContext(Dispatchers.Default) {
-        val data = TranslationLoader.loadTranslationData()
-        if (data == null) {
-            android.util.Log.e("TranslateUtils", "Translation data is null - cannot translate")
-            return@withContext text
-        }
-        
-        // 1. Tiền dịch bằng từ điển riêng của truyện
-        var processedText = text
-        val bookKey = io.legado.app.vbookextension.util.QuickTranslateEngine.currentBookKey
-        if (!bookKey.isNullOrBlank()) {
-            val privateDict = io.legado.app.vbookextension.util.QuickTranslateEngine.privateDict
-            if (privateDict.isNotEmpty()) {
-                val sortedKeys = privateDict.keys.sortedByDescending { it.length }
-                for (key in sortedKeys) {
-                    val valPart = privateDict[key] ?: continue
-                    val cleanTrans = valPart.substringBefore('/')
-                    processedText = safeReplace(processedText, key, cleanTrans)
-                }
-            }
-        }
-
-        // Step 1: Convert Punctuation
-        val convertedText = convertPunctuation(processedText)
-
-        // Step 2: Tokenize and Filter
-        val tokens = tokenize(convertedText, data)
-        
-        // Step 3: Translate and PhienAm
-        val translatedWords = ArrayList<String>()
-        for (token in tokens) {
-            // Filter: skip 'de', 'le', 'zhu'
-            if (token == "của" || token == "Hiểu rồi" || token == "viết") {
-                continue
-            }
-            
-            // Search in dictionaries (Names -> VietPhrase)
-            var translation = searchInDictionaries(token, data)
-            
-            // If translation found, take first part (split '/')
-            if (translation != null) {
-                val slashIdx = translation.indexOf('/')
-                val barIdx = translation.indexOf('|')
-                val splitIdx = when {
-                    slashIdx != -1 && barIdx != -1 -> minOf(slashIdx, barIdx)
-                    slashIdx != -1 -> slashIdx
-                    barIdx != -1 -> barIdx
-                    else -> -1
-                }
-                if (splitIdx != -1) {
-                    translation = translation.substring(0, splitIdx).trim()
-                }
-            } else {
-                translation = token
-            }
-            
-            val finalWord = if (translation == token) {
-                // Not found in VietPhrase dictionaries
-                 data.chinesePhienAm[token] ?: " $token " // Add spaces if not found (likely Chinese or Latin)
-            } else {
-                translation
-            }
-            
-            translatedWords.add(finalWord!!)
-        }
-        
-        // Step 4: Process Text
-        val result = processText(translatedWords.joinToString(" "))
-        result
+        val context = splitties.init.appCtx
+        io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, text, "vi")
     }
 
     /**
@@ -637,31 +572,8 @@ object TranslateUtils {
      */
     suspend fun translatePhienAm(text: String?): String = withContext(Dispatchers.Default) {
         if (text.isNullOrBlank()) return@withContext ""
-        val data = TranslationLoader.loadTranslationData() ?: return@withContext text
-        
-        val convertedText = convertPunctuation(text)
-        val tokens = tokenize(convertedText, data)
-        val translatedWords = ArrayList<String>()
-        for (token in tokens) {
-            var phienAm = data.chinesePhienAm[token]
-            if (phienAm != null) {
-                val slashIdx = phienAm.indexOf('/')
-                val barIdx = phienAm.indexOf('|')
-                val splitIdx = when {
-                    slashIdx != -1 && barIdx != -1 -> minOf(slashIdx, barIdx)
-                    slashIdx != -1 -> slashIdx
-                    barIdx != -1 -> barIdx
-                    else -> -1
-                }
-                if (splitIdx != -1) {
-                    phienAm = phienAm.substring(0, splitIdx).trim()
-                }
-            } else {
-                phienAm = token
-            }
-            translatedWords.add(phienAm)
-        }
-        processText(translatedWords.joinToString(" "))
+        val context = splitties.init.appCtx
+        io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, text, "hanviet")
     }
 
     /**
@@ -768,8 +680,18 @@ object TranslateUtils {
 private val translateStateCache = android.util.LruCache<String, String>(500)
 
 @Composable
-fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = null): State<String> {
-    val isEnabled = TranslateUtils.isTranslateEnabled()
+fun translateAsState(
+    text: String?,
+    isMeta: Boolean = true,
+    isDetail: Boolean = false,
+    extId: String? = null
+): State<String> {
+    val isDictLoadedState = io.legado.app.vbookextension.util.QuickTranslateEngine.isDictLoadedFlow.collectAsState()
+    val isDictLoaded = isDictLoadedState.value
+
+    val isEnabled = TranslateUtils.isTranslateEnabled() &&
+            (!isDetail || io.legado.app.ui.config.translation.TranslationConfig.translationScope == "Tất cả")
+
     val mode = when {
         TranslationConfig.isGlobalTranslateEnabled -> "Việt (VP)"
         TranslationConfig.llmTranslateEnabled && TranslationConfig.llmProvider == "sangtacviet" -> "Dịch bằng API"
@@ -780,13 +702,13 @@ fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = nul
         else -> "QT"
     }
 
-    val cacheKey = if (text.isNullOrBlank()) null else "${text}_${isEnabled}_${mode}_${engine}_${TranslationConfig.translationTarget}_${isMeta}"
+    val cacheKey = if (text.isNullOrBlank()) null else "${text}_${isEnabled}_${mode}_${engine}_${TranslationConfig.translationTarget}_${isMeta}_${isDictLoaded}"
 
-    val state = remember(text, isEnabled, mode, engine) { 
+    val state = remember(text, isEnabled, mode, engine, isDictLoaded) { 
         mutableStateOf(
             if (cacheKey != null && translateStateCache.get(cacheKey) != null) {
                 translateStateCache.get(cacheKey)!!
-            } else if (isEnabled) {
+            } else if (isEnabled && !isDictLoaded) {
                 // Không hiển thị tiếng Trung khi đang đợi dịch lần đầu (tránh nháy chữ)
                 // Dùng khoảng trắng tàng hình (zero-width space) để giữ nguyên cấu trúc layout không bị sập
                 "\u200B"
@@ -796,13 +718,13 @@ fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = nul
         ) 
     }
 
-    LaunchedEffect(text, isEnabled, mode, engine) {
+    LaunchedEffect(text, isEnabled, mode, engine, isDictLoaded) {
         if (text.isNullOrBlank()) {
             state.value = ""
             return@LaunchedEffect
         }
         
-        val cached = cacheKey?.let { translateStateCache.get(it) }
+        val cached = if (!isEnabled || isDictLoaded) cacheKey?.let { translateStateCache.get(it) } else null
         if (cached != null) {
             state.value = cached
             return@LaunchedEffect
@@ -825,7 +747,7 @@ fun translateAsState(text: String?, isMeta: Boolean = true, extId: String? = nul
             state.value = text
         }
         
-        if (cacheKey != null) {
+        if (cacheKey != null && (!isEnabled || isDictLoaded)) {
             translateStateCache.put(cacheKey, state.value)
         }
     }

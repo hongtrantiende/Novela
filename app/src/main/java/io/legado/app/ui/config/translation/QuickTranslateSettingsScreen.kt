@@ -411,6 +411,7 @@ fun QuickTranslateSettingsScreen(
                                 prefs.edit().putString("qt_dict_priority_name_vp", value).apply()
                                 nameVpPriority = value
                                 QuickTranslateEngine.init(context, force = true)
+                                io.legado.app.utils.TranslateUtils.clearCache()
                                 refreshTrigger++
                             }
                         )
@@ -424,6 +425,7 @@ fun QuickTranslateSettingsScreen(
                                 prefs.edit().putString("qt_dict_priority_private_public", value).apply()
                                 privatePublicPriority = value
                                 QuickTranslateEngine.init(context, force = true)
+                                io.legado.app.utils.TranslateUtils.clearCache()
                                 refreshTrigger++
                             }
                         )
@@ -437,6 +439,7 @@ fun QuickTranslateSettingsScreen(
                                 val intVal = value.toIntOrNull() ?: 12
                                 prefs.edit().putInt("qt_max_phrase_length", intVal).apply()
                                 maxPhraseLength = intVal
+                                io.legado.app.utils.TranslateUtils.clearCache()
                                 refreshTrigger++
                             }
                         )
@@ -449,6 +452,7 @@ fun QuickTranslateSettingsScreen(
                             onValueChange = { value ->
                                 prefs.edit().putString("qt_vp_length_priority", value).apply()
                                 vpLengthPriority = value
+                                io.legado.app.utils.TranslateUtils.clearCache()
                                 refreshTrigger++
                             }
                         )
@@ -462,6 +466,7 @@ fun QuickTranslateSettingsScreen(
                                 prefs.edit().putString("qt_luat_nhan", value).apply()
                                 luatNhan = value
                                 QuickTranslateEngine.init(context, force = true)
+                                io.legado.app.utils.TranslateUtils.clearCache()
                                 refreshTrigger++
                             }
                         )
@@ -474,6 +479,7 @@ fun QuickTranslateSettingsScreen(
                             onValueChange = { value ->
                                 prefs.edit().putString("qt_segment_mode", value).apply()
                                 segmentMode = value
+                                io.legado.app.utils.TranslateUtils.clearCache()
                                 refreshTrigger++
                             }
                         )
@@ -496,10 +502,14 @@ fun QuickTranslateSettingsScreen(
                             onCheckedChange = { checked ->
                                 prefs.edit().putBoolean("qt_convert_traditional_simplified", checked).apply()
                                 convertTraditionalSimplified = checked
+                                io.legado.app.utils.TranslateUtils.clearCache()
                                 refreshTrigger++
                             }
                         )
 
+                        // Native Canvas-based ReadView doesn't support HTML <i> tags.
+                        // Commenting out to avoid user confusion.
+                        /*
                         SwitchSettingItem(
                             title = "In nghiêng câu thoại",
                             description = "Tự động in nghiêng câu thoại nằm giữa 2 dấu nháy kép.",
@@ -510,6 +520,7 @@ fun QuickTranslateSettingsScreen(
                                 refreshTrigger++
                             }
                         )
+                        */
                     }
                 }
             }

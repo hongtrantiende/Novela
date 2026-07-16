@@ -787,7 +787,7 @@ private fun BookInfoHeaderContent(
             ) {
                 var showTitleMenu by remember { mutableStateOf(false) }
                 var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
-                val translatedBookName by io.legado.app.utils.translateAsState(book.name)
+                val translatedBookName by io.legado.app.utils.translateAsState(book.name, isDetail = true)
                 Box {
                     AppText(
                         text = translatedBookName,
@@ -819,7 +819,7 @@ private fun BookInfoHeaderContent(
                         )
                     }
                 }
-                val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor)
+                val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor, isDetail = true)
                 AppText(
                     text = stringResource(R.string.author_show, translatedAuthor),
                     style = LegadoTheme.typography.bodyLarge,
@@ -848,7 +848,7 @@ private fun BookInfoHeaderContent(
             ) {
                 groupNames?.takeIf { it.isNotBlank() }?.let {
                     item(key = "group-$it") {
-                        val translatedGroupName by io.legado.app.utils.translateAsState(it)
+                        val translatedGroupName by io.legado.app.utils.translateAsState(it, isDetail = true)
                         TextCard(
                             text = stringResource(R.string.group_s, translatedGroupName),
                             textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -861,7 +861,7 @@ private fun BookInfoHeaderContent(
                     items = kindLabels,
                     key = { index, label -> "kind-$index-$label" }
                 ) { _, label ->
-                    val translatedLabel by io.legado.app.utils.translateAsState(label)
+                    val translatedLabel by io.legado.app.utils.translateAsState(label, isDetail = true)
                     TextCard(
                         text = translatedLabel,
                         textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -1013,7 +1013,7 @@ private fun BookInfoHeader(
                             ) {
                                 var showTitleMenu by remember { mutableStateOf(false) }
                                 var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
-                                val translatedBookName by io.legado.app.utils.translateAsState(book.name)
+                                val translatedBookName by io.legado.app.utils.translateAsState(book.name, isDetail = true)
                                 Box {
                                     AppText(
                                         text = translatedBookName,
@@ -1045,7 +1045,7 @@ private fun BookInfoHeader(
                                         )
                                     }
                                 }
-                                val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor)
+                                val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor, isDetail = true)
                                 AppText(
                                     text = stringResource(R.string.author_show, translatedAuthor),
                                     style = LegadoTheme.typography.bodyLarge,
@@ -1078,7 +1078,7 @@ private fun BookInfoHeader(
                     ) {
                         groupNames?.takeIf { it.isNotBlank() }?.let {
                             item(key = "group-$it") {
-                                val translatedGroupName by io.legado.app.utils.translateAsState(it)
+                                val translatedGroupName by io.legado.app.utils.translateAsState(it, isDetail = true)
                                 TextCard(
                                     text = stringResource(R.string.group_s, translatedGroupName),
                                     textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -1091,7 +1091,7 @@ private fun BookInfoHeader(
                             items = kindLabels,
                             key = { index, label -> "kind-$index-$label" }
                         ) { _, label ->
-                            val translatedLabel by io.legado.app.utils.translateAsState(label)
+                            val translatedLabel by io.legado.app.utils.translateAsState(label, isDetail = true)
                             TextCard(
                                 text = translatedLabel,
                                 textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -1378,7 +1378,7 @@ private fun BookInfoSummary(
             color = LegadoTheme.colorScheme.onSurface
         )
 
-        val translatedIntro by io.legado.app.utils.translateAsState(book.displayIntro.orEmpty())
+        val translatedIntro by io.legado.app.utils.translateAsState(book.displayIntro.orEmpty(), isDetail = true)
         val introText = translatedIntro.ifBlank { stringResource(R.string.intro_show_null) }
         var isIntroExpanded by remember { mutableStateOf(false) }
 
