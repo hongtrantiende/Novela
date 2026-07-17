@@ -180,7 +180,7 @@ dependencies {
     "baselineProfile"(project(":baselineprofile"))
     coreLibraryDesugaring(libs.desugar)
     testImplementation(libs.junit)
-    testImplementation("org.robolectric:robolectric:4.11.1")
+    testImplementation("org.robolectric:robolectric:4.16.1")
     androidTestImplementation(libs.bundles.androidTest)
     implementation(libs.kotlin.stdlib)
     implementation(libs.kotlinx.collections.immutable)
