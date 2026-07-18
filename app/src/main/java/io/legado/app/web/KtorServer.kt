@@ -29,6 +29,8 @@ import io.legado.app.web.socket.RssSourceDebugWebSocket
 import io.legado.app.web.utils.AssetsWeb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import splitties.init.appCtx
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -169,6 +171,8 @@ class KtorServer(private val port: Int) {
                         if (tempFile.exists()) tempFile.delete()
                     }
                 }
+                post("/test") { handleExtensionTest() }
+                post("/extension/test") { handleExtensionTest() }
                 post("/saveReadConfig") { handlePost { BookController.saveWebReadConfig(it) } }
                 post("/saveRssSource") { handlePost { RssSourceController.saveSource(it) } }
                 post("/saveRssSources") { handlePost { RssSourceController.saveSources(it) } }
@@ -261,6 +265,72 @@ class KtorServer(private val port: Int) {
         } catch (e: Exception) {
             LogUtils.e(TAG, e.stackTraceStr)
             call.respondText(e.message ?: "Unknown error")
+        }
+    }
+
+    private suspend fun RoutingContext.handleExtensionTest() {
+        WebService.serve()
+        val tempDir = File(appCtx.cacheDir, "ext_test_run_${System.currentTimeMillis()}")
+        try {
+            val payload = call.receive<Map<String, String>>()
+            val pluginStr = payload["plugin"] ?: return call.respond(HttpStatusCode.BadRequest, "Missing plugin")
+            val srcStr = payload["src"] ?: return call.respond(HttpStatusCode.BadRequest, "Missing src")
+            val inputStr = payload["input"] ?: return call.respond(HttpStatusCode.BadRequest, "Missing input")
+
+            val json = Json { ignoreUnknownKeys = true; isLenient = true }
+            val pluginJson = json.decodeFromString<io.legado.app.vbookextension.model.PluginJson>(pluginStr)
+            val srcMap = json.decodeFromString<Map<String, String>>(srcStr)
+
+            val gson = com.google.gson.Gson()
+            val inputMap = gson.fromJson(inputStr, Map::class.java)
+            val scriptName = inputMap["script"] as? String ?: return call.respond(HttpStatusCode.BadRequest, "Missing script")
+            val varargList = inputMap["vararg"] as? List<*> ?: emptyList<Any>()
+            val varargArray = varargList.map { it.toString() }.toTypedArray()
+
+            tempDir.mkdirs()
+            File(tempDir, "plugin.json").writeText(pluginStr)
+            
+            val srcDir = File(tempDir, "src")
+            srcDir.mkdirs()
+            for ((name, content) in srcMap) {
+                File(srcDir, name).writeText(content)
+            }
+
+            val loadedExtension = io.legado.app.vbookextension.model.LoadedExtension(pluginJson, tempDir)
+            val logCollector = mutableListOf<String>()
+            val extensionRunner: io.legado.app.vbookextension.runtime.VBookJsExtensionRunner =
+                org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+
+            val result = extensionRunner.execute(loadedExtension, scriptName, *varargArray, logCollector = logCollector)
+            
+            val responseMap = mutableMapOf<String, Any>()
+            responseMap["log"] = logCollector
+
+            when (result) {
+                is io.legado.app.vbookextension.model.ExtensionResult.Success -> {
+                    responseMap["result"] = result.data
+                    try {
+                        responseMap["data"] = gson.fromJson(result.data, Any::class.java)
+                    } catch (e: Exception) {
+                        responseMap["data"] = result.data
+                    }
+                }
+                is io.legado.app.vbookextension.model.ExtensionResult.Error -> {
+                    responseMap["exception"] = result.message
+                }
+            }
+            call.respond(responseMap)
+        } catch (e: Exception) {
+            LogUtils.e("KtorServer", e.stackTraceStr)
+            val errorResponse = mapOf(
+                "exception" to (e.message ?: "Unknown test runner error"),
+                "log" to emptyList<String>()
+            )
+            call.respond(errorResponse)
+        } finally {
+            if (tempDir.exists()) {
+                tempDir.deleteRecursively()
+            }
         }
     }
 
