@@ -35,7 +35,7 @@ import splitties.init.appCtx
 import java.io.ByteArrayOutputStream
 import java.io.File
 
-class KtorServer(private val port: Int) {
+class KtorServer(val port: Int) {
     private var server: EmbeddedServer<*, *>? = null
     private var wsServer: EmbeddedServer<*, *>? = null
     private val assetsWeb = AssetsWeb("web")
@@ -193,6 +193,7 @@ class KtorServer(private val port: Int) {
                 get("/getRssSource") { handleGet { RssSourceController.getSource(it) } }
                 get("/getRssSources") { handleGet { RssSourceController.sources } }
                 get("/getReplaceRules") { handleGet { ReplaceRuleController.allRules } }
+                get("/connect") { call.respond(mapOf("success" to true)) }
 
                 get("{...}") {
                     WebService.serve()

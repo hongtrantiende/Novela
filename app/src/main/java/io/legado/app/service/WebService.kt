@@ -149,10 +149,23 @@ class WebService : BaseService() {
     }
 
     private fun upWebServer() {
+        val port = getPort()
+        if (ktorServer != null && ktorServer?.port == port && isRun) {
+            return
+        }
         ktorServer?.stop()
         val addressList = NetworkUtils.getLocalIPAddress()
         if (addressList.any()) {
-            val port = getPort()
+            if (!isPortAvailable(port)) {
+                toastOnUi("Port $port is already in use by another app!")
+                stopSelf()
+                return
+            }
+            if (!isPortAvailable(port + 1)) {
+                toastOnUi("Port ${port + 1} is already in use by another app!")
+                stopSelf()
+                return
+            }
             ktorServer = KtorServer(port)
             try {
                 ktorServer?.start()
@@ -180,6 +193,14 @@ class WebService : BaseService() {
         } else {
             toastOnUi("web service cant start, no ip address")
             stopSelf()
+        }
+    }
+
+    private fun isPortAvailable(port: Int): Boolean {
+        return try {
+            java.net.ServerSocket(port).use { true }
+        } catch (e: java.io.IOException) {
+            false
         }
     }
 
