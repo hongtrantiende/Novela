@@ -95,9 +95,6 @@ class ChangeSourceSearchUseCase(
             .mapNotNull { part ->
                 val isExt = part.bookSourceUrl.startsWith("ext_")
                 if (isExt) {
-                    if (!io.legado.app.help.MemberManager.isVip) {
-                        return@mapNotNull null
-                    }
                     ChangeSourceSearchable(part, null)
                 } else {
                     val source = part.getBookSource() ?: return@mapNotNull null

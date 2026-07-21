@@ -13,15 +13,16 @@ import kotlinx.collections.immutable.persistentListOf
 
 const val READER_RESULT_DELETED = 100
 
+@Stable
 data class BookInfoUiState(
     val book: BookInfoBookUi? = null,
     val hasChapters: Boolean = false,
-    val webFiles: List<BookInfoWebFile> = emptyList(),
-    val kindLabels: List<String> = emptyList(),
+    val webFiles: ImmutableList<BookInfoWebFile> = persistentListOf(),
+    val kindLabels: ImmutableList<String> = persistentListOf(),
     val groupNames: String? = null,
     val hasCustomGroup: Boolean = false,
     val readRecordTotalTime: Long = 0L,
-    val readRecordTimelineDays: List<ReadRecordTimelineDay> = emptyList(),
+    val readRecordTimelineDays: ImmutableList<ReadRecordTimelineDay> = persistentListOf(),
     val inBookshelf: Boolean = false,
     val bookSource: BookInfoSourceUi? = null,
     val relatedBooks: ImmutableList<RelatedBooksUi> = persistentListOf(),

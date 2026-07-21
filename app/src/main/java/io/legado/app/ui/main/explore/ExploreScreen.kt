@@ -156,31 +156,62 @@ fun ExploreScreen(
     val listItems by remember(uiState.items, uiState.expandedId, uiState.exploreKinds) {
         derivedStateOf { viewModel.buildExploreListItems(uiState) }
     }
-    val isVip = uiState.isVip
-    val currentExploreTab = if (isVip) uiState.exploreTab else 0
+    val isVip = true // Tabs/UI always visible to all users
+    val isVipForSources = uiState.isVip // Source filtering still VIP-gated
+    val currentExploreTab = uiState.exploreTab
 
-    LaunchedEffect(isVip) {
-        if (!isVip && uiState.exploreTab != 0) {
-            viewModel.setExploreTab(0)
-        }
+    LaunchedEffect(Unit) {
+        // No-op: tab gating removed
     }
 
-    val filteredListItems by remember(listItems, isVip) {
+    val filteredListItems by remember(listItems, isVipForSources) {
         derivedStateOf {
-            if (isVip) {
+            if (isVipForSources) {
                 listItems
             } else {
+                val extensionDao: io.legado.app.vbookextension.data.dao.ExtensionDao? = try {
+                    org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+                } catch (e: Throwable) { null }
+
+                val installedDefaultExtIds = try {
+                    extensionDao?.getEnabledExtensionsSync()
+                        ?.filter { ext ->
+                            val repoUrl = ext.repositoryUrl.orEmpty()
+                            val source = ext.source
+                            repoUrl.contains("hongtrantiende", ignoreCase = true) ||
+                            repoUrl.contains("vbookext.me", ignoreCase = true) ||
+                            source.contains("hongtrantiende", ignoreCase = true) ||
+                            source.contains("vbookext.me", ignoreCase = true) ||
+                            ext.id.contains("vbook", ignoreCase = true)
+                        }
+                        ?.map { "ext_${it.id}" }
+                        ?.toSet().orEmpty()
+                } catch (e: Throwable) { emptySet() }
+
                 listItems.filter { listItem ->
                     when (listItem) {
                         is ExploreListItem.Header -> {
                             val item = listItem.source
-                            val isAllowed = !item.bookSourceUrl.startsWith("ext_") && !item.bookSourceUrl.startsWith("online_yckceo_")
-                            isAllowed
+                            val group = item.bookSourceGroup.orEmpty()
+                            val isYckceo = item.bookSourceUrl.startsWith("online_yckceo_")
+                            val isDefaultExtRepo = item.bookSourceUrl.startsWith("ext_online_") &&
+                                    (group.contains("hongtrantiende", ignoreCase = true) ||
+                                     group.contains("vbookext.me", ignoreCase = true))
+                            val isInstalledDefaultExt = installedDefaultExtIds.contains(item.bookSourceUrl)
+                            !isYckceo && !isDefaultExtRepo && !isInstalledDefaultExt
                         }
                         is ExploreListItem.KindRow -> {
                             val sourceUrl = listItem.sourceUrl
-                            val isAllowed = !sourceUrl.startsWith("ext_") && !sourceUrl.startsWith("online_yckceo_")
-                            isAllowed
+                            val sourceGroup = listItems.firstOrNull { 
+                                it is ExploreListItem.Header && it.source.bookSourceUrl == sourceUrl 
+                            }?.let { (it as ExploreListItem.Header).source.bookSourceGroup }.orEmpty()
+                            
+                            val isYckceo = sourceUrl.startsWith("online_yckceo_")
+                            val isDefaultExtRepo = sourceUrl.startsWith("ext_online_") &&
+                                    (sourceGroup.contains("hongtrantiende", ignoreCase = true) ||
+                                     sourceGroup.contains("vbookext.me", ignoreCase = true))
+                            val isInstalledDefaultExt = installedDefaultExtIds.contains(sourceUrl)
+                            !isYckceo && !isDefaultExtRepo && !isInstalledDefaultExt
                         }
                     }
                 }

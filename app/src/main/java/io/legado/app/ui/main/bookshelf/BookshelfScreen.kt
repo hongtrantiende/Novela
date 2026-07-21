@@ -10,6 +10,7 @@ import io.legado.app.utils.FileDoc
 import io.legado.app.utils.checkWrite
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.constant.IntentAction
+import io.legado.app.utils.toastOnUi
 import androidx.compose.ui.platform.LocalContext
 import android.content.ClipData
 import android.content.res.Configuration
@@ -1171,7 +1172,12 @@ fun BookshelfScreen(
     }
 
     showExportDialogForBook?.let { book ->
-        BookExportDialog(
+        val isVBookExt = io.legado.app.service.isVBookExtBook(book.toLightBook())
+        if (isVBookExt && !io.legado.app.help.MemberManager.isVip) {
+            context.toastOnUi("Nguồn này thuộc bản quyền của vbook không thể xuất file vui lòng qua vbook tải")
+            showExportDialogForBook = null
+        } else {
+            BookExportDialog(
             book = book.toLightBook(),
             cacheCount = cacheCountForExport,
             onDismiss = { showExportDialogForBook = null },
@@ -1214,6 +1220,7 @@ fun BookshelfScreen(
             }
         )
     }
+}
 
     showDownloadSettingsForBook?.let { book ->
         DownloadSettingsDialog(

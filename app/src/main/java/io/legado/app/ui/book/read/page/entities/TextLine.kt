@@ -679,7 +679,17 @@ data class TextLine(
                             ctx.assets.open(assetPath).use { input ->
                                 decodeSampledBitmap(input)
                             }
-                        }.getOrNull()
+                        }.getOrNull() ?: run {
+                            // Fallback: try .webp variant for migrated assets
+                            val webpPath = assetPath.replaceAfterLast('.', "webp")
+                            if (webpPath != assetPath) {
+                                runCatching {
+                                    ctx.assets.open(webpPath).use { input ->
+                                        decodeSampledBitmap(input)
+                                    }
+                                }.getOrNull()
+                            } else null
+                        }
                     }
                 }
             } catch (e: Exception) {

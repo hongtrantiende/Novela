@@ -1,5 +1,8 @@
 package io.legado.app.ui.config.readConfig
 
+import androidx.compose.runtime.Stable
+
+@Stable
 data class ReadConfigUiState(
     val screenOrientation: String = "0",
     val keepLight: String = "0",

@@ -1417,7 +1417,7 @@ class BookInfoViewModel(
                 _uiState.update {
                     it.copy(
                         readRecordTotalTime = currentReadRecordTotalTime,
-                        readRecordTimelineDays = currentReadRecordTimelineDays
+                        readRecordTimelineDays = currentReadRecordTimelineDays.toImmutableList()
                     )
                 }
             }
@@ -1457,13 +1457,13 @@ class BookInfoViewModel(
             it.copy(
                 book = currentBook?.toBookInfoBookUi(),
                 hasChapters = currentChapterList.isNotEmpty(),
-                webFiles = currentWebFiles,
+                webFiles = currentWebFiles.toImmutableList(),
                 relatedBooks = currentRelatedBooks.toImmutableList(),
-                kindLabels = currentKindLabels,
+                kindLabels = currentKindLabels.toImmutableList(),
                 groupNames = currentGroupNames,
                 hasCustomGroup = currentHasCustomGroup,
                 readRecordTotalTime = currentReadRecordTotalTime,
-                readRecordTimelineDays = currentReadRecordTimelineDays,
+                readRecordTimelineDays = currentReadRecordTimelineDays.toImmutableList(),
                 inBookshelf = inBookshelf,
                 bookSource = bookSource?.toBookInfoSourceUi(),
                 isTocLoading = isTocLoading,

@@ -55,16 +55,17 @@ class BaselineProfileGenerator {
                 Thread.sleep(1000)
             }
 
-            // "nav_my"
-            /* val tabs = listOf("nav_explore", "nav_rss", "nav_bookshelf")
+            // Navigate through bottom tabs to profile common user flows
+            val tabs = listOf("nav_explore", "nav_rss", "nav_my", "nav_bookshelf")
             for (tabDesc in tabs) {
                 val tab = device.wait(Until.findObject(By.desc(tabDesc)), 5000)
                 if (tab != null) {
                     val bounds = tab.visibleBounds
                     device.click(bounds.centerX(), bounds.centerY())
-                    Thread.sleep(3000)
+                    device.waitForIdle()
+                    Thread.sleep(2000)
                 }
-            }*/
+            }
         }
     }
 }

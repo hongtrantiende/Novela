@@ -1138,48 +1138,54 @@ private fun BookshelfManageScreen(
     }
 
     showBookExportDialogBook?.let { book ->
-        BookExportDialog(
-            book = book,
-            cacheCount = viewModel.getCacheCount(book.bookUrl) ?: 0,
-            onDismiss = { showBookExportDialogBook = null },
-            onConfirm = { scope, type, uploadToGd ->
-                if (uploadToGd) {
-                    context.startService<io.legado.app.service.ExportBookService> {
-                        action = IntentAction.start
-                        putExtra("bookUrl", book.bookUrl)
-                        putExtra("exportType", type)
-                        putExtra("exportPath", context.cacheDir.absolutePath)
-                        if (scope != null) {
-                            putExtra("epubScope", scope)
-                        }
-                        putExtra("uploadToGoogleDrive", true)
-                    }
-                } else {
-                    val path = ACache.get().getAsString(exportBookPathKey)
-                    val isWritable = kotlin.runCatching {
-                        !path.isNullOrEmpty() && FileDoc.fromDir(path).checkWrite()
-                    }.getOrDefault(false)
-                    if (!isWritable) {
-                        pendingExportBook = book
-                        pendingExportScope = scope
-                        pendingExportType = type
-                        pendingExportToGoogleDrive = false
-                        selectExportFolder(book.bookUrl)
-                    } else {
+        val isVBookExt = io.legado.app.service.isVBookExtBook(book)
+        if (isVBookExt && !io.legado.app.help.MemberManager.isVip) {
+            context.toastOnUi("Nguồn này thuộc bản quyền của vbook không thể xuất file vui lòng qua vbook tải")
+            showBookExportDialogBook = null
+        } else {
+            BookExportDialog(
+                book = book,
+                cacheCount = viewModel.getCacheCount(book.bookUrl) ?: 0,
+                onDismiss = { showBookExportDialogBook = null },
+                onConfirm = { scope, type, uploadToGd ->
+                    if (uploadToGd) {
                         context.startService<io.legado.app.service.ExportBookService> {
                             action = IntentAction.start
                             putExtra("bookUrl", book.bookUrl)
                             putExtra("exportType", type)
-                            putExtra("exportPath", path)
+                            putExtra("exportPath", context.cacheDir.absolutePath)
                             if (scope != null) {
                                 putExtra("epubScope", scope)
                             }
-                            putExtra("uploadToGoogleDrive", false)
+                            putExtra("uploadToGoogleDrive", true)
+                        }
+                    } else {
+                        val path = ACache.get().getAsString(exportBookPathKey)
+                        val isWritable = kotlin.runCatching {
+                            !path.isNullOrEmpty() && FileDoc.fromDir(path).checkWrite()
+                        }.getOrDefault(false)
+                        if (!isWritable) {
+                            pendingExportBook = book
+                            pendingExportScope = scope
+                            pendingExportType = type
+                            pendingExportToGoogleDrive = false
+                            selectExportFolder(book.bookUrl)
+                        } else {
+                            context.startService<io.legado.app.service.ExportBookService> {
+                                action = IntentAction.start
+                                putExtra("bookUrl", book.bookUrl)
+                                putExtra("exportType", type)
+                                putExtra("exportPath", path)
+                                if (scope != null) {
+                                    putExtra("epubScope", scope)
+                                }
+                                putExtra("uploadToGoogleDrive", false)
+                            }
                         }
                     }
                 }
-            }
-        )
+            )
+        }
     }
 
     OptionSheet(

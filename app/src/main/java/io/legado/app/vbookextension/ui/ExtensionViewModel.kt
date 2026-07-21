@@ -185,6 +185,24 @@ class ExtensionViewModel(
         }
     }
 
+    fun installExtensionFromZip(zipBytes: ByteArray, onSuccess: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                val loaded = extensionLoader.installExtensionFromZip(zipBytes)
+                if (loaded != null) {
+                    onSuccess?.invoke()
+                } else {
+                    _error.value = "Cài đặt tiện ích từ file ZIP thất bại"
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun installExtension(info: ExtensionInfo) {
         viewModelScope.launch {
             val slug = info.name.toSlug()

@@ -29,8 +29,8 @@ data class ChangeChapterSourceUiState(
     val scopeState: ScopeUiState = ScopeUiState(
         isAll = true,
         isSource = false,
-        displayNames = emptyList(),
-        sourceUrls = emptyList()
+        displayNames = persistentListOf(),
+        sourceUrls = persistentListOf()
     ),
     val enabledGroups: ImmutableList<String> = persistentListOf(),
     val enabledSources: ImmutableList<BookSourcePart> = persistentListOf(),
@@ -42,8 +42,8 @@ data class ChangeChapterSourceUiState(
 data class ScopeUiState(
     val isAll: Boolean,
     val isSource: Boolean,
-    val displayNames: List<String>,
-    val sourceUrls: List<String>
+    val displayNames: ImmutableList<String>,
+    val sourceUrls: ImmutableList<String>
 )
 
 sealed interface ChangeChapterSourceIntent {

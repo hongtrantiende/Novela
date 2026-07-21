@@ -3,12 +3,14 @@ package io.legado.app.ui.about
 import androidx.compose.runtime.Stable
 import io.legado.app.help.update.AppUpdate
 import io.legado.app.utils.FileDoc
+import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.persistentListOf
 
 @Stable
 data class AboutUiState(
     val sheet: AboutSheet = AboutSheet.None,
     val dialog: AboutDialog? = null,
-    val crashLogFiles: List<FileDoc> = emptyList(),
+    val crashLogFiles: ImmutableList<FileDoc> = persistentListOf(),
 )
 
 sealed interface AboutSheet {

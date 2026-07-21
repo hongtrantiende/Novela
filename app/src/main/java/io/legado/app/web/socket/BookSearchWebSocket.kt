@@ -147,7 +147,6 @@ class BookSearchWebSocket(private val session: DefaultWebSocketServerSession) : 
 
                 // 2. Search extension sources in parallel
                 val extensionSearchJob = launch {
-                    if (!io.legado.app.help.MemberManager.isVip) return@launch
                     try {
                         val extensionDao: io.legado.app.vbookextension.data.dao.ExtensionDao =
                             org.koin.mp.KoinPlatformTools.defaultContext().get().get()

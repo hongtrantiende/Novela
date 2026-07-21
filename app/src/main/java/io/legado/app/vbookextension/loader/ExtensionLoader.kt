@@ -270,6 +270,7 @@ class ExtensionLoader(
                     iconPath = iconPath,
                     isInstalled = true,
                     isEnabled = true,
+                    repositoryUrl = info.path.ifBlank { info.source }
                 )
             )
 
@@ -348,6 +349,7 @@ class ExtensionLoader(
                 iconPath = iconPath,
                 isInstalled = true,
                 isEnabled = true,
+                repositoryUrl = url
             )
             extensionDao.insert(entity)
 
@@ -610,6 +612,7 @@ class ExtensionLoader(
                     iconPath = iconPath,
                     isInstalled = true,
                     isEnabled = true,
+                    repositoryUrl = "local_zip"
                 )
             )
 
@@ -683,6 +686,7 @@ class ExtensionLoader(
                     iconPath = iconPath,
                     isInstalled = true,
                     isEnabled = true,
+                    repositoryUrl = "local_zip"
                 )
             )
 

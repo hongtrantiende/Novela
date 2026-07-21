@@ -47,6 +47,9 @@ interface RepositoryDao {
     @Query("SELECT * FROM repositories WHERE isEnabled = 1")
     suspend fun getEnabledRepositories(): List<RepositoryEntity>
 
+    @Query("SELECT * FROM repositories WHERE isEnabled = 1")
+    fun getEnabledRepositoriesSync(): List<RepositoryEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(repository: RepositoryEntity)
 

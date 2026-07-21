@@ -331,7 +331,7 @@ class ExploreViewModel(
                                 BookSourcePart(
                                     bookSourceUrl = "ext_online_${onlineItem.name.toSlug()}",
                                     bookSourceName = onlineItem.name,
-                                    bookSourceGroup = "${onlineItem.icon}|${onlineItem.type}|${onlineItem.locale}",
+                                    bookSourceGroup = "${onlineItem.icon}|${onlineItem.type}|${onlineItem.locale}|${onlineItem.path}|${onlineItem.source}",
                                     customOrder = 0,
                                     enabled = false,
                                     enabledExplore = false,

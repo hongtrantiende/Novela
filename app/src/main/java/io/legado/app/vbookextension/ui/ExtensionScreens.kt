@@ -6,6 +6,7 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -85,11 +86,24 @@ fun ExtensionScreens(
         available.associateWith { it.name.toSlug() }
     }
 
-    // Filter available extensions to get only those that are NOT installed
-    val uninstalledExtensions = remember(available, installedMap, searchQuery, availableSlugs) {
-        val list = available.filter { !installedMap.containsKey(availableSlugs[it]) }
-        if (searchQuery.isBlank()) list else {
-            list.filter {
+    val isVip = io.legado.app.help.MemberManager.isVip
+
+    // Filter available extensions: for non-VIP, only hide default GitHub/vbookext.me repository extensions, keep external repos
+    val uninstalledExtensions = remember(available, installedMap, searchQuery, availableSlugs, isVip) {
+        val uninstalledList = available.filter { !installedMap.containsKey(availableSlugs[it]) }
+        val filteredByVip = if (isVip) {
+            uninstalledList
+        } else {
+            uninstalledList.filter { info ->
+                val isDefaultGitHubRepo = info.path.contains("hongtrantiende", ignoreCase = true) ||
+                        info.path.contains("vbookext.me", ignoreCase = true) ||
+                        info.source.contains("hongtrantiende", ignoreCase = true) ||
+                        info.source.contains("vbookext.me", ignoreCase = true)
+                !isDefaultGitHubRepo
+            }
+        }
+        if (searchQuery.isBlank()) filteredByVip else {
+            filteredByVip.filter {
                 it.name.contains(searchQuery, ignoreCase = true) ||
                 it.description.contains(searchQuery, ignoreCase = true) ||
                 it.author.contains(searchQuery, ignoreCase = true)
@@ -98,10 +112,24 @@ fun ExtensionScreens(
     }
 
     // Pre-query pinned states to completely avoid calling getSharedPreferences during visible list binding
-    val (filteredInstalled, pinnedExtIds) = remember(installed, searchQuery) {
+    val (filteredInstalled, pinnedExtIds) = remember(installed, searchQuery, isVip) {
         val prefs = context.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
-        val pinnedIds = installed.filter { prefs.getBoolean("ext_pinned_${it.id}", false) }.map { it.id }.toSet()
-        val sortedList = installed.sortedWith(compareByDescending<ExtensionEntity> {
+        val vipFilteredInstalled = if (isVip) {
+            installed
+        } else {
+            installed.filter { ext ->
+                val repoUrl = ext.repositoryUrl.orEmpty()
+                val source = ext.source
+                val isDefaultRepo = repoUrl.contains("hongtrantiende", ignoreCase = true) ||
+                        repoUrl.contains("vbookext.me", ignoreCase = true) ||
+                        source.contains("hongtrantiende", ignoreCase = true) ||
+                        source.contains("vbookext.me", ignoreCase = true) ||
+                        ext.id.contains("vbook", ignoreCase = true)
+                !isDefaultRepo
+            }
+        }
+        val pinnedIds = vipFilteredInstalled.filter { prefs.getBoolean("ext_pinned_${it.id}", false) }.map { it.id }.toSet()
+        val sortedList = vipFilteredInstalled.sortedWith(compareByDescending<ExtensionEntity> {
             pinnedIds.contains(it.id)
         }.thenBy { it.name })
         
@@ -474,6 +502,25 @@ fun ExtensionScreens(
         )
     }
 
+    val zipPicker = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let {
+            try {
+                val bytes = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
+                if (bytes != null && bytes.isNotEmpty()) {
+                    viewModel.installExtensionFromZip(bytes) {
+                        context.toastOnUi("Đã cài đặt tiện ích từ file ZIP thành công")
+                    }
+                } else {
+                    context.toastOnUi("File ZIP rỗng hoặc không đọc được")
+                }
+            } catch (e: Exception) {
+                context.toastOnUi("Lỗi cài tiện ích: ${e.message}")
+            }
+        }
+    }
+
     if (showManageReposDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.showManageReposDialog(false) },
@@ -484,10 +531,17 @@ fun ExtensionScreens(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("Quản lý kho nguồn", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    IconButton(
-                        onClick = { viewModel.showAddRepoDialog(true) }
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Thêm kho nguồn")
+                    Row {
+                        IconButton(
+                            onClick = { zipPicker.launch(arrayOf("*/*")) }
+                        ) {
+                            Icon(Icons.Default.UploadFile, contentDescription = "Nhập từ file ZIP")
+                        }
+                        IconButton(
+                            onClick = { viewModel.showAddRepoDialog(true) }
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Thêm kho nguồn")
+                        }
                     }
                 }
             },
@@ -541,6 +595,15 @@ fun ExtensionScreens(
                                 }
                             }
                         }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = { zipPicker.launch(arrayOf("*/*")) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.UploadFile, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Nhập tiện ích từ file ZIP (.zip)", fontSize = 13.sp)
                     }
                 }
             },

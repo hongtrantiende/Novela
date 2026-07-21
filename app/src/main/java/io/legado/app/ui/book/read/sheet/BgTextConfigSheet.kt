@@ -254,12 +254,12 @@ fun BgTextConfigSheet(
 
             // LazyRow of all background images
             val bgImages = listOf(
-                "bg7.jpg", "bg7.png", "bg6.png", "bg6_d.png", "bg5.jpg", "bg5.png",
-                "bg4.jpg", "bg4.png", "bg3.png", "bg1.png",
-                "宁静夜色.jpg", "午后沙滩.jpg", "山水墨影.jpg", "山水画.jpg",
-                "护眼漫绿.jpg", "新羊皮纸.jpg", "明媚倾城.jpg", "深宫魅影.jpg",
-                "清新时光.jpg", "羊皮纸1.jpg", "羊皮纸2.jpg", "羊皮纸3.jpg", "羊皮纸4.jpg",
-                "边彩画布.jpg"
+                "bg7.webp", "bg6.webp", "bg6_d.webp", "bg5.webp",
+                "bg4.webp", "bg3.webp", "bg1.webp",
+                "宁静夜色.webp", "午后沙滩.webp", "山水墨影.webp", "山水画.webp",
+                "护眼漫绿.webp", "新羊皮纸.webp", "明媚倾城.webp", "深宫魅影.webp",
+                "清新时光.webp", "羊皮纸1.webp", "羊皮纸2.webp", "羊皮纸3.webp", "羊皮纸4.webp",
+                "边彩画布.webp"
             )
 
 

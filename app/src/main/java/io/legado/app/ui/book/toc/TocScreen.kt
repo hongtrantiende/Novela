@@ -1,5 +1,7 @@
 package io.legado.app.ui.book.toc
 
+import io.legado.app.utils.translateAsState
+
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -768,7 +770,7 @@ fun ChapterListContent(
                 item(key = "volume-${uiItem.id}") {
                     CollapsibleHeader(
                         modifier = Modifier.animateItem(),
-                        title = uiItem.title,
+                        title = translateAsState(uiItem.title, isMeta = true).value,
                         isCollapsed = collapsedVolumes.contains(uiItem.id),
                         onToggle = { viewModel.toggleVolume(uiItem.id) }
                     )
@@ -863,8 +865,9 @@ fun ChapterItem(
                         )
                     }
 
+                    val translatedTitle = translateAsState(item.title, isMeta = true).value
                     AppText(
-                        text = item.title,
+                        text = translatedTitle,
                         style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
                         color = textColor,
                         maxLines = 2,

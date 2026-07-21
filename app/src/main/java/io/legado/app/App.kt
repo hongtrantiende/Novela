@@ -133,6 +133,7 @@ class App : Application(), ImageLoaderFactory {
         oldConfig = Configuration(resources.configuration)
         registerActivityLifecycleCallbacks(LifecycleHelp)
         defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
+        // ── Group A: Essential init (immediate, on Default) ──
         Coroutine.async {
             LogUtils.init(this@App)
             LogUtils.d("App", "onCreate")
@@ -148,8 +149,6 @@ class App : Application(), ImageLoaderFactory {
                     .putBoolean("tts_v1_default_reset", true)
                     .apply()
             }
-            //预下载Cronet so
-            Cronet.preDownload()
             createNotificationChannels()
             LiveEventBus.config()
                 .lifecycleObserverAlwaysActive(true)
@@ -160,35 +159,43 @@ class App : Application(), ImageLoaderFactory {
             AppFreezeMonitor.init(this@App)
             DispatchersMonitor.init()
             URL.setURLStreamHandlerFactory(ObsoleteUrlFactory(okHttpClient))
-            launch { installGmsTlsProvider(appCtx) }
             initRhino()
             //初始化封面
             BookCover.toString()
+            //调整排序序号
+            SourceHelp.adjustSortNumber()
+        }
+        // ── Group B: IO-bound tasks (parallel on IO) ──
+        Coroutine.async(context = kotlinx.coroutines.Dispatchers.IO) {
+            //预下载Cronet so
+            Cronet.preDownload()
+            launch { installGmsTlsProvider(appCtx) }
             //清除过期数据
             appDb.cacheDao.clearDeadline(System.currentTimeMillis())
             if (getPrefBoolean(PreferKey.autoClearExpired, true)) {
                 val clearTime = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(1)
                 appDb.searchBookDao.clearExpired(clearTime)
             }
+            //同步阅读记录
+            if (AppConfig.syncBookProgress) {
+                AppWebDav.downloadAllBookProgress()
+            }
+        }
+        // ── Group C: Deferred cleanup (delay 5s after startup) ──
+        Coroutine.async {
+            kotlinx.coroutines.delay(5000)
             RuleBigDataHelp.clearInvalid()
             BookHelp.clearInvalidCache()
             Backup.clearCache()
             ReadBookConfig.clearBgAndCache()
             ThemeConfigStore.clearBg()
-            //初始化简繁转换引擎
+            // Defer Chinese converter preload — loaded lazily on first use
             when (AppConfig.chineseConverterType) {
                 1 -> {
                     ChineseUtils.fixT2sDict()
                     ChineseUtils.preLoad(true, TransType.TRADITIONAL_TO_SIMPLE)
                 }
-
                 2 -> ChineseUtils.preLoad(true, TransType.SIMPLE_TO_TRADITIONAL)
-            }
-            //调整排序序号
-            SourceHelp.adjustSortNumber()
-            //同步阅读记录
-            if (AppConfig.syncBookProgress) {
-                AppWebDav.downloadAllBookProgress()
             }
         }
     }

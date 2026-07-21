@@ -52,8 +52,8 @@ class ChangeChapterSourceViewModel(
                 scopeState = ScopeUiState(
                     isAll = searchScope.isAll(),
                     isSource = searchScope.isSource(),
-                    displayNames = searchScope.displayNames,
-                    sourceUrls = searchScope.sourceUrls
+                    displayNames = searchScope.displayNames.toImmutableList(),
+                    sourceUrls = searchScope.sourceUrls.toImmutableList()
                 )
             )
         }
@@ -450,8 +450,8 @@ class ChangeChapterSourceViewModel(
                 scopeState = ScopeUiState(
                     isAll = searchScope.isAll(),
                     isSource = searchScope.isSource(),
-                    displayNames = searchScope.displayNames,
-                    sourceUrls = searchScope.sourceUrls
+                    displayNames = searchScope.displayNames.toImmutableList(),
+                    sourceUrls = searchScope.sourceUrls.toImmutableList()
                 )
             )
         }

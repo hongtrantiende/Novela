@@ -12,6 +12,7 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.update.AppUpdate
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
+import kotlinx.collections.immutable.toImmutableList
 import io.legado.app.utils.compress.ZipUtils
 import io.legado.app.utils.createFileIfNotExist
 import io.legado.app.utils.createFolderIfNotExist
@@ -92,7 +93,7 @@ class AboutViewModel(application: Application) : BaseViewModel(application) {
         }.onSuccess { files ->
             _uiState.update {
                 it.copy(
-                    crashLogFiles = files,
+                    crashLogFiles = files.toImmutableList(),
                     sheet = AboutSheet.CrashLogs
                 )
             }
@@ -127,7 +128,7 @@ class AboutViewModel(application: Application) : BaseViewModel(application) {
             execute {
                 loadCrashLogFiles()
             }.onSuccess { files ->
-                _uiState.update { it.copy(crashLogFiles = files) }
+                _uiState.update { it.copy(crashLogFiles = files.toImmutableList()) }
             }
         }
     }

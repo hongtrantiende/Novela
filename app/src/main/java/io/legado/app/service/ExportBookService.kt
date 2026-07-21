@@ -217,6 +217,18 @@ class ExportBookService : BaseService(), KoinComponent {
                 val book = appDb.bookDao.getBook(bookUrl)
                 try {
                     book ?: throw NoStackTraceException("Lỗi khi tải sách ${bookUrl}")
+
+                    val isVBookExt = isVBookExtBook(book)
+
+                    if (isVBookExt && !io.legado.app.help.MemberManager.isVip) {
+                        val copyrightMsg = "Nguồn này thuộc bản quyền của vbook không thể xuất file vui lòng qua vbook tải"
+                        toastOnUi(copyrightMsg)
+                        exportMsg[bookUrl] = copyrightMsg
+                        notifyExportBookChanged(bookUrl)
+                        exportProgress.remove(bookUrl)
+                        continue
+                    }
+
                     refreshChapterList(book)
 
                     val isTranslateEnabled = io.legado.app.utils.TranslateUtils.isTranslateEnabled()
@@ -1265,4 +1277,53 @@ class ExportBookService : BaseService(), KoinComponent {
         }
         return result
     }
+}
+
+fun isVBookExtBook(book: io.legado.app.data.entities.Book): Boolean {
+    val originLower = book.origin.lowercase()
+    val originNameLower = book.originName.lowercase()
+
+    if (originLower.contains("vbookext.me") ||
+        originLower.startsWith("online_yckceo_") ||
+        originNameLower.contains("vbookext.me")
+    ) {
+        return true
+    }
+
+    if (book.origin.startsWith("ext_")) {
+        val extId = book.origin.substringAfter("ext_").lowercase()
+        if (extId.contains("vbook") || extId.contains("yckceo")) return true
+
+        try {
+            val extensionDao: io.legado.app.vbookextension.data.dao.ExtensionDao =
+                org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+            val extension = extensionDao.getExtensionByIdSync(extId)
+            if (extension != null) {
+                val repoUrl = extension.repositoryUrl.orEmpty().lowercase()
+                val source = extension.source.lowercase()
+                if (repoUrl.contains("vbookext.me") || repoUrl.contains("vbook") ||
+                    source.contains("vbookext.me") || source.contains("vbook")
+                ) {
+                    return true
+                }
+            }
+        } catch (e: Throwable) {
+            // ignore
+        }
+
+        try {
+            val repoDao: io.legado.app.vbookextension.data.dao.RepositoryDao =
+                org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+            val repos = repoDao.getEnabledRepositoriesSync()
+            if (repos.any { repo ->
+                    val urlLower = repo.url.lowercase()
+                    urlLower.contains("vbookext.me") && (extId.isBlank() || urlLower.contains(extId) || extId.contains("vbook"))
+                }) {
+                return true
+            }
+        } catch (e: Throwable) {
+            // ignore
+        }
+    }
+    return false
 }

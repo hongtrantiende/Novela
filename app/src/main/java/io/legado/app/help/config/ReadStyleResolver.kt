@@ -109,7 +109,8 @@ object ReadStyleResolver {
             bgDrawable = when (background.type) {
                 0 -> background.value.toColorInt().toDrawable()
                 1 -> {
-                    val path = "bg" + File.separator + background.value
+                    val assetName = migrateToWebp(background.value)
+                    val path = "bg" + File.separator + assetName
                     val bitmap = BitmapUtils.decodeAssetsBitmap(appCtx, path, width, height)
                     bitmap?.resizeAndRecycle(width, height)?.toDrawable(resources)
                 }
@@ -129,6 +130,24 @@ object ReadStyleResolver {
         }
 
         return bgDrawable ?: fallbackBackground()
+    }
+
+    /**
+     * Migrate legacy .png/.jpg bg asset names to .webp.
+     * Only applies to built-in asset backgrounds (not user-imported paths).
+     */
+    private fun migrateToWebp(bgValue: String): String {
+        if (bgValue.endsWith(".webp") || bgValue.contains(File.separator)) {
+            return bgValue
+        }
+        val webpName = bgValue.replaceAfterLast('.', "webp")
+        // Verify .webp asset exists before migrating
+        return try {
+            appCtx.assets.open("bg/$webpName").close()
+            webpName
+        } catch (_: Exception) {
+            bgValue // Keep original if .webp not found
+        }
     }
 
     private fun fallbackBackground(): Drawable {

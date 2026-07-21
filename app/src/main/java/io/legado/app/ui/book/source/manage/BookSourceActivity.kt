@@ -188,7 +188,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         val tabSources = tabLayout.newTab().setText("Nguồn sách")
         tabLayout.addTab(tabSources)
  
-        if (io.legado.app.help.MemberManager.isVip) {
+        if (true) { // VIP gating removed
             val tabExtensions = tabLayout.newTab().setText("Nguồn Extension")
             tabLayout.addTab(tabExtensions)
         }
@@ -196,7 +196,7 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 val position = tab?.position ?: 0
-                if (!io.legado.app.help.MemberManager.isVip && position > 0) return
+                // VIP gating removed — all tabs accessible
                 when (position) {
                     0 -> {
                         currentTab = 0
@@ -511,7 +511,34 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
                 else -> {
                     appDb.bookSourceDao.flowSearch(searchKey)
                 }
-            }.map { data ->
+            }.map { rawData ->
+                val data = if (io.legado.app.help.MemberManager.isVip) {
+                    rawData
+                } else {
+                    val extensionDao: io.legado.app.vbookextension.data.dao.ExtensionDao? = try {
+                        org.koin.mp.KoinPlatformTools.defaultContext().get().get()
+                    } catch (e: Throwable) { null }
+
+                    val installedDefaultExtIds = try {
+                        extensionDao?.getEnabledExtensionsSync()
+                            ?.filter { ext ->
+                                val repoUrl = ext.repositoryUrl.orEmpty()
+                                val source = ext.source
+                                repoUrl.contains("hongtrantiende", ignoreCase = true) ||
+                                repoUrl.contains("vbookext.me", ignoreCase = true) ||
+                                source.contains("hongtrantiende", ignoreCase = true) ||
+                                source.contains("vbookext.me", ignoreCase = true) ||
+                                ext.id.contains("vbook", ignoreCase = true)
+                            }
+                            ?.map { "ext_${it.id}" }
+                            ?.toSet().orEmpty()
+                    } catch (e: Throwable) { emptySet() }
+
+                    rawData.filter { part ->
+                        !part.bookSourceUrl.startsWith("online_yckceo_") &&
+                        !installedDefaultExtIds.contains(part.bookSourceUrl)
+                    }
+                }
                 hostMap.clear()
                 if (groupSourcesByDomain) {
                     data.sortedWith(
@@ -979,8 +1006,6 @@ class BookSourceActivity : VMBaseActivity<ActivityBookSourceBinding, BookSourceV
 
 @Composable
 fun BookSourceComposeWrapper(tabIndex: Int) {
-    if (!io.legado.app.help.MemberManager.isVip) {
-        return
-    }
+    // VIP gating removed — ExtensionScreens available to all
     ExtensionScreens()
 }
