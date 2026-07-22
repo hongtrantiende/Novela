@@ -234,7 +234,7 @@ fun TranslationSettingsDialog(
                             expanded = engineMenuExpanded,
                             onDismissRequest = { engineMenuExpanded = false }
                         ) {
-                            listOf("VP", "STV", "AI").forEach { eng ->
+                            listOf("VP", "STV", "HACHIMI", "AI").forEach { eng ->
                                 DropdownMenuItem(
                                     text = { AppText(eng) },
                                     onClick = {

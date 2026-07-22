@@ -9,6 +9,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import io.legado.app.R
 import io.legado.app.ui.theme.adaptiveContentPadding
 import io.legado.app.ui.widget.components.AppScaffold
@@ -91,6 +95,106 @@ fun TranslationConfigScreen(
                         steps = 17,
                         onValueChange = { TranslationConfig.llmMaxCharsPerChunk = it.toInt() }
                     )
+                }
+            }
+
+            if (TranslationConfig.llmProvider == TranslationConfig.PROVIDER_HACHIMI_MT) {
+                item {
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val scope = androidx.compose.runtime.rememberCoroutineScope()
+                    val downloadState by io.legado.app.model.translation.HachimiModelManager.state.collectAsStateWithLifecycle()
+                    val selectedId by io.legado.app.model.translation.HachimiModelManager.selectedModelIdFlow.collectAsStateWithLifecycle()
+                    val allModels = remember(downloadState, selectedId) {
+                        io.legado.app.model.translation.HachimiModelManager.getAllInstalledModelIds(context)
+                    }
+
+                    // File picker launcher
+                    val zipPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                        contract = androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+                    ) { uri ->
+                        if (uri != null) {
+                            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                io.legado.app.model.translation.HachimiModelManager.importLocalZip(context, uri)
+                            }
+                        }
+                    }
+
+                    SplicedColumnGroup(title = "Mô hình dịch ONNX") {
+                        // Default model (download)
+                        val defaultModel = io.legado.app.domain.model.TranslationConstants.AVAILABLE_ONNX_MODELS.first()
+                        val isDefaultInstalled = allModels.any { it.first == defaultModel.id }
+                        val isDefaultSelected = selectedId == defaultModel.id
+
+                        val defaultStatus = when {
+                            isDefaultSelected && downloadState is io.legado.app.model.translation.HachimiModelManager.DownloadState.Downloading ->
+                                "Đang tải... ${((downloadState as io.legado.app.model.translation.HachimiModelManager.DownloadState.Downloading).progress * 100).toInt()}%"
+                            isDefaultSelected && downloadState is io.legado.app.model.translation.HachimiModelManager.DownloadState.Extracting ->
+                                "Đang giải nén..."
+                            isDefaultInstalled && isDefaultSelected -> "Đang sử dụng"
+                            isDefaultInstalled -> "Đã tải · Nhấn để chọn"
+                            else -> "${defaultModel.sizeDescription} · Nhấn để tải"
+                        }
+
+                        ClickableSettingItem(
+                            title = (if (isDefaultSelected) "● " else "○ ") + defaultModel.displayName,
+                            description = "${defaultModel.description}\n$defaultStatus",
+                            onClick = {
+                                scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                    if (isDefaultInstalled) {
+                                        io.legado.app.model.translation.HachimiModelManager.switchModel(defaultModel.id, context)
+                                    } else {
+                                        io.legado.app.model.translation.HachimiModelManager.switchModel(defaultModel.id, context)
+                                        io.legado.app.model.translation.HachimiModelManager.ensureModelReady(context, defaultModel)
+                                    }
+                                }
+                            },
+                            onLongClick = {
+                                if (isDefaultInstalled) {
+                                    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                        io.legado.app.model.translation.HachimiModelManager.deleteModel(context, defaultModel.id)
+                                    }
+                                }
+                            }
+                        )
+
+                        // Show imported models (not in AVAILABLE_ONNX_MODELS)
+                        val knownIds = io.legado.app.domain.model.TranslationConstants.AVAILABLE_ONNX_MODELS.map { it.id }.toSet()
+                        val importedModels = allModels.filter { it.first !in knownIds }
+                        importedModels.forEach { (modelId, displayName) ->
+                            val isSelected = selectedId == modelId
+                            ClickableSettingItem(
+                                title = (if (isSelected) "● " else "○ ") + displayName,
+                                description = if (isSelected) "Đang sử dụng (nhập cục bộ)" else "Nhấn để chọn · Giữ để xóa",
+                                onClick = {
+                                    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                        io.legado.app.model.translation.HachimiModelManager.switchModel(modelId, context)
+                                    }
+                                },
+                                onLongClick = {
+                                    scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                                        io.legado.app.model.translation.HachimiModelManager.deleteModel(context, modelId)
+                                    }
+                                }
+                            )
+                        }
+
+                        // Import button
+                        val importStatus = when (val state = downloadState) {
+                            is io.legado.app.model.translation.HachimiModelManager.DownloadState.Extracting ->
+                                "Đang giải nén..."
+                            is io.legado.app.model.translation.HachimiModelManager.DownloadState.Error ->
+                                "Lỗi: ${state.message}"
+                            else -> "Chọn file ZIP chứa model ONNX"
+                        }
+
+                        ClickableSettingItem(
+                            title = "Nhập mô hình ONNX cục bộ",
+                            description = importStatus,
+                            onClick = {
+                                zipPickerLauncher.launch(arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream"))
+                            }
+                        )
+                    }
                 }
             }
 

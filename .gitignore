@@ -42,4 +42,7 @@ package.json
 # AI Agent scratch & local cookies
 .agents/skills/
 cookies.txt
+scratch/
+*.zip
+
 

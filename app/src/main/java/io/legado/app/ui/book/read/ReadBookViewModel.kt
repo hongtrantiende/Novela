@@ -4084,6 +4084,12 @@ class ReadBookViewModel(
                     io.legado.app.ui.config.translation.TranslationConfig.llmProvider = io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_SANGTACVIET
                     book.setTranslationMode(true)
                 }
+                "HACHIMI" -> {
+                    io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled = false
+                    io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled = true
+                    io.legado.app.ui.config.translation.TranslationConfig.llmProvider = io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_HACHIMI_MT
+                    book.setTranslationMode(true)
+                }
                 "AI" -> {
                     io.legado.app.ui.config.translation.TranslationConfig.isGlobalTranslateEnabled = false
                     io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled = true

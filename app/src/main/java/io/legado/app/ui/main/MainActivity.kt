@@ -184,6 +184,12 @@ open class MainActivity : BaseComposeActivity(), VariableDialog.Callback {
 
         if (checkStartupRoute()) return
 
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            android.util.Log.d("HachimiMTTest", ">>> TEST HACHIMI START >>>")
+            val res = io.legado.app.model.translation.HachimiOnnxTranslator.translate("第一章 初始")
+            android.util.Log.d("HachimiMTTest", ">>> TEST HACHIMI RESULT: '${res.getOrNull()}' <<<")
+        }
+
         val token = LocalConfig.accessToken
         if (!token.isNullOrBlank()) {
             lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {

@@ -300,6 +300,9 @@ class TranslateChapterUseCase(
                     onUpdate = onDictionaryUpdate,
                     retryReason = lastRetryReason
                 )
+                TranslationConstants.PROVIDER_HACHIMI_MT -> {
+                    io.legado.app.model.translation.HachimiOnnxTranslator.translate(chunk.content)
+                }
                 TranslationConstants.PROVIDER_VIETPHRASE,
                 TranslationConstants.PROVIDER_SANGTACVIET -> {
                     llmGateway.translate(

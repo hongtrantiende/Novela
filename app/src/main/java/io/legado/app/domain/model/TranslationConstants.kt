@@ -7,12 +7,46 @@ object TranslationConstants {
     const val PROVIDER_APP_AI = "app_ai"
     const val PROVIDER_VIETPHRASE = "vietphrase"
     const val PROVIDER_SANGTACVIET = "sangtacviet"
+    const val PROVIDER_HACHIMI_MT = "hachimi_mt"
     const val MIN_TEMPERATURE = 0f
     const val MAX_TEMPERATURE = 2f
     const val DEFAULT_TEMPERATURE = 1.3f
 
-    val providerDisplayNames = listOf("Dịch API Sáng Tác Việt", "Từ điển VietPhrase", "Nhà cung cấp dịch AI")
-    val providerValues = listOf(PROVIDER_SANGTACVIET, PROVIDER_VIETPHRASE, PROVIDER_APP_AI)
+    /**
+     * Registry of available ONNX translation models (zh → vi).
+     * Each model is a MarianMT encoder-decoder, packaged as ONNX INT8.
+     */
+    data class OnnxModelInfo(
+        val id: String,
+        val displayName: String,
+        val description: String,
+        val downloadUrl: String,
+        val zipFilename: String,
+        val sizeDescription: String,
+        val isLocalImport: Boolean = false,
+    )
+
+    const val DEFAULT_ONNX_MODEL_ID = "hachimi-mt60"
+
+    val AVAILABLE_ONNX_MODELS = listOf(
+        OnnxModelInfo(
+            id = "hachimi-mt60",
+            displayName = "HachimiMT-60",
+            description = "Dịch truyện convert cơ bản, nhẹ và nhanh",
+            downloadUrl = "https://raw.githubusercontent.com/hongtrantiende/Extransion-TTC/main/legado-hachimi-onnx-arm64-20260721.zip",
+            zipFilename = "legado-hachimi-onnx-arm64-20260721.zip",
+            sizeDescription = "~70MB",
+        ),
+    )
+
+    /** Backward compat — resolve current model zip filename */
+    val HACHIMI_MODEL_ZIP_FILENAME: String
+        get() = AVAILABLE_ONNX_MODELS.first().zipFilename
+    val HACHIMI_MODEL_DOWNLOAD_URL: String
+        get() = AVAILABLE_ONNX_MODELS.first().downloadUrl
+
+    val providerDisplayNames = listOf("Dịch API Sáng Tác Việt", "Từ điển VietPhrase", "Dịch AI Offline HachimiMT (ONNX)", "Nhà cung cấp dịch AI")
+    val providerValues = listOf(PROVIDER_SANGTACVIET, PROVIDER_VIETPHRASE, PROVIDER_HACHIMI_MT, PROVIDER_APP_AI)
 
     val targetLanguages = listOf(
         "vi" to "Tiếng Việt",

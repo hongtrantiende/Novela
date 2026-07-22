@@ -245,6 +245,8 @@ dependencies {
     implementation(libs.markwon.html)
     implementation(libs.markdown.renderer.m3)
     implementation(libs.quick.chinese.transfer.core)
+    implementation(libs.onnxruntime.android)
+    implementation(libs.onnxruntime.extensions.android)
     implementation(libs.hutool.crypto)
     //noinspection GradleDependency
     implementation(platform(libs.firebase.bom))

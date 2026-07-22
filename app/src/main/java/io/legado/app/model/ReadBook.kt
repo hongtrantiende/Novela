@@ -756,8 +756,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 val content = if (book.getTranslationMode()) {
                     TranslationManager.getCachedTranslation(book, chapter)
                         ?: run {
+                            val prov = io.legado.app.ui.config.translation.TranslationConfig.llmProvider
                             val isAiEngine = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
-                                    io.legado.app.ui.config.translation.TranslationConfig.llmProvider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI
+                                    (prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI ||
+                                     prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_HACHIMI_MT ||
+                                     prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_SANGTACVIET)
                             val shouldStartTrans = (index == durChapterIndex || index == durChapterIndex + 1)
                             if (shouldStartTrans && (!isAiEngine || index == durChapterIndex)) {
                                 TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
@@ -806,8 +809,11 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 val content = if (book.getTranslationMode()) {
                     TranslationManager.getCachedTranslation(book, chapter)
                         ?: run {
+                            val prov = io.legado.app.ui.config.translation.TranslationConfig.llmProvider
                             val isAiEngine = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
-                                    io.legado.app.ui.config.translation.TranslationConfig.llmProvider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI
+                                    (prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI ||
+                                     prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_HACHIMI_MT ||
+                                     prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_SANGTACVIET)
                             val shouldStartTrans = (index == durChapterIndex || index == durChapterIndex + 1)
                             if (shouldStartTrans && (!isAiEngine || index == durChapterIndex)) {
                                 TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->

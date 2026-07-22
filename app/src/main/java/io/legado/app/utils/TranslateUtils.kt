@@ -367,6 +367,13 @@ object TranslateUtils {
      */
     private suspend fun performTranslation(text: String): String = withContext(Dispatchers.Default) {
         val context = splitties.init.appCtx
+        val provider = io.legado.app.ui.config.translation.TranslationConfig.llmProvider
+        if (io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
+            provider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_HACHIMI_MT) {
+            val res = io.legado.app.model.translation.HachimiOnnxTranslator.translate(text, context)
+            val translated = res.getOrNull()
+            if (!translated.isNullOrBlank()) return@withContext translated
+        }
         io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, text, "vi")
     }
 

@@ -115,6 +115,11 @@ object TranslationConfig {
                     llmTranslateEnabled = true
                     llmProvider = PROVIDER_VIETPHRASE
                 }
+                "HACHIMI" -> {
+                    isGlobalTranslateEnabled = false
+                    llmTranslateEnabled = true
+                    llmProvider = PROVIDER_HACHIMI_MT
+                }
                 "AI" -> {
                     isGlobalTranslateEnabled = false
                     llmTranslateEnabled = true
@@ -139,6 +144,7 @@ object TranslationConfig {
     const val PROVIDER_GOOGLE = TranslationConstants.PROVIDER_GOOGLE
     const val PROVIDER_SANGTACVIET = TranslationConstants.PROVIDER_SANGTACVIET
     const val PROVIDER_VIETPHRASE = TranslationConstants.PROVIDER_VIETPHRASE
+    const val PROVIDER_HACHIMI_MT = TranslationConstants.PROVIDER_HACHIMI_MT
     val providerDisplayNames get() = TranslationConstants.providerDisplayNames
     val providerValues get() = TranslationConstants.providerValues
     val targetLanguages get() = TranslationConstants.targetLanguages

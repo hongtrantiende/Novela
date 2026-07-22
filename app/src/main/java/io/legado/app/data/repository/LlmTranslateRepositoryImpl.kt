@@ -92,6 +92,9 @@ class LlmTranslateRepositoryImpl : LlmGateway {
                         Result.failure(Exception("VietPhrase dictionaries not loaded"))
                     }
                 }
+                TranslationConstants.PROVIDER_HACHIMI_MT -> {
+                    io.legado.app.model.translation.HachimiOnnxTranslator.translate(text)
+                }
                 TranslationConstants.PROVIDER_SANGTACVIET -> {
                     TranslateUtils.networkSemaphore.withPermit {
                         translateWithSangTacViet(text)

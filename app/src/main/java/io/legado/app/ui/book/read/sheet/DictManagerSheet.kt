@@ -89,6 +89,9 @@ fun DictManagerSheet(
     val isScanningAi = isScanningFlowState.value && scanBookUrlFlowState.value == state.book?.bookUrl
     val scanProgressText = if (isScanningAi) scanProgressFlowState.value else ""
     
+    var isScanningLtp by remember { mutableStateOf(false) }
+    var ltpScanProgressText by remember { mutableStateOf("") }
+    
     var showResumeDialog by remember { mutableStateOf(false) }
     var resumeSavedIndex by remember { mutableStateOf(-1) }
 
@@ -299,7 +302,43 @@ fun DictManagerSheet(
             )
 
             // Auto Scan with AI
-            if (isScanningAi) {
+            if (isScanningLtp) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = ltpScanProgressText,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = LegadoTheme.colorScheme.onSurface
+                        )
+                    }
+                    Button(
+                        onClick = {
+                            isScanningLtp = false
+                            Toast.makeText(context, "Đã gửi yêu cầu dừng quét LTP Server", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LegadoTheme.colorScheme.error,
+                            contentColor = LegadoTheme.colorScheme.onError
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text("Dừng", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else if (isScanningAi) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -346,6 +385,81 @@ fun DictManagerSheet(
                     OutlinedButton(
                         onClick = {
                             val book = state.book ?: return@OutlinedButton
+                            isScanningLtp = true
+                            ltpScanProgressText = "Đang kết nối LTP NER Server..."
+                            scope.launch(Dispatchers.IO) {
+                                try {
+                                    val chapterList = appDb.bookChapterDao.getChapterList(book.bookUrl)
+                                    val downloadedChapters = chapterList.filter { io.legado.app.help.book.BookHelp.hasContent(book, it) }
+                                    var addedCount = 0
+                                    
+                                    downloadedChapters.forEachIndexed { index, chapter ->
+                                        if (!isActive || !isScanningLtp) return@forEachIndexed
+                                        val content = io.legado.app.help.book.BookHelp.getContent(book, chapter)
+                                        if (!content.isNullOrBlank()) {
+                                            withContext(Dispatchers.Main) {
+                                                ltpScanProgressText = "LTP Server quét chương ${index + 1} / ${downloadedChapters.size}..."
+                                            }
+                                            val entities = io.legado.app.help.LtpNerClient.fetchEntities(content, context)
+                                            for (entity in entities) {
+                                                val targetTag = when (entity.tag) {
+                                                    "Nh" -> "PER"
+                                                    "Ns" -> "LOC"
+                                                    "Ni" -> "ORG"
+                                                    else -> "PER"
+                                                }
+                                                val viTranslation = if (entity.translation.isBlank() || entity.translation == entity.text) {
+                                                    io.legado.app.help.LtpNerClient.toHanViet(entity.text, context)
+                                                } else {
+                                                    entity.translation
+                                                }
+                                                QuickTranslateDictHelper.addOrUpdateEntry(
+                                                    context,
+                                                    privateNameFile,
+                                                    entity.text,
+                                                    "$viTranslation/$targetTag"
+                                                )
+                                                addedCount++
+                                            }
+                                        }
+                                    }
+                                    
+                                    io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                                    io.legado.app.utils.TranslateUtils.clearCache()
+                                    
+                                    withContext(Dispatchers.Main) {
+                                        io.legado.app.model.ReadBook.loadContent(false)
+                                        Toast.makeText(context, "Quét LTP Server xong! Đã thêm $addedCount từ vào từ điển.", Toast.LENGTH_LONG).show()
+                                        refreshListTrigger++
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Lỗi quét LTP Server: ${e.message}", Toast.LENGTH_SHORT).show()
+                                    }
+                                } finally {
+                                    withContext(Dispatchers.Main) {
+                                        isScanningLtp = false
+                                    }
+                                }
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Quét LTP Server", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            val book = state.book ?: return@OutlinedButton
                             if (TranslationConfig.llmBaseUrl.isBlank() || TranslationConfig.llmApiKey.isBlank()) {
                                 Toast.makeText(context, "Vui lòng cấu hình API AI trước", Toast.LENGTH_SHORT).show()
                                 return@OutlinedButton
@@ -364,15 +478,16 @@ fun DictManagerSheet(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Bolt,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Tự động quét bằng AI (Tất cả chương đã tải)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Quét bằng AI", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
                 }
             }
