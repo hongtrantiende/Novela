@@ -33,7 +33,7 @@ object TranslationConstants {
             id = "hachimi-mt60",
             displayName = "HachimiMT-60",
             description = "Dịch truyện convert cơ bản, nhẹ và nhanh",
-            downloadUrl = "https://raw.githubusercontent.com/hongtrantiende/Extransion-TTC/main/legado-hachimi-onnx-arm64-20260721.zip",
+            downloadUrl = "https://raw.githubusercontent.com/hongtrantiende/Novela/main/legado-hachimi-onnx-arm64-20260721.zip",
             zipFilename = "legado-hachimi-onnx-arm64-20260721.zip",
             sizeDescription = "~70MB",
         ),
