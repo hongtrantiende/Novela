@@ -203,3 +203,21 @@ cn.hutool.core.util.**{*;}
 -keepclasseswithmembernames class baidu.lac.jni.** {
     native <methods>;
 }
+
+# ==============================================================================
+# ONNX Runtime & Extensions JNI Keep Rules
+# ==============================================================================
+-keep class ai.onnxruntime.** { *; }
+-keepclassmembers class ai.onnxruntime.** { *; }
+-keepclasseswithmembernames class ai.onnxruntime.** {
+    native <methods>;
+}
+-dontwarn ai.onnxruntime.**
+
+-keep class ai.onnxruntime.extensions.** { *; }
+-keepclassmembers class ai.onnxruntime.extensions.** { *; }
+-dontwarn ai.onnxruntime.extensions.**
+
+-keep class io.legado.app.model.translation.** { *; }
+-keepclassmembers class io.legado.app.model.translation.** { *; }
+

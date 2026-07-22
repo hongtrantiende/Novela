@@ -205,7 +205,7 @@ object HachimiOnnxTranslator {
                 val finalResult = translatedParagraphs.joinToString("\n")
                 Log.d("HachimiMT", "Translation result: '$text' -> '$finalResult'")
                 Result.success(finalResult)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e("HachimiMT", "HachimiMT ONNX translation failed completely, falling back to VietPhrase", e)
                 val fallbackText = fallbackTranslate(text, context)
                 Result.success(fallbackText)
@@ -397,7 +397,7 @@ object HachimiOnnxTranslator {
             if (tokensToDetokenize.isEmpty()) return fallbackTranslate(paragraph, context)
 
             return detokenizeTokens(tokensToDetokenize, env, paragraph, context)
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e("HachimiMT", "ONNX inference error for paragraph '$paragraph'", e)
             return fallbackTranslate(paragraph, context)
         }
@@ -422,7 +422,7 @@ object HachimiOnnxTranslator {
                     Log.d("HachimiMT", "Tokenizer ONNX success, tokens (${ids.size}): ${ids.take(10).joinToString()}")
                     return ids.take(MAX_SOURCE_TOKENS).toLongArray()
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e("HachimiMT", "Tokenizer ONNX session run failed for text: '$text'", e)
             }
         } else {
@@ -461,7 +461,7 @@ object HachimiOnnxTranslator {
                     Log.d("HachimiMT", "Detokenizer ONNX success: '$resultText'")
                     return resultText
                 }
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 Log.e("HachimiMT", "Detokenizer ONNX session run failed for tokens: ${tokens.take(10)}", e)
             }
         } else {

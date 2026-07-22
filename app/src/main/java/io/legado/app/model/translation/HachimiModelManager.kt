@@ -179,7 +179,11 @@ object HachimiModelManager {
             val response = okHttpClient.newCall(request).execute()
 
             if (!response.isSuccessful) {
-                val errorMsg = "HTTP ${response.code}: ${response.message}"
+                val errorMsg = if (response.code == 404) {
+                    "Lỗi HTTP 404. Hãy chép file ${modelInfo.zipFilename} vào thư mục Download của máy để ứng dụng tự nạp cục bộ."
+                } else {
+                    "HTTP ${response.code}: ${response.message}"
+                }
                 _state.value = DownloadState.Error(errorMsg)
                 return@withContext Result.failure(Exception(errorMsg))
             }

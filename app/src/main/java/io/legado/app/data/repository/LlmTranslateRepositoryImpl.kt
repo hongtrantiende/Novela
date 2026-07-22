@@ -103,7 +103,7 @@ class LlmTranslateRepositoryImpl : LlmGateway {
 
                 else -> Result.failure(IllegalArgumentException("Unknown provider: $provider"))
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Result.failure(e)
         }
     }
