@@ -22,22 +22,34 @@ Hướng dẫn tổng hợp cho AI agents (Antigravity, Codex, Claude) khi làm 
 
 ## 1. AGENT WORKFLOW & COMMUNICATION
 
-### Quy trình làm việc chuẩn
-- **Phase 0 - Tiếp nhận**: Đọc yêu cầu 2 lần. Xác định rõ Input / Output / Constraints / Unknowns. Nếu không rõ thì hỏi.
-- **Phase 1 - Lập kế hoạch**: Chia nhỏ task, ưu tiên blocking dependencies, trình plan cho user duyệt.
-- **Phase 2 - Thực thi**: Làm tuần tự, đánh dấu progress. Readable > Clever, xử lý edge cases.
-- **Phase 3 - Debug**: Framework 5 câu hỏi: WHAT → WHERE → WHEN → WHY → FIX (sửa gốc rễ, không patch triệu chứng).
-- **Phase 4 - Xác minh**: Build/compile, test edge cases, báo cáo rõ ràng.
+### Mô hình 3 Agents Chuẩn (Triad Architecture)
+> **MÔ HÌNH BẮT BUỘC CHO CHAT AGY**: Chat AGY (AI 1) đóng vai trò Trưởng nhóm (Planner Agent), tự động hóa việc phân tích và điều phối 2 Subagent ngầm (AI 2: Worker & AI 3: Reviewer/QA).
+
+- **Bước 1 - Tiếp nhận & Lập kế hoạch (AI 1: Lead / Planner Agent)**:
+  - Tiếp nhận lệnh từ người dùng, làm rõ yêu cầu (`interview-me`), kiểm tra mã nguồn và lập kế hoạch thực thi chi tiết (`planning-and-task-breakdown`).
+- **Bước 2 - Giao việc cho Worker Subagent (AI 2: Senior Developer)**:
+  - Khởi tạo AI 2 ngầm (`invoke_subagent`, Role: `Senior Developer`) để sửa code, viết hàm, refactor theo kế hoạch (`safe-edit`, `code-simplification`).
+- **Bước 3 - Kiểm tra đối kháng & Đề phòng lỗi (AI 3: Reviewer & QA Subagent)**:
+  - Khởi tạo AI 3 ngầm (`invoke_subagent`, Role: `QA & Reviewer`) để kiểm tra đối kháng (`doubt-driven-development` & `code-review-and-quality`).
+  - **Cơ chế Đề phòng (Failsafe Check)**: AI 3 soi kỹ git diff của AI 2 xem có **xóa nhầm code lân cận**, **viết thiếu trường hợp/edge case**, hay **gây lỗi tiềm ẩn** hay không.
+  - **Vòng lặp Phản hồi (Feedback Loop)**: Nếu AI 3 phát hiện bất kỳ lỗi/xóa nhầm nào, AI 3 sẽ báo cáo lại ngay cho AI 1 (Trưởng nhóm). AI 1 sẽ nhắc nhở và giao lại yêu cầu sửa bổ sung cho AI 2 khắc phục tới khi đạt 100% PASS.
+  - Chạy lệnh biên dịch (`.\gradlew.bat :app:compileAppDebugKotlin` / `assembleAppDebug`) và cài đặt APK qua ADB vào thiết bị.
+- **Bước 4 - Tổng hợp & Báo cáo (AI 1: Lead Agent)**:
+  - Trưởng nhóm tổng hợp kết quả thực thi hoàn chỉnh từ các Subagent và báo cáo kết quả cho người dùng.
 
 ### Giao tiếp
 - Ngắn gọn khi yêu cầu rõ. Gom câu hỏi lại hỏi 1 lần nếu chưa rõ.
 - Dừng ngay nếu cách tiếp cận sai, đề xuất phương án thay thế kèm trade-off.
 - Báo cáo: Đã làm gì / Files thay đổi / Cách test / Lưu ý.
 
+
+
+
 ---
 
 ## 2. CODING STANDARDS
 
+- **Understand Principles & Rationale First (BẮT BUỘC)**: Trước khi viết hoặc sửa code, AI **BẮT BUỘC** phải đọc kỹ để hiểu rõ nguyên lý hoạt động của mã nguồn hiện tại, phân tích lý do **tại sao nên sửa như thế này** và **tại sao viết theo cách này** là giải pháp tối ưu nhất (về hiệu năng, kiến trúc Clean Architecture, độ an toàn coroutine). Tuyệt đối không sửa mù quáng hay sửa triệu chứng bề ngoài.
 - **Readable > Clever**: Code viết cho người đọc tiếp theo.
 - **Clean Naming**: Boolean→`is/has/can/should`, Function→verb, Array→plural, Constant→`UPPER_SNAKE_CASE`.
 - **SRP**: Mỗi function/class làm đúng 1 việc.
@@ -45,6 +57,7 @@ Hướng dẫn tổng hợp cho AI agents (Antigravity, Codex, Claude) khi làm 
 - **Constants**: Dùng hằng số thay magic numbers/strings.
 - **Surgical Changes**: Không sửa code lân cận không liên quan. Match style hiện có. Xóa import/var do edit của mình gây unused, không xóa dead code có sẵn.
 - **Design System**: Khi tạo hoặc sửa bất kỳ giao diện nào, **BẮT BUỘC** đọc và tuân thủ [DESIGN_SYSTEM.md](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/DESIGN_SYSTEM.md). Không được tự sáng tạo style, màu sắc, component mới. Chỉ dùng component có sẵn trong `ui/widget/components/`.
+
 
 ---
 
@@ -252,23 +265,45 @@ pnpm build     # production build
 
 ## 9. AVAILABLE AGENT SKILLS
 
-Workspace đã tích hợp sẵn các kỹ năng tùy biến cho Agent (tự động nạp từ `.agents/skills/`). Khi thực hiện các tác vụ tương ứng, hãy đọc file `SKILL.md` của kỹ năng đó trước:
+Workspace đã tích hợp đầy đủ các kỹ năng tùy biến cho Agent (tự động nạp từ `.agents/skills/`). Khi thực hiện các tác vụ tương ứng, Agent **BẮT BUỘC** đọc file `SKILL.md` của kỹ năng đó trước:
 
-* **Tái cấu trúc & Sửa mã nguồn**:
+* **Xác định & Thiết kế (Define & Design)**:
+  - [interview-me](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/interview-me/SKILL.md) — Phỏng vấn làm rõ yêu cầu 1 câu hỏi/lần.
+  - [idea-refine](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/idea-refine/SKILL.md) — Tinh chỉnh ý tưởng thô thành kế hoạch khả thi.
+  - [spec-driven-development](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/spec-driven-development/SKILL.md) — Lập trình hướng đặc tả (Spec trước Code).
+  - [api-and-interface-design](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/api-and-interface-design/SKILL.md) — Thiết kế API và giao thức giao tiếp giữa các module.
+* **Lập kế hoạch & Thực thi (Plan & Build)**:
+  - [planning-and-task-breakdown](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/planning-and-task-breakdown/SKILL.md) — Chia nhỏ tác vụ thành các bước thực thi cụ thể.
+  - [incremental-implementation](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/incremental-implementation/SKILL.md) — Triển khai thay đổi theo từng bước nhỏ an toàn.
+  - [test-driven-development](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/test-driven-development/SKILL.md) — Lập trình hướng kiểm thử (Red-Green-Refactor).
+  - [source-driven-development](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/source-driven-development/SKILL.md) — Code dựa trên tài liệu chính thức.
+  - [frontend-ui-engineering](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/frontend-ui-engineering/SKILL.md) — Xây dựng giao diện UI chuẩn production.
+  - [frontend-design](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/frontend-design/SKILL.md) — Thiết kế visual UI ấn tượng, mượt mà.
+* **Tái cấu trúc & Sửa mã nguồn (Refactor & Code Edit)**:
   - [safe-edit](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/safe-edit/SKILL.md) — Kiểm tra ảnh hưởng trước khi sửa code.
   - [plan-refactor](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/plan-refactor/SKILL.md) — Lập kế hoạch refactor an toàn theo từng bước.
-  - [rename-symbol](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/rename-symbol/SKILL.md) — Đổi tên các biểu tượng (hàm/biến/lớp) an toàn trên toàn bộ workspace.
+  - [rename-symbol](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/rename-symbol/SKILL.md) — Đổi tên biểu tượng (hàm/biến/lớp) an toàn trên toàn workspace.
+  - [code-simplification](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/code-simplification/SKILL.md) — Tối ưu hóa và làm gọn code thừa.
+* **Đánh giá & Kiểm soát Chất lượng (Review & QA)**:
+  - [code-review-and-quality](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/code-review-and-quality/SKILL.md) — Đánh giá mã nguồn đa trục trước khi merge.
+  - [doubt-driven-development](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/doubt-driven-development/SKILL.md) — Review đối kháng phản biện trước khi chốt giải pháp.
+  - [pre-commit-check](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/pre-commit-check/SKILL.md) — Đánh giá tác động trước khi commit code.
+  - [validate-business-rules](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/validate-business-rules/SKILL.md) — Kiểm tra các quy tắc nghiệp vụ trong ứng dụng.
 * **Điều tra & Debug**:
   - [explore-codebase](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/explore-codebase/SKILL.md) — Tìm hiểu cấu trúc mã nguồn dự án mới nhanh chóng.
-  - [investigate-bug](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/investigate-bug/SKILL.md) — Điều tra nguyên nhân gốc rễ của lỗi bằng stack trace.
-  - [trace-request](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/trace-request/SKILL.md) — Truy vết luồng dữ liệu từ API qua các tầng xử lý đến database.
-* **Quy trình coding & Kiểm tra nghiệp vụ**:
-  - [ai-coding-workflow](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/ai-coding-workflow/SKILL.md) — Quy trình coding chuẩn.
-  - [spec-driven-coding](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/spec-driven-coding/SKILL.md) — Lập trình theo spec/yêu cầu cụ thể.
-  - [validate-business-rules](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/validate-business-rules/SKILL.md) — Tìm kiếm và kiểm tra quy tắc nghiệp vụ trong app.
-  - [pre-commit-check](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/pre-commit-check/SKILL.md) — Đánh giá tác động trước khi commit.
-  - [workspace-context](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/workspace-context/SKILL.md) — Nạp ngữ cảnh dự án.
-* **Legado-specific**:
-  - [debugging-guide](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/debugging-guide/SKILL.md) — Hướng dẫn debug cho Legado.
-  - [legado-compose-migration](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/legado-compose-migration/SKILL.md) — Quy chuẩn di chuyển giao diện XML sang Jetpack Compose.
-  - [legado-compose-review](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/legado-compose-review/SKILL.md) — Đánh giá mã nguồn Compose cho Legado.
+  - [investigate-bug](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/investigate-bug/SKILL.md) — Điều tra nguyên nhân lỗi bằng stack trace.
+  - [debugging-and-error-recovery](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/debugging-and-error-recovery/SKILL.md) — Quy trình khắc phục lỗi có hệ thống.
+  - [debugging-guide](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/debugging-guide/SKILL.md) — Hướng dẫn debug dành riêng cho dự án Legado.
+  - [trace-request](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/trace-request/SKILL.md) — Truy vết luồng dữ liệu từ API đến DB.
+* **Tối ưu & Bảo mật & Release**:
+  - [performance-optimization](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/performance-optimization/SKILL.md) — Tối ưu hiệu năng UI và truy vấn.
+  - [security-and-hardening](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/security-and-hardening/SKILL.md) — Gia cố bảo mật và kiểm tra dữ liệu untrusted.
+  - [shipping-and-launch](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/shipping-and-launch/SKILL.md) — Kiểm tra danh mục trước khi phát hành release.
+  - [git-workflow-and-versioning](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/git-workflow-and-versioning/SKILL.md) — Quy chuẩn Git workflow và đánh phiên bản.
+  - [ci-cd-and-automation](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/ci-cd-and-automation/SKILL.md) — Tự động hóa pipeline và build test.
+  - [documentation-and-adrs](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/documentation-and-adrs/SKILL.md) — Ghi chép quyết định kiến trúc ADR.
+  - [context-engineering](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/context-engineering/SKILL.md) — Tối ưu ngữ cảnh làm việc cho AI agent.
+* **Legado Specialization**:
+  - [legado-compose-migration](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/legado-compose-migration/SKILL.md) — Quy chuẩn di chuyển XML sang Jetpack Compose.
+  - [legado-compose-review](file:///c:/Users/bac5a/OneDrive/Máy tính/Nam/Novela/.agents/skills/legado-compose-review/SKILL.md) — Review mã nguồn Compose cho Legado.
+

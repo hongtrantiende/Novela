@@ -57,6 +57,7 @@ import io.legado.app.ui.widget.components.image.cover.buildCoverImageRequest
 import io.legado.app.utils.ArchiveUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.ImageSaveUtils
+import io.legado.app.utils.TranslateUtils
 import io.legado.app.utils.UrlUtil
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.postEvent
@@ -659,6 +660,18 @@ class BookInfoViewModel(
                 book.durChapterPos = it.durChapterPos
                 book.durChapterTitle = it.durChapterTitle
             }
+            if (TranslateUtils.isTranslateEnabled()) {
+                book.name = TranslateUtils.translateMeta(book.name)
+                book.author = TranslateUtils.translateMeta(book.author)
+                val latestTitle = book.latestChapterTitle
+                if (!latestTitle.isNullOrEmpty()) {
+                    book.latestChapterTitle = TranslateUtils.translateChapterTitle(latestTitle)
+                }
+                val durTitle = book.durChapterTitle
+                if (!durTitle.isNullOrEmpty()) {
+                    book.durChapterTitle = TranslateUtils.translateChapterTitle(durTitle)
+                }
+            }
             book.save()
             if (ReadBook.book?.isSameNameAuthor(book) == true) {
                 ReadBook.book = book
@@ -695,6 +708,18 @@ class BookInfoViewModel(
                 book.durChapterPos = it.durChapterPos
                 book.durChapterTitle = it.durChapterTitle
             }
+            if (TranslateUtils.isTranslateEnabled()) {
+                book.name = TranslateUtils.translateMeta(book.name)
+                book.author = TranslateUtils.translateMeta(book.author)
+                val latestTitle = book.latestChapterTitle
+                if (!latestTitle.isNullOrEmpty()) {
+                    book.latestChapterTitle = TranslateUtils.translateChapterTitle(latestTitle)
+                }
+                val durTitle = book.durChapterTitle
+                if (!durTitle.isNullOrEmpty()) {
+                    book.durChapterTitle = TranslateUtils.translateChapterTitle(durTitle)
+                }
+            }
             if (ReadBook.book?.isSameNameAuthor(book) == true) {
                 ReadBook.book = book
             } else if (AudioPlay.book?.isSameNameAuthor(book) == true) {
@@ -717,6 +742,18 @@ class BookInfoViewModel(
             book.removeType(BookType.notShelf)
             if (book.order == 0) {
                 book.order = appDb.bookDao.minOrder - 1
+            }
+            if (TranslateUtils.isTranslateEnabled()) {
+                book.name = TranslateUtils.translateMeta(book.name)
+                book.author = TranslateUtils.translateMeta(book.author)
+                val latestTitle = book.latestChapterTitle
+                if (!latestTitle.isNullOrEmpty()) {
+                    book.latestChapterTitle = TranslateUtils.translateChapterTitle(latestTitle)
+                }
+                val durTitle = book.durChapterTitle
+                if (!durTitle.isNullOrEmpty()) {
+                    book.durChapterTitle = TranslateUtils.translateChapterTitle(durTitle)
+                }
             }
             appDb.bookDao.insert(book)
             appDb.bookChapterDao.insert(*toc.toTypedArray())

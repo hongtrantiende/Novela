@@ -19,6 +19,7 @@ Khi bắt đầu một phiên làm việc mới hoặc tiếp nhận yêu cầu,
 6. `memory/semantic/architecture-map.md` — Bản đồ kiến trúc.
 
 ## 3. CODE EDITING & SAFETY RULES
+- **Understand Principles & Rationale First (BẮT BUỘC)**: Trước khi sửa hoặc viết code, AI **BẮT BUỘC** phải đọc kỹ mã nguồn hiện tại để hiểu sâu nguyên lý hoạt động, phân tích rõ **tại sao nên sửa như thế này** và **tại sao viết như thế này** là giải pháp tối ưu nhất. Không bao giờ sửa mù quáng hay sửa triệu chứng bề ngoài.
 - **Surgical Changes**: Chỉ sửa đúng những dòng cần thiết. Không format lại file hoặc thay đổi code lân cận không liên quan.
 - **Double Check Imports**: Loại bỏ mọi package imports không dùng tới do quá trình sửa đổi code gây ra.
 - **Compile Check**: Luôn chạy lệnh Gradle compile check trước khi bàn giao cho người dùng:
@@ -27,3 +28,18 @@ Khi bắt đầu một phiên làm việc mới hoặc tiếp nhận yêu cầu,
   ```
 - **Error Handling**: Sử dụng Exception cụ thể, tránh dùng catch `Throwable` hoặc generic `Exception` trừ trường hợp bắt buộc. Dùng `runCatching` của Kotlin một cách cẩn thận.
 - **No Placeholders**: Không viết code giả định hoặc comment `// TODO: Implement later`. Mọi code bổ sung phải hoàn chỉnh và hoạt động được.
+
+
+## 4. 3-AGENT TRIAD ARCHITECTURE (AUTOMATED WORKFLOW)
+- **Role Assignment**: Chat Agent (AI 1) mặc định đóng vai trò **Trưởng nhóm (Lead / Planner Agent)**.
+- **Workflow & Failsafe Loop**:
+  1. **AI 1 (Planner Agent)**: Tiếp nhận lệnh từ người dùng, làm rõ yêu cầu, nghiên cứu mã nguồn và lập kế hoạch thực thi chi tiết.
+  2. **AI 2 (Worker Subagent)**: Trực tiếp thực thi đọc, viết, sửa code và refactor theo kế hoạch.
+  3. **AI 3 (Reviewer & QA Subagent - Failsafe Check)**: 
+     - Kiểm tra đối kháng mã nguồn của AI 2: Soi kỹ git diff xem AI 2 có **xóa nhầm code lân cận**, **viết thiếu trường hợp/edge cases** hay không.
+     - Nếu phát hiện lỗi: AI 3 báo cáo lại ngay cho AI 1 (Trưởng nhóm). AI 1 sẽ nhắc nhở và chỉ đạo AI 2 sửa bổ sung tới khi đạt 100% PASS.
+     - Kiểm tra biên dịch Gradle (`.\gradlew.bat`), chạy unit test và deploy APK lên thiết bị thật qua ADB.
+- **Báo cáo**: Trưởng nhóm tổng hợp kết quả hoàn chỉnh từ các Subagent và báo cáo cho người dùng.
+
+
+

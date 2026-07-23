@@ -136,6 +136,9 @@ android {
 
     packaging {
         resources.excludes.add("META-INF/*")
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     sourceSets {

@@ -193,7 +193,7 @@ class BookshelfViewModel(
                     groups.find { it.groupId == groupId },
                     sortConfig.sort,
                     sortConfig.sortOrder
-                ).map { it.toUiItem() }
+                ).map { it.translatedIfNeeded().toUiItem() }
             }
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
@@ -212,7 +212,7 @@ class BookshelfViewModel(
                             group,
                             sortConfig.sort,
                             sortConfig.sortOrder
-                        ).map { it.toUiItem() }.toImmutableList()
+                        ).map { it.translatedIfNeeded().toUiItem() }.toImmutableList()
                     }
                 }
                 combine(flows) { results ->
@@ -285,7 +285,7 @@ class BookshelfViewModel(
                 }
                 val previewFlow = bookRepository.flowGroupPreview(group.groupId)
                 combine(countFlow, previewFlow) { count, preview ->
-                    Triple(group.groupId, count, preview.map { it.toUiItem() })
+                    Triple(group.groupId, count, preview.map { it.translatedIfNeeded().toUiItem() })
                 }
             }
             combine(groupFlows) { results ->
