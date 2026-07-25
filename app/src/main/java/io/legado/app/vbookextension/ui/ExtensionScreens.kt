@@ -15,6 +15,12 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.PushPin
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import io.legado.app.vbookextension.model.ExtensionSetting
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -664,9 +670,12 @@ fun ExtensionDetailDialog(
     val cookie by viewModel.selectedCookie.collectAsStateWithLifecycle()
     val localStorage by viewModel.selectedLocalStorage.collectAsStateWithLifecycle()
     val isPinned by viewModel.selectedIsPinned.collectAsStateWithLifecycle()
+    val settings by viewModel.selectedSettings.collectAsStateWithLifecycle()
+    val settingValues by viewModel.selectedSettingValues.collectAsStateWithLifecycle()
 
     var showEditCookieDialog by remember { mutableStateOf(false) }
     var showAddStorageDialog by remember { mutableStateOf(false) }
+    var editingSetting by remember { mutableStateOf<ExtensionSetting?>(null) }
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -901,6 +910,70 @@ fun ExtensionDetailDialog(
                             }
                         }
                     }
+
+                    if (settings.isNotEmpty()) {
+                        SectionCard(
+                            title = "Cài đặt nguồn",
+                            showAddButton = false
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                settings.forEach { setting ->
+                                    val currentValue = settingValues[setting.key] ?: setting.default
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                                            .clickable { editingSetting = setting }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            AppText(
+                                                text = setting.title.ifBlank { setting.key },
+                                                fontWeight = FontWeight.Bold,
+                                                style = LegadoTheme.typography.bodyMedium,
+                                                color = LegadoTheme.colorScheme.primary
+                                            )
+                                            if (!setting.desc.isNullOrBlank()) {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                AppText(
+                                                    text = setting.desc,
+                                                    style = LegadoTheme.typography.bodySmall,
+                                                    color = LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            AppText(
+                                                text = if (setting.type == "password" || setting.format == "password") {
+                                                    if (currentValue.isBlank()) "Chưa thiết lập" else "••••••••"
+                                                } else {
+                                                    currentValue.ifBlank { "Chưa thiết lập" }
+                                                },
+                                                style = LegadoTheme.typography.bodySmall,
+                                                color = if (currentValue.isBlank()) LegadoTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                else LegadoTheme.colorScheme.onSurface,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Chỉnh sửa",
+                                            tint = LegadoTheme.colorScheme.primary.copy(alpha = 0.8f),
+                                            modifier = Modifier
+                                                .padding(start = 8.dp)
+                                                .size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
@@ -971,6 +1044,83 @@ fun ExtensionDetailDialog(
             },
             dismissButton = {
                 TextButton(onClick = { showAddStorageDialog = false }) {
+                    Text("Hủy")
+                }
+            }
+        )
+    }
+
+    if (editingSetting != null) {
+        val setting = editingSetting!!
+        var tempValue by remember(setting) { mutableStateOf(settingValues[setting.key] ?: setting.default) }
+
+        AlertDialog(
+            onDismissRequest = { editingSetting = null },
+            title = { Text("Cấu hình ${setting.title.ifBlank { setting.key }}") },
+            text = {
+                Column {
+                    if (!setting.desc.isNullOrBlank()) {
+                        AppText(
+                            text = setting.desc,
+                            style = LegadoTheme.typography.bodySmall,
+                            color = LegadoTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+
+                    if (setting.choices != null && setting.choices.isNotEmpty()) {
+                        setting.choices.forEach { choice ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { tempValue = choice }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = (tempValue == choice),
+                                    onClick = { tempValue = choice }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                AppText(text = choice)
+                            }
+                        }
+                    } else if (setting.type == "boolean" || setting.format == "boolean") {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            AppText("Bật / Tắt")
+                            Switch(
+                                checked = tempValue.toBooleanStrictOrNull() ?: false,
+                                onCheckedChange = { tempValue = it.toString() }
+                            )
+                        }
+                    } else {
+                        val isPassword = setting.type == "password" || setting.format == "password"
+                        OutlinedTextField(
+                            value = tempValue,
+                            onValueChange = { tempValue = it },
+                            label = { Text(setting.title.ifBlank { setting.key }) },
+                            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+                            keyboardOptions = if (isPassword) KeyboardOptions(keyboardType = KeyboardType.Password) else KeyboardOptions.Default,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = !isPassword && !setting.title.contains("Thông báo")
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.updateSettingValue(extension.id, setting.key, tempValue)
+                    editingSetting = null
+                }) {
+                    Text("Lưu")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingSetting = null }) {
                     Text("Hủy")
                 }
             }

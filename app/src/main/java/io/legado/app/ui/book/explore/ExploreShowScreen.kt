@@ -796,7 +796,11 @@ private fun ExploreShowContent(
             label = "ExploreContentCrossfade"
         ) { showSkeleton ->
             if (showSkeleton) {
-                ExploreShowSkeleton(isGridMode = isGridMode, gridCount = state.gridCount)
+                ExploreShowSkeleton(
+                    isGridMode = isGridMode,
+                    gridCount = state.gridCount,
+                    paddingValues = paddingValues
+                )
             } else {
                 AppPullToRefresh(
                     modifier = Modifier.fillMaxSize(),
@@ -946,28 +950,23 @@ private fun SkeletonBox(
     val colorScheme = LegadoTheme.colorScheme
     val colors = remember(colorScheme) {
         listOf(
-            colorScheme.surfaceContainerHighest,
-            colorScheme.surfaceContainerHigh,
-            colorScheme.surfaceContainerHighest,
+            colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
+            colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
+            colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
         )
     }
 
-    var positionInRoot by remember { mutableStateOf(Offset.Zero) }
-
-    val brush = remember(shimmerOffset, positionInRoot, colors) {
-        val globalOffset = shimmerOffset * 2000f
+    val brush = remember(shimmerOffset, colors) {
+        val sweep = shimmerOffset * 1200f
         Brush.linearGradient(
             colors = colors,
-            start = Offset(globalOffset - positionInRoot.x, globalOffset - positionInRoot.y),
-            end = Offset(globalOffset + 400f - positionInRoot.x, globalOffset + 400f - positionInRoot.y),
+            start = Offset(sweep - 300f, sweep - 300f),
+            end = Offset(sweep + 300f, sweep + 300f),
         )
     }
 
     Box(
         modifier = modifier
-            .onGloballyPositioned { coordinates ->
-                positionInRoot = coordinates.positionInRoot()
-            }
             .clip(RoundedCornerShape(cornerRadius))
             .background(brush)
     )
@@ -977,54 +976,60 @@ private fun SkeletonBox(
 private fun ExploreShowSkeleton(
     isGridMode: Boolean,
     gridCount: Int,
+    paddingValues: PaddingValues = PaddingValues(),
 ) {
     val shimmerOffset = rememberShimmerOffset()
     if (isGridMode) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(gridCount),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = 12.dp,
+                bottom = paddingValues.calculateBottomPadding() + 12.dp,
+                start = 12.dp,
+                end = 12.dp
+            ),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            userScrollEnabled = false
         ) {
-            repeat(4) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            items(12) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    repeat(gridCount) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(4.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            SkeletonBox(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(5f / 7f),
-                                cornerRadius = 8.dp,
-                                shimmerOffset = shimmerOffset
-                            )
-                            SkeletonBox(
-                                modifier = Modifier
-                                    .fillMaxWidth(0.8f)
-                                    .height(14.dp),
-                                cornerRadius = 4.dp,
-                                shimmerOffset = shimmerOffset
-                            )
-                        }
-                    }
+                    SkeletonBox(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(5f / 7f),
+                        cornerRadius = 8.dp,
+                        shimmerOffset = shimmerOffset
+                    )
+                    SkeletonBox(
+                        modifier = Modifier
+                            .fillMaxWidth(0.85f)
+                            .height(14.dp),
+                        cornerRadius = 4.dp,
+                        shimmerOffset = shimmerOffset
+                    )
                 }
             }
         }
     } else {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                top = 8.dp,
+                bottom = paddingValues.calculateBottomPadding() + 16.dp,
+                start = 16.dp,
+                end = 16.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            userScrollEnabled = false
         ) {
-            repeat(6) {
+            items(8) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp),

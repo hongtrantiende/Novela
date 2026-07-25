@@ -7,22 +7,107 @@ import java.io.File
 import java.text.Normalizer
 import java.util.Locale
 
+import kotlinx.serialization.json.*
+
 @Serializable
 data class ExtensionSetting(
-    val key: String,
-    val title: String,
-    val type: String, // "text" | "password" | "boolean" | "select"
+    val key: String = "",
+    val title: String = "",
+    val type: String = "text", // "text" | "password" | "boolean" | "select"
     val default: String = "",
     val desc: String? = null,
     val choices: List<String>? = null,
+    val mode: String? = null,
+    val format: String? = null,
 )
 
 @Serializable
 data class PluginJson(
     val metadata: PluginMetadata,
     val script: Map<String, String> = emptyMap(),
-    val settings: List<ExtensionSetting> = emptyList(),
-)
+    @SerialName("settings") val rawSettings: JsonElement? = null,
+    @SerialName("config") val rawConfig: JsonElement? = null,
+) {
+    val settings: List<ExtensionSetting> get() = getParsedSettings()
+
+    fun getParsedSettings(): List<ExtensionSetting> {
+        val list = mutableListOf<ExtensionSetting>()
+
+        fun parseFromJsonObject(obj: JsonObject) {
+            for ((key, element) in obj) {
+                when (element) {
+                    is JsonObject -> {
+                        val title = element["title"]?.jsonPrimitive?.contentOrNull ?: key
+                        val mode = element["mode"]?.jsonPrimitive?.contentOrNull
+                        val format = element["format"]?.jsonPrimitive?.contentOrNull
+                        val type = element["type"]?.jsonPrimitive?.contentOrNull ?: format ?: mode ?: "text"
+                        val default = element["default"]?.jsonPrimitive?.contentOrNull ?: ""
+                        val desc = element["desc"]?.jsonPrimitive?.contentOrNull
+                            ?: element["description"]?.jsonPrimitive?.contentOrNull
+                        val choices = element["choices"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                            ?: element["options"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }
+
+                        list.add(
+                            ExtensionSetting(
+                                key = key,
+                                title = title,
+                                type = type,
+                                default = default,
+                                desc = desc,
+                                choices = choices,
+                                mode = mode,
+                                format = format
+                            )
+                        )
+                    }
+                    else -> {}
+                }
+            }
+        }
+
+        rawSettings?.let { element ->
+            when (element) {
+                is JsonArray -> {
+                    element.forEach { item ->
+                        if (item is JsonObject) {
+                            val key = item["key"]?.jsonPrimitive?.contentOrNull ?: ""
+                            val title = item["title"]?.jsonPrimitive?.contentOrNull ?: key
+                            val type = item["type"]?.jsonPrimitive?.contentOrNull ?: "text"
+                            val default = item["default"]?.jsonPrimitive?.contentOrNull ?: ""
+                            val desc = item["desc"]?.jsonPrimitive?.contentOrNull
+                            val choices = item["choices"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull }
+                            if (key.isNotBlank()) {
+                                list.add(
+                                    ExtensionSetting(
+                                        key = key,
+                                        title = title,
+                                        type = type,
+                                        default = default,
+                                        desc = desc,
+                                        choices = choices
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+                is JsonObject -> {
+                    parseFromJsonObject(element)
+                }
+                else -> {}
+            }
+        }
+
+        if (list.isEmpty() && rawConfig is JsonObject) {
+            parseFromJsonObject(rawConfig)
+        }
+
+        return list.filterNot { setting ->
+            val k = setting.key.lowercase()
+            k == "thread_num" || k == "delay" || k == "thread" || k == "delay_time" || k == "threadnum"
+        }
+    }
+}
 
 @Serializable
 data class PluginMetadata(

@@ -145,6 +145,49 @@ class VBookJsExtensionRunner(
             ScriptableObject.putProperty(scope, "vite", viteObject)
             Log.d(TAG, "Injected secure vite object for extension ${extension.id}")
 
+            // Inject primitive entries from rawConfig (e.g. thread_num, delay) into Rhino global scope
+            val rawConfigObj = extension.pluginJson.rawConfig as? kotlinx.serialization.json.JsonObject
+            if (rawConfigObj != null) {
+                for ((key, element) in rawConfigObj) {
+                    if (element is kotlinx.serialization.json.JsonPrimitive) {
+                        val content = element.content
+                        val boolVal = content.toBooleanStrictOrNull()
+                        val longVal = content.toLongOrNull()
+                        val doubleVal = content.toDoubleOrNull()
+                        if (boolVal != null) {
+                            ScriptableObject.putProperty(scope, key, boolVal)
+                        } else if (longVal != null) {
+                            ScriptableObject.putProperty(scope, key, longVal)
+                        } else if (doubleVal != null) {
+                            ScriptableObject.putProperty(scope, key, doubleVal)
+                        } else {
+                            ScriptableObject.putProperty(scope, key, content)
+                        }
+                    }
+                }
+            }
+
+            // Inject custom extension settings/config into Rhino global scope
+            val settingsPrefs = appContext.getSharedPreferences("ext_config_${extension.id}", Context.MODE_PRIVATE)
+            val settingsList = extension.pluginJson.getParsedSettings()
+            for (setting in settingsList) {
+                if (setting.key.isBlank()) continue
+                val savedVal = settingsPrefs.getString(setting.key, null) ?: setting.default
+                if (setting.type == "boolean" || savedVal.lowercase() == "true" || savedVal.lowercase() == "false") {
+                    val boolVal = savedVal.toBooleanStrictOrNull()
+                    if (boolVal != null) {
+                        ScriptableObject.putProperty(scope, setting.key, boolVal)
+                    } else {
+                        ScriptableObject.putProperty(scope, setting.key, savedVal)
+                    }
+                } else if (setting.type == "number" && savedVal.toLongOrNull() != null) {
+                    ScriptableObject.putProperty(scope, setting.key, savedVal.toLong())
+                } else {
+                    ScriptableObject.putProperty(scope, setting.key, savedVal)
+                }
+                Log.d(TAG, "Injected setting ${setting.key} = $savedVal for extension ${extension.id}")
+            }
+
             bridge = JSBridge(rhinoCtx, scope, httpClient, extension.id, appContext, extension, logCollector)
             val bridgeJs = RhinoContext.javaToJS(bridge, scope)
             ScriptableObject.putProperty(scope, "JSBridge", bridgeJs)

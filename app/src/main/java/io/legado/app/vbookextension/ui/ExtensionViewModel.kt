@@ -19,6 +19,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 import io.legado.app.help.http.okHttpClient
 
+import io.legado.app.vbookextension.model.ExtensionSetting
+
 class ExtensionViewModel(
     private val appContext: Context,
     val extensionLoader: ExtensionLoader,
@@ -67,19 +69,47 @@ class ExtensionViewModel(
     private val _selectedIsPinned = MutableStateFlow(false)
     val selectedIsPinned = _selectedIsPinned.asStateFlow()
 
-    fun loadExtensionDetails(extensionId: String) {
-        val prefs = appContext.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
-        _selectedCookie.value = prefs.getString("ext_cookies_$extensionId", "") ?: ""
-        _selectedParallelConnections.value = prefs.getInt("ext_parallel_connections_$extensionId", 3)
-        _selectedConnectionInterval.value = prefs.getInt("ext_connection_interval_$extensionId", 33)
-        _selectedIsPinned.value = prefs.getBoolean("ext_pinned_$extensionId", false)
+    private val _selectedSettings = MutableStateFlow<List<ExtensionSetting>>(emptyList())
+    val selectedSettings = _selectedSettings.asStateFlow()
 
-        val storagePrefs = appContext.getSharedPreferences("ext_storage_$extensionId", Context.MODE_PRIVATE)
-        val result = mutableMapOf<String, String>()
-        storagePrefs.all.forEach { (k, v) ->
-            result[k] = v?.toString() ?: ""
+    private val _selectedSettingValues = MutableStateFlow<Map<String, String>>(emptyMap())
+    val selectedSettingValues = _selectedSettingValues.asStateFlow()
+
+    fun loadExtensionDetails(extensionId: String) {
+        viewModelScope.launch {
+            val prefs = appContext.getSharedPreferences("novel_reader_prefs", Context.MODE_PRIVATE)
+            _selectedCookie.value = prefs.getString("ext_cookies_$extensionId", "") ?: ""
+            _selectedParallelConnections.value = prefs.getInt("ext_parallel_connections_$extensionId", 3)
+            _selectedConnectionInterval.value = prefs.getInt("ext_connection_interval_$extensionId", 33)
+            _selectedIsPinned.value = prefs.getBoolean("ext_pinned_$extensionId", false)
+
+            val storagePrefs = appContext.getSharedPreferences("ext_storage_$extensionId", Context.MODE_PRIVATE)
+            val result = mutableMapOf<String, String>()
+            storagePrefs.all.forEach { (k, v) ->
+                result[k] = v?.toString() ?: ""
+            }
+            _selectedLocalStorage.value = result
+
+            val loadedExt = withContext(Dispatchers.IO) {
+                extensionLoader.loadExtension(extensionId)
+            }
+            val parsedSettings = loadedExt?.pluginJson?.getParsedSettings() ?: emptyList()
+            _selectedSettings.value = parsedSettings
+
+            val settingsPrefs = appContext.getSharedPreferences("ext_config_$extensionId", Context.MODE_PRIVATE)
+            val valuesMap = mutableMapOf<String, String>()
+            parsedSettings.forEach { setting ->
+                val savedVal = settingsPrefs.getString(setting.key, null)
+                valuesMap[setting.key] = savedVal ?: setting.default
+            }
+            _selectedSettingValues.value = valuesMap
         }
-        _selectedLocalStorage.value = result
+    }
+
+    fun updateSettingValue(extensionId: String, key: String, value: String) {
+        val settingsPrefs = appContext.getSharedPreferences("ext_config_$extensionId", Context.MODE_PRIVATE)
+        settingsPrefs.edit().putString(key, value).apply()
+        loadExtensionDetails(extensionId)
     }
 
     fun updateCookie(extensionId: String, cookie: String) {
