@@ -53,11 +53,13 @@ import io.legado.app.ui.book.source.edit.BookSourceEditActivity
 import io.legado.app.ui.book.toc.rule.TxtTocRuleActivity
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.replace.ReplaceEditRoute
 import io.legado.app.ui.replace.ReplaceRuleActivity
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.takePersistablePermissionSafely
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.translateAsState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.launch
@@ -68,34 +70,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import io.legado.app.ui.book.read.sheet.ReadAloudContent
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.animation.animateColorAsState
-import io.legado.app.data.appDb
-import io.legado.app.ui.theme.LegadoTheme
 import android.view.WindowManager
 import io.legado.app.help.config.ThemeConfigStore
 import io.legado.app.utils.windowSize
@@ -126,255 +100,6 @@ interface ReadBookRouteHost :
     )
 }
 
-@Composable
-private fun ChapterListItem(
-    modifier: Modifier = Modifier,
-    title: String,
-    isCurrent: Boolean,
-    isVip: Boolean,
-    isPay: Boolean,
-    tag: String?,
-    wordCount: String?,
-    isDownloaded: Boolean,
-    onClick: () -> Unit,
-) {
-    val backgroundColor by animateColorAsState(
-        targetValue = when {
-            isCurrent -> LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-            else -> Color.Transparent
-        }, label = "BgColor"
-    )
-
-    val textColor by animateColorAsState(
-        targetValue = when {
-            isCurrent -> LegadoTheme.colorScheme.primary
-            else -> LegadoTheme.colorScheme.onSurface
-        }, label = "TextColor"
-    )
-
-    val detailColor by animateColorAsState(
-        targetValue = when {
-            isCurrent -> LegadoTheme.colorScheme.primary
-            else -> LegadoTheme.colorScheme.onSurfaceVariant
-        }, label = "DetailColor"
-    )
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        color = backgroundColor
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (isVip && !isPay) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = LegadoTheme.colorScheme.error,
-                            modifier = Modifier
-                                .size(14.dp)
-                                .padding(end = 4.dp)
-                        )
-                    }
-
-                    Text(
-                        text = title,
-                        style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
-                        color = textColor,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                if (!tag.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = tag,
-                        style = LegadoTheme.typography.labelSmallEmphasized,
-                        color = detailColor.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            // Right side: Word Count Card & Status Indicator
-            val showStatus = isCurrent || isDownloaded || !wordCount.isNullOrEmpty()
-            if (showStatus) {
-                Row(
-                    modifier = Modifier.padding(start = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (!wordCount.isNullOrEmpty() && isDownloaded) {
-                        Surface(
-                            shape = MaterialTheme.shapes.extraSmall,
-                            color = if (isCurrent) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer,
-                            modifier = Modifier.padding(end = 6.dp)
-                        ) {
-                            Text(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                text = wordCount,
-                                style = LegadoTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                color = if (isCurrent) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    
-                    if (isCurrent) {
-                        Icon(
-                            imageVector = Icons.Rounded.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = LegadoTheme.colorScheme.secondary
-                        )
-                    } else if (isDownloaded) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = LegadoTheme.colorScheme.secondary
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Full-screen chapter list overlay that slides up from the bottom.
- * Replaces TocActivity when the user taps "Danh sách chương" while reading.
- * Mirrors AudioChapterListOverlay in ReadAloudSheet for a consistent UX.
- */
-@Composable
-private fun ReadBookChapterListOverlay(
-    book: io.legado.app.data.entities.Book?,
-    currentChapterIndex: Int,
-    onChapterClick: (Int) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val bookUrl = book?.bookUrl ?: ""
-    BackHandler { onDismiss() }
-
-    var chapters by remember { mutableStateOf<List<io.legado.app.data.entities.BookChapter>>(emptyList()) }
-    LaunchedEffect(bookUrl) {
-        if (bookUrl.isNotEmpty()) {
-            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                appDb.bookChapterDao.getChapterList(bookUrl)
-            }
-            chapters = list
-        } else {
-            chapters = emptyList()
-        }
-    }
-
-    var cachedFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
-    LaunchedEffect(chapters, book) {
-        if (book != null) {
-            val files = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
-            }
-            cachedFiles = files
-        } else {
-            cachedFiles = emptySet()
-        }
-    }
-
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = (currentChapterIndex - 3).coerceAtLeast(0)
-    )
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(LegadoTheme.colorScheme.surfaceContainerHigh)
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .windowInsetsPadding(WindowInsets.navigationBars)
-    ) {
-        // Header row with Book Cover and Title
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            io.legado.app.ui.widget.components.image.cover.BookCoverImage(
-                name = book?.name,
-                author = book?.author,
-                path = book?.getDisplayCover(),
-                modifier = Modifier
-                    .size(width = 44.dp, height = 60.dp)
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = book?.name ?: "",
-                    style = LegadoTheme.typography.titleMedium,
-                    color = LegadoTheme.colorScheme.onSurface,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Danh sách chương (${chapters.size})",
-                    style = LegadoTheme.typography.bodySmall,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            // Close button
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(LegadoTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    .clickable { onDismiss() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Đóng",
-                    tint = LegadoTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        // Chapter items
-        LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            items(
-                items = chapters,
-                key = { it.index }
-            ) { chapter ->
-                val isCurrent = chapter.index == currentChapterIndex
-                val isDownloaded = remember(chapter.index, cachedFiles) {
-                    chapter.getFileName() in cachedFiles
-                }
-                ChapterListItem(
-                    title = chapter.getDisplayTitle(),
-                    isCurrent = isCurrent,
-                    isVip = chapter.isVip,
-                    isPay = chapter.isPay,
-                    tag = chapter.tag,
-                    wordCount = chapter.wordCount,
-                    isDownloaded = isDownloaded,
-                    onClick = { onChapterClick(chapter.index) }
-                )
-            }
-        }
-    }
-}
 /**
  * Narrow interface for hardware input delegation from Activity.
  * MainActivity holds this instead of the full bridge/controller.
@@ -416,8 +141,15 @@ fun ReadBookRouteScreen(
 
     // ── ActivityResult Launchers ──────────────────────────────────────
 
-    // Chapter list overlay state — replaces TocActivity launch
-    var showChapterListOverlay by remember { mutableStateOf(false) }
+    // Launcher for TocActivity (unified chapter list / TOC)
+    val tocActivityResult = rememberLauncherForActivityResult(
+        TocActivityResult(fromRead = true)
+    ) { result ->
+        if (result != null) {
+            val (index, chapterPos) = result
+            viewModel.onIntent(ReadBookIntent.OpenChapterResult(index, chapterPos))
+        }
+    }
     var showReadAloudOverlay by remember { mutableStateOf(false) }
 
 
@@ -546,7 +278,7 @@ fun ReadBookRouteScreen(
                         when (effect) {
                             // Launcher-dependent effects — handled directly by route
                             is ReadBookEffect.OpenChapterList -> {
-                                showChapterListOverlay = true
+                                tocActivityResult.launch(effect.bookUrl)
                             }
                             is ReadBookEffect.OpenReadAloud -> {
                                 showReadAloudOverlay = true
@@ -701,6 +433,23 @@ fun ReadBookRouteScreen(
         }
     }
 
+    val translatedBookName by translateAsState(
+        text = state.bookName,
+        isMeta = true
+    )
+
+    val displayBookName = translatedBookName.ifBlank {
+        state.bookName
+    }
+
+    val displayState = remember(state, displayBookName) {
+        if (displayBookName == state.bookName) {
+            state
+        } else {
+            state.copy(bookName = displayBookName)
+        }
+    }
+
     var hasShownContent by remember(state.book?.bookUrl) { mutableStateOf(false) }
 
     val isPageLoading = state.curTextChapter == null || 
@@ -727,6 +476,7 @@ fun ReadBookRouteScreen(
                     .then(if (useMenuHazeSource) Modifier.hazeSource(menuHazeState) else Modifier)
                     .layerBackdrop(menuBackdrop),
                 showLoadingOverlay = showLoadingOverlay,
+                displayBookName = displayBookName,
                 onRefsReady = { controller.onRefsReady(it) },
                 onCursorTouch = controller,
                 readViewCallBack = controller,
@@ -743,7 +493,7 @@ fun ReadBookRouteScreen(
                 preferences = readPreferences,
             ) {
                 ReadBookMenuBar(
-                    state = state,
+                    state = displayState,
                     onIntent = viewModel::onIntent,
                     backdrop = menuBackdrop,
                     hazeState = if (useMenuHazeSource) menuHazeState else null,
@@ -782,23 +532,6 @@ fun ReadBookRouteScreen(
             }
         }
 
-        // ── Inline chapter list overlay (replaces TocActivity) ──
-        AnimatedVisibility(
-            visible = showChapterListOverlay,
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-        ) {
-            ReadBookChapterListOverlay(
-                book = state.book,
-                currentChapterIndex = state.durChapterIndex,
-                onChapterClick = { index ->
-                    showChapterListOverlay = false
-                    viewModel.onIntent(ReadBookIntent.OpenChapter(index))
-                },
-                onDismiss = { showChapterListOverlay = false },
-            )
-        }
-
         // ── Inline read aloud overlay ──
         AnimatedVisibility(
             visible = showReadAloudOverlay,
@@ -811,8 +544,9 @@ fun ReadBookRouteScreen(
                 onIntent = viewModel::onIntent,
                 onDismissRequest = { showReadAloudOverlay = false },
                 onOpenChapterList = {
-                    showReadAloudOverlay = false
-                    showChapterListOverlay = true
+                    state.book?.bookUrl?.let { bookUrl ->
+                        tocActivityResult.launch(bookUrl)
+                    }
                 },
                 onGoToBackground = {
                     viewModel.onIntent(ReadBookIntent.CloseReadBook(keepReadAloud = true))
@@ -830,6 +564,7 @@ fun ReadBookRouteScreen(
 private fun ReadBookViewLayer(
     modifier: Modifier = Modifier,
     showLoadingOverlay: Boolean,
+    displayBookName: String,
     onRefsReady: (ReadBookViewRefs) -> Unit,
     onCursorTouch: View.OnTouchListener,
     readViewCallBack: ReadView.CallBack,
@@ -852,6 +587,7 @@ private fun ReadBookViewLayer(
                         FrameLayout.LayoutParams.MATCH_PARENT,
                         FrameLayout.LayoutParams.MATCH_PARENT,
                     )
+                    setDisplayBookName(displayBookName)
                 }
                 val textMenuPosition = View(context).apply {
                     id = R.id.text_menu_position
@@ -909,6 +645,7 @@ private fun ReadBookViewLayer(
         },
         update = { view ->
             view.visibility = if (showLoadingOverlay) View.INVISIBLE else View.VISIBLE
+            (view.getChildAt(0) as? ReadView)?.setDisplayBookName(displayBookName)
         }
     )
 }

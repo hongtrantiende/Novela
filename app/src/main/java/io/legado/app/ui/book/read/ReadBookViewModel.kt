@@ -558,7 +558,8 @@ class ReadBookViewModel(
             }
             is ReadBookIntent.MenuRefreshDur -> {
                 ReadBook.book?.let { book ->
-                    if (ReadBook.bookSource == null) {
+                    val isExtension = book.origin.startsWith("ext_")
+                    if (ReadBook.bookSource == null && !isExtension) {
                         _effects.tryEmit(ReadBookEffect.UpContent(0, true))
                     } else {
                         ReadBook.curTextChapter = null
@@ -570,7 +571,8 @@ class ReadBookViewModel(
 
             is ReadBookIntent.MenuRefreshAfter -> {
                 ReadBook.book?.let { book ->
-                    if (ReadBook.bookSource == null) {
+                    val isExtension = book.origin.startsWith("ext_")
+                    if (ReadBook.bookSource == null && !isExtension) {
                         _effects.tryEmit(ReadBookEffect.UpContent(0, true))
                     } else {
                         ReadBook.clearTextChapter()
@@ -582,7 +584,8 @@ class ReadBookViewModel(
 
             is ReadBookIntent.MenuRefreshAll -> {
                 ReadBook.book?.let { book ->
-                    if (ReadBook.bookSource == null) {
+                    val isExtension = book.origin.startsWith("ext_")
+                    if (ReadBook.bookSource == null && !isExtension) {
                         _effects.tryEmit(ReadBookEffect.UpContent(0, true))
                     } else {
                         ReadBook.clearTextChapter()
@@ -2352,7 +2355,28 @@ class ReadBookViewModel(
     }
 
     private suspend fun loadChapterListAwait(book: Book): Boolean {
-        if (book.isLocal) {
+        if (book.origin.startsWith("ext_")) {
+            kotlin.runCatching {
+                val chapters = extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+                if (chapters.isNotEmpty()) {
+                    val updatedBook = book.copy(totalChapterNum = chapters.size)
+                    appDb.runInTransaction {
+                        appDb.bookDao.update(updatedBook)
+                        appDb.bookChapterDao.delByBook(book.bookUrl)
+                        appDb.bookChapterDao.insert(*chapters.toTypedArray())
+                    }
+                    ReadBook.onChapterListUpdated(updatedBook)
+                    return true
+                } else {
+                    ReadBook.upMsg(context.getString(R.string.error_load_toc))
+                    return false
+                }
+            }.onFailure {
+                coroutineContext.ensureActive()
+                ReadBook.upMsg(context.getString(R.string.error_load_toc))
+                return false
+            }
+        } else if (book.isLocal) {
             kotlin.runCatching {
                 LocalBook.getChapterList(book).let {
                     appDb.bookChapterDao.delByBook(book.bookUrl)
@@ -2637,6 +2661,10 @@ class ReadBookViewModel(
                 appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
                     ?.let { chapter ->
                         BookHelp.delContent(book, chapter)
+                        if (book.origin.startsWith("ext_")) {
+                            io.legado.app.model.translation.TranslationManager.deleteTranslationCache(book, chapter)
+                        }
+                        ReadBook.curTextChapter = null
                         ReadBook.loadContent(ReadBook.durChapterIndex, resetPageOffset = false)
                     }
             }
@@ -2658,6 +2686,10 @@ class ReadBookViewModel(
                 ).forEach { chapter ->
                     BookHelp.delContent(book, chapter)
                 }
+                if (book.origin.startsWith("ext_")) {
+                    io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                }
+                ReadBook.clearTextChapter()
                 ReadBook.loadContent(false)
             }
         }
@@ -2672,6 +2704,10 @@ class ReadBookViewModel(
         execute {
             ReadBook.book?.let { book ->
                 BookHelp.clearCache(book)
+                if (book.origin.startsWith("ext_")) {
+                    io.legado.app.model.translation.TranslationManager.clearBookTranslationCache(book)
+                }
+                ReadBook.clearTextChapter()
                 ReadBook.loadContent(false)
             }
         }

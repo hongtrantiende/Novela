@@ -29,6 +29,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.model.SourceCallBack
 import io.legado.app.model.cache.CacheBookDownloadState
 import io.legado.app.model.localBook.LocalBook
+import io.legado.app.ui.book.info.BookInfoCache
 import io.legado.app.ui.widget.components.importComponents.BaseImportUiState
 import io.legado.app.ui.widget.components.list.ListUiState
 import io.legado.app.ui.widget.components.list.SelectableItem
@@ -48,9 +49,11 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.scan
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -121,12 +124,14 @@ private data class TitleCacheKey(
     val chapterCount: Int
 )
 
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class TocViewModel(
     application: Application,
     savedStateHandle: SavedStateHandle,
     private val cacheBookChaptersUseCase: CacheBookChaptersUseCase,
-    private val readSettingsRepository: ReadSettingsRepository
+    private val readSettingsRepository: ReadSettingsRepository,
+    private val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository
 ) : BaseRuleViewModel<TocItemUi, TocDomainItem, Int, TocActionState>(
     application,
     initialState = TocActionState()
@@ -250,9 +255,16 @@ class TocViewModel(
     private var titleCacheJob: Job? = null
     private var lastTitleCacheKey: TitleCacheKey? = null
 
-    override val rawDataFlow: Flow<List<TocDomainItem>> = combine(
+    private val baseTocItemsFlow: StateFlow<List<TocDomainItem>> = combine(
         bookState.filterNotNull().map { it.bookUrl }.distinctUntilChanged()
-            .flatMapLatest { appDb.bookChapterDao.getChapterListFlow(it) },
+            .flatMapLatest { url ->
+                appDb.bookChapterDao.getChapterListFlow(url)
+                    .onStart {
+                        BookInfoCache.getChapters(url)
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let { emit(it) }
+                    }
+            },
         downloadContextFlow,
         uiConfigFlow,
         titleReplaceCache
@@ -306,8 +318,15 @@ class TocViewModel(
                 downloadState
             )
         }
+    }
+        .flowOn(Dispatchers.Default)
+        .stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            emptyList()
+        )
 
-    }.flowOn(Dispatchers.Default)
+    override val rawDataFlow: Flow<List<TocDomainItem>> = baseTocItemsFlow
 
     val useReplace get() = tocPreferences.value.useReplace
     val showWordCount get() = tocPreferences.value.showWordCount
@@ -762,6 +781,40 @@ class TocViewModel(
                 newCache[chapter.index] = chapter.getDisplayTitle(replaceRules, true)
             }
             titleReplaceCache.value = newCache
+        }
+    }
+
+    fun refreshExtensionToc() {
+        if (_isUploading.value) return
+        val book = bookState.value ?: return
+        if (!book.origin.startsWith("ext_")) return
+
+        _isUploading.value = true
+        execute {
+            val chapters = extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+            if (chapters.isNotEmpty()) {
+                val updatedBook = book.copy(totalChapterNum = chapters.size)
+                appDb.runInTransaction {
+                    appDb.bookDao.update(updatedBook)
+                    appDb.bookChapterDao.delByBook(book.bookUrl)
+                    appDb.bookChapterDao.insert(*chapters.toTypedArray())
+                }
+                BookInfoCache.putChapters(updatedBook.bookUrl, chapters)
+                ReadBook.onChapterListUpdated(updatedBook)
+                true
+            } else {
+                false
+            }
+        }.onSuccess { success ->
+            if (success) {
+                getApplication<Application>().toastOnUi(R.string.success)
+            } else {
+                getApplication<Application>().toastOnUi(R.string.error_load_toc)
+            }
+        }.onError {
+            getApplication<Application>().toastOnUi(R.string.error_load_toc)
+        }.onFinally {
+            _isUploading.value = false
         }
     }
 }

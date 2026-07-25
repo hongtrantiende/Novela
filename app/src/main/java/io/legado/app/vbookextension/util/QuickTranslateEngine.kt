@@ -222,6 +222,7 @@ object QuickTranslateEngine {
 
                 isLoaded = true
                 _isDictLoadedFlow.value = true
+                io.legado.app.utils.TranslateUtils.clearCache()
                 Log.d(TAG, "All dictionaries loaded successfully in ${System.currentTimeMillis() - startTime} ms. Final dict size: ${translationDict.size}")
 
             } catch (e: Exception) {

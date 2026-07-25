@@ -8,6 +8,8 @@ import io.legado.app.data.entities.rule.BookListRule
 import io.legado.app.data.entities.rule.ExploreKind
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
+import io.legado.app.help.book.resolveBookCompletionStatus
+import io.legado.app.help.book.withCompletionStatus
 import io.legado.app.help.source.exploreKindsJson
 import io.legado.app.help.source.getBookType
 import io.legado.app.model.Debug
@@ -228,6 +230,10 @@ object BookList {
             Debug.log(bookSource.bookSourceUrl, "┌Nhận danh mục", log)
             try {
                 searchBook.kind = analyzeRule.getStringList(ruleKind)?.joinToString(",")?.take(1000)
+                if (!searchBook.kind.isNullOrEmpty()) {
+                    val status = resolveBookCompletionStatus(null, searchBook.kind)
+                    searchBook.type = searchBook.type.withCompletionStatus(status)
+                }
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.kind ?: ""}", log)
             } catch (e: Exception) {
                 coroutineContext.ensureActive()

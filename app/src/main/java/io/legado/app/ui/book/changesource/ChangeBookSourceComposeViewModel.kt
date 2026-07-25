@@ -355,7 +355,7 @@ class ChangeBookSourceComposeViewModel(
         onSuccess: (book: Book, toc: List<BookChapter>, source: BookSource) -> Unit,
     ) {
         viewModelScope.launch {
-            val found = searchResults.firstOrNull { it.type == bookType }
+            val found = searchResults.firstOrNull { bookType != null && it.sameBookTypeLocal(bookType) }
             if (found != null) {
                 try {
                     val (toc, source) = getChapterContentUseCase.getToc(found.toBook())

@@ -442,6 +442,14 @@ class PageView(
         binding.contentTextView.contentDescription = content
     }
 
+    private var displayBookName: String? = null
+
+    fun setDisplayBookName(name: String) {
+        if (displayBookName == name) return
+        displayBookName = name
+        tvBookName?.setTextIfNotEqual(name)
+    }
+
     /**
      * 重置滚动位置
      */
@@ -454,7 +462,9 @@ class PageView(
      */
     @SuppressLint("SetTextI18n")
     fun setProgress(textPage: TextPage) = textPage.apply {
-        tvBookName?.setTextIfNotEqual(ReadBook.book?.name)
+        tvBookName?.setTextIfNotEqual(
+            displayBookName ?: ReadBook.book?.name
+        )
         tvTitle?.setTextIfNotEqual(textPage.title)
         tvTitleArrow?.setTextIfNotEqual(textPage.title)
         tvTitleArrowClassic?.setTextIfNotEqual(textPage.title)

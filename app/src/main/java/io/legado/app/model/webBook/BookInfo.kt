@@ -7,6 +7,8 @@ import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isWebFile
+import io.legado.app.help.book.resolveBookCompletionStatus
+import io.legado.app.help.book.withCompletionStatus
 import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
@@ -86,7 +88,11 @@ object BookInfo {
                 ?.joinToString(",")
                 ?.take(1000)
                 ?.let {
-                    if (it.isNotEmpty()) book.kind = it
+                    if (it.isNotEmpty()) {
+                        book.kind = it
+                        val status = resolveBookCompletionStatus(null, it)
+                        book.type = book.type.withCompletionStatus(status)
+                    }
                     Debug.log(bookSource.bookSourceUrl, "└${it}")
                 } ?: Debug.log(bookSource.bookSourceUrl, "└")
         } catch (e: Exception) {

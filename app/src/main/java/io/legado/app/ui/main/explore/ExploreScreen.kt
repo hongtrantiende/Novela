@@ -91,6 +91,15 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BugReport
+import io.legado.app.vbookextension.data.dao.ExtensionDao
+import io.legado.app.vbookextension.data.entity.ExtensionEntity
+import io.legado.app.vbookextension.ui.ExtensionDetailDialog
+import io.legado.app.vbookextension.ui.ExtensionScriptEditActivity
+import io.legado.app.vbookextension.ui.ExtensionScriptEditDialog
+import io.legado.app.vbookextension.ui.ExtensionViewModel
+import kotlinx.coroutines.Dispatchers
 
 import io.legado.app.ui.association.ImportBookSourceDialog
 import io.legado.app.utils.showDialogFragment
@@ -219,6 +228,10 @@ fun ExploreScreen(
         }
     }
     var sourceToDeleteUrl by rememberSaveable { mutableStateOf<String?>(null) }
+    var activeDetailExtension by remember { mutableStateOf<ExtensionEntity?>(null) }
+    var activeScriptEditExtension by remember { mutableStateOf<ExtensionEntity?>(null) }
+    val extensionDao: ExtensionDao = koinInject()
+    val extViewModel: ExtensionViewModel = koinViewModel()
     val sourceToDelete = remember(sourceToDeleteUrl, uiState.items) {
         uiState.items.firstOrNull { it.bookSourceUrl == sourceToDeleteUrl }
     }
@@ -247,10 +260,39 @@ fun ExploreScreen(
         }
     }
     val onHeaderTop = remember(viewModel) { { item: BookSourcePart -> viewModel.topSource(item) } }
-    val onHeaderEdit = remember(context) {
+    val onHeaderTest: (BookSourcePart) -> Unit = remember(context, onOpenExploreShow) {
         { item: BookSourcePart ->
-            context.startActivity<BookSourceEditActivity> {
-                putExtra("sourceUrl", item.bookSourceUrl)
+            if (item.bookSourceUrl.startsWith("ext_")) {
+                context.startActivity<ExtensionScriptEditActivity> {
+                    putExtra("sourceUrl", item.bookSourceUrl)
+                    putExtra("openDebug", true)
+                }
+            } else {
+                onOpenExploreShow(item.bookSourceName, item.bookSourceUrl, null)
+            }
+        }
+    }
+    val onHeaderEdit: (BookSourcePart) -> Unit = remember(context) {
+        { item: BookSourcePart ->
+            if (item.bookSourceUrl.startsWith("ext_")) {
+                context.startActivity<ExtensionScriptEditActivity> {
+                    putExtra("sourceUrl", item.bookSourceUrl)
+                }
+            } else {
+                context.startActivity<BookSourceEditActivity> {
+                    putExtra("sourceUrl", item.bookSourceUrl)
+                }
+            }
+        }
+    }
+    val onHeaderDetail: (BookSourcePart) -> Unit = remember(scope, extensionDao) {
+        { item: BookSourcePart ->
+            if (item.bookSourceUrl.startsWith("ext_")) {
+                val extId = item.bookSourceUrl.substringAfter("ext_")
+                scope.launch(Dispatchers.IO) {
+                    val ext = extensionDao.getExtensionById(extId)
+                    activeDetailExtension = ext
+                }
             }
         }
     }
@@ -448,6 +490,8 @@ fun ExploreScreen(
                                                 onInstall = onHeaderInstall,
                                                 onTop = onHeaderTop,
                                                 onEdit = onHeaderEdit,
+                                                onDetail = onHeaderDetail,
+                                                onTest = onHeaderTest,
                                                 onSearch = onHeaderSearch,
                                                 onLogin = onHeaderLogin,
                                                 onRefresh = onHeaderRefresh,
@@ -574,6 +618,34 @@ fun ExploreScreen(
             uiState = uiState
         )
     }
+
+    activeScriptEditExtension?.let { ext ->
+        ExtensionScriptEditDialog(
+            extension = ext,
+            onDismissRequest = { activeScriptEditExtension = null },
+            onSaveSuccess = {
+                activeScriptEditExtension = null
+                viewModel.refreshExploreKinds("ext_${ext.id}")
+            }
+        )
+    }
+
+    activeDetailExtension?.let { ext ->
+        ExtensionDetailDialog(
+            extension = ext,
+            viewModel = extViewModel,
+            onDismissRequest = { activeDetailExtension = null },
+            onUninstallClick = {
+                viewModel.deleteSource(
+                    BookSourcePart(
+                        bookSourceUrl = "ext_${ext.id}",
+                        bookSourceName = ext.name
+                    )
+                )
+                activeDetailExtension = null
+            }
+        )
+    }
 }
 
 
@@ -592,6 +664,8 @@ fun ExploreSourceHeader(
     onInstall: (BookSourcePart) -> Unit = {},
     onTop: (BookSourcePart) -> Unit,
     onEdit: (BookSourcePart) -> Unit,
+    onDetail: (BookSourcePart) -> Unit = {},
+    onTest: (BookSourcePart) -> Unit = {},
     onSearch: (BookSourcePart) -> Unit,
     onLogin: (BookSourcePart) -> Unit,
     onRefresh: (BookSourcePart) -> Unit,
@@ -667,7 +741,7 @@ fun ExploreSourceHeader(
             modifier = Modifier
                 .combinedClickable(
                     onClick = { if (isInstalled) onClick(item) else onInstall(item) },
-                    onLongClick = { if (isInstalled && !item.bookSourceUrl.startsWith("ext_")) showMenu = true }
+                    onLongClick = { if (isInstalled) showMenu = true }
                 )
                 .fillMaxWidth(),
             colors = ListItemDefaults.colors(
@@ -846,44 +920,78 @@ fun ExploreSourceHeader(
                             io.legado.app.utils.NetworkUtils.getDomain(item.bookSourceUrl)
                         }
                         PillHeaderDivider(title = menuTitle)
-                        RoundDropdownMenuItem(
-                            leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
-                            text = stringResource(R.string.to_top),
-                            onClick = { onTop(item); showMenu = false }
-                        )
-                        RoundDropdownMenuItem(
-                            leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
-                            text = stringResource(R.string.edit),
-                            onClick = { onEdit(item); showMenu = false }
-                        )
-                        RoundDropdownMenuItem(
-                            leadingIcon = { MenuItemIcon(Icons.Default.Search) },
-                            text = stringResource(R.string.search),
-                            onClick = { onSearch(item); showMenu = false }
-                        )
-                        if (item.hasLoginUrl) {
+                        if (item.bookSourceUrl.startsWith("ext_")) {
                             RoundDropdownMenuItem(
-                                leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
-                                text = stringResource(R.string.login),
-                                onClick = { onLogin(item); showMenu = false }
+                                leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
+                                text = stringResource(R.string.to_top),
+                                onClick = { onTop(item); showMenu = false }
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                                text = "Sửa mã nguồn",
+                                onClick = { onEdit(item); showMenu = false }
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Settings) },
+                                text = "Cấu hình & Chi tiết",
+                                onClick = { onDetail(item); showMenu = false }
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Search) },
+                                text = stringResource(R.string.search),
+                                onClick = { onSearch(item); showMenu = false }
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = {
+                                    MenuItemIcon(
+                                        Icons.Default.Delete,
+                                        tint = LegadoTheme.colorScheme.error
+                                    )
+                                },
+                                text = stringResource(R.string.delete),
+                                color = LegadoTheme.colorScheme.error,
+                                onClick = { onDelete(item); showMenu = false }
+                            )
+                        } else {
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.VerticalAlignTop) },
+                                text = stringResource(R.string.to_top),
+                                onClick = { onTop(item); showMenu = false }
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Edit) },
+                                text = stringResource(R.string.edit),
+                                onClick = { onEdit(item); showMenu = false }
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Search) },
+                                text = stringResource(R.string.search),
+                                onClick = { onSearch(item); showMenu = false }
+                            )
+                            if (item.hasLoginUrl) {
+                                RoundDropdownMenuItem(
+                                    leadingIcon = { MenuItemIcon(Icons.AutoMirrored.Filled.Login) },
+                                    text = stringResource(R.string.login),
+                                    onClick = { onLogin(item); showMenu = false }
+                                )
+                            }
+                            RoundDropdownMenuItem(
+                                leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
+                                text = stringResource(R.string.refresh),
+                                onClick = { onRefresh(item); showMenu = false }
+                            )
+                            RoundDropdownMenuItem(
+                                leadingIcon = {
+                                    MenuItemIcon(
+                                        Icons.Default.Delete,
+                                        tint = LegadoTheme.colorScheme.error
+                                    )
+                                },
+                                text = stringResource(R.string.delete),
+                                color = LegadoTheme.colorScheme.error,
+                                onClick = { onDelete(item); showMenu = false }
                             )
                         }
-                        RoundDropdownMenuItem(
-                            leadingIcon = { MenuItemIcon(Icons.Default.Refresh) },
-                            text = stringResource(R.string.refresh),
-                            onClick = { onRefresh(item); showMenu = false }
-                        )
-                        RoundDropdownMenuItem(
-                            leadingIcon = {
-                                MenuItemIcon(
-                                    Icons.Default.Delete,
-                                    tint = LegadoTheme.colorScheme.error
-                                )
-                            },
-                            text = stringResource(R.string.delete),
-                            color = LegadoTheme.colorScheme.error,
-                            onClick = { onDelete(item); showMenu = false }
-                        )
                     }
                 }
             }

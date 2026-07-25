@@ -187,6 +187,13 @@
             android:name=".ui.qrcode.QrCodeActivity"
             android:enableOnBackInvokedCallback="true"
             android:launchMode="singleTask" />
+        <!-- Extension Source Script Edit -->
+        <activity
+            android:name=".vbookextension.ui.ExtensionScriptEditActivity"
+            android:enableOnBackInvokedCallback="true"
+            android:configChanges="locale|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <!-- 书源编辑 -->
         <activity
             android:name=".ui.book.source.edit.BookSourceEditActivity"

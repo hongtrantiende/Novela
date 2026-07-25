@@ -280,6 +280,15 @@ sealed class ExtensionResult {
     data class Error(val message: String) : ExtensionResult()
 }
 
+enum class ExtensionDebugMode {
+    FULL,
+    SEARCH,
+    EXPLORE,
+    DETAIL,
+    TOC,
+    CONTENT
+}
+
 enum class ScriptType(val key: String) {
     HOME("home"),
     GENRE("genre"),
@@ -322,3 +331,10 @@ val ExtensionInfo.cleanName: String
 
         return clean
     }
+
+data class ExtensionDebugResult(
+    val success: Boolean,
+    val bookUrl: String? = null,
+    val chapterUrl: String? = null,
+    val chapterContent: String? = null
+)

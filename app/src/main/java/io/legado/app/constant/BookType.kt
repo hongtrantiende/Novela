@@ -54,9 +54,19 @@ object BookType {
      */
     const val notShelf = 0b100_0000_0000
 
+    /**
+     * 2048 已完结
+     */
+    const val completed = 0b1000_0000_0000
+
+    /**
+     * 4096 已知完结状态(ONGOING 或 COMPLETED)
+     */
+    const val completionKnown = 0b1_0000_0000_0000
+
     @Target(AnnotationTarget.VALUE_PARAMETER)
     @Retention(AnnotationRetention.SOURCE)
-    @IntDef(text, updateError, audio, image, webFile, local, archive, notShelf)
+    @IntDef(text, updateError, audio, image, webFile, local, archive, notShelf, completed, completionKnown)
     annotation class Type
 
     /**

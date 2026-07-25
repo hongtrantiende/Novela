@@ -89,12 +89,7 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.rounded.LocationOn
-import androidx.compose.material3.Surface
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.animation.animateColorAsState
 import io.legado.app.ui.widget.components.progressIndicator.AppContainedLoadingIndicator
 import io.legado.app.service.BaseReadAloudService
 import kotlinx.coroutines.Dispatchers
@@ -108,32 +103,17 @@ fun ReadAloudContent(
     state: ReadBookUiState,
     onIntent: (ReadBookIntent) -> Unit,
     onDismissRequest: () -> Unit,
-    onOpenChapterList: () -> Unit = {},
+    onOpenChapterList: () -> Unit,
     onGoToBackground: () -> Unit,
     onShowReadAloudConfig: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var showChapterList by remember { mutableStateOf(false) }
-
     // Đợi transition Bottom Sheet chạy xong mượt mà, sau đó mới load các logic nặng chạy ngầm
     var isUiReady by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(400)
         isUiReady = true
-    }
-
-    // Load chapter list from DB asynchronously only when needed
-    var chapters by remember { mutableStateOf<List<io.legado.app.data.entities.BookChapter>>(emptyList()) }
-    LaunchedEffect(showChapterList, state.book?.bookUrl, isUiReady) {
-        if (!isUiReady) return@LaunchedEffect
-        if (showChapterList && chapters.isEmpty()) {
-            state.book?.bookUrl?.let { bookUrl ->
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    chapters = io.legado.app.data.appDb.bookChapterDao.getChapterList(bookUrl)
-                }
-            }
-        }
     }
 
     val timerMinute = state.readAloudTtsTimer
@@ -644,8 +624,8 @@ fun ReadAloudContent(
                 BottomBarItem(
                     icon = Icons.AutoMirrored.Filled.List,
                     label = "Mục lục",
-                    selected = showChapterList,
-                    onClick = { showChapterList = !showChapterList },
+                    selected = false,
+                    onClick = onOpenChapterList,
                     modifier = Modifier.weight(1f)
                 )
                 BottomBarItem(
@@ -674,25 +654,6 @@ fun ReadAloudContent(
                     modifier = Modifier.weight(1f)
                 )
             }
-        }
-
-        // ── Chapter List Overlay ──
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showChapterList,
-            enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + androidx.compose.animation.fadeOut(),
-        ) {
-            AudioChapterListOverlay(
-                book = state.book,
-                chapters = chapters,
-                currentChapterIndex = state.durChapterIndex,
-                onChapterClick = { index ->
-                    showChapterList = false
-                    onIntent(ReadBookIntent.OpenChapter(index))
-                },
-                onDismiss = { showChapterList = false },
-                bgColor = appBgColor,
-            )
         }
     }
 }
@@ -891,236 +852,3 @@ private fun SegmentedProgressBar(
         }
     }
 }
-
-@Composable
-private fun ChapterListItem(
-    modifier: Modifier = Modifier,
-    title: String,
-    isCurrent: Boolean,
-    isVip: Boolean,
-    isPay: Boolean,
-    tag: String?,
-    wordCount: String?,
-    isDownloaded: Boolean,
-    onClick: () -> Unit,
-) {
-    val backgroundColor by animateColorAsState(
-        targetValue = when {
-            isCurrent -> LegadoTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-            else -> Color.Transparent
-        }, label = "BgColor"
-    )
-
-    val textColor by animateColorAsState(
-        targetValue = when {
-            isCurrent -> LegadoTheme.colorScheme.primary
-            else -> LegadoTheme.colorScheme.onSurface
-        }, label = "TextColor"
-    )
-
-    val detailColor by animateColorAsState(
-        targetValue = when {
-            isCurrent -> LegadoTheme.colorScheme.primary
-            else -> LegadoTheme.colorScheme.onSurfaceVariant
-        }, label = "DetailColor"
-    )
-
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        color = backgroundColor
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (isVip && !isPay) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = LegadoTheme.colorScheme.error,
-                            modifier = Modifier
-                                .size(14.dp)
-                                .padding(end = 4.dp)
-                        )
-                    }
-
-                    Text(
-                        text = title,
-                        style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
-                        color = textColor,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                if (!tag.isNullOrEmpty()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = tag,
-                        style = LegadoTheme.typography.labelSmallEmphasized,
-                        color = detailColor.copy(alpha = 0.8f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-
-            // Right side: Word Count Card & Status Indicator
-            val showStatus = isCurrent || isDownloaded || !wordCount.isNullOrEmpty()
-            if (showStatus) {
-                Row(
-                    modifier = Modifier.padding(start = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (!wordCount.isNullOrEmpty() && isDownloaded) {
-                        Surface(
-                            shape = MaterialTheme.shapes.extraSmall,
-                            color = if (isCurrent) LegadoTheme.colorScheme.primaryContainer else LegadoTheme.colorScheme.surfaceContainer,
-                            modifier = Modifier.padding(end = 6.dp)
-                        ) {
-                            Text(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                text = wordCount,
-                                style = LegadoTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                                color = if (isCurrent) LegadoTheme.colorScheme.onPrimaryContainer else LegadoTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    
-                    if (isCurrent) {
-                        Icon(
-                            imageVector = Icons.Rounded.LocationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = LegadoTheme.colorScheme.secondary
-                        )
-                    } else if (isDownloaded) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = LegadoTheme.colorScheme.secondary
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-/**
- * Chapter list overlay inside audio player
- */
-@Composable
-private fun AudioChapterListOverlay(
-    book: io.legado.app.data.entities.Book?,
-    chapters: List<io.legado.app.data.entities.BookChapter>,
-    currentChapterIndex: Int,
-    onChapterClick: (Int) -> Unit,
-    onDismiss: () -> Unit,
-    bgColor: Color,
-) {
-    var cachedFiles by remember { mutableStateOf<Set<String>>(emptySet()) }
-    LaunchedEffect(chapters, book) {
-        cachedFiles = withContext(Dispatchers.IO) {
-            if (book != null) {
-                io.legado.app.help.book.BookHelp.getChapterFiles(book).toSet()
-            } else {
-                emptySet()
-            }
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(bgColor)
-            .windowInsetsPadding(WindowInsets.statusBars)
-            .windowInsetsPadding(WindowInsets.navigationBars)
-    ) {
-        // Premium Book Header with Cover and Title
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            io.legado.app.ui.widget.components.image.cover.BookCoverImage(
-                name = book?.name,
-                author = book?.author,
-                path = book?.getDisplayCover(),
-                modifier = Modifier
-                    .size(width = 44.dp, height = 60.dp)
-                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = book?.name ?: "",
-                    style = LegadoTheme.typography.titleMedium,
-                    color = LegadoTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Danh sách chương (${chapters.size})",
-                    style = LegadoTheme.typography.bodySmall,
-                    color = LegadoTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            // Close button
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(LegadoTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                    .clickable { onDismiss() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Đóng",
-                    tint = LegadoTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        // Chapter list
-        val listState = androidx.compose.foundation.lazy.rememberLazyListState(
-            initialFirstVisibleItemIndex = (currentChapterIndex - 3).coerceAtLeast(0)
-        )
-        androidx.compose.foundation.lazy.LazyColumn(
-            state = listState,
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            items(chapters.size) { index ->
-                val chapter = chapters[index]
-                val isCurrent = index == currentChapterIndex
-                val isDownloaded = remember(chapter.index, cachedFiles) {
-                    chapter.getFileName() in cachedFiles
-                }
-                ChapterListItem(
-                    title = chapter.getDisplayTitle(),
-                    isCurrent = isCurrent,
-                    isVip = chapter.isVip,
-                    isPay = chapter.isPay,
-                    tag = chapter.tag,
-                    wordCount = chapter.wordCount,
-                    isDownloaded = isDownloaded,
-                    onClick = { onChapterClick(index) }
-                )
-            }
-        }
-    }
-}
-
-

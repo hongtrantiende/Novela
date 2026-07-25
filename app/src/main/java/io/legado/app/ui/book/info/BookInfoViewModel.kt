@@ -660,18 +660,6 @@ class BookInfoViewModel(
                 book.durChapterPos = it.durChapterPos
                 book.durChapterTitle = it.durChapterTitle
             }
-            if (TranslateUtils.isTranslateEnabled()) {
-                book.name = TranslateUtils.translateMeta(book.name)
-                book.author = TranslateUtils.translateMeta(book.author)
-                val latestTitle = book.latestChapterTitle
-                if (!latestTitle.isNullOrEmpty()) {
-                    book.latestChapterTitle = TranslateUtils.translateChapterTitle(latestTitle)
-                }
-                val durTitle = book.durChapterTitle
-                if (!durTitle.isNullOrEmpty()) {
-                    book.durChapterTitle = TranslateUtils.translateChapterTitle(durTitle)
-                }
-            }
             book.save()
             if (ReadBook.book?.isSameNameAuthor(book) == true) {
                 ReadBook.book = book
@@ -905,8 +893,10 @@ class BookInfoViewModel(
         }.onSuccess { chapters ->
             book.totalChapterNum = chapters.size
             if (chapters.isNotEmpty()) {
-                book.latestChapterTitle = chapters.last().title
-                if (book.durChapterTitle.isNullOrBlank()) {
+                val latest = chapters.last().title
+                book.latestChapterTitle = latest
+                val dur = book.durChapterTitle
+                if (dur.isNullOrBlank()) {
                     book.durChapterTitle = chapters.first().title
                 }
             }
@@ -1073,6 +1063,15 @@ class BookInfoViewModel(
             val oldBook = book.copy()
             WebBook.getChapterList(scope, source, book, runPreUpdateJs)
                 .onSuccess(IO) { chapters ->
+                    book.totalChapterNum = chapters.size
+                    if (chapters.isNotEmpty()) {
+                        val latest = chapters.last().title
+                        book.latestChapterTitle = latest
+                        val dur = book.durChapterTitle
+                        if (dur.isNullOrBlank()) {
+                            book.durChapterTitle = chapters.first().title
+                        }
+                    }
                     if (inBookshelf) {
                         appDb.bookDao.replace(oldBook, book)
                         if (oldBook.bookUrl != book.bookUrl) {

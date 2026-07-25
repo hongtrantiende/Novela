@@ -331,7 +331,25 @@ object WebBook {
         if (book.origin.startsWith("ext_")) {
             return kotlin.runCatching {
                 val extensionRepository: io.legado.app.vbookextension.data.repository.ExtensionRepository = org.koin.mp.KoinPlatformTools.defaultContext().get().get()
-                extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+                val chapters = extensionRepository.getTableOfContents(book.origin, book.bookUrl)
+                if (chapters.isEmpty()) {
+                    throw io.legado.app.exception.TocEmptyException("Extension TOC is empty")
+                }
+                val oldTotalChapterNum = book.totalChapterNum
+                if (chapters.size > oldTotalChapterNum) {
+                    book.lastCheckCount = chapters.size - oldTotalChapterNum
+                    book.latestChapterTime = System.currentTimeMillis()
+                }
+                book.lastCheckTime = System.currentTimeMillis()
+                book.totalChapterNum = chapters.size
+                val latestChapter = chapters.lastOrNull { !it.isVolume } ?: chapters.last()
+                book.latestChapterTitle = latestChapter.title
+                if (book.durChapterIndex in chapters.indices) {
+                    book.durChapterTitle = chapters[book.durChapterIndex].title
+                }
+                chapters
+            }.onFailure {
+                coroutineContext.ensureActive()
             }
         }
         if (!book.config.fixedType) {

@@ -506,7 +506,11 @@ class ExploreViewModel(
 
     fun deleteSource(source: BookSourcePart) {
         execute {
-            exploreRepository.deleteSource(source.bookSourceUrl)
+            if (source.bookSourceUrl.startsWith("ext_")) {
+                extensionLoader.uninstallExtension(source.bookSourceUrl.substringAfter("ext_"))
+            } else {
+                exploreRepository.deleteSource(source.bookSourceUrl)
+            }
         }
     }
 

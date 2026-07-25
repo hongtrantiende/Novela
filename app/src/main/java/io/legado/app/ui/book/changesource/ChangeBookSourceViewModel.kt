@@ -690,7 +690,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     ) {
         execute {
             searchBooks.forEach {
-                if (it.type == bookType) {
+                if (bookType != null && it.sameBookTypeLocal(bookType)) {
                     val book = it.toBook()
                     val result = getToc(book).getOrNull()
                     if (result != null) {

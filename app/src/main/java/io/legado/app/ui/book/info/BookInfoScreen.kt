@@ -147,15 +147,16 @@ fun BookInfoScreen(
 ) {
     val bookColorTheme = rememberBookInfoColorTheme(state.book)
 
-    BookInfoScreenContent(
-        state = state,
-        onIntent = onIntent,
-        onBack = onBack,
-        sharedTransitionScope = sharedTransitionScope,
-        animatedVisibilityScope = animatedVisibilityScope,
-        sharedCoverKey = sharedCoverKey,
-        bookColorTheme = bookColorTheme,
-    )
+    BookInfoColorTheme(theme = bookColorTheme) {
+        BookInfoScreenContent(
+            state = state,
+            onIntent = onIntent,
+            onBack = onBack,
+            sharedTransitionScope = sharedTransitionScope,
+            animatedVisibilityScope = animatedVisibilityScope,
+            sharedCoverKey = sharedCoverKey,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class,
@@ -169,7 +170,6 @@ private fun BookInfoScreenContent(
     sharedTransitionScope: SharedTransitionScope?,
     animatedVisibilityScope: AnimatedVisibilityScope?,
     sharedCoverKey: String?,
-    bookColorTheme: ThemeOverrideState?,
 ) {
     val isMiuix = ThemeResolver.isMiuixEngine(LegadoTheme.composeEngine)
     val scrollBehavior = if (isMiuix) {
@@ -213,16 +213,14 @@ private fun BookInfoScreenContent(
                 else Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
             ),
         topBar = {
-            BookInfoColorTheme(theme = bookColorTheme) {
-                BookInfoTransparentTopAppBar(
-                    state = state,
-                    showMenu = showMenu,
-                    onShowMenuChange = { showMenu = it },
-                    onMenuAction = { onIntent(BookInfoIntent.MenuAction(it)) },
-                    onBackPressed = onBack,
-                    scrollBehavior = scrollBehavior,
-                )
-            }
+            BookInfoTransparentTopAppBar(
+                state = state,
+                showMenu = showMenu,
+                onShowMenuChange = { showMenu = it },
+                onMenuAction = { onIntent(BookInfoIntent.MenuAction(it)) },
+                onBackPressed = onBack,
+                scrollBehavior = scrollBehavior,
+            )
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
@@ -248,12 +246,10 @@ private fun BookInfoScreenContent(
             } else {
                 if (book != null) {
                     Box(modifier = Modifier.fillMaxSize()) {
-                BookInfoColorTheme(theme = bookColorTheme) {
-                    BookInfoBackdrop(
-                        book = book,
-                        systemSurfaceColor = systemSurfaceColor,
-                    )
-                }
+                BookInfoBackdrop(
+                    book = book,
+                    systemSurfaceColor = systemSurfaceColor,
+                )
                 AppPullToRefresh(
                     modifier = Modifier.fillMaxSize(),
                     isRefreshing = state.isTocLoading,
@@ -265,7 +261,34 @@ private fun BookInfoScreenContent(
                     Column(modifier = Modifier.fillMaxSize()) {
                         if (isFixedHeader) {
                             Box(modifier = Modifier.padding(top = paddingValues.calculateTopPadding() - 65.dp)) {
-                                BookInfoColorTheme(theme = bookColorTheme) {
+                                BookInfoHeader(
+                                    book = book,
+                                    kindLabels = state.kindLabels,
+                                    groupNames = state.groupNames,
+                                    systemSurfaceColor = systemSurfaceColor,
+                                    onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
+                                    onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
+                                    onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
+                                    onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
+                                    onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
+                                    onKindClick = { onIntent(BookInfoIntent.KindClick(it)) },
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    sharedCoverKey = sharedCoverKey,
+                                    topPadding = 65.dp,
+                                )
+                            }
+                        }
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(
+                                top = if (isFixedHeader) 8.dp else (paddingValues.calculateTopPadding() + 8.dp),
+                                bottom = paddingValues.calculateBottomPadding() + 88.dp,
+                            ),
+                        ) {
+                            if (!isFixedHeader) {
+                                item {
                                     BookInfoHeader(
                                         book = book,
                                         kindLabels = state.kindLabels,
@@ -280,38 +303,7 @@ private fun BookInfoScreenContent(
                                         sharedTransitionScope = sharedTransitionScope,
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         sharedCoverKey = sharedCoverKey,
-                                        topPadding = 65.dp,
                                     )
-                                }
-                            }
-                        }
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.weight(1f),
-                            contentPadding = PaddingValues(
-                                top = if (isFixedHeader) 8.dp else (paddingValues.calculateTopPadding() + 8.dp),
-                                bottom = paddingValues.calculateBottomPadding() + 88.dp,
-                            ),
-                        ) {
-                            if (!isFixedHeader) {
-                                item {
-                                    BookInfoColorTheme(theme = bookColorTheme) {
-                                        BookInfoHeader(
-                                            book = book,
-                                            kindLabels = state.kindLabels,
-                                            groupNames = state.groupNames,
-                                            systemSurfaceColor = systemSurfaceColor,
-                                            onCoverClick = { onIntent(BookInfoIntent.CoverClick) },
-                                            onCoverLongClick = { onIntent(BookInfoIntent.CoverLongClick) },
-                                            onAuthorClick = { onIntent(BookInfoIntent.AuthorClick(it)) },
-                                            onBookNameClick = { onIntent(BookInfoIntent.BookNameClick(it)) },
-                                            onOriginClick = { onIntent(BookInfoIntent.OriginClick) },
-                                            onKindClick = { onIntent(BookInfoIntent.KindClick(it)) },
-                                            sharedTransitionScope = sharedTransitionScope,
-                                            animatedVisibilityScope = animatedVisibilityScope,
-                                            sharedCoverKey = sharedCoverKey,
-                                        )
-                                    }
                                 }
                             }
                         item {
@@ -787,7 +779,7 @@ private fun BookInfoHeaderContent(
             ) {
                 var showTitleMenu by remember { mutableStateOf(false) }
                 var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
-                val translatedBookName by io.legado.app.utils.translateAsState(book.name, isDetail = true)
+                val translatedBookName by io.legado.app.utils.translateAsState(book.name, isDetail = false)
                 Box {
                     AppText(
                         text = translatedBookName,
@@ -819,7 +811,8 @@ private fun BookInfoHeaderContent(
                         )
                     }
                 }
-                val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor, isDetail = true)
+                val translatedAuthorRaw by io.legado.app.utils.translateAsState(book.realAuthor, isDetail = false)
+                val translatedAuthor = translatedAuthorRaw.trim().replace("\n", "")
                 AppText(
                     text = stringResource(R.string.author_show, translatedAuthor),
                     style = LegadoTheme.typography.bodyLarge,
@@ -848,7 +841,7 @@ private fun BookInfoHeaderContent(
             ) {
                 groupNames?.takeIf { it.isNotBlank() }?.let {
                     item(key = "group-$it") {
-                        val translatedGroupName by io.legado.app.utils.translateAsState(it, isDetail = true)
+                        val translatedGroupName by io.legado.app.utils.translateAsState(it, isDetail = false)
                         TextCard(
                             text = stringResource(R.string.group_s, translatedGroupName),
                             textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -861,7 +854,7 @@ private fun BookInfoHeaderContent(
                     items = kindLabels,
                     key = { index, label -> "kind-$index-$label" }
                 ) { _, label ->
-                    val translatedLabel by io.legado.app.utils.translateAsState(label, isDetail = true)
+                    val translatedLabel by io.legado.app.utils.translateAsState(label, isDetail = false)
                     TextCard(
                         text = translatedLabel,
                         textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -1013,7 +1006,7 @@ private fun BookInfoHeader(
                             ) {
                                 var showTitleMenu by remember { mutableStateOf(false) }
                                 var isTitleExpanded by rememberSaveable { mutableStateOf(false) }
-                                val translatedBookName by io.legado.app.utils.translateAsState(book.name, isDetail = true)
+                                val translatedBookName by io.legado.app.utils.translateAsState(book.name, isDetail = false)
                                 Box {
                                     AppText(
                                         text = translatedBookName,
@@ -1045,7 +1038,8 @@ private fun BookInfoHeader(
                                         )
                                     }
                                 }
-                                val translatedAuthor by io.legado.app.utils.translateAsState(book.realAuthor, isDetail = true)
+                                val translatedAuthorRaw by io.legado.app.utils.translateAsState(book.realAuthor, isDetail = false)
+                                val translatedAuthor = translatedAuthorRaw.trim().replace("\n", "")
                                 AppText(
                                     text = stringResource(R.string.author_show, translatedAuthor),
                                     style = LegadoTheme.typography.bodyLarge,
@@ -1078,7 +1072,7 @@ private fun BookInfoHeader(
                     ) {
                         groupNames?.takeIf { it.isNotBlank() }?.let {
                             item(key = "group-$it") {
-                                val translatedGroupName by io.legado.app.utils.translateAsState(it, isDetail = true)
+                                val translatedGroupName by io.legado.app.utils.translateAsState(it, isDetail = false)
                                 TextCard(
                                     text = stringResource(R.string.group_s, translatedGroupName),
                                     textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -1091,7 +1085,7 @@ private fun BookInfoHeader(
                             items = kindLabels,
                             key = { index, label -> "kind-$index-$label" }
                         ) { _, label ->
-                            val translatedLabel by io.legado.app.utils.translateAsState(label, isDetail = true)
+                            val translatedLabel by io.legado.app.utils.translateAsState(label, isDetail = false)
                             TextCard(
                                 text = translatedLabel,
                                 textStyle = LegadoTheme.typography.labelLargeEmphasized,
@@ -1313,13 +1307,20 @@ private fun BookInfoSummary(
             .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
+        val rawDurTitle = book.durChapterTitle
+        val translatedDurTitleRaw by io.legado.app.utils.translateAsState(rawDurTitle, isMeta = true)
+        val translatedDurTitle = translatedDurTitleRaw.trim().replace("\n", "")
+        val rawLatestTitle = book.latestChapterTitle
+        val translatedLatestTitleRaw by io.legado.app.utils.translateAsState(rawLatestTitle, isMeta = true)
+        val translatedLatestTitle = translatedLatestTitleRaw.trim().replace("\n", "")
+
         AnimatedTextLine(
-            text = stringResource(R.string.toc_s, book.durChapterTitle ?: stringResource(R.string.loading)),
+            text = stringResource(R.string.toc_s, if (rawDurTitle.isNullOrBlank()) stringResource(R.string.loading) else translatedDurTitle),
             style = LegadoTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
         )
         AnimatedTextLine(
-            text = stringResource(R.string.lasted_show, book.latestChapterTitle ?: ""),
+            text = stringResource(R.string.lasted_show, translatedLatestTitle),
             style = LegadoTheme.typography.bodyMedium,
             color = LegadoTheme.colorScheme.onSurfaceVariant,
         )
@@ -1378,7 +1379,7 @@ private fun BookInfoSummary(
             color = LegadoTheme.colorScheme.onSurface
         )
 
-        val translatedIntro by io.legado.app.utils.translateAsState(book.displayIntro.orEmpty(), isDetail = true)
+        val translatedIntro by io.legado.app.utils.translateAsState(book.displayIntro.orEmpty(), isDetail = false)
         val introText = translatedIntro.ifBlank { stringResource(R.string.intro_show_null) }
         var isIntroExpanded by remember { mutableStateOf(false) }
 

@@ -78,6 +78,9 @@ val Book.isCbzOrZip: Boolean
 val Book.isOnLineTxt: Boolean
     get() = !isLocal && isType(BookType.text)
 
+val Book.isCompleted: Boolean
+    get() = type.getCompletionStatus() == BookCompletionStatus.COMPLETED
+
 val Book.isWebFile: Boolean
     get() = isType(BookType.webFile)
 
@@ -383,7 +386,14 @@ fun Book.updateTo(newBook: Book): Book {
     newBook.customTag = customTag
     newBook.canUpdate = canUpdate
     if (config.fixedType) {
-        newBook.type = type
+        val fixedContentType = this.type and (BookType.allBookTypeLocal or BookType.updateError or BookType.notShelf or BookType.archive)
+        val completionBits = newBook.type and (BookType.completed or BookType.completionKnown)
+        newBook.type = fixedContentType or completionBits
+    }
+    val newStatus = newBook.type.getCompletionStatus()
+    val oldStatus = this.type.getCompletionStatus()
+    if (newStatus == BookCompletionStatus.UNKNOWN && oldStatus != BookCompletionStatus.UNKNOWN) {
+        newBook.type = newBook.type.withCompletionStatus(oldStatus)
     }
     newBook.readConfig = readConfig
     if (newBook.wordCount.isNullOrBlank()) {

@@ -72,6 +72,16 @@ class ReadView(
     val prevPage by lazy { PageView(context, contentCallBack) }
     val curPage by lazy { PageView(context, contentCallBack) }
     val nextPage by lazy { PageView(context, contentCallBack) }
+
+    private var displayBookName: String? = null
+
+    fun setDisplayBookName(name: String) {
+        if (displayBookName == name) return
+        displayBookName = name
+        prevPage.setDisplayBookName(name)
+        curPage.setDisplayBookName(name)
+        nextPage.setDisplayBookName(name)
+    }
     val defaultAnimationSpeed = 300
     private var pressDown = false
     private var isMove = false

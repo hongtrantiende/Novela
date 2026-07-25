@@ -209,11 +209,17 @@ class ContentProcessor private constructor(
             }
         }
         if (includeTitle) {
-            //重新添加标题
-            mContent = chapter.getDisplayTitle(
+            // 重新添加标题
+            val displayTitle = chapter.getDisplayTitle(
                 getTitleReplaceRules(),
                 useReplace = useReplace && book.getUseReplaceRule()
-            ) + "\n" + mContent
+            )
+            val finalTitle = if (io.legado.app.utils.TranslateUtils.isTranslateEnabled()) {
+                kotlinx.coroutines.runBlocking {
+                    io.legado.app.utils.TranslateUtils.translateChapterTitle(displayTitle)
+                }
+            } else displayTitle
+            mContent = finalTitle + "\n" + mContent
         }
         if (isAndroid8) {
             mContent = mContent.replace('\u00A0', ' ')

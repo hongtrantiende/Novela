@@ -1326,13 +1326,13 @@ private fun MenuTitleBarMergedGlassButton(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() },
                             role = Role.Button,
-                            onClick = { onIntent(ReadBookIntent.MenuRefreshAfter) },
+                            onClick = { onIntent(ReadBookIntent.MenuRefreshDur) },
                             onLongClick = { refreshExpanded = true },
                         ),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Refresh,
-                        contentDescription = stringResource(R.string.menu_refresh_after),
+                        contentDescription = stringResource(R.string.menu_refresh_dur),
                         tint = tint,
                         modifier = Modifier.size(20.dp),
                     )
@@ -1454,10 +1454,10 @@ private fun RefreshActionButton(
 
     Box {
         MenuTitleGlassButton(
-            onClick = { onIntent(ReadBookIntent.MenuRefreshAfter) },
+            onClick = { onIntent(ReadBookIntent.MenuRefreshDur) },
             onLongClick = { expanded = true },
             icon = Icons.Default.Refresh,
-            contentDescription = stringResource(R.string.menu_refresh_after),
+            contentDescription = stringResource(R.string.menu_refresh_dur),
             state = state,
             colors = colors,
             backdrop = backdrop,

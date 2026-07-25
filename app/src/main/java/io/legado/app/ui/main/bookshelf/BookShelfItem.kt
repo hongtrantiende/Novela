@@ -2,6 +2,8 @@ package io.legado.app.ui.main.bookshelf
 
 import androidx.compose.runtime.Stable
 import io.legado.app.constant.BookType
+import io.legado.app.help.book.BookCompletionStatus
+import io.legado.app.help.book.getCompletionStatus
 import io.legado.app.data.entities.Book
 import io.legado.app.utils.TranslateUtils
 import io.legado.app.utils.splitNotBlank
@@ -45,6 +47,8 @@ data class BookShelfItem(
     val isVideo: Boolean get() = (type and BookType.video) > 0
 
     val isNotShelf: Boolean get() = (type and BookType.notShelf) > 0
+
+    val isCompleted: Boolean get() = type.getCompletionStatus() == BookCompletionStatus.COMPLETED
 
     val isNew: Boolean get() = lastCheckCount > 0
 

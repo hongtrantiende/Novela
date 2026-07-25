@@ -627,14 +627,20 @@ fun BookItem(
     val book = bookUi.book
     val unreadCount = book.getUnreadChapterNum()
     val unreadText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null
-    val bookTypeLabel = if (BookshelfConfig.showTip) {
+    val sourceStatusLabel = when {
+        book.isLocal -> null
+        book.origin.startsWith("ext_") ->
+            if (book.isCompleted) "EXT · Hoàn thành" else "EXT"
+        else ->
+            if (book.isCompleted) "Legado · Hoàn thành" else "Legado"
+    }
+    val bookTypeLabel = if (BookshelfConfig.showTip && book.isLocal) {
         when {
             book.isAudio -> stringResource(R.string.audio)
             book.isImage -> stringResource(R.string.manga)
             book.isVideo -> stringResource(R.string.video)
             (book.type and BookType.webFile) > 0 -> stringResource(R.string.web_file)
-            book.isLocal -> stringResource(R.string.local)
-            else -> stringResource(R.string.noval)
+            else -> stringResource(R.string.local)
         }
     } else {
         null
@@ -678,7 +684,7 @@ fun BookItem(
                 sourceOrigin = book.origin,
                 badgeText = if (layoutMode != 0) unreadText else null,
                 showBadgeDot = BookshelfConfig.showUnread && BookshelfConfig.showUnreadNew && book.isNew,
-                leftBottomText = matchedSourceLabel ?: bookTypeLabel,
+                leftBottomText = matchedSourceLabel ?: sourceStatusLabel ?: bookTypeLabel,
                 showLoadingPlaceholder = true,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,

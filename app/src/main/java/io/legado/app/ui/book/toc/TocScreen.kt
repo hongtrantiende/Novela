@@ -178,10 +178,11 @@ fun TocScreen(
     val addBookmarkText = stringResource(R.string.bookmark_add)
     val bookmarkDefaultFileName = stringResource(R.string.bookmark)
 
-    val topBarTitle = remember(
+    val rawTopBarTitle = remember(
         pagerState.currentPage,
         book?.name,
         book?.durChapterTitle,
+        bookmarkManagementTitle
     ) {
         when (pagerState.currentPage) {
             0 -> {
@@ -191,6 +192,15 @@ fun TocScreen(
             1 -> bookmarkManagementTitle
             else -> book?.name ?: ""
         }
+    }
+
+    val textToTranslate = if (pagerState.currentPage == 0) rawTopBarTitle else ""
+    val translatedTitle = translateAsState(textToTranslate, isMeta = true).value
+
+    val topBarTitle = if (pagerState.currentPage == 0) {
+        translatedTitle.ifBlank { rawTopBarTitle }
+    } else {
+        rawTopBarTitle
     }
 
     val topBarSubtitle = remember(
@@ -397,6 +407,15 @@ fun TocScreen(
                                     viewModel.reverseToc()
                                 }
                             )
+                            if (book?.origin?.startsWith("ext_") == true) {
+                                RoundDropdownMenuItem(
+                                    text = stringResource(R.string.update_toc),
+                                    onClick = {
+                                        dismiss()
+                                        viewModel.refreshExtensionToc()
+                                    }
+                                )
+                            }
                             PillDivider()
                             RoundDropdownMenuItem(
                                 text = stringResource(R.string.replace_rule_title),
@@ -717,15 +736,17 @@ fun ChapterListContent(
                 )
                 androidx.compose.foundation.layout.Spacer(modifier = Modifier.width(16.dp))
                 Column {
+                    val translatedBookName by translateAsState(book?.name, isMeta = true)
+                    val translatedAuthor by translateAsState(book?.author, isMeta = true)
                     AppText(
-                        text = book?.name ?: "",
+                        text = translatedBookName,
                         style = LegadoTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = LegadoTheme.colorScheme.onSurface
                     )
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
                     AppText(
-                        text = book?.author ?: "",
+                        text = translatedAuthor,
                         style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.onSurfaceVariant
                     )
@@ -768,9 +789,13 @@ fun ChapterListContent(
             } else if (uiItem.isVolume) {
 
                 item(key = "volume-${uiItem.id}") {
+                    val translatedVolumeTitle by translateAsState(
+                        text = uiItem.title,
+                        isMeta = true
+                    )
                     CollapsibleHeader(
                         modifier = Modifier.animateItem(),
-                        title = translateAsState(uiItem.title, isMeta = true).value,
+                        title = translatedVolumeTitle.ifBlank { uiItem.title },
                         isCollapsed = collapsedVolumes.contains(uiItem.id),
                         onToggle = { viewModel.toggleVolume(uiItem.id) }
                     )
@@ -865,9 +890,13 @@ fun ChapterItem(
                         )
                     }
 
-                    val translatedTitle = translateAsState(item.title, isMeta = true).value
+                    val translatedTitle by translateAsState(
+                        text = item.title,
+                        isMeta = true
+                    )
+
                     AppText(
-                        text = translatedTitle,
+                        text = translatedTitle.ifBlank { item.title },
                         style = LegadoTheme.typography.bodyMediumEmphasized.copy(fontWeight = FontWeight.Medium),
                         color = textColor,
                         maxLines = 2,

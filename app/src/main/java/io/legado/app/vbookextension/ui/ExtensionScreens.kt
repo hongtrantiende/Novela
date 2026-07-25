@@ -926,7 +926,7 @@ fun ExtensionDetailDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(LegadoTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                                            .background(LegadoTheme.colorScheme.surfaceContainerLow)
                                             .clickable { editingSetting = setting }
                                             .padding(horizontal = 12.dp, vertical = 10.dp),
                                         verticalAlignment = Alignment.CenterVertically,

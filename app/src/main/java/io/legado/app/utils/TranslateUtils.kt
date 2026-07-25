@@ -92,41 +92,66 @@ object TranslateUtils {
         val text = raw.trim()
         if (text.isEmpty()) return ""
 
-        // Regex: 第 [numbers] [unit]
-        // Supports: 第十二章, 第3回, 第一卷
-        val regex = Regex("""第\s*([0-9一二三四五六七八九十百千零〇两]+)\s*([卷回章节幕折集])""")
-        
-        // Find match
-        val match = regex.find(text)
+        // Regex for Vietnamese prefixed chapter titles: "Chương 1: [Chinese]", "Quyển 1: [Chinese]", etc.
+        val viRegex = Regex("""^(Chương|Quyển|Hồi|Màn|Chiết|Tiết|Tập)\s*([0-9一二三四五六七八九十百千零〇两]+)\s*[:：]?\s*(.*)$""", RegexOption.IGNORE_CASE)
+        val viMatch = viRegex.find(text)
+        val result = if (viMatch != null) {
+            val unitRaw = viMatch.groupValues[1]
+            val unit = unitRaw.replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+            val numStr = viMatch.groupValues[2]
+            val restCn = viMatch.groupValues[3].trim()
+            val num = if (numStr.all { it.isDigit() }) numStr else chineseNumberToInt(numStr).toString()
+            val prefix = "$unit $num"
+            if (restCn.isNotBlank()) {
+                val translatedRest = if (io.legado.app.vbookextension.util.QuickTranslateEngine.hasChinese(restCn)) {
+                    io.legado.app.vbookextension.util.QuickTranslateEngine.translate(appCtx, restCn, "vi").trim()
+                } else {
+                    translateMeta(restCn).trim()
+                }
+                val separator = if (translatedRest.startsWith(":") || translatedRest.startsWith("：")) "" else ": "
+                "$prefix$separator$translatedRest"
+            } else {
+                prefix
+            }
+        } else {
+            // Regex: 第 [numbers] [unit]
+            // Supports: 第十二章, 第3回, 第一卷
+            val regex = Regex("""第\s*([0-9一二三四五六七八九十百千零〇两]+)\s*([卷回章节幕折集])""")
 
-        if (match == null) {
-            return translateMeta(text)
+            // Find match
+            val match = regex.find(text)
+
+            if (match == null) {
+                translateMeta(text)
+            } else {
+                // Extract parts
+                val numberCn = match.groupValues[1]
+                val unitCn = match.groupValues[2]
+
+                // Convert number and unit
+                val number = chineseNumberToInt(numberCn)
+                val unitVi = chapterUnitMap[unitCn] ?: "Chương"
+
+                val chapterPart = "$unitVi $number"
+
+                // Translate text before and after the match
+                val preMatch = text.substring(0, match.range.first)
+                val postMatch = text.substring(match.range.last + 1)
+
+                val translatedPre = if (preMatch.isNotBlank()) translateMeta(preMatch) + " " else ""
+                val translatedPostRaw = if (postMatch.isNotBlank()) translateMeta(postMatch).trim() else ""
+
+                val separator = if (translatedPostRaw.isNotEmpty()) {
+                    if (translatedPostRaw.startsWith(":") || translatedPostRaw.startsWith("：")) "" else ": "
+                } else ""
+
+                val translatedPost = if (translatedPostRaw.isNotEmpty()) separator + translatedPostRaw else ""
+
+                "$translatedPre$chapterPart$translatedPost"
+            }
         }
 
-        // Extract parts
-        val numberCn = match.groupValues[1]
-        val unitCn = match.groupValues[2]
-
-        // Convert number and unit
-        val number = chineseNumberToInt(numberCn)
-        val unitVi = chapterUnitMap[unitCn] ?: "Chương"
-        
-        val chapterPart = "$unitVi $number"
-
-        // Translate text before and after the match
-        val preMatch = text.substring(0, match.range.first)
-        val postMatch = text.substring(match.range.last + 1)
-        
-        val translatedPre = if (preMatch.isNotBlank()) translateMeta(preMatch) + " " else ""
-        val translatedPostRaw = if (postMatch.isNotBlank()) translateMeta(postMatch).trim() else ""
-
-        val separator = if (translatedPostRaw.isNotEmpty()) {
-            if (translatedPostRaw.startsWith(":") || translatedPostRaw.startsWith("：")) "" else ": "
-        } else ""
-
-        val translatedPost = if (translatedPostRaw.isNotEmpty()) separator + translatedPostRaw else ""
-
-        return "$translatedPre$chapterPart$translatedPost".trim()
+        return normalizeTranslatedMetadata(result)
     }
 
     private fun chineseNumberToInt(chineseNumber: String): Int {
@@ -184,7 +209,7 @@ object TranslateUtils {
      * Translate text for metadata (book names, authors, etc.)
      */
     suspend fun translateMeta(text: String?): String {
-        return translateText(text, true)
+        return normalizeTranslatedMetadata(translateText(text, true))
     }
     
     /**
@@ -279,7 +304,9 @@ object TranslateUtils {
                 translated = translated.replace("[[LG_TAG_$j]]", tags[j])
             }
             
-            translationCache.put(cacheKey, translated)
+            if (io.legado.app.vbookextension.util.QuickTranslateEngine.isDictLoaded() || io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled) {
+                translationCache.put(cacheKey, translated)
+            }
             translated
         } catch (e: Exception) {
             e.printStackTrace()
@@ -368,11 +395,15 @@ object TranslateUtils {
     private suspend fun performTranslation(text: String): String = withContext(Dispatchers.Default) {
         val context = splitties.init.appCtx
         val provider = io.legado.app.ui.config.translation.TranslationConfig.llmProvider
-        if (io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
-            provider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_HACHIMI_MT) {
-            val res = io.legado.app.model.translation.HachimiOnnxTranslator.translate(text, context)
-            val translated = res.getOrNull()
-            if (!translated.isNullOrBlank()) return@withContext translated
+        if (io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled) {
+            if (provider == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_HACHIMI_MT) {
+                val res = io.legado.app.model.translation.HachimiOnnxTranslator.translate(text, context)
+                val translated = res.getOrNull()
+                if (!translated.isNullOrBlank()) return@withContext translated
+            } else if (provider == "sangtacviet") {
+                val translated = translateWithEngine(text, "STV", "vi")
+                if (!translated.isNullOrBlank()) return@withContext translated
+            }
         }
         io.legado.app.vbookextension.util.QuickTranslateEngine.translate(context, text, "vi")
     }
@@ -564,6 +595,7 @@ object TranslateUtils {
         translationCache.evictAll()
         translateStateCache.evictAll()
         TranslationLoader.clearCache()
+        StvTranslationBatcher.clearCache()
     }
     
     /**
@@ -586,60 +618,143 @@ object TranslateUtils {
     /**
      * Translate text dynamically based on the selected engine and mode
      */
-    suspend fun translateWithEngine(text: String?, engine: String, mode: String): String = withContext(Dispatchers.IO) {
-        if (text.isNullOrBlank()) return@withContext ""
-
-        // 1. Tiền dịch bằng từ điển riêng của truyện
-        var processedText = text ?: ""
+    private fun getPrivateDictPairs(): List<Pair<String, String>> {
         val bookKey = io.legado.app.vbookextension.util.QuickTranslateEngine.currentBookKey
         if (!bookKey.isNullOrBlank()) {
             val privateDict = io.legado.app.vbookextension.util.QuickTranslateEngine.privateDict
             if (privateDict.isNotEmpty()) {
-                val sortedKeys = privateDict.keys.sortedByDescending { it.length }
-                for (key in sortedKeys) {
-                    val valPart = privateDict[key] ?: continue
-                    val cleanTrans = valPart.substringBefore('/')
-                    processedText = safeReplace(processedText, key, cleanTrans)
-                }
+                return privateDict.keys.sortedByDescending { it.length }
+                    .mapNotNull { key ->
+                        val valPart = privateDict[key] ?: return@mapNotNull null
+                        key to valPart.substringBefore('/')
+                    }
             }
         }
+        return emptyList()
+    }
+
+    private fun applyDictPairs(text: String, pairs: List<Pair<String, String>>): String {
+        if (pairs.isEmpty() || text.isEmpty()) return text
+        var processedText = text
+        for ((key, cleanTrans) in pairs) {
+            processedText = safeReplace(processedText, key, cleanTrans)
+        }
+        return processedText
+    }
+
+    private fun applyPrivateDict(text: String): String {
+        val pairs = getPrivateDictPairs()
+        return applyDictPairs(text, pairs)
+    }
+
+    private suspend fun postStvContent(content: String): String? = networkSemaphore.withPermit {
+        try {
+            val formBody = okhttp3.FormBody.Builder()
+                .add("sajax", "trans")
+                .add("content", content)
+                .build()
+            val request = okhttp3.Request.Builder()
+                .url("https://comic.sangtacvietcdn.xyz/tsm.php?cdn=/")
+                .post(formBody)
+                .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .build()
+            io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val bodyStr = response.body?.string()
+                    if (!bodyStr.isNullOrEmpty()) {
+                        bodyStr
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Translate text dynamically based on the selected engine and mode
+     */
+    suspend fun translateWithEngine(text: String?, engine: String, mode: String): String = withContext(Dispatchers.IO) {
+        if (text.isNullOrBlank()) return@withContext ""
+
+        val processedText = applyPrivateDict(text)
 
         return@withContext when (engine) {
             "STV", "Sáng Tác Việt" -> {
-                networkSemaphore.withPermit {
-                    try {
-                        val formBody = okhttp3.FormBody.Builder()
-                            .add("sajax", "trans")
-                            .add("content", processedText)
-                            .build()
-                        val request = okhttp3.Request.Builder()
-                            .url("https://comic.sangtacvietcdn.xyz/tsm.php?cdn=/")
-                            .post(formBody)
-                            .addHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                            .build()
-                        io.legado.app.help.http.okHttpClient.newCall(request).execute().use { response ->
-                            if (response.isSuccessful) {
-                                val bodyStr = response.body?.string()
-                                if (!bodyStr.isNullOrEmpty()) {
-                                    bodyStr
-                                } else {
-                                    processedText
-                                }
-                            } else {
-                                processedText
-                            }
-                        }
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        text ?: ""
-                    }
-                }
+                postStvContent(processedText) ?: processedText
             }
             else -> { // QT
                 val targetMode = if (mode.contains("Hán Việt")) "hanviet" else "vi"
                 if (targetMode == "hanviet") translatePhienAm(text) else translateContent(text)
             }
         }
+    }
+
+data class StvBatchResult(
+    val values: List<String>,
+    val success: Boolean
+)
+
+private const val STV_BATCH_SEPARATOR = "__LEGADO_STV_BATCH_SEPARATOR_7F3A9D__"
+
+    suspend fun translateBatchWithEngineDetailed(
+        texts: List<String>,
+        engine: String,
+        mode: String,
+        isMeta: Boolean = true
+    ): StvBatchResult = withContext(Dispatchers.IO) {
+        if (texts.isEmpty()) return@withContext StvBatchResult(emptyList(), success = true)
+
+        return@withContext when (engine) {
+            "STV", "Sáng Tác Việt" -> {
+                val dictPairs = getPrivateDictPairs()
+                val processedTexts = texts.map { text ->
+                    val processed = applyDictPairs(text, dictPairs)
+                    if (isMeta) {
+                        processed.replace(Regex("[\\r\\n]+"), " ")
+                    } else {
+                        processed
+                    }
+                }
+                val joinedContent = processedTexts.joinToString("\n$STV_BATCH_SEPARATOR\n")
+                val responseStr = postStvContent(joinedContent)
+                if (responseStr.isNullOrEmpty()) {
+                    return@withContext StvBatchResult(texts, success = false)
+                }
+                val parts = responseStr.split(STV_BATCH_SEPARATOR)
+                if (parts.size == texts.size) {
+                    val values = parts.map { part ->
+                        val trimmed = part.trim()
+                        if (isMeta) {
+                            normalizeTranslatedMetadata(trimmed)
+                        } else {
+                            trimmed
+                        }
+                    }
+                    StvBatchResult(values, success = true)
+                } else {
+                    StvBatchResult(texts, success = false)
+                }
+            }
+            else -> {
+                val values = texts.map { translateWithEngine(it, engine, mode) }
+                StvBatchResult(values, success = true)
+            }
+        }
+    }
+
+    suspend fun translateBatchWithEngine(
+        texts: List<String>,
+        engine: String,
+        mode: String,
+        isMeta: Boolean = true
+    ): List<String> {
+        return translateBatchWithEngineDetailed(texts, engine, mode, isMeta).values
     }
 
     private fun isLatinLetterOrDigit(c: Char): Boolean {
@@ -709,13 +824,13 @@ fun translateAsState(
         else -> "QT"
     }
 
-    val cacheKey = if (text.isNullOrBlank()) null else "${text}_${isEnabled}_${mode}_${engine}_${TranslationConfig.translationTarget}_${isMeta}_${isDictLoaded}"
+    val cacheKey = if (text.isNullOrBlank()) null else "${text}_${isEnabled}_${mode}_${engine}_${TranslationConfig.translationTarget}_${isMeta}"
 
-    val state = remember(text, isEnabled, mode, engine, isDictLoaded) { 
+    val state = remember(text, isEnabled, mode, engine) {
         mutableStateOf(
             if (cacheKey != null && translateStateCache.get(cacheKey) != null) {
                 translateStateCache.get(cacheKey)!!
-            } else if (isEnabled && !isDictLoaded) {
+            } else if (isEnabled && !isDictLoaded && engine == "QT") {
                 // Không hiển thị tiếng Trung khi đang đợi dịch lần đầu (tránh nháy chữ)
                 // Dùng khoảng trắng tàng hình (zero-width space) để giữ nguyên cấu trúc layout không bị sập
                 "\u200B"
@@ -731,7 +846,7 @@ fun translateAsState(
             return@LaunchedEffect
         }
         
-        val cached = if (!isEnabled || isDictLoaded) cacheKey?.let { translateStateCache.get(it) } else null
+        val cached = if (!isEnabled || isDictLoaded || engine != "QT") cacheKey?.let { translateStateCache.get(it) } else null
         if (cached != null) {
             state.value = cached
             return@LaunchedEffect
@@ -739,23 +854,35 @@ fun translateAsState(
         
         android.util.Log.d("TranslateUtils", "translateAsState starting for: '$text'")
         if (isEnabled) {
-            if (engine == "QT") {
-                if (TranslationConfig.translationTarget == "Hán Việt") {
-                    state.value = TranslateUtils.translatePhienAm(text)
+            val (translated, success) = if (engine == "QT") {
+                val qtResult = if (TranslationConfig.translationTarget == "Hán Việt") {
+                    TranslateUtils.translatePhienAm(text)
                 } else {
-                    state.value = if (isMeta) TranslateUtils.translateMeta(text)
-                                  else TranslateUtils.translateContent(text)
+                    if (isMeta) TranslateUtils.translateMeta(text)
+                    else TranslateUtils.translateContent(text)
                 }
+                Pair(qtResult, true)
             } else {
-                state.value = TranslateUtils.translateWithEngine(text, engine, mode)
+                val stvRes = StvTranslationBatcher.translateDetailed(
+                    text = text,
+                    isMeta = isMeta,
+                    engine = engine,
+                    mode = mode
+                )
+                Pair(stvRes.text, stvRes.success)
             }
-            android.util.Log.d("TranslateUtils", "translateAsState finished: '$text' -> '${state.value}'")
+            val normalizedTranslation = if (isMeta && engine == "QT") {
+                normalizeTranslatedMetadata(translated)
+            } else {
+                translated
+            }
+            state.value = normalizedTranslation
+            android.util.Log.d("TranslateUtils", "translateAsState finished: '$text' -> '${state.value}' (success=$success)")
+            if (cacheKey != null && (!isEnabled || isDictLoaded || (engine == "STV" && success))) {
+                translateStateCache.put(cacheKey, normalizedTranslation)
+            }
         } else {
             state.value = text
-        }
-        
-        if (cacheKey != null && (!isEnabled || isDictLoaded)) {
-            translateStateCache.put(cacheKey, state.value)
         }
     }
     return state

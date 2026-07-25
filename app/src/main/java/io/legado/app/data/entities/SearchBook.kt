@@ -10,6 +10,8 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import io.legado.app.R
 import io.legado.app.constant.BookType
+import io.legado.app.help.book.BookCompletionStatus
+import io.legado.app.help.book.getCompletionStatus
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.parcelize.IgnoredOnParcel
@@ -142,4 +144,7 @@ data class SearchBook(
         this.infoHtml = this@SearchBook.infoHtml
         this.tocHtml = this@SearchBook.tocHtml
     }
+
+    val isCompleted: Boolean
+        get() = type.getCompletionStatus() == BookCompletionStatus.COMPLETED
 }
