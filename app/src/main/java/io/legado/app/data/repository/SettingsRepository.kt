@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.core.content.edit
 import androidx.datastore.core.DataMigration
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.SharedPreferencesMigration
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -28,10 +27,41 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
     name = "settings",
     produceMigrations = { context ->
         listOf(
-            SharedPreferencesMigration(
-                context,
-                "${context.packageName}_preferences"
-            ),
+            object : DataMigration<Preferences> {
+                val MIGRATED_KEY = booleanPreferencesKey("has_migrated_from_sp_v2")
+
+                override suspend fun shouldMigrate(currentData: Preferences): Boolean {
+                    return currentData[MIGRATED_KEY] != true
+                }
+
+                override suspend fun migrate(currentData: Preferences): Preferences {
+                    val sp = context.getSharedPreferences("${context.packageName}_preferences", Context.MODE_PRIVATE)
+                    val all = sp.all
+                    if (all.isEmpty()) {
+                        return currentData.toMutablePreferences().apply {
+                            this[MIGRATED_KEY] = true
+                        }
+                    }
+                    val mutablePrefs = currentData.toMutablePreferences()
+                    all.forEach { (key, value) ->
+                        when (value) {
+                            is Boolean -> mutablePrefs[booleanPreferencesKey(key)] = value
+                            is Int -> mutablePrefs[intPreferencesKey(key)] = value
+                            is Long -> mutablePrefs[longPreferencesKey(key)] = value
+                            is Float -> mutablePrefs[floatPreferencesKey(key)] = value
+                            is String -> mutablePrefs[stringPreferencesKey(key)] = value
+                            is Set<*> -> {
+                                @Suppress("UNCHECKED_CAST")
+                                mutablePrefs[stringSetPreferencesKey(key)] = value as Set<String>
+                            }
+                        }
+                    }
+                    mutablePrefs[MIGRATED_KEY] = true
+                    return mutablePrefs
+                }
+
+                override suspend fun cleanUp() {}
+            },
             ShowBrightnessViewMigration,
         )
     }

@@ -490,7 +490,7 @@ class BookshelfViewModel(
         }
         viewModelScope.launch {
             FlowEventBus.with<Unit>(EventBus.UP_ALL_BOOK_TOC).collect {
-                refreshAllBooks(force = true)
+                refreshAllBooks(force = false)
             }
         }
         viewModelScope.launch {
@@ -770,16 +770,22 @@ class BookshelfViewModel(
         val now = System.currentTimeMillis()
         if (!force && now - lastAutoRefreshTime < AUTO_REFRESH_COOLDOWN_MS) return
         lastAutoRefreshTime = now
-        _isRefreshingFlow.value = true
+        if (force) {
+            _isRefreshingFlow.value = true
+        }
         execute(context = updateDispatcher) {
             val books = appDb.bookDao.hasUpdateBooks
             if (books.isEmpty()) {
-                _isRefreshingFlow.value = false
+                if (force) {
+                    _isRefreshingFlow.value = false
+                }
                 return@execute
             }
             addToWaitUp(books)
         }.onError {
-            _isRefreshingFlow.value = false
+            if (force) {
+                _isRefreshingFlow.value = false
+            }
         }
     }
 
