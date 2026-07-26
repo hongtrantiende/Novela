@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_time_just_now">Just now</string>
+    <string name="ai_time_minutes_ago">%1$d minutes ago</string>
+    <string name="ai_time_hours_ago">%1$d hours ago</string>
+    <string name="ai_time_days_ago">%1$d days ago</string>
+    <string name="ai_time_weeks_ago">%1$d weeks ago</string>
+</resources>

@@ -27,7 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import io.legado.app.R
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.card.NormalCard
@@ -56,10 +59,10 @@ fun AiThinkingCard(
     val hasTools = steps.any { it is AiThinkingStep.ToolStep }
     val hasReasoning = steps.any { it is AiThinkingStep.ReasoningStep }
     val headerTitle = when {
-        hasTools && hasReasoning -> "思考与工具"
-        hasTools -> "工具调用"
-        isStreaming -> "思考中"
-        else -> "思考"
+        hasTools && hasReasoning -> "Suy nghĩ & Công cụ"
+        hasTools -> "Gọi công cụ"
+        isStreaming -> "Đang suy nghĩ"
+        else -> "Suy nghĩ"
     }
     val headerIcon = if (hasTools) Icons.Default.Build else Icons.Default.AutoAwesome
 
@@ -164,6 +167,7 @@ fun AiThinkingCard(
 
 @Composable
 private fun ToolStepContent(tool: AiMessagePart.Tool) {
+    val context = LocalContext.current
     val hasContent = tool.output.isNotBlank() || tool.input.isNotBlank()
 
     Column(
@@ -173,14 +177,14 @@ private fun ToolStepContent(tool: AiMessagePart.Tool) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             AppText(
-                text = tool.toolName,
+                text = aiToolDisplayName(context, tool.toolName),
                 style = LegadoTheme.typography.labelSmall,
                 color = LegadoTheme.colorScheme.onSurfaceVariant
             )
             if (!hasContent) {
                 Spacer(modifier = Modifier.width(6.dp))
                 AppText(
-                    text = "· 无输出",
+                    text = "· ${stringResource(R.string.ai_tool_no_output)}",
                     style = LegadoTheme.typography.labelSmall,
                     color = LegadoTheme.colorScheme.outline
                 )
@@ -200,12 +204,12 @@ private fun ToolStepContent(tool: AiMessagePart.Tool) {
 
 private fun buildToolContent(tool: AiMessagePart.Tool): String = buildString {
     if (tool.input.isNotBlank()) {
-        append("**输入:**\n")
+        append("**Đầu vào:**\n")
         append(tool.input)
         if (tool.output.isNotBlank()) append("\n\n")
     }
     if (tool.output.isNotBlank()) {
-        append("**结果:**\n")
+        append("**Kết quả:**\n")
         append(tool.output)
     }
 }

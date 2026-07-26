@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ai_tool_label">Tool:</string>
+    <string name="ai_tool_id">ID:</string>
+    <string name="ai_tool_result">Result:</string>
+    <string name="ai_tool_no_output">No output</string>
+    <string name="ai_previous_branch">Previous response branch</string>
+    <string name="ai_next_branch">Next response branch</string>
+    <string name="ai_error_create_chat">Could not create a new chat.</string>
+    <string name="ai_error_save_rejected_tool">Could not save the rejected tool response.</string>
+    <string name="ai_error_stream_interrupted">The AI response was interrupted.</string>
+    <string name="ai_error_chat_failed">AI chat failed.</string>
+    <string name="ai_error_switch_branch">Could not switch response branch.</string>
+    <string name="ai_error_tool_failed">The AI tool failed.</string>
+    <string name="ai_tool_search_books">Search bookshelf</string>
+    <string name="ai_tool_get_book_detail">Book details</string>
+    <string name="ai_tool_list_book_chapters">List chapters</string>
+    <string name="ai_tool_get_chapter_content">Read chapter content</string>
+    <string name="ai_tool_search_bookmarks">Search bookmarks</string>
+    <string name="ai_tool_get_reading_stats">Reading statistics</string>
+    <string name="ai_tool_get_ai_artifacts">AI notes</string>
+    <string name="ai_tool_save_ai_artifact">Save AI note</string>
+    <string name="ai_tool_save_memory">Save memory</string>
+    <string name="ai_tool_recall_memory">Recall memory</string>
+    <string name="ai_tool_delete_memory">Delete memory</string>
+</resources>

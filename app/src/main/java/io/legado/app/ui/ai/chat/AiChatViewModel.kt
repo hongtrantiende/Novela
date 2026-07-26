@@ -3,6 +3,7 @@ package io.legado.app.ui.ai.chat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.JsonObject
+import io.legado.app.R
 import io.legado.app.domain.gateway.AiChatGateway
 import io.legado.app.domain.gateway.AiProfileGateway
 import io.legado.app.domain.model.AiMessagePart
@@ -149,7 +150,7 @@ class AiChatViewModel(
             }.onSuccess {
                 selectConversation(it.id)
             }.onFailure { error ->
-                _effects.tryEmit(AiChatEffect.ShowMessage(error.message ?: "Failed to create chat"))
+                _effects.tryEmit(AiChatEffect.ShowMessage(R.string.ai_error_create_chat))
             }
         }
     }
@@ -210,7 +211,7 @@ class AiChatViewModel(
     private fun rejectPendingTool() {
         val pending = pendingToolRun ?: return
         pendingToolRun = null
-        val rejectionText = "工具调用已被你拒绝，我不会执行这些操作。还需要我继续帮你做什么？"
+        val rejectionText = "Bạn đã từ chối gọi công cụ, tôi sẽ không thực hiện thao tác này. Bạn cần tôi giúp gì thêm?"
         val assistantText = buildString {
             pending.fullText.trim().takeIf { it.isNotBlank() }?.let {
                 append(it)
@@ -252,7 +253,7 @@ class AiChatViewModel(
             saveResult.onSuccess {
                 _uiState.update { it.copy(streamingMessage = null) }
             }.onFailure { error ->
-                _effects.tryEmit(AiChatEffect.ShowMessage(error.message ?: "Failed to save rejected tool response"))
+                _effects.tryEmit(AiChatEffect.ShowMessage(R.string.ai_error_save_rejected_tool))
             }
             if (streamingJob == currentCoroutineContext()[Job]) {
                 streamingJob = null
@@ -346,20 +347,20 @@ class AiChatViewModel(
                     wasCancelled = true
                     throw e
                 } catch (e: Exception) {
-                    failureMessage = "Stream interrupted: ${e.message ?: "unknown error"}"
-                    _effects.tryEmit(AiChatEffect.ShowMessage(failureMessage))
+                    failureMessage = e.message ?: "stream_interrupted"
+                    _effects.tryEmit(AiChatEffect.ShowMessage(R.string.ai_error_stream_interrupted))
                 }
             } catch (e: CancellationException) {
                 wasCancelled = true
                 throw e
             } catch (e: Exception) {
-                failureMessage = e.message ?: "AI chat failed"
-                _effects.tryEmit(AiChatEffect.ShowMessage(failureMessage))
+                failureMessage = e.message ?: "chat_failed"
+                _effects.tryEmit(AiChatEffect.ShowMessage(R.string.ai_error_chat_failed))
             } finally {
                 val assistantContent = when {
                     waitingForToolConfirmation -> null
                     fullText.isNotEmpty() -> fullText.toString()
-                    !wasCancelled && !failureMessage.isNullOrBlank() -> "请求失败：$failureMessage"
+                    !wasCancelled && !failureMessage.isNullOrBlank() -> "Không thể hoàn thành yêu cầu."
                     else -> null
                 }
                 if (assistantContent != null) {
@@ -394,7 +395,7 @@ class AiChatViewModel(
             runCatching {
                 aiChatGateway.selectBranch(messageId)
             }.onFailure { error ->
-                _effects.tryEmit(AiChatEffect.ShowMessage(error.message ?: "Failed to switch branch"))
+                _effects.tryEmit(AiChatEffect.ShowMessage(R.string.ai_error_switch_branch))
             }
         }
     }
@@ -450,20 +451,20 @@ class AiChatViewModel(
                     wasCancelled = true
                     throw e
                 } catch (e: Exception) {
-                    failureMessage = "Stream interrupted: ${e.message ?: "unknown error"}"
-                    _effects.tryEmit(AiChatEffect.ShowMessage(failureMessage))
+                    failureMessage = e.message ?: "stream_interrupted"
+                    _effects.tryEmit(AiChatEffect.ShowMessage(R.string.ai_error_stream_interrupted))
                 }
             } catch (e: CancellationException) {
                 wasCancelled = true
                 throw e
             } catch (e: Exception) {
-                failureMessage = e.message ?: "AI chat failed"
-                _effects.tryEmit(AiChatEffect.ShowMessage(failureMessage))
+                failureMessage = e.message ?: "chat_failed"
+                _effects.tryEmit(AiChatEffect.ShowMessage(R.string.ai_error_chat_failed))
             } finally {
                 val assistantContent = when {
                     waitingForToolConfirmation -> null
                     fullText.isNotEmpty() -> fullText.toString()
-                    !wasCancelled && !failureMessage.isNullOrBlank() -> "请求失败：$failureMessage"
+                    !wasCancelled && !failureMessage.isNullOrBlank() -> "Không thể hoàn thành yêu cầu."
                     else -> null
                 }
                 if (conversationIdForMsg != null && assistantContent != null) {
@@ -525,7 +526,7 @@ class AiChatViewModel(
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            _effects.tryEmit(AiChatEffect.ShowMessage(e.message ?: "AI tool failed"))
+            _effects.tryEmit(AiChatEffect.ShowMessage(R.string.ai_error_tool_failed))
         } finally {
             if (!waitingForToolConfirmation && pending.conversationId != null && fullText.isNotEmpty()) {
                 val duration = _uiState.value.streamingMessage?.thinkingDuration ?: 0
@@ -705,7 +706,7 @@ class AiChatViewModel(
                 part.output.isBlank()
             ) {
                 part.copy(
-                    output = "用户拒绝执行此工具调用。",
+                    output = "Người dùng đã từ chối gọi công cụ này.",
                     approvalState = AiToolApprovalState.DENIED
                 )
             } else {

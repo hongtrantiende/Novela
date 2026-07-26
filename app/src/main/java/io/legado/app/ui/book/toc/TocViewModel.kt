@@ -240,6 +240,8 @@ class TocViewModel(
         _cacheFileNames
     ) { bookUrl, state, cached ->
         DownloadContext(state.books[bookUrl], cached)
+    }.onStart {
+        emit(DownloadContext(null, emptySet()))
     }
 
     private val uiConfigFlow = combine(
@@ -290,7 +292,7 @@ class TocViewModel(
 
         if (book.isLocal) {
             return@combine processedChapters.map { chapter ->
-                val baseTitle = chapter.getDisplayTitle(useReplace = false)
+                val baseTitle = chapter.getDisplayTitle(useReplace = false, translate = false)
                 TocDomainItem(
                     chapter = chapter,
                     displayTitle = cachedTitles[chapter.index] ?: baseTitle,
@@ -311,7 +313,7 @@ class TocViewModel(
                 else -> DownloadState.NONE
             }
 
-            val baseTitle = chapter.getDisplayTitle(useReplace = false)
+            val baseTitle = chapter.getDisplayTitle(useReplace = false, translate = false)
             TocDomainItem(
                 chapter,
                 cachedTitles[chapter.index] ?: baseTitle,
@@ -778,7 +780,7 @@ class TocViewModel(
         titleCacheJob = viewModelScope.launch(Dispatchers.Default) {
             val newCache = HashMap<Int, String>(chapters.size)
             chapters.forEach { chapter ->
-                newCache[chapter.index] = chapter.getDisplayTitle(replaceRules, true)
+                newCache[chapter.index] = chapter.getDisplayTitle(replaceRules, useReplace = true, translate = false)
             }
             titleReplaceCache.value = newCache
         }

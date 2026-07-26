@@ -1,5 +1,6 @@
 package io.legado.app.ui.ai.chat
 
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Stable
 import io.legado.app.domain.model.AiMessagePart
 import io.legado.app.domain.model.AiReasoningLevel
@@ -76,5 +77,5 @@ sealed interface AiChatIntent {
 }
 
 sealed interface AiChatEffect {
-    data class ShowMessage(val message: String) : AiChatEffect
+    data class ShowMessage(@StringRes val messageRes: Int) : AiChatEffect
 }

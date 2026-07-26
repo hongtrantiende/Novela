@@ -82,6 +82,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -139,6 +140,7 @@ fun AiChatScreen(
     onBackClick: () -> Unit,
     onOpenBookInfo: (AiChatBookResultUi) -> Unit
 ) {
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -152,8 +154,12 @@ fun AiChatScreen(
     val currentConversation = state.conversations.firstOrNull {
         it.id == state.currentConversationId
     } ?: state.conversations.firstOrNull { it.isSelected }
-    val conversationTitle = currentConversation?.title?.takeIf { it.isNotBlank() }
-        ?: stringResource(R.string.ai_chat)
+    val rawConversationTitle = currentConversation?.title?.takeIf { it.isNotBlank() }
+    val conversationTitle = when (rawConversationTitle) {
+        "New Chat" -> stringResource(R.string.ai_new_chat)
+        null -> stringResource(R.string.ai_chat)
+        else -> rawConversationTitle
+    }
     val modelName = currentConversation?.modelName?.takeIf { it.isNotBlank() }
         ?: stringResource(R.string.ai_select_model)
     val assistantLabel = when {
@@ -192,7 +198,7 @@ fun AiChatScreen(
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
-                is AiChatEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is AiChatEffect.ShowMessage -> snackbarHostState.showSnackbar(context.getString(effect.messageRes))
             }
         }
     }
@@ -573,6 +579,7 @@ private fun PendingToolConfirmationCard(
     onConfirm: () -> Unit,
     onReject: () -> Unit
 ) {
+    val context = LocalContext.current
     GlassCard(
         containerColor = LegadoTheme.colorScheme.tertiaryContainer,
         modifier = Modifier
@@ -587,14 +594,14 @@ private fun PendingToolConfirmationCard(
             )
             Spacer(modifier = Modifier.height(4.dp))
             AppText(
-                text = confirmation.title,
+                text = localizeToolNames(context, confirmation.title),
                 style = LegadoTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = LegadoTheme.colorScheme.onTertiaryContainer
             )
             Spacer(modifier = Modifier.height(4.dp))
             AppText(
-                text = confirmation.description,
+                text = localizeToolTrace(context, confirmation.description),
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.onTertiaryContainer,
                 maxLines = 6
@@ -624,6 +631,7 @@ private fun RecentChatsDrawer(
     onDeleteConversation: (String) -> Unit
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    val context = LocalContext.current
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var conversationToDelete by remember { mutableStateOf<AiChatConversationUi?>(null) }
     val searchFocusRequester = remember { FocusRequester() }
@@ -715,7 +723,11 @@ private fun RecentChatsDrawer(
                             .padding(horizontal = 12.dp, vertical = 10.dp)
                     ) {
                         AppText(
-                            text = conversation.title,
+                            text = if (conversation.title == "New Chat") {
+                                stringResource(R.string.ai_new_chat)
+                            } else {
+                                conversation.title
+                            },
                             style = LegadoTheme.typography.bodyMedium,
                             maxLines = 2,
                             color = if (isSelected) {
@@ -726,7 +738,7 @@ private fun RecentChatsDrawer(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         AppText(
-                            text = formatRelativeTime(conversation.updatedAt),
+                            text = formatRelativeTime(context, conversation.updatedAt),
                             style = LegadoTheme.typography.labelSmall,
                             color = LegadoTheme.colorScheme.outline
                         )
@@ -751,18 +763,18 @@ private fun RecentChatsDrawer(
     )
 }
 
-private fun formatRelativeTime(timestamp: Long): String {
+private fun formatRelativeTime(context: android.content.Context, timestamp: Long): String {
     val now = System.currentTimeMillis()
     val diff = now - timestamp
     val minutes = TimeUnit.MILLISECONDS.toMinutes(diff)
     val hours = TimeUnit.MILLISECONDS.toHours(diff)
     val days = TimeUnit.MILLISECONDS.toDays(diff)
     return when {
-        minutes < 1 -> "Vừa xong"
-        minutes < 60 -> "${minutes} phút trước"
-        hours < 24 -> "${hours} giờ trước"
-        days < 7 -> "${days} ngày trước"
-        days < 30 -> "${days / 7} tuần trước"
+        minutes < 1 -> context.getString(R.string.ai_time_just_now)
+        minutes < 60 -> context.getString(R.string.ai_time_minutes_ago, minutes)
+        hours < 24 -> context.getString(R.string.ai_time_hours_ago, hours)
+        days < 7 -> context.getString(R.string.ai_time_days_ago, days)
+        days < 30 -> context.getString(R.string.ai_time_weeks_ago, days / 7)
         else -> {
             val sdf = SimpleDateFormat("MM/dd", Locale.getDefault())
             sdf.format(Date(timestamp))
@@ -1010,10 +1022,11 @@ private fun AiChatEffectHandler(
     effects: Flow<AiChatEffect>,
     snackbarHostState: SnackbarHostState
 ) {
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         effects.collectLatest { effect ->
             when (effect) {
-                is AiChatEffect.ShowMessage -> snackbarHostState.showSnackbar(effect.message)
+                is AiChatEffect.ShowMessage -> snackbarHostState.showSnackbar(context.getString(effect.messageRes))
             }
         }
     }

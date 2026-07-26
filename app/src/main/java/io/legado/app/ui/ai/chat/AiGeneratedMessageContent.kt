@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -63,6 +64,7 @@ fun AiGeneratedMessageContent(
     onRegenerate: (() -> Unit)? = null,
     onSwitchBranch: ((direction: Int) -> Unit)? = null,
 ) {
+    val context = LocalContext.current
     val groupedParts = remember(message.parts, message.thinkingDuration) {
         message.parts.groupMessageParts(message.thinkingDuration)
     }
@@ -156,14 +158,23 @@ fun AiGeneratedMessageContent(
             val displayToolTrace = message.parts.filterIsInstance<AiMessagePart.Tool>()
                 .joinToString("\n\n") { tool ->
                     buildString {
-                        append("Tool: "); append(tool.toolName); append('\n')
-                        append("ID: "); append(tool.toolCallId)
+                        append(context.getString(R.string.ai_tool_label))
+                        append(' ')
+                        append(aiToolDisplayName(context, tool.toolName))
+                        append('\n')
+                        append(context.getString(R.string.ai_tool_id))
+                        append(' ')
+                        append(tool.toolCallId)
                         tool.input.takeIf { it.isNotBlank() }?.let { append('\n'); append(it) }
                         tool.output.takeIf { it.isNotBlank() }?.let {
-                            append('\n'); append("Result: "); append(it)
+                            append('\n')
+                            append(context.getString(R.string.ai_tool_result))
+                            append(' ')
+                            append(it)
                         }
                     }
-                }.takeIf { it.isNotBlank() } ?: message.toolTrace
+                }.takeIf { it.isNotBlank() }
+                ?: message.toolTrace?.let { localizeToolTrace(context, it) }
             if (!displayToolTrace.isNullOrBlank()) {
                 TracePanel(
                     title = stringResource(R.string.ai_tool_trace),
@@ -197,7 +208,7 @@ fun AiGeneratedMessageContent(
                     SmallPlainButton(
                         onClick = { onSwitchBranch(-1) },
                         icon = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Previous branch",
+                        contentDescription = stringResource(R.string.ai_previous_branch),
                         modifier = Modifier.size(28.dp)
                     )
                     AppText(
@@ -208,7 +219,7 @@ fun AiGeneratedMessageContent(
                     SmallPlainButton(
                         onClick = { onSwitchBranch(1) },
                         icon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Next branch",
+                        contentDescription = stringResource(R.string.ai_next_branch),
                         modifier = Modifier.size(28.dp)
                     )
                 }

@@ -110,6 +110,7 @@ import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarNavigationButton
 import io.legado.app.utils.StringUtils.formatFriendlyDate
 import io.legado.app.utils.formatReadDuration
+import io.legado.app.utils.translateAsState
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import java.time.LocalDate
@@ -748,6 +749,10 @@ fun LazyListScope.renderListByMode(
     }
 }
 
+private fun readRecordTranslatedOrOriginal(translated: String, original: String): String {
+    return translated.takeUnless { it.isBlank() || it == "\u200B" } ?: original
+}
+
 @Composable
 fun LatestReadItem(
     record: ReadRecord,
@@ -760,6 +765,11 @@ fun LatestReadItem(
     LaunchedEffect(record.bookName, record.bookAuthor) {
         coverPath = viewModel.getBookCover(record.bookName, record.bookAuthor)
     }
+
+    val translatedName by translateAsState(record.bookName, isMeta = true)
+    val translatedAuthor by translateAsState(record.bookAuthor, isMeta = true)
+    val displayName = readRecordTranslatedOrOriginal(translatedName, record.bookName)
+    val displayAuthor = readRecordTranslatedOrOriginal(translatedAuthor, record.bookAuthor)
 
     Row(
         modifier = modifier
@@ -779,13 +789,13 @@ fun LatestReadItem(
 
         Column(modifier = Modifier.weight(1f)) {
             AppText(
-                text = record.bookName,
+                text = displayName,
                 style = LegadoTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             AppText(
-                text = record.bookAuthor.ifBlank { "Chưa rõ" },
+                text = displayAuthor.ifBlank { "Chưa rõ" },
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.outline,
                 maxLines = 1,
@@ -831,6 +841,13 @@ fun TimelineSessionItem(
         val title = viewModel.getChapterTitle(session.bookName, session.bookAuthor, session.words)
         chapterTitle = title ?: "Chương ${session.words}"
     }
+
+    val translatedName by translateAsState(session.bookName, isMeta = true)
+    val translatedAuthor by translateAsState(session.bookAuthor, isMeta = true)
+    val translatedChapter by translateAsState(chapterTitle, isMeta = true)
+    val displayName = readRecordTranslatedOrOriginal(translatedName, session.bookName)
+    val displayAuthor = readRecordTranslatedOrOriginal(translatedAuthor, session.bookAuthor)
+    val displayChapter = readRecordTranslatedOrOriginal(translatedChapter, chapterTitle.orEmpty())
 
     val endTimeText = DateUtil.format(Date(session.endTime), "HH:mm")
 
@@ -893,13 +910,13 @@ fun TimelineSessionItem(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     AppText(
-                        text = session.bookName,
+                        text = displayName,
                         style = LegadoTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     AppText(
-                        text = session.bookAuthor.ifBlank { "Tác giả chưa rõ" },
+                        text = displayAuthor.ifBlank { "Tác giả chưa rõ" },
                         style = LegadoTheme.typography.bodySmall,
                         color = LegadoTheme.colorScheme.outline,
                         maxLines = 1,
@@ -907,7 +924,7 @@ fun TimelineSessionItem(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     AppText(
-                        text = chapterTitle.orEmpty(),
+                        text = displayChapter,
                         style = LegadoTheme.typography.labelSmall,
                         color = LegadoTheme.colorScheme.outline,
                         maxLines = 1,
@@ -932,6 +949,11 @@ fun ReadRecordItem(
         coverPath = viewModel.getBookCover(detail.bookName, detail.bookAuthor)
     }
 
+    val translatedName by translateAsState(detail.bookName, isMeta = true)
+    val translatedAuthor by translateAsState(detail.bookAuthor, isMeta = true)
+    val displayName = readRecordTranslatedOrOriginal(translatedName, detail.bookName)
+    val displayAuthor = readRecordTranslatedOrOriginal(translatedAuthor, detail.bookAuthor)
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -950,12 +972,12 @@ fun ReadRecordItem(
 
         Column(modifier = Modifier.weight(1f)) {
             AppText(
-                text = detail.bookName,
+                text = displayName,
                 style = LegadoTheme.typography.titleMedium,
                 maxLines = 1
             )
             AppText(
-                text = detail.bookAuthor.ifBlank { "Tác giả chưa rõ" },
+                text = displayAuthor.ifBlank { "Tác giả chưa rõ" },
                 style = LegadoTheme.typography.bodySmall,
                 color = LegadoTheme.colorScheme.outline,
             )

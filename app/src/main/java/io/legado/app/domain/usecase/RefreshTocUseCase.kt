@@ -62,16 +62,28 @@ class RefreshTocUseCase(
                 WebBook.runPreUpdateJs(source, book)
             }
             val toc = WebBook.getChapterListAwait(source, book).getOrThrow()
+            if (toc.isEmpty()) {
+                throw TocEmptyException("Legado TOC is empty")
+            }
             book.sync(oldBook)
             book.removeType(BookType.updateError)
-            if (book.bookUrl == bookUrl) {
-                bookRepository.update(book)
-            } else {
-                bookRepository.replace(oldBook, book)
+
+            val isBookUrlChanged = book.bookUrl != bookUrl
+
+            appDb.runInTransaction {
+                if (isBookUrlChanged) {
+                    appDb.bookDao.replace(oldBook, book)
+                } else {
+                    appDb.bookDao.update(book)
+                }
+                appDb.bookChapterDao.delByBook(bookUrl)
+                appDb.bookChapterDao.insert(*toc.toTypedArray())
+            }
+
+            if (isBookUrlChanged) {
                 BookHelp.updateCacheFolder(oldBook, book)
             }
-            bookRepository.deleteChaptersByBook(bookUrl)
-            bookRepository.insertChapters(*toc.toTypedArray())
+
             ReadBook.onChapterListUpdated(book)
             onSuccess(source, book)
         }

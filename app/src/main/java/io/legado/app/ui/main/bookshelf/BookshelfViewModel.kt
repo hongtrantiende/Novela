@@ -54,11 +54,13 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -100,7 +102,8 @@ class BookshelfViewModel(
     private val isEditModeFlow = MutableStateFlow(false)
     private val selectedBookUrlsFlow = MutableStateFlow<Set<String>>(emptySet())
     private val isInFolderRootFlow = MutableStateFlow(BookshelfConfig.bookGroupStyle == 2)
-    private val isRefreshingFlow = MutableStateFlow(false)
+    private val _isRefreshingFlow = MutableStateFlow(false)
+    val isRefreshingFlow = _isRefreshingFlow.asStateFlow()
     private val bookGroupStyleFlow = MutableStateFlow(BookshelfConfig.bookGroupStyle)
     private val draggingBooksFlow = MutableStateFlow<List<BookUiItem>?>(null)
     private val pendingSavedBooksFlow = MutableStateFlow<List<BookUiItem>?>(null)
@@ -193,7 +196,7 @@ class BookshelfViewModel(
                     groups.find { it.groupId == groupId },
                     sortConfig.sort,
                     sortConfig.sortOrder
-                ).map { it.translatedIfNeeded().toUiItem() }
+                ).map { it.toUiItem() }
             }
         }.distinctUntilChanged().flowOn(Dispatchers.Default)
 
@@ -212,7 +215,7 @@ class BookshelfViewModel(
                             group,
                             sortConfig.sort,
                             sortConfig.sortOrder
-                        ).map { it.translatedIfNeeded().toUiItem() }.toImmutableList()
+                        ).map { it.toUiItem() }.toImmutableList()
                     }
                 }
                 combine(flows) { results ->
@@ -285,7 +288,7 @@ class BookshelfViewModel(
                 }
                 val previewFlow = bookRepository.flowGroupPreview(group.groupId)
                 combine(countFlow, previewFlow) { count, preview ->
-                    Triple(group.groupId, count, preview.map { it.translatedIfNeeded().toUiItem() })
+                    Triple(group.groupId, count, preview.map { it.toUiItem() })
                 }
             }
             combine(groupFlows) { results ->
@@ -346,7 +349,7 @@ class BookshelfViewModel(
         isEditModeFlow,
         selectedVisibleBookUrlsFlow,
         isInFolderRootFlow,
-        isRefreshingFlow
+        _isRefreshingFlow
     ) { activeOverlay, isEditMode, selectedBookUrls, isInFolderRoot, isRefreshing ->
         BookshelfInteractionState(
             activeOverlay = activeOverlay,
@@ -482,12 +485,12 @@ class BookshelfViewModel(
 
     init {
         viewModelScope.launch {
-            delay(500)
+            booksFlow.first()
             isInitialLoadingFlow.value = false
         }
         viewModelScope.launch {
             FlowEventBus.with<Unit>(EventBus.UP_ALL_BOOK_TOC).collect {
-                upAllBookToc()
+                refreshAllBooks(force = true)
             }
         }
         viewModelScope.launch {
@@ -519,7 +522,7 @@ class BookshelfViewModel(
         viewModelScope.launch {
             isInitialLoadingFlow.filter { !it }.collect {
                 if (BookshelfConfig.autoRefreshBook) {
-                    upAllBookToc()
+                    refreshAllBooks(force = false)
                 }
             }
         }
@@ -710,8 +713,8 @@ class BookshelfViewModel(
     }
 
     fun refreshBooks(books: List<BookUiItem>) {
-        if (isRefreshingFlow.value) return
-        isRefreshingFlow.value = true
+        if (_isRefreshingFlow.value) return
+        _isRefreshingFlow.value = true
         val limit = BookshelfConfig.bookshelfRefreshingLimit
         val list = if (limit > 0) books.take(limit) else books
         enqueueTocUpdate(list.map { it.book }, resetRefreshWhenIdle = true)
@@ -756,9 +759,27 @@ class BookshelfViewModel(
     fun gotoTop() {
         scrollTrigger.tryEmit(Unit)
     }
-    fun upAllBookToc() {
-        execute {
-            addToWaitUp(appDb.bookDao.hasUpdateBooks)
+
+    companion object {
+        private var lastAutoRefreshTime = 0L
+        private const val AUTO_REFRESH_COOLDOWN_MS = 10 * 60 * 1000L // 10 minutes
+    }
+
+    fun refreshAllBooks(force: Boolean = true) {
+        if (_isRefreshingFlow.value) return
+        val now = System.currentTimeMillis()
+        if (!force && now - lastAutoRefreshTime < AUTO_REFRESH_COOLDOWN_MS) return
+        lastAutoRefreshTime = now
+        _isRefreshingFlow.value = true
+        execute(context = updateDispatcher) {
+            val books = appDb.bookDao.hasUpdateBooks
+            if (books.isEmpty()) {
+                _isRefreshingFlow.value = false
+                return@execute
+            }
+            addToWaitUp(books)
+        }.onError {
+            _isRefreshingFlow.value = false
         }
     }
 
@@ -778,7 +799,7 @@ class BookshelfViewModel(
             addToWaitUp(fullBooks)
         }.onError {
             if (resetRefreshWhenIdle) {
-                isRefreshingFlow.value = false
+                _isRefreshingFlow.value = false
             }
         }.onFinally {
             if (resetRefreshWhenIdle) {
@@ -876,7 +897,7 @@ class BookshelfViewModel(
             upTocJob == null && waitUpTocBooks.isEmpty() && onUpTocBooks.isEmpty()
         }
         if (isIdle) {
-            isRefreshingFlow.value = false
+            _isRefreshingFlow.value = false
         }
     }
 

@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +56,7 @@ import io.legado.app.ui.widget.components.image.cover.BookshelfCover
 import io.legado.app.ui.widget.components.image.cover.CoilBookCover
 import io.legado.app.ui.widget.components.text.AppText
 import io.legado.app.utils.toTimeAgo
+import io.legado.app.utils.translateAsState
 
 /**
  * 通用的书架条目布局组件
@@ -625,6 +627,18 @@ fun BookItem(
     onLongClick: (() -> Unit)?
 ) {
     val book = bookUi.book
+
+    // Async translation for visible items only
+    val translatedName by translateAsState(book.name, isMeta = true)
+    val translatedAuthor by translateAsState(book.author, isMeta = true)
+    val translatedDurTitle by translateAsState(book.durChapterTitle, isMeta = true)
+    val translatedLatestTitle by translateAsState(book.latestChapterTitle, isMeta = true)
+
+    val displayName = translatedOrOriginal(translatedName, book.name)
+    val displayAuthor = translatedOrOriginal(translatedAuthor, book.author)
+    val displayDurTitle = translatedOrOriginal(translatedDurTitle, book.durChapterTitle ?: "")
+    val displayLatestTitle = translatedOrOriginal(translatedLatestTitle, book.latestChapterTitle ?: "")
+
     val unreadCount = book.getUnreadChapterNum()
     val unreadText = if (BookshelfConfig.showUnread && unreadCount > 0) unreadCount.toString() else null
     val sourceStatusLabel = when {
@@ -691,13 +705,13 @@ fun BookItem(
                 sharedCoverKey = sharedCoverKey,
             )
         },
-        title = book.name,
+        title = displayName,
         subTitle = if (layoutMode == 0 && isCompact) {
-            stringResource(R.string.author_read, book.author, unreadCount)
+            stringResource(R.string.author_read, displayAuthor, unreadCount)
         } else {
-            book.author
+            displayAuthor
         },
-        desc = book.durChapterTitle ?: "",
+        desc = displayDurTitle,
         columnContent = if (layoutMode == 0 && !isCompact && BookshelfConfig.showBookIntro) {
             {
                 val kindList = bookUi.displayTags
@@ -757,7 +771,7 @@ fun BookItem(
                     )
                 }
                 AppText(
-                    text = book.latestChapterTitle ?: "",
+                    text = displayLatestTitle,
                     style = LegadoTheme.typography.labelSmallEmphasized,
                     color = LegadoTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     maxLines = 1,
@@ -774,4 +788,8 @@ fun BookItem(
         onClick = onClick,
         onLongClick = onLongClick
     )
+}
+
+private fun translatedOrOriginal(translated: String, original: String): String {
+    return translated.takeUnless { it.isBlank() || it == "\u200B" } ?: original
 }

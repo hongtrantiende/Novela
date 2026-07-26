@@ -102,6 +102,7 @@ data class BookChapter(
         replaceRules: List<ReplaceRule>? = null,
         useReplace: Boolean = true,
         chineseConvert: Boolean = true,
+        translate: Boolean = true,
     ): String {
         var displayTitle = title.replace(AppPattern.rnRegex, "")
         if (chineseConvert) {
@@ -110,11 +111,12 @@ data class BookChapter(
                 2 -> displayTitle = ChineseUtils.s2t(displayTitle)
             }
         }
-        if (io.legado.app.utils.TranslateUtils.isTranslateEnabled()) {
+        if (translate && io.legado.app.utils.TranslateUtils.isTranslateEnabled()) {
             displayTitle = kotlinx.coroutines.runBlocking {
                 io.legado.app.utils.TranslateUtils.translateChapterTitle(displayTitle)
             }
         }
+
         if (useReplace && replaceRules != null) kotlin.run {
             replaceRules.forEach { item ->
                 if (item.pattern.isNotEmpty()) {
@@ -179,4 +181,3 @@ data class BookChapter(
         return String.format("%05d-%s.ttf", index, titleMD5)
     }
 }
-

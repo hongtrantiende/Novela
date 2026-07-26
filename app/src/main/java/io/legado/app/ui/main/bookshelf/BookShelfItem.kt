@@ -5,7 +5,6 @@ import io.legado.app.constant.BookType
 import io.legado.app.help.book.BookCompletionStatus
 import io.legado.app.help.book.getCompletionStatus
 import io.legado.app.data.entities.Book
-import io.legado.app.utils.TranslateUtils
 import io.legado.app.utils.splitNotBlank
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
@@ -71,15 +70,6 @@ data class BookShelfItem(
             displayTags = tagList.toImmutableList()
         )
     }
-}
-
-suspend fun BookShelfItem.translatedIfNeeded(): BookShelfItem {
-    if (!TranslateUtils.isTranslateEnabled()) return this
-    val tName = TranslateUtils.translateMeta(name)
-    val tAuthor = TranslateUtils.translateMeta(author)
-    val tDurTitle = durChapterTitle?.let { TranslateUtils.translateChapterTitle(it) }
-    val tLatestTitle = latestChapterTitle?.let { TranslateUtils.translateChapterTitle(it) }
-    return copy(name = tName, author = tAuthor, durChapterTitle = tDurTitle, latestChapterTitle = tLatestTitle)
 }
 
 /**

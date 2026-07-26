@@ -38,7 +38,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.LaunchedEffect
 import io.legado.app.ui.widget.components.modalBottomSheet.AppModalBottomSheet
 import io.legado.app.ui.widget.components.heatmap.HEATMAP_CALENDAR_TITLE
 import io.legado.app.ui.widget.components.heatmap.HeatmapCalendarEndAction
@@ -74,6 +73,7 @@ import io.legado.app.ui.widget.components.topbar.GlassMediumFlexibleTopAppBar
 import io.legado.app.ui.widget.components.topbar.GlassTopAppBarDefaults
 import io.legado.app.ui.widget.components.topbar.TopBarActionButton
 import org.koin.androidx.compose.koinViewModel
+import io.legado.app.utils.translateAsState
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -144,6 +144,12 @@ fun ChapterUpdateRow(
     val progressText = item.progressText
 
     val isFaded = status == ChapterReadStatus.READ
+
+    // Async translation for visible items
+    val translatedBookName by translateAsState(book.name, isMeta = true)
+    val translatedChapterTitle by translateAsState(chapter.title, isMeta = true)
+    val displayBookName = translatedBookName.takeUnless { it.isBlank() || it == "\u200B" } ?: book.name
+    val displayChapterTitle = translatedChapterTitle.takeUnless { it.isBlank() || it == "\u200B" } ?: chapter.title
 
     val nodeRadius = 4.dp
     val lineWidth = 2.dp
@@ -221,7 +227,7 @@ fun ChapterUpdateRow(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = book.name,
+                    text = displayBookName,
                     style = LegadoTheme.typography.bodyLargeEmphasized.copy(
                         fontWeight = FontWeight.Medium,
                         fontSize = 15.sp
@@ -238,14 +244,14 @@ fun ChapterUpdateRow(
                 Spacer(modifier = Modifier.height(2.dp))
 
                 val primaryColor = LegadoTheme.colorScheme.primary
-                val chapterText = remember(chapter.title, progressText, status, primaryColor) {
+                val chapterText = remember(displayChapterTitle, progressText, status, primaryColor) {
                     buildAnnotatedString {
                         if (status == ChapterReadStatus.UNREAD || status == ChapterReadStatus.CURRENT) {
                             withStyle(SpanStyle(color = primaryColor, fontWeight = FontWeight.Bold)) {
                                 append("• ")
                             }
                         }
-                        append(chapter.title)
+                        append(displayChapterTitle)
                         if (!progressText.isNullOrBlank()) {
                             append(" • ")
                             append(progressText)
@@ -291,11 +297,12 @@ fun ChapterUpdateRow(
 @Composable
 fun BookUpdatesScreen(
     viewModel: BookUpdatesViewModel = koinViewModel(),
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onBookClick: (BookShelfItem) -> Unit,
     onBookLongClick: (BookShelfItem) -> Unit
 ) {
     val updatesList by viewModel.updatesList.collectAsStateWithLifecycle()
-    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val scrollBehavior = GlassTopAppBarDefaults.defaultScrollBehavior()
     val listState = rememberLazyListState()
     val context = LocalContext.current
@@ -306,10 +313,6 @@ fun BookUpdatesScreen(
         dailyUpdateCounts.mapValues { it.value.toLong() }
     }
     var showCalendar by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        viewModel.refresh(force = false)
-    }
 
     AppScaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -322,7 +325,7 @@ fun BookUpdatesScreen(
                 subtitle = subTitle,
                 actions = {
                     TopBarActionButton(
-                        onClick = { viewModel.refresh(force = true) },
+                        onClick = { onRefresh() },
                         imageVector = Icons.Default.Refresh,
                         contentDescription = stringResource(R.string.refresh)
                     )
@@ -369,7 +372,7 @@ fun BookUpdatesScreen(
             Box(modifier = Modifier.fillMaxSize()) {
                 AppPullToRefresh(
                     isRefreshing = isRefreshing,
-                    onRefresh = { viewModel.refresh(force = true) },
+                    onRefresh = { onRefresh() },
                     enabled = true,
                     topPadding = 0.dp
                 ) {

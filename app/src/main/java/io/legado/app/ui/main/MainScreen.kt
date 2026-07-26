@@ -450,7 +450,11 @@ fun MainScreen(
                             )
 
                             MainDestination.Updates -> {
+                                val bookshelfViewModel: BookshelfViewModel = koinViewModel()
+                                val bookshelfIsRefreshing by bookshelfViewModel.isRefreshingFlow.collectAsStateWithLifecycle()
                                 BookUpdatesScreen(
+                                    isRefreshing = bookshelfIsRefreshing,
+                                    onRefresh = { bookshelfViewModel.refreshAllBooks(force = true) },
                                     onBookClick = { book ->
                                         context.startActivityForBook(book.toLightBook())
                                     },
