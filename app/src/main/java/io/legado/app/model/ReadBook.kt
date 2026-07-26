@@ -642,9 +642,30 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                     readAloud(!BaseReadAloudService.pause)
                 }
             }
+            // Pre-translate next chapter when user reads near end of current chapter
+            preTranslateNextChapterIfNeeded(it)
         }
         upReadTime()
         preDownload()
+    }
+
+    /**
+     * Pre-translate the next chapter when user is near the end of the current chapter.
+     * Triggers when within the last 2 pages to ensure translation is ready for seamless transition.
+     */
+    private fun preTranslateNextChapterIfNeeded(textChapter: TextChapter) {
+        val book = book ?: return
+        if (!book.getTranslationMode()) return
+        val remainingPages = textChapter.pageSize - durPageIndex
+        if (remainingPages > 2) return
+        val nextIndex = durChapterIndex + 1
+        if (nextIndex >= chapterSize) return
+        Coroutine.async {
+            val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, nextIndex) ?: return@async
+            if (!TranslationManager.hasTranslatedCache(book, chapter)) {
+                TranslationManager.startTranslation(book, chapter)
+            }
+        }
     }
 
     /**
@@ -756,13 +777,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 val content = if (book.getTranslationMode()) {
                     TranslationManager.getCachedTranslation(book, chapter)
                         ?: run {
-                            val prov = io.legado.app.ui.config.translation.TranslationConfig.llmProvider
-                            val isAiEngine = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
-                                    (prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI ||
-                                     prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_HACHIMI_MT ||
-                                     prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_SANGTACVIET)
                             val shouldStartTrans = (index == durChapterIndex || index == durChapterIndex + 1)
-                            if (shouldStartTrans && (!isAiEngine || index == durChapterIndex)) {
+                            if (shouldStartTrans) {
                                 TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
                                     startTranslationObserver(taskFlow, book, chapter)
                                 }
@@ -809,13 +825,8 @@ object ReadBook : CoroutineScope by MainScope(), KoinComponent {
                 val content = if (book.getTranslationMode()) {
                     TranslationManager.getCachedTranslation(book, chapter)
                         ?: run {
-                            val prov = io.legado.app.ui.config.translation.TranslationConfig.llmProvider
-                            val isAiEngine = io.legado.app.ui.config.translation.TranslationConfig.llmTranslateEnabled &&
-                                    (prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_APP_AI ||
-                                     prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_HACHIMI_MT ||
-                                     prov == io.legado.app.ui.config.translation.TranslationConfig.PROVIDER_SANGTACVIET)
                             val shouldStartTrans = (index == durChapterIndex || index == durChapterIndex + 1)
-                            if (shouldStartTrans && (!isAiEngine || index == durChapterIndex)) {
+                            if (shouldStartTrans) {
                                 TranslationManager.startTranslation(book, chapter)?.let { taskFlow ->
                                     startTranslationObserver(taskFlow, book, chapter)
                                 }

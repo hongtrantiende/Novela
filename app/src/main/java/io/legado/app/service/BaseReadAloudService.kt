@@ -810,8 +810,27 @@ abstract class BaseReadAloudService : BaseService(),
         ReadBook.upReadTime()
         AppLog.putDebug("${ReadBook.curTextChapter?.chapter?.title} Kết thúc việc đọc và chuyển sang chương tiếp theo và đọc to")
         resumeReadAloudInternal()
+        // Pre-translate the chapter after next for seamless reading
+        preTranslateAheadChapter()
         if (!ReadBook.moveToNextChapter(true)) {
             stopSelf()
+        }
+    }
+
+    /**
+     * Pre-translate chapter ahead of current reading position.
+     * Called when TTS transitions to next chapter so translation is ready in advance.
+     */
+    private fun preTranslateAheadChapter() {
+        val book = ReadBook.book ?: return
+        if (!book.getTranslationMode()) return
+        val aheadIndex = ReadBook.durChapterIndex + 2
+        if (aheadIndex >= ReadBook.chapterSize) return
+        io.legado.app.help.coroutine.Coroutine.async {
+            val chapter = io.legado.app.data.appDb.bookChapterDao.getChapter(book.bookUrl, aheadIndex) ?: return@async
+            if (!io.legado.app.model.translation.TranslationManager.hasTranslatedCache(book, chapter)) {
+                io.legado.app.model.translation.TranslationManager.startTranslation(book, chapter)
+            }
         }
     }
 

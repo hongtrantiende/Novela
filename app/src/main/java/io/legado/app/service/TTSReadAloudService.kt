@@ -364,7 +364,29 @@ class TTSReadAloudService : BaseReadAloudService(), TextToSpeech.OnInitListener 
                     return
                 }
             } while (contentList[nowSpeak].matches(AppPattern.notReadAloudRegex))
+            // Pre-translate next chapter when nearing end of current chapter
+            val remainingParagraphs = contentList.size - nowSpeak
+            if (remainingParagraphs <= 3) {
+                triggerNextChapterPreTranslation()
+            }
             playNextWithDelay()
+        }
+
+        /**
+         * Trigger pre-translation of the next chapter so translation is ready
+         * when TTS transitions to the next chapter.
+         */
+        private fun triggerNextChapterPreTranslation() {
+            val book = ReadBook.book ?: return
+            if (!book.getTranslationMode()) return
+            val nextIndex = ReadBook.durChapterIndex + 1
+            if (nextIndex >= ReadBook.chapterSize) return
+            io.legado.app.help.coroutine.Coroutine.async {
+                val chapter = io.legado.app.data.appDb.bookChapterDao.getChapter(book.bookUrl, nextIndex) ?: return@async
+                if (!io.legado.app.model.translation.TranslationManager.hasTranslatedCache(book, chapter)) {
+                    io.legado.app.model.translation.TranslationManager.startTranslation(book, chapter)
+                }
+            }
         }
 
         @Deprecated("Deprecated in Java")

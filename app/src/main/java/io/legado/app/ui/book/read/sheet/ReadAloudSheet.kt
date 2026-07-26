@@ -280,17 +280,22 @@ fun ReadAloudContent(
                     .padding(horizontal = 28.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                val bookName = state.book?.name ?: state.bookName
+                val translatedName by io.legado.app.utils.translateAsState(bookName, isMeta = true)
+                val displayName = translatedName.takeUnless { it.isBlank() || it == "\u200B" } ?: bookName
                 Text(
-                    text = state.book?.name ?: state.bookName,
+                    text = displayName,
                     style = LegadoTheme.typography.titleLarge,
                     color = LegadoTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 state.book?.author?.takeIf { it.isNotEmpty() }?.let { author ->
+                    val translatedAuthor by io.legado.app.utils.translateAsState(author, isMeta = true)
+                    val displayAuthor = translatedAuthor.takeUnless { it.isBlank() || it == "\u200B" } ?: author
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = author,
+                        text = displayAuthor,
                         style = LegadoTheme.typography.bodyMedium,
                         color = LegadoTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
