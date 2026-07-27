@@ -10,7 +10,14 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -33,7 +40,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -111,6 +120,7 @@ fun BookCoverImage(
         }
     }
 
+
     Box(modifier = modifier) {
         if (hasCustomDefault && showPlaceholder) {
             AsyncImage(
@@ -161,6 +171,8 @@ fun BookCoverImage(
                 onLoadFinish?.invoke()
             }
         }
+
+        // Shimmer overlay removed from here - handled by CoilBookCover
     }
 }
 
@@ -180,6 +192,7 @@ fun CoilBookCover(
     sharedTransitionScope: SharedTransitionScope? = null,
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
+    showCoverShimmer: Boolean = false,
 ) {
     val isNight = LegadoTheme.isDark
 
@@ -288,6 +301,16 @@ fun CoilBookCover(
                 author = author,
                 isNight = isNight
             )
+        }
+
+        // Shimmer overlay ON TOP - visible while cover image is loading
+        val isImageLoading = showCoverShimmer && showLoadingPlaceholder && !isOnlineCoverLoaded
+        androidx.compose.animation.AnimatedVisibility(
+            visible = isImageLoading,
+            enter = fadeIn(animationSpec = tween(200)),
+            exit = fadeOut(animationSpec = tween(400)),
+        ) {
+            CoverShimmerOverlay(modifier = Modifier.fillMaxSize())
         }
     }
 }
@@ -475,4 +498,39 @@ private fun CoverTextOverlay(
             }
         }
     }
+}
+
+/**
+ * Shimmer overlay for individual book covers while image is loading.
+ * Shows a diagonal sweep animation from top-left to bottom-right.
+ */
+@Composable
+private fun CoverShimmerOverlay(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "coverShimmer")
+    val offset by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "coverShimmerOffset",
+    )
+
+    val colorScheme = LegadoTheme.colorScheme
+    val baseColor = colorScheme.surfaceContainerHighest
+    val highlightColor = colorScheme.surfaceContainerLow
+
+    val brush = remember(offset, baseColor, highlightColor) {
+        val sweep = offset * 800f
+        Brush.linearGradient(
+            colors = listOf(baseColor, highlightColor, baseColor),
+            start = Offset(sweep - 200f, sweep - 200f),
+            end = Offset(sweep + 200f, sweep + 200f),
+        )
+    }
+
+    Box(
+        modifier = modifier.background(brush)
+    )
 }

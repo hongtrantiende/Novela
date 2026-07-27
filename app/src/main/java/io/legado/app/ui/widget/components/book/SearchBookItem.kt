@@ -60,6 +60,7 @@ fun SearchBookListItem(
     sharedCoverKey: String? = null,
     sourceCount: Int? = null,
     shouldLoadCover: Boolean = true,
+    showCoverShimmer: Boolean = false,
 ) {
     val extId = remember(book.origin) { if (book.origin.startsWith("ext_")) book.origin.substringAfter("ext_") else null }
     Row(
@@ -85,7 +86,8 @@ fun SearchBookListItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null
+                showLoadingPlaceholder = sharedCoverKey == null,
+                showCoverShimmer = showCoverShimmer
             )
 
             val shelfIcon = when (shelfState) {
@@ -253,6 +255,7 @@ fun SearchBookGridItem(
     animatedVisibilityScope: AnimatedVisibilityScope? = null,
     sharedCoverKey: String? = null,
     shouldLoadCover: Boolean = true,
+    showCoverShimmer: Boolean = false,
 ) {
     val extId = remember(book.origin) { if (book.origin.startsWith("ext_")) book.origin.substringAfter("ext_") else null }
     Column(
@@ -278,7 +281,8 @@ fun SearchBookGridItem(
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
                 sharedCoverKey = sharedCoverKey,
-                showLoadingPlaceholder = sharedCoverKey == null
+                showLoadingPlaceholder = sharedCoverKey == null,
+                showCoverShimmer = showCoverShimmer
             )
 
             val shelfIcon = when (shelfState) {

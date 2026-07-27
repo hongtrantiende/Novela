@@ -111,11 +111,6 @@ data class BookChapter(
                 2 -> displayTitle = ChineseUtils.s2t(displayTitle)
             }
         }
-        if (translate && io.legado.app.utils.TranslateUtils.isTranslateEnabled()) {
-            displayTitle = kotlinx.coroutines.runBlocking {
-                io.legado.app.utils.TranslateUtils.translateChapterTitle(displayTitle)
-            }
-        }
 
         if (useReplace && replaceRules != null) kotlin.run {
             replaceRules.forEach { item ->
@@ -143,6 +138,11 @@ data class BookChapter(
                         appCtx.toastOnUi("lỗi thay thế ${item.name}")
                     }
                 }
+            }
+        }
+        if (translate && io.legado.app.utils.TranslateUtils.isTranslateEnabled()) {
+            displayTitle = kotlinx.coroutines.runBlocking {
+                io.legado.app.utils.TranslateUtils.translateChapterTitle(displayTitle)
             }
         }
         return displayTitle

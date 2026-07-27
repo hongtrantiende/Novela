@@ -31,6 +31,7 @@ class ContentProcessor private constructor(
     companion object {
         private val processors = hashMapOf<String, WeakReference<ContentProcessor>>()
         private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
+        private val chapterPrefixRegex = "^(?:(?:[Cc]hương|[TTh]ứ|[Đđ]ệ|[Hh]ồi|[Bb]ài|[Qq]uyển|[Tt]ập|[Pp]hần)\\s*\\d+[\\d\\.\\-]*\\s*(?:[Cc]hương|[Hh]ồi|[Bb]ài|[Qq]uyển|[Tt]ập|[Pp]hần)?|(?:第)?\\s*[零一二三四五六七八九十百千万\\d]+[\\d\\.\\-]*\\s*(?:章|回|节|卷|集|部|篇))\\s*[:\\-\\., ]*\\s*".toRegex()
 
         fun get(book: Book) = get(book.name, book.origin)
 
@@ -135,6 +136,38 @@ class ContentProcessor private constructor(
                     if (matcher.find()) {
                         mContent = mContent.substring(matcher.end())
                         sameTitleRemoved = true
+                    }
+                }
+                if (!sameTitleRemoved) {
+                    val coreTitle = chapter.title.replace(chapterPrefixRegex, "").trim()
+                    if (coreTitle.length >= 2) {
+                        val lines = mContent.split('\n', limit = 6)
+                        val normalize = { s: String -> s.lowercase().replace(Regex("[\\p{P}\\s]"), "") }
+                        val normalizedCoreTitle = normalize(coreTitle)
+                        
+                        var targetIndex = -1
+                        var lengthToSkip = 0
+                        
+                        for (i in 0 until minOf(5, lines.size)) {
+                            val line = lines[i]
+                            if (line.isNotBlank()) {
+                                val coreLine = line.replace(chapterPrefixRegex, "").trim()
+                                if (normalizedCoreTitle == normalize(coreLine)) {
+                                    targetIndex = lengthToSkip + line.length
+                                    break
+                                }
+                            }
+                            lengthToSkip += line.length + 1
+                        }
+                        
+                        if (targetIndex != -1) {
+                            mContent = if (targetIndex < mContent.length) {
+                                mContent.substring(targetIndex + if (mContent[targetIndex] == '\n') 1 else 0).trimStart()
+                            } else {
+                                ""
+                            }
+                            sameTitleRemoved = true
+                        }
                     }
                 }
             } catch (e: Exception) {

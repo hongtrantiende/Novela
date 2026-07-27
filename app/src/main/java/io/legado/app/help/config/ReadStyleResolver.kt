@@ -77,19 +77,16 @@ object ReadStyleResolver {
             2 -> config.bgTypeEInk
             else -> error("unknown bgIndex: $bgIndex")
         }
-        if (bgType != 2) {
-            return null
-        }
         val bgStr = when (bgIndex) {
             0 -> config.bgStr
             1 -> config.bgStrNight
             2 -> config.bgStrEInk
             else -> error("unknown bgIndex: $bgIndex")
         }
-        return if (bgStr.contains(File.separator)) {
-            bgStr
-        } else {
-            FileUtils.getPath(appCtx.externalFiles, "bg", bgStr)
+        return when (bgType) {
+            1 -> "file:///android_asset/bg/${migrateToWebp(bgStr)}"
+            2 -> if (bgStr.contains(File.separator)) bgStr else FileUtils.getPath(appCtx.externalFiles, "bg", bgStr)
+            else -> null
         }
     }
 

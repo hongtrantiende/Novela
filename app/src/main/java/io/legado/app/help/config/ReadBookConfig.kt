@@ -1256,12 +1256,6 @@ object ReadBookConfig {
         }
 
         fun curTextColor(): Int {
-            val mode = ReadStyleResolver.currentMode()
-            val bg = ReadStyleResolver.currentBackground(this)
-            if (bg.type == 0 && mode != ReadStyleResolver.ReadStyleMode.EInk) {
-                val isNight = mode == ReadStyleResolver.ReadStyleMode.Night
-                return if (isNight) android.graphics.Color.WHITE else android.graphics.Color.BLACK
-            }
             ensureColorInts()
             return currentModeValue(
                 eInk = { textColorIntEInk },
@@ -1287,13 +1281,6 @@ object ReadBookConfig {
         }
 
         fun curStatusIconDark(): Boolean {
-            val mode = ReadStyleResolver.currentMode()
-            val bg = ReadStyleResolver.currentBackground(this)
-            if (bg.type == 0 && mode != ReadStyleResolver.ReadStyleMode.EInk) {
-                val isNight = mode == ReadStyleResolver.ReadStyleMode.Night
-                val themeBgColor = ThemeConfig.getActiveThemeBackgroundColor(isNight)
-                return io.legado.app.utils.ColorUtils.isColorLight(themeBgColor)
-            }
             return currentModeValue(
                 eInk = { darkStatusIconEInk },
                 night = { darkStatusIconNight },

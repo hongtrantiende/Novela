@@ -1560,7 +1560,7 @@ fun BookshelfPage(
             horizontalArrangement = Arrangement.spacedBy(if (isGridMode) 4.dp else 0.dp),
             showFastScroll = showFastScroll
         ) {
-            items(displayBooks, key = { it.book.bookUrl }) { bookUi ->
+            items(displayBooks, key = { it.book.bookUrl }, contentType = { "book" }) { bookUi ->
                 val isSelected = selectedBookUrls.contains(bookUi.book.bookUrl)
                 val sharedCoverKey = if (isCurrentPage) {
                     bookCoverSharedElementKey(

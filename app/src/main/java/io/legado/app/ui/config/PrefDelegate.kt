@@ -25,7 +25,7 @@ import io.legado.app.utils.putPrefInt
 import io.legado.app.utils.putPrefLong
 import io.legado.app.utils.putPrefString
 import io.legado.app.utils.putPrefStringSync
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import splitties.init.appCtx
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -79,9 +79,9 @@ fun <T> prefDelegate(
                     is Long -> appCtx.putPrefLong(key, value)
                     is Float -> appCtx.putPrefFloat(key, value)
                 }
-                // 同步写入 DataStore，确保持久化
-                runCatching {
-                    runBlocking {
+                // 异步写入 DataStore（SP 已同步写入，DataStore 仅作备份）
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                    runCatching {
                         when (value) {
                             is String? -> DsSync.putString(key, value)
                             is Int -> DsSync.putInt(key, value)

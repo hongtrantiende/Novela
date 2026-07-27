@@ -48,6 +48,7 @@ import io.legado.app.help.DefaultData
 import io.legado.app.ui.book.read.ConfigUpdate
 import io.legado.app.ui.book.read.ReadBookIntent
 import io.legado.app.ui.book.read.ReadBookStyleConfig
+import io.legado.app.ui.config.readConfig.ReadConfig
 import io.legado.app.ui.theme.LegadoTheme
 import io.legado.app.ui.widget.components.alert.AppAlertDialog
 import io.legado.app.ui.widget.components.button.series.SmallTonalButton
@@ -232,8 +233,8 @@ fun BgTextConfigSheet(
             )
 
             // Selector for Day/Night target
-            val isDarkTheme = LegadoTheme.isDark
-            var targetIsNight by remember { mutableStateOf(isDarkTheme) }
+            val isReadNight = ReadConfig.isNightTheme
+            var targetIsNight by remember { mutableStateOf(isReadNight) }
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)

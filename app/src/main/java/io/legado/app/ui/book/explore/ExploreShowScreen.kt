@@ -655,7 +655,8 @@ fun ExploreBookItem(
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         sharedCoverKey = sharedCoverKey,
-        shouldLoadCover = shouldLoadCover
+        shouldLoadCover = shouldLoadCover,
+        showCoverShimmer = true
     )
 }
 
@@ -681,7 +682,8 @@ fun ExploreBookGridItem(
         sharedTransitionScope = sharedTransitionScope,
         animatedVisibilityScope = animatedVisibilityScope,
         sharedCoverKey = sharedCoverKey,
-        shouldLoadCover = shouldLoadCover
+        shouldLoadCover = shouldLoadCover,
+        showCoverShimmer = true
     )
 }
 
@@ -930,10 +932,10 @@ private fun ExploreShowContent(
 private fun rememberShimmerOffset(): Float {
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
     val offset by infiniteTransition.animateFloat(
-        initialValue = -1f,
+        initialValue = 0f,
         targetValue = 2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "shimmerOffset",
@@ -948,18 +950,13 @@ private fun SkeletonBox(
     shimmerOffset: Float,
 ) {
     val colorScheme = LegadoTheme.colorScheme
-    val colors = remember(colorScheme) {
-        listOf(
-            colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
-            colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
-            colorScheme.surfaceContainerHighest.copy(alpha = 0.6f),
-        )
-    }
+    val baseColor = colorScheme.surfaceContainerHighest
+    val highlightColor = colorScheme.surfaceContainerLow
 
-    val brush = remember(shimmerOffset, colors) {
+    val brush = remember(shimmerOffset, baseColor, highlightColor) {
         val sweep = shimmerOffset * 1200f
         Brush.linearGradient(
-            colors = colors,
+            colors = listOf(baseColor, highlightColor, baseColor),
             start = Offset(sweep - 300f, sweep - 300f),
             end = Offset(sweep + 300f, sweep + 300f),
         )

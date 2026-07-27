@@ -258,6 +258,7 @@ fun GlobalThemePage(
                         StyleCard(
                             config = config,
                             isSelected = styleSelect == index,
+                            refreshTrigger = if (styleSelect == index) styleConfig else null,
                             onClick = {
                                 onIntent(ReadBookIntent.UpdateConfig(ConfigUpdate.StyleSelect(index)))
                                 onStyleSelect(index)
@@ -376,6 +377,7 @@ fun GlobalThemePage(
 fun StyleCard(
     config: ReadBookConfig.Config,
     isSelected: Boolean,
+    refreshTrigger: Any? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
