@@ -98,7 +98,7 @@ profileinstaller = "1.4.1"
 playServicesAuth = "21.2.0"
 googleApiClientAndroid = "2.9.0"
 googleApiServicesDrive = "v3-rev20260428-2.0.0"
-googleHttpClientGson = "2.1.0"
+googleHttpClientGson = "2.2.0"
 onnxruntime = "1.18.0"
 onnxruntime-extensions = "0.13.0"
 
